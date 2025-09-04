@@ -329,11 +329,13 @@ if len(teams_in_view) == 1:
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
         color_enc = alt.Color("metric:N", title="Series")
         single_sel = (len(selected) == 1)
-        def y_axis_for(metric: str):
+        def y_axis_for(metric: str) -> alt.Axis:
             title = metric if single_sel else None
             show = single_sel
-            fmt = ".0%" if metric == "Open Complaint Timeliness" else None
-            return alt.Axis(title=title, labels=show, ticks=show, domain=show, format=fmt)
+            kwargs = dict(title=title, labels=show, ticks=show, domain=show)
+            if metric == "Open Complaint Timeliness":
+                kwargs["format"] = "%"  
+            return alt.Axis(**kwargs)
         layers = []
         for metric in selected:
             col = display_to_col.get(metric)
