@@ -291,13 +291,17 @@ with right2:
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
-    single = f[f["team"] == team_name].sort_values("period_date").copy()
+    single = (
+        f[f["team"] == team_name]
+        .sort_values("period_date")
+        .copy()
+    )
     metric_options = [
         "HC in WIP",
         "Open Complaint Timeliness",
         "Actual UPLH",
         "Actual Output",
-        "Actual Hours",  # maps to Completed Hours
+        "Actual Hours",
     ]
     available = []
     for opt in metric_options:
@@ -307,53 +311,63 @@ if len(teams_in_view) == 1:
         elif opt in single.columns:
             available.append(opt)
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
-    if not selected:
-        st.info("Select at least one series to display.")
-    else:
-        left_map = {"HC in WIP": "HC in WIP", "Actual Output": "Actual Output", "Actual Hours": "Completed Hours"}
-        right_map = {"Open Complaint Timeliness": "Open Complaint Timeliness", "Actual UPLH": "Actual UPLH"}
-        left_sel  = [s for s in selected if s in left_map]
-        right_sel = [s for s in selected if s in right_map]
-        import itertools
-        def melt(df, mapping):
-            if not mapping:
-                return pd.DataFrame(columns=["period_date", "Metric", "Value"])
-            cols = [left_map.get(m, right_map.get(m)) for m in mapping]
-            long = df.melt(id_vars=["period_date"], value_vars=cols, var_name="Metric", value_name="Value")
-            long["Metric"] = long["Metric"].replace({"Completed Hours": "Actual Hours"})
-            return long.dropna(subset=["Value"])
-        left_long  = melt(single, left_sel)
-        right_long = melt(single, right_sel)
-        series_sel = alt.selection_point(fields=["Metric"], bind="legend")
-        base = alt.Chart().encode(x=alt.X("period_date:T", title="Week"))
-        left_layer = alt.Chart(left_long).encode(
-            y=alt.Y("Value:Q", axis=alt.Axis(title="Output / Hours / WIP", orient="left")),
-            color=alt.Color("Metric:N", title="Series"),
-            tooltip=["period_date:T", "Metric:N",
-                     alt.Tooltip("Value:Q", format=",.2f")]
-        ).transform_calculate(
-            side="'left'"
-        ).mark_line(point=True).encode(
-            opacity=alt.condition(series_sel, alt.value(1.0), alt.value(0.25))
-        ).properties(height=320)
-        right_layer = alt.Chart(right_long).encode(
-            y=alt.Y("Value:Q", axis=alt.Axis(title="UPLH / Timeliness", orient="right")),
-            color=alt.Color("Metric:N", title=None),  # share legend
-            tooltip=[
-                "period_date:T",
-                "Metric:N",
-                alt.Tooltip("Value:Q", format=alt.ExprRef(expr="datum.Metric == 'Open Complaint Timeliness' ? '.0%' : '.2f'"))
-            ]
-        ).transform_calculate(
-            side="'right'"
-        ).mark_line(point=True, strokeDash=[4, 2]).encode(
-            opacity=alt.condition(series_sel, alt.value(1.0), alt.value(0.25))
-        ).properties(height=320)
-        combo = alt.layer(
-            left_layer.properties(data=left_long),
-            right_layer.properties(data=right_long)
-        ).resolve_scale(y="independent").add_params(series_sel)
+    if selected:
+        base = alt.Chart(single).encode(
+            x=alt.X("period_date:T", title="Week")
+        )
+        layers = []
+        def side(i: int) -> str:
+            return "left" if (i % 2 == 0) else "right"
+        i = 0
+        if "HC in WIP" in selected and "HC in WIP" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("HC in WIP:Q",
+                            axis=alt.Axis(title="HC in WIP", orient=side(i))),
+                    tooltip=["period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
+                )
+            )
+            i += 1
+        if "Open Complaint Timeliness" in selected and "Open Complaint Timeliness" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("Open Complaint Timeliness:Q",
+                            axis=alt.Axis(title="Timeliness", orient=side(i), format="%")),
+                    tooltip=["period_date:T", alt.Tooltip("Open Complaint Timeliness:Q", format=".0%")]
+                )
+            )
+            i += 1
+        if "Actual UPLH" in selected and "Actual UPLH" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("Actual UPLH:Q",
+                            axis=alt.Axis(title="Actual UPLH", orient=side(i))),
+                    tooltip=["period_date:T", alt.Tooltip("Actual UPLH:Q", format=".2f")]
+                )
+            )
+            i += 1
+        if "Actual Output" in selected and "Actual Output" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("Actual Output:Q",
+                            axis=alt.Axis(title="Actual Output", orient=side(i))),
+                    tooltip=["period_date:T", alt.Tooltip("Actual Output:Q", format=",.0f")]
+                )
+            )
+            i += 1
+        if "Actual Hours" in selected and "Completed Hours" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("Completed Hours:Q",
+                            axis=alt.Axis(title="Actual Hours", orient=side(i))),
+                    tooltip=["period_date:T", alt.Tooltip("Completed Hours:Q", format=",.0f")]
+                )
+            )
+            i += 1
+        combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
         st.altair_chart(combo, use_container_width=True)
+    else:
+        st.info("Select at least one series to display.")
 st.subheader("Efficiency vs Target (Actual / Target)")
 eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
 eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
