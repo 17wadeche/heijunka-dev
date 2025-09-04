@@ -111,7 +111,7 @@ with kpi_cols[0]:
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
 kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}")
 kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
-kpi_cols2 = st.columns(3)
+kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi(kpi_cols2[2], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{:.2f}")
 kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
