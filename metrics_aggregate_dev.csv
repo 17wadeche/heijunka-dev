@@ -1,8 +1,8 @@
 team,period_date,source_file,Total Available Hours,Completed Hours,Target Output,Actual Output,Target UPLH,Actual UPLH,HC in WIP,Open Complaint Timeliness,fallback_used
-PSS,2024-06-03,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,227.0,297.5,1020.0,1636.0,4.49,5.5,10,0.89,
-PSS,2024-06-10,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,194.0,237.5,916.0,1547.0,4.72,6.51,9,0.89,
-PSS,2024-06-17,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,270.0,330.0,1220.0,1349.0,4.52,4.09,10,0.89,
-PSS,2024-06-24,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,264.0,294.5,1196.0,1552.0,4.53,5.27,10,0.89,
+PSS,2024-06-03,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,227.0,297.5,1020.0,1636.0,4.49,5.5,10,89,
+PSS,2024-06-10,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,194.0,237.5,916.0,1547.0,4.72,6.51,9,89,
+PSS,2024-06-17,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,270.0,330.0,1220.0,1349.0,4.52,4.09,10,89,
+PSS,2024-06-24,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,264.0,294.5,1196.0,1552.0,4.53,5.27,10,89,
 PSS,2024-07-01,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,250.5,297.0,1062.0,1509.0,4.24,5.08,10,88,
 PSS,2024-07-08,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,260.0,320.0,1180.0,1665.0,4.54,5.2,10,88,
 PSS,2024-07-15,C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm,274.0,275.5,1236.0,1517.0,4.51,5.51,10,88,
