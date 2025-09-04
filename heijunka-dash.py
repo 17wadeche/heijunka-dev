@@ -357,16 +357,40 @@ if len(teams_in_view) == 1:
             color=alt.Color("Metric:N", title="Series"),
             tooltip=tooltip_for("left")
         )
-        left_layer = style_line(left_layer)
+        left_layer = alt.Chart(left_long).mark_line(point=False, interpolate="monotone").encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y(
+                "Value:Q",
+                axis=alt.Axis(
+                    title="Output / Hours / (WIP)",
+                    orient="left",
+                    labels=False,   # hide numbers
+                    ticks=False     # hide tick marks
+                    # grid stays on by default; remove with grid=False if you want
+                )
+            ),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=tooltip_for("left")
+        )
         right_axis_title = "UPLH / Timeliness" + (" / WIP" if "HC in WIP" in right_sel else "")
         right_layer = alt.Chart(right_long).mark_line(point=False, interpolate="monotone", strokeDash=[4,2]).encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", axis=alt.Axis(title=right_axis_title, orient="right")),
+            y=alt.Y(
+                "Value:Q",
+                axis=alt.Axis(
+                    title=right_axis_title,
+                    orient="right",
+                    labels=False,   # hide numbers
+                    ticks=False     # hide tick marks
+                )
+            ),
             color=alt.Color("Metric:N", title=None),
             tooltip=tooltip_for("right")
         )
-        right_layer = style_line(right_layer)
-        combo = alt.layer(left_layer, right_layer).resolve_scale(y="independent").add_params(series_sel).properties(height=340)
+        combo = alt.layer(left_layer, right_layer)\
+           .resolve_scale(y="independent")\
+           .add_params(series_sel)\
+           .properties(height=340)
         st.altair_chart(combo, use_container_width=True)
 st.subheader("Efficiency vs Target (Actual / Target)")
 eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
