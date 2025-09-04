@@ -312,49 +312,53 @@ if len(teams_in_view) == 1:
             available.append(opt)
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
     if selected:
-        # map UI labels to real columns
+        # Map display names to actual columns
         display_to_col = {
             "HC in WIP": "HC in WIP",
             "Open Complaint Timeliness": "Open Complaint Timeliness",
             "Actual UPLH": "Actual UPLH",
             "Actual Output": "Actual Output",
-            "Actual Hours": "Completed Hours",  # <— the culprit
+            "Actual Hours": "Completed Hours",  # <- maps to real column
         }
 
-        # keep only columns that actually exist (defensive)
-        cols = [display_to_col[s] for s in selected if display_to_col.get(s) in single.columns]
-
-        # rename to display names so legend is pretty
-        df_for_plot = (
-            single[["period_date"] + cols]
-            .rename(columns={display_to_col[k]: k for k in selected if display_to_col.get(k) in single.columns})
+        # Base chart with x encoding only
+        base = alt.Chart(single).encode(
+            x=alt.X("period_date:T", title="Week")
         )
 
-        # long form
-        melted = (
-            df_for_plot.melt(
-                id_vars=["period_date"],
-                value_vars=[c for c in df_for_plot.columns if c != "period_date"],
-                var_name="metric",
-                value_name="value",
+        # Helper for tooltip format per metric
+        def tooltip_for(metric: str):
+            if metric == "Open Complaint Timeliness":
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=".0%")]
+            if metric == "Actual UPLH":
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=".2f")]
+            # integers for counts/hours/output
+            return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=",.0f")]
+
+        # Build one layer per selected metric
+        layers = []
+        for metric in selected:
+            col = display_to_col.get(metric)
+            if not col or col not in single.columns:
+                continue
+
+            layer = (
+                base
+                .transform_calculate(metric=f'"{metric}"')  # constant field so color/legend can bind
+                .mark_line(point=True)
+                .encode(
+                    y=alt.Y(f"{col}:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                    color=alt.Color("metric:N", title="Series"),  # one legend across layers
+                    tooltip=tooltip_for(metric),
+                )
             )
-            .dropna()
-        )
+            layers.append(layer)
 
-        # chart: hide y labels, show legend via color
-        base = alt.Chart(melted).mark_line(point=True).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("value:Q", axis=alt.Axis(title=None, labels=False, ticks=False)),
-            color=alt.Color("metric:N", title="Series", legend=alt.Legend(orient="top")),
-            tooltip=[
-                "period_date:T",
-                "metric:N",
-                alt.Tooltip("value:Q", format=",.2f"),
-            ],
-        )
-
-        chart = base.properties(height=320)
-        st.altair_chart(chart, use_container_width=True)
+        if layers:
+            combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
+            st.altair_chart(combo, use_container_width=True)
+        else:
+            st.info("Select at least one series to display.")
     else:
         st.info("Select at least one series to display.")
         layers = []
