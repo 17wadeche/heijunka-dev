@@ -38,7 +38,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH"]:
+                "Target UPLH", "Actual UPLH", "HC in WIP", "Open Complaint Timeliness"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     if {"Actual Output", "Target Output"}.issubset(df.columns):
@@ -93,6 +93,19 @@ tot_target = latest["Target Output"].sum(skipna=True)
 tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
+tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
+def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
+    if pd.isna(v):
+        return np.nan, "{:.0%}"
+    try:
+        v = float(v)
+    except Exception:
+        return np.nan, "{:.0%}"
+    if v <= 1.0:
+        return v, "{:.0%}"
+    return v / 100.0, "{:.0%}"
+timeliness_avg_raw = latest["Open Complaint Timeliness"].dropna().mean() if "Open Complaint Timeliness" in latest.columns else np.nan
+timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 with kpi_cols[0]:
     st.subheader("Latest (All Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
@@ -102,6 +115,9 @@ kpi_cols2 = st.columns(3)
 kpi(kpi_cols2[0], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi(kpi_cols2[1], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{:.2f}")
 kpi(kpi_cols2[2], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
+kpi(kpi_cols2[3], "HC in WIP", tot_hc_wip, "{:,.0f}")
+kpi_cols3 = st.columns(1)
+kpi(kpi_cols3[0], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
@@ -150,7 +166,6 @@ with left:
         st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
     else:
         st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
-
 with mid:
     st.subheader("Output Trend")
     out_long = (
@@ -203,6 +218,43 @@ with right:
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
     )
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+    st.markdown("---")
+    left2, right2 = st.columns(2)
+    with left2:
+        st.subheader("HC in WIP Trend")
+        if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
+            hc = f[["team", "period_date", "HC in WIP"]].dropna()
+            base_hc = alt.Chart(hc).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("HC in WIP:Q", title="HC in WIP"),
+                color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
+                tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
+            )
+            st.altair_chart(
+                base_hc.mark_line(point=True).properties(height=260),
+                use_container_width=True
+            )
+        else:
+            st.info("No 'HC in WIP' data available in the selected range.")
+    with right2:
+        st.subheader("Open Complaint Timeliness Trend")
+        if "Open Complaint Timeliness" in f.columns and f["Open Complaint Timeliness"].notna().any():
+            tml = f[["team", "period_date", "Open Complaint Timeliness"]].dropna().copy()
+            max_val = tml["Open Complaint Timeliness"].max()
+            divisor = 100.0 if pd.notna(max_val) and float(max_val) > 1.5 else 1.0
+            tml["Timeliness %"] = tml["Open Complaint Timeliness"].astype(float) / divisor
+            base_tml = alt.Chart(tml).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Timeliness %:Q", title="Timeliness", axis=alt.Axis(format="%")),
+                color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("seagreen"),
+                tooltip=["team:N", "period_date:T", alt.Tooltip("Timeliness %:Q", format=".0%")]
+            )
+            st.altair_chart(
+                base_tml.mark_line(point=True).properties(height=260),
+                use_container_width=True
+            )
+        else:
+            st.info("No 'Open Complaint Timeliness' data available in the selected range.")
 st.subheader("Efficiency vs Target (Actual / Target)")
 eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
 eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
