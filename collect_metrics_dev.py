@@ -506,6 +506,66 @@ def sum_column_openpyxl_filtered(ws, target_col: str,
         except Exception:
             continue
     return total if any_vals else None
+def _svt_hc_in_wip_openpyxl(ws,
+                            key_col_letter: str = "C",
+                            cond_col_letter: str = "G",
+                            row_start: int = 7,
+                            row_end: int = 200) -> int:
+    kc = col_letter_to_index(key_col_letter)
+    cc = col_letter_to_index(cond_col_letter)
+    unique_keys = set()
+    for r, row in enumerate(ws.iter_rows(min_row=row_start, max_row=row_end,
+                                         min_col=min(kc, cc), max_col=max(kc, cc),
+                                         values_only=True), start=row_start):
+        vals = {col_letter_to_index(chr(ord('A') + i)): v
+                for i, v in enumerate(range(min(kc, cc), max(kc, cc) + 1))}
+        key_val = row[kc - min(kc, cc)]
+        cond_val = row[cc - min(kc, cc)]
+        try:
+            if cond_val is None:
+                continue
+            cond_num = float(str(cond_val).replace(",", "").strip())
+            if cond_num <= 0:
+                continue
+        except Exception:
+            continue
+        if key_val is None:
+            continue
+        key_str = str(key_val).strip()
+        if key_str:
+            unique_keys.add(key_str)
+    return len(unique_keys)
+def _hc_in_wip_from_file(file_path: Path, sheet_name: str,
+                         key_col_letter: str = "C", cond_col_letter: str = "G",
+                         row_start: int = 7, row_end: int = 200) -> int | None:
+    ext = file_path.suffix.lower()
+    try:
+        if ext in (".xlsx", ".xlsm"):
+            wb = load_workbook(file_path, data_only=True, read_only=True)
+            if sheet_name not in wb.sheetnames:
+                return None
+            ws = wb[sheet_name]
+            return _svt_hc_in_wip_openpyxl(ws, key_col_letter, cond_col_letter, row_start, row_end)
+        elif ext == ".xlsb":
+            from pandas import read_excel
+            df = read_excel(file_path, sheet_name=sheet_name, engine="pyxlsb", header=None)
+            rs = row_start - 1
+            re_ = row_end     # pandas slice end is exclusive
+            k = col_letter_to_index(key_col_letter) - 1
+            c = col_letter_to_index(cond_col_letter) - 1
+            cond_series = pd.to_numeric(df.iloc[rs:re_, c], errors="coerce")
+            mask = cond_series > 0
+            keys_series = df.iloc[rs:re_, k].where(mask)
+            uniq = set()
+            for v in keys_series.dropna().tolist():
+                s = str(v).strip()
+                if s and s.lower() != "nan":
+                    uniq.add(s)
+            return len(uniq)
+        else:
+            return None
+    except Exception:
+        return None
 def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
@@ -690,6 +750,13 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                         row[out_name] = None
                 except Exception:
                     row[out_name] = None
+            if team_name == "SVT":
+                try:
+                    if "#12 Production Analysis" in wb.sheetnames:
+                        ws_hc = wb["#12 Production Analysis"]
+                        row["HC in WIP"] = _svt_hc_in_wip_openpyxl(ws_hc)
+                except Exception:
+                    row["HC in WIP"] = None  
         rows.append(row)
         if "Current Week" in wb.sheetnames:
             ws_cw = wb["Current Week"]
@@ -707,7 +774,9 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                 "Total Available Hours": tah,
                 "Completed Hours": ch,
                 "Target Output": to_,
-                "Actual Output": ao
+                "Actual Output": ao,
+                **({"HC in WIP": _svt_hc_in_wip_openpyxl(wb["#12 Production Analysis"])}
+                    if (team_name == "SVT" and "#12 Production Analysis" in wb.sheetnames) else {})
             })
         return rows
     elif file_ext == ".xlsb":
@@ -964,6 +1033,21 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
+            sheet_for_hc = None
+            if team_name == "TCT Commercial":
+                sheet_for_hc = "Commercial #12 Prod Analysis"
+            elif team_name == "TCT Clinical":
+                sheet_for_hc = "Clinical #12 Prod Analysis"
+            if sheet_for_hc:
+                values["HC in WIP"] = _hc_in_wip_from_file(p, sheet_for_hc)
+            if team_name == "SVT":
+                try:
+                    wb_tmp = load_workbook(p, data_only=True, read_only=True)
+                    if "#12 Production Analysis" in wb_tmp.sheetnames:
+                        ws_hc = wb_tmp["#12 Production Analysis"]
+                        values["HC in WIP"] = _svt_hc_in_wip_openpyxl(ws_hc)
+                except Exception:
+                    values["HC in WIP"] = None
             rows.append({
                 "team": team_name,
                 "period_date": period,
