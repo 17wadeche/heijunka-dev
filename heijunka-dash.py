@@ -419,12 +419,9 @@ if len(teams_in_view) == 1:
                         color=color_enc,
                         tooltip=tip,
                     )
-
                     layers.extend([band, f_line])
                 else:
                     st.info("Not enough historical points to forecast. Need at least 3.")
-
-        # Compose chart
         if layers:
             if shared_scale:
                 combo = alt.layer(*layers).properties(height=320)  # shared axis for actual+forecast
