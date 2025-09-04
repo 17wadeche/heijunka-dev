@@ -329,13 +329,30 @@ if len(teams_in_view) == 1:
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
         color_enc = alt.Color("metric:N", title="Series")
         single_sel = (len(selected) == 1)
-        def y_axis_for(metric: str) -> alt.Axis:
+        def axis_for(metric: str) -> alt.Axis:
             title = metric if single_sel else None
             show = single_sel
             kwargs = dict(title=title, labels=show, ticks=show, domain=show)
             if metric == "Open Complaint Timeliness":
                 kwargs["format"] = "%"
             return alt.Axis(**kwargs)
+        def y_enc(metric: str, field: str) -> alt.Y:
+            ax = axis_for(metric)
+            if metric == "Open Complaint Timeliness":
+                col = display_to_col[metric]
+                vals = single[col].dropna().astype(float)
+                if len(vals):
+                    vmin = float(vals.min())
+                    vmax = float(vals.max())
+                else:
+                    vmin, vmax = 0.0, 1.0
+                rng = max(0.0, vmax - vmin)
+                pad = max(0.02, rng * 0.15)   # >= 2% padding
+                lo = max(0.0, vmin - pad)
+                hi = min(1.0, vmax + pad)
+                return alt.Y(f"{field}:Q", axis=ax, scale=alt.Scale(domain=[lo, hi], clamp=True, nice=False))
+            else:
+                return alt.Y(f"{field}:Q", axis=ax)
         layers = []
         for metric in selected:
             col = display_to_col.get(metric)
@@ -345,7 +362,7 @@ if len(teams_in_view) == 1:
                 base.transform_calculate(metric=f'"{metric}"')
                     .mark_line(point=True)
                     .encode(
-                        y=alt.Y(f"{col}:Q", axis=y_axis_for(metric)),
+                        y=y_enc(metric, col),
                         color=color_enc,
                         tooltip=tooltip_for(metric),
                     )
@@ -384,6 +401,10 @@ if len(teams_in_view) == 1:
                     resid_sd = float(np.std(resid, ddof=1)) if len(resid) > 2 else 0.0
                     lower = ypred - 1.96 * resid_sd
                     upper = ypred + 1.96 * resid_sd
+                    if metric == "Open Complaint Timeliness":
+                        ypred = np.clip(ypred, 0.0, 1.0)
+                        lower = np.clip(lower, 0.0, 1.0)
+                        upper = np.clip(upper, 0.0, 1.0)
                     forecast_df = pd.DataFrame({
                         "period_date": future_index,
                         col: ypred,     # same y field as actuals → same scale
@@ -393,13 +414,13 @@ if len(teams_in_view) == 1:
                     })
                     band = alt.Chart(forecast_df).mark_area(opacity=0.15).encode(
                         x=alt.X("period_date:T", title="Week"),
-                        y=alt.Y("lower:Q", axis=y_axis_for(metric)),
+                        y=y_enc(metric, "lower"),
                         y2="upper:Q",
                         color=alt.Color("metric:N", legend=None),
                     )
                     f_line = alt.Chart(forecast_df).mark_line(point=True, strokeDash=[5, 5]).encode(
                         x="period_date:T",
-                        y=alt.Y(f"{col}:Q", axis=y_axis_for(metric)),
+                        y=y_enc(metric, col),
                         color=color_enc,
                         tooltip=tooltip_for(metric),
                     )
