@@ -15,6 +15,7 @@ from openpyxl import load_workbook
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 GIT_BRANCH = "main"
+TIMELINESS_CSV = REPO_DIR / "timeliness.csv"
 EXCLUDED_SOURCE_FILES = {
     r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka\SVT Future Heijunka.xlsm"
 }
@@ -1154,6 +1155,7 @@ def save_outputs(df: pd.DataFrame):
         "Target Output", "Actual Output",
         "Target UPLH", "Actual UPLH",
         "HC in WIP",
+        "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
     cols = [c for c in preferred_cols if c in df.columns]
@@ -1227,6 +1229,57 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
         if EXCLUDED_DIRS:
             combined = combined[~norm.str.startswith(tuple(EXCLUDED_DIRS))]
     return combined
+def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
+    try:
+        p = TIMELINESS_CSV
+    except NameError:
+        p = Path(r"C:\heijunka-dev") / "timeliness.csv"
+    if not p.exists():
+        print(f"[timeliness] {p} not found; skipping join.")
+        return df
+    try:
+        t = pd.read_csv(p, dtype=str, keep_default_na=False)
+    except Exception as e:
+        print(f"[timeliness] Failed to read {p}: {e}")
+        return df
+    if t.shape[1] < 3:
+        print("[timeliness] Expected at least 3 columns (A, B, value). Skipping join.")
+        return df
+    lower_cols = [str(c).strip().lower() for c in t.columns]
+    def _first_match(names):
+        for want in names:
+            if want in lower_cols:
+                return t.columns[lower_cols.index(want)]
+        return None
+    team_col = _first_match(["team"])
+    date_col = _first_match(["period_date", "period", "date"])
+    val_col  = _first_match(["open complaint timeliness", "timeliness", "value", "metric"])
+    if not (team_col and date_col and val_col):
+        t = t.iloc[:, :3].copy()
+        t.columns = ["team", "period_date", "Open Complaint Timeliness"]
+        team_col, date_col, val_col = t.columns.tolist()
+    else:
+        t = t.rename(columns={
+            team_col: "team",
+            date_col: "period_date",
+            val_col:  "Open Complaint Timeliness"
+        })
+    t["team"] = t["team"].astype(str).str.strip()
+    t["period_date"] = pd.to_datetime(t["period_date"], errors="coerce").dt.normalize()
+    t = t.dropna(subset=["team", "period_date"])
+    t = t.drop_duplicates(subset=["team", "period_date"], keep="last")
+    out = df.copy()
+    if "team" not in out.columns or "period_date" not in out.columns:
+        print("[timeliness] 'team'/'period_date' not found in metrics df; skipping join.")
+        return df
+    out["team"] = out["team"].astype(str).str.strip()
+    out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = out.merge(
+        t[["team", "period_date", "Open Complaint Timeliness"]],
+        on=["team", "period_date"],
+        how="left"
+    )
+    return out
 def run_once():
     all_rows = []
     for cfg in TEAM_CONFIG:
@@ -1253,6 +1306,7 @@ def run_once():
     df["Target UPLH"] = df["Target UPLH"].round(2)
     df["Actual UPLH"] = df["Actual UPLH"].round(2)
     df = merge_with_existing(df)
+    df = add_open_complaint_timeliness(df)
     save_outputs(df)
     if not df.empty:
         with pd.option_context("display.max_columns", None, "display.width", 180):
