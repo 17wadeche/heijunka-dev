@@ -116,8 +116,8 @@ kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), 
 kpi(kpi_cols2[2], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{:.2f}")
 kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
 kpi_cols3 = st.columns(2)
-kpi(kpi_cols3[1.5], "HC in WIP", tot_hc_wip, "{:,.0f}")
-kpi(kpi_cols3[2.5], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
+kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
+kpi(kpi_cols3[2], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
