@@ -312,9 +312,22 @@ if len(teams_in_view) == 1:
             available.append(opt)
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
     if selected:
-        base = alt.Chart(single).encode(
-            x=alt.X("period_date:T", title="Week")
+        melted = single.melt(
+            id_vars=["period_date"], 
+            value_vars=selected,
+            var_name="metric", 
+            value_name="value"
+        ).dropna()
+        base = alt.Chart(melted).mark_line(point=True).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("value:Q", axis=alt.Axis(title=None, labels=False)),  # hide y labels
+            color=alt.Color("metric:N", title="Series"),  # legend appears here
+            tooltip=["period_date:T", "metric:N", alt.Tooltip("value:Q", format=",.2f")]
         )
+        chart = base.properties(height=320)
+        st.altair_chart(chart, use_container_width=True)
+    else:
+        st.info("Select at least one series to display.")
         layers = []
         def side(i: int) -> str:
             return "left" if (i % 2 == 0) else "right"
