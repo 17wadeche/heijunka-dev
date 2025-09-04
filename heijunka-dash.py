@@ -1,0 +1,236 @@
+# heijunka-dash.py
+import os
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import streamlit as st
+import altair as alt
+DEFAULT_DATA_PATH = Path(r"C:\Users\wadec8\OneDrive - Medtronic PLC\metrics_aggregate_dev.xlsx")
+DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
+st.set_page_config(page_title="Heijunka Metrics", layout="wide")
+if hasattr(st, "autorefresh"):
+    st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_data(data_path: str | None, data_url: str | None):
+    if data_url:
+        if data_url.lower().endswith(".json"):
+            df = pd.read_json(data_url)
+        else:
+            df = pd.read_csv(data_url)
+        return _postprocess(df)
+    if not data_path:
+        return pd.DataFrame()
+    p = Path(data_path)
+    if not p.exists():
+        return pd.DataFrame()
+    if p.suffix.lower() in (".xlsx", ".xlsm"):
+        df = pd.read_excel(p, sheet_name="All Metrics")
+    elif p.suffix.lower() == ".csv":
+        df = pd.read_csv(p)
+    elif p.suffix.lower() == ".json":
+        df = pd.read_json(p)
+    else:
+        return pd.DataFrame()
+    return _postprocess(df)
+def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    if "period_date" in df.columns:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
+                "Target UPLH", "Actual UPLH"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    if {"Actual Output", "Target Output"}.issubset(df.columns):
+        df["Efficiency vs Target"] = (df["Actual Output"] / df["Target Output"]).replace([np.inf, -np.inf], np.nan)
+    if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
+        df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
+    return df
+data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
+mtime_key = 0
+if data_path:
+    p = Path(data_path)
+    mtime_key = p.stat().st_mtime if p.exists() else 0
+df = load_data(data_path, DATA_URL)
+st.title("Heijunka Metrics Dashboard")
+if df.empty:
+    st.warning("No data found yet. Make sure metrics_aggregate.xlsx exists and has the 'All Metrics' sheet.")
+    st.stop()
+teams = sorted([t for t in df["team"].dropna().unique()])
+default_teams = teams
+col1, col2, col3 = st.columns([2,2,6], gap="large")
+with col1:
+    selected_teams = st.multiselect("Teams", teams, default=default_teams)
+with col2:
+    min_date = pd.to_datetime(df["period_date"].min()).date() if df["period_date"].notna().any() else None
+    max_date = pd.to_datetime(df["period_date"].max()).date() if df["period_date"].notna().any() else None
+    if min_date and max_date:
+        start, end = st.date_input("Date range", (min_date, max_date))
+    else:
+        start, end = None, None
+f = df.copy()
+if selected_teams:
+    f = f[f["team"].isin(selected_teams)]
+if start and end:
+    f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
+
+if f.empty:
+    st.info("No rows match your filters.")
+    st.stop()
+latest = (f.sort_values(["team", "period_date"])
+            .groupby("team", as_index=False)
+            .tail(1))
+kpi_cols = st.columns(4)
+def kpi(col, label, value, fmt="{:,.2f}"):
+    if pd.isna(value):
+        col.metric(label, "—")
+    else:
+        try:
+            col.metric(label, fmt.format(value))
+        except Exception:
+            col.metric(label, str(value))
+tot_target = latest["Target Output"].sum(skipna=True)
+tot_actual = latest["Actual Output"].sum(skipna=True)
+tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
+tot_chl   = latest["Completed Hours"].sum(skipna=True)
+with kpi_cols[0]:
+    st.subheader("Latest (All Selected Teams)")
+kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
+kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}")
+kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
+kpi_cols2 = st.columns(3)
+kpi(kpi_cols2[0], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
+kpi(kpi_cols2[1], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{:.2f}")
+kpi(kpi_cols2[2], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
+st.markdown("---")
+left, mid, right = st.columns(3)
+base = alt.Chart(f).transform_calculate(
+    week="toDate(datum.period_date)"
+).encode(
+    x=alt.X("period_date:T", title="Week")
+)
+teams_in_view = sorted([t for t in f["team"].dropna().unique()])
+multi_team = len(teams_in_view) > 1
+team_sel = alt.selection_point(fields=["team"], bind="legend")
+with left:
+    st.subheader("Hours Trend")
+    have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
+    if have_hours:
+        hrs_long = (
+            f.melt(
+                id_vars=["team", "period_date"],
+                value_vars=["Total Available Hours", "Completed Hours"],
+                var_name="Metric",
+                value_name="Value"
+            )
+            .dropna(subset=["Value"])
+            .assign(Metric=lambda d: d["Metric"].replace({
+                "Total Available Hours": "Target Hours",
+                "Completed Hours": "Actual Hours"
+            }))
+        )
+        base = alt.Chart(hrs_long).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Hours"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=[
+                "team:N", "period_date:T", "Metric:N",
+                alt.Tooltip("Value:Q", format=",.0f")
+            ]
+        )
+        line = base.mark_line(point=False).encode(
+            detail="team:N",
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+        )
+        pts = base.mark_point().encode(
+            shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+            size=alt.value(45),
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+        )
+        st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+    else:
+        st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
+
+with mid:
+    st.subheader("Output Trend")
+    out_long = (
+        f.melt(
+            id_vars=["team", "period_date"],
+            value_vars=["Target Output", "Actual Output"],
+            var_name="Metric", value_name="Value"
+        ).dropna(subset=["Value"])
+    )
+    base = alt.Chart(out_long).encode(
+        x=alt.X("period_date:T", title="Week"),
+        y=alt.Y("Value:Q", title="Output"),
+        color=alt.Color("Metric:N", title="Series"),
+        tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
+    )
+    line = base.mark_line().encode(
+        detail="team:N",
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+    )
+    pts = base.mark_point().encode(
+        shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+        size=alt.value(45),
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+    )
+    st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+with right:
+    st.subheader("UPLH Trend")
+    have_target_uplh = "Target UPLH" in f.columns
+    uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
+    uplh_long = (
+        f.melt(
+            id_vars=["team", "period_date"],
+            value_vars=uplh_vars,
+            var_name="Metric", value_name="Value"
+        ).dropna(subset=["Value"])
+    )
+    base = alt.Chart(uplh_long).encode(
+        x=alt.X("period_date:T", title="Week"),
+        y=alt.Y("Value:Q", title="UPLH"),
+        color=alt.Color("Metric:N", title="Series"),
+        tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")]
+    )
+    line = base.mark_line().encode(
+        detail="team:N",
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+    )
+    pts = base.mark_point().encode(
+        shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+        size=alt.value(45),
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+    )
+    st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+st.subheader("Efficiency vs Target (Actual / Target)")
+eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
+eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
+color_scale = alt.Scale(
+    domain=[0, 1],
+    range=["#d62728", "#2ca02c"]
+)
+eff_bar = (
+    alt.Chart(eff)
+    .mark_bar()
+    .encode(
+        x=alt.X("period_date:T", title="Week"),
+        y=alt.Y("Efficiency:Q", title="x of Target"),
+        color=alt.condition("datum.Efficiency >= 1", alt.value("#2ca02c"), alt.value("#d62728")),
+        tooltip=[
+            "team:N",
+            "period_date:T",
+            alt.Tooltip("Actual Output:Q", format=",.0f"),
+            alt.Tooltip("Target Output:Q", format=",.0f"),
+            alt.Tooltip("Efficiency:Q", format=".2f")
+        ]
+    )
+)
+ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).encode(y="y:Q")
+st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
+st.markdown("---")
+st.subheader("Detailed Rows")
+hide_cols = {"source_file", "fallback_used", "error"}
+drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
+f_table = f.drop(columns=drop_these, errors="ignore").sort_values(["team", "period_date"])
+st.dataframe(f_table, use_container_width=True)
