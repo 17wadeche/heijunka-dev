@@ -35,6 +35,20 @@ def load_data(data_path: str | None, data_url: str | None):
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
+    def _norm_name(x: str) -> str:
+        s = str(x).strip()
+        s = " ".join(s.split())
+        return s
+    df = df.rename(columns={c: _norm_name(c) for c in df.columns})
+    canon_map = {}
+    for c in list(df.columns):
+        lc = c.lower()
+        if lc == "hc in wip":
+            canon_map[c] = "HC in WIP"
+        elif lc in ("open complaint timeliness", "open complaints timeliness", "complaint timeliness"):
+            canon_map[c] = "Open Complaint Timeliness"
+    if canon_map:
+        df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     if "Open Complaint Timeliness" in df.columns:
