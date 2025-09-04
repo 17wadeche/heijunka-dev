@@ -352,6 +352,39 @@ def _sum_pairs_from_excel_com(ws, sum_pairs: dict[str, list[str]]) -> dict:
                 pass
         out[key] = total if any_vals else None
     return out
+def _count_pss_hc_in_wip_com(ws, row_indices=None, col_start="B", col_end="O") -> int:
+    if row_indices is None:
+        row_indices = [34, 35, 38, 39, 42, 43, 46, 47, 50, 51]
+    rmin, rmax = min(row_indices), max(row_indices)
+    rng = ws.Range(f"{col_start}{rmin}:{col_end}{rmax}").Value  
+    if not isinstance(rng, (tuple, list)) or not isinstance(rng[0], (tuple, list)):
+        rng = (rng,)
+    wanted_offsets = {ri - rmin for ri in row_indices}
+    def _is_zero_or_blank(v):
+        if v is None:
+            return True
+        s = str(v).strip()
+        if not s:
+            return True
+        try:
+            return float(s) == 0.0
+        except Exception:
+            return False
+    cols = len(rng[0])
+    count = 0
+    for c in range(cols):
+        any_nonzero = False
+        for r_off in wanted_offsets:
+            try:
+                v = rng[r_off][c]
+            except Exception:
+                v = None
+            if not _is_zero_or_blank(v):
+                any_nonzero = True
+                break
+        if any_nonzero:
+            count += 1
+    return count
 def sum_cells_openpyxl(ws, addrs: list[str]):
     total, any_vals = 0.0, False
     for a in addrs:
@@ -551,6 +584,7 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                 row = {"team": team_name, "source_file": src_display, "period_date": period_date}
                 row.update(_read_cells_from_excel_com(ws, cfg.get("cells") or {}))
                 row.update(_sum_pairs_from_excel_com(ws, cfg.get("sum_pairs") or {}))
+                row["HC in WIP"] = _count_pss_hc_in_wip_com(ws)
                 rows.append(row)
             try:
                 ws_cw = wb.Worksheets("Current Week")
@@ -567,7 +601,8 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                     "Total Available Hours": tah,
                     "Completed Hours": ch,
                     "Target Output": to_,
-                    "Actual Output": ao
+                    "Actual Output": ao,
+                    "HC in WIP": _count_pss_hc_in_wip_com(ws_cw)
                 })
             except Exception:
                 pass
@@ -1034,6 +1069,7 @@ def save_outputs(df: pd.DataFrame):
         "Total Available Hours", "Completed Hours",
         "Target Output", "Actual Output",
         "Target UPLH", "Actual UPLH",
+        "HC in WIP",
         "fallback_used", "error",
     ]
     cols = [c for c in preferred_cols if c in df.columns]
