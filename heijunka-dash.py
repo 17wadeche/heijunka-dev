@@ -291,17 +291,15 @@ with right2:
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
-    single = (
-        f[f["team"] == team_name]
-        .sort_values("period_date")
-        .copy()
-    )
+
+    single = f[f["team"] == team_name].sort_values("period_date").copy()
+
     metric_options = [
         "HC in WIP",
         "Open Complaint Timeliness",
         "Actual UPLH",
         "Actual Output",
-        "Actual Hours",
+        "Actual Hours",   # maps to Completed Hours
     ]
     available = []
     for opt in metric_options:
@@ -310,64 +308,90 @@ if len(teams_in_view) == 1:
                 available.append(opt)
         elif opt in single.columns:
             available.append(opt)
+
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
-    if selected:
-        base = alt.Chart(single).encode(
-            x=alt.X("period_date:T", title="Week")
-        )
-        layers = []
-        def side(i: int) -> str:
-            return "left" if (i % 2 == 0) else "right"
-        i = 0
-        if "HC in WIP" in selected and "HC in WIP" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("HC in WIP:Q",
-                            axis=alt.Axis(title="HC in WIP", orient=side(i))),
-                    tooltip=["period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
-                )
-            )
-            i += 1
-        if "Open Complaint Timeliness" in selected and "Open Complaint Timeliness" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("Open Complaint Timeliness:Q",
-                            axis=alt.Axis(title="Timeliness", orient=side(i), format="%")),
-                    tooltip=["period_date:T", alt.Tooltip("Open Complaint Timeliness:Q", format=".0%")]
-                )
-            )
-            i += 1
-        if "Actual UPLH" in selected and "Actual UPLH" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("Actual UPLH:Q",
-                            axis=alt.Axis(title="Actual UPLH", orient=side(i))),
-                    tooltip=["period_date:T", alt.Tooltip("Actual UPLH:Q", format=".2f")]
-                )
-            )
-            i += 1
-        if "Actual Output" in selected and "Actual Output" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("Actual Output:Q",
-                            axis=alt.Axis(title="Actual Output", orient=side(i))),
-                    tooltip=["period_date:T", alt.Tooltip("Actual Output:Q", format=",.0f")]
-                )
-            )
-            i += 1
-        if "Actual Hours" in selected and "Completed Hours" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("Completed Hours:Q",
-                            axis=alt.Axis(title="Actual Hours", orient=side(i))),
-                    tooltip=["period_date:T", alt.Tooltip("Completed Hours:Q", format=",.0f")]
-                )
-            )
-            i += 1
-        combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
-        st.altair_chart(combo, use_container_width=True)
-    else:
+    if not selected:
         st.info("Select at least one series to display.")
+    else:
+        # Base mapping
+        left_map  = {"Actual Output": "Actual Output", "Actual Hours": "Completed Hours"}
+        right_map = {"Open Complaint Timeliness": "Open Complaint Timeliness", "Actual UPLH": "Actual UPLH"}
+
+        # Decide where to put HC in WIP:
+        # if any big-count series (Output/Hours) are selected, move HC in WIP to RIGHT to avoid squashing
+        has_big_counts = any(s in selected for s in ["Actual Output", "Actual Hours"])
+        if has_big_counts:
+            right_map["HC in WIP"] = "HC in WIP"
+        else:
+            left_map["HC in WIP"] = "HC in WIP"
+
+        # Keep only selected ones
+        left_sel  = [s for s in selected if s in left_map]
+        right_sel = [s for s in selected if s in right_map]
+
+        def melt_for(mapping, label_fix=True):
+            if not mapping:
+                return pd.DataFrame(columns=["period_date", "Metric", "Value"])
+            cols = {disp: col for disp, col in mapping.items() if disp in selected}
+            long = single.melt(id_vars=["period_date"],
+                               value_vars=list(cols.values()),
+                               var_name="Metric", value_name="Value")
+            # Remap var_name back to display labels
+            inv = {v: k for k, v in cols.items()}
+            long["Metric"] = long["Metric"].map(inv).fillna(long["Metric"])
+            if label_fix:
+                long["Metric"] = long["Metric"].replace({"Completed Hours": "Actual Hours"})
+            return long.dropna(subset=["Value"])
+
+        left_long  = melt_for(left_map)
+        right_long = melt_for(right_map)
+
+        # Format timeliness to percent in tooltip if present
+        def tooltip_for(side):
+            if side == "right":
+                return [
+                    "period_date:T",
+                    "Metric:N",
+                    alt.Tooltip("Value:Q", format=".0%")
+                ]
+            return [
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.2f")
+            ]
+
+        # If timeliness exists, make sure it’s 0–1 (already handled in _postprocess)
+
+        series_sel = alt.selection_point(fields=["Metric"], bind="legend")
+
+        # Common aesthetic tweaks
+        def style_line(mark):
+            return mark.encode(
+                opacity=alt.condition(series_sel, alt.value(1.0), alt.value(0.35)),
+                strokeWidth=alt.condition(series_sel, alt.value(3), alt.value(1.5))
+            )
+
+        # LEFT axis (counts)
+        left_layer = alt.Chart(left_long).mark_line(point=False, interpolate="monotone").encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", axis=alt.Axis(title="Output / Hours / (WIP)", orient="left")),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=tooltip_for("left")
+        )
+        left_layer = style_line(left_layer)
+
+        # RIGHT axis (rates + HC in WIP if we moved it)
+        right_axis_title = "UPLH / Timeliness" + (" / WIP" if "HC in WIP" in right_sel else "")
+        right_layer = alt.Chart(right_long).mark_line(point=False, interpolate="monotone", strokeDash=[4,2]).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", axis=alt.Axis(title=right_axis_title, orient="right")),
+            color=alt.Color("Metric:N", title=None),
+            tooltip=tooltip_for("right")
+        )
+        right_layer = style_line(right_layer)
+
+        combo = alt.layer(left_layer, right_layer).resolve_scale(y="independent").add_params(series_sel).properties(height=340)
+        st.altair_chart(combo, use_container_width=True)
 st.subheader("Efficiency vs Target (Actual / Target)")
 eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
 eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
