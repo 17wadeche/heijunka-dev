@@ -354,8 +354,6 @@ if len(teams_in_view) == 1:
         if single_sel:
             metric = selected[0]
             col = display_to_col[metric]
-            alpha = st.slider("Level smoothing (α)", min_value=0.05, max_value=0.95, value=0.40, step=0.05)
-            beta  = st.slider("Trend smoothing (β)", min_value=0.05, max_value=0.95, value=0.20, step=0.05)
             if st.button("Show 3-month forecast"):
                 df = single[["period_date", col]].dropna().sort_values("period_date").copy()
                 if len(df) >= 3:
@@ -370,16 +368,12 @@ if len(teams_in_view) == 1:
                     l, b = y[0], y[1] - y[0]  # initial level & trend
                     for t in range(1, len(y)):
                         prev_l = l
-                        l = alpha * y[t] + (1 - alpha) * (l + b)
-                        b = beta  * (l - prev_l) + (1 - beta)  * b
                     steps = np.arange(1, len(future_index) + 1)
                     ypred = l + steps * b
                     preds_in, lvl, tr = [], y[0], y[1] - y[0]
                     for t in range(1, len(y)):
                         preds_in.append(lvl + tr)
                         prev_lvl = lvl
-                        lvl = alpha * y[t] + (1 - alpha) * (lvl + tr)
-                        tr = beta  * (lvl - prev_lvl) + (1 - beta)  * tr
                     resid = y[1:] - np.array(preds_in)
                     resid_sd = float(np.std(resid, ddof=1)) if len(resid) > 2 else 0.0
                     lower = ypred - 1.96 * resid_sd
