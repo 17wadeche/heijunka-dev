@@ -319,9 +319,7 @@ if len(teams_in_view) == 1:
             "Actual Output": "Actual Output",
             "Actual Hours": "Completed Hours",
         }
-
         base = alt.Chart(single).encode(x=alt.X("period_date:T", title="Week"))
-
         def tooltip_for(metric: str):
             col = display_to_col[metric]
             if metric == "Open Complaint Timeliness":
@@ -329,10 +327,13 @@ if len(teams_in_view) == 1:
             if metric == "Actual UPLH":
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
-
         color_enc = alt.Color("metric:N", title="Series")
-
-        # Actual series
+        single_sel = (len(selected) == 1)
+        def y_axis_for(metric: str):
+            title = metric if single_sel else None
+            show = single_sel
+            fmt = ".0%" if metric == "Open Complaint Timeliness" else None
+            return alt.Axis(title=title, labels=show, ticks=show, domain=show, format=fmt)
         layers = []
         for metric in selected:
             col = display_to_col.get(metric)
@@ -342,61 +343,45 @@ if len(teams_in_view) == 1:
                 base.transform_calculate(metric=f'"{metric}"')
                     .mark_line(point=True)
                     .encode(
-                        y=alt.Y(f"{col}:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                        y=alt.Y(f"{col}:Q", axis=y_axis_for(metric)),
                         color=color_enc,
                         tooltip=tooltip_for(metric),
                     )
             )
-
-        shared_scale = False
-
-        # Forecast only if one series is selected
-        if len(selected) == 1:
-            shared_scale = True
+        shared_scale = single_sel
+        if single_sel:
             metric = selected[0]
             col = display_to_col[metric]
-
+            alpha = st.slider("Level smoothing (α)", min_value=0.05, max_value=0.95, value=0.40, step=0.05)
+            beta  = st.slider("Trend smoothing (β)", min_value=0.05, max_value=0.95, value=0.20, step=0.05)
             if st.button("Show 3-month forecast"):
                 df = single[["period_date", col]].dropna().sort_values("period_date").copy()
-
                 if len(df) >= 3:
-                    freq = pd.infer_freq(df["period_date"])
-                    if freq is None:
-                        freq = "W"
-
+                    freq = pd.infer_freq(df["period_date"]) or "W"
                     last_date = df["period_date"].max()
                     end_date = last_date + pd.DateOffset(months=3)
                     future_index = pd.date_range(
                         start=last_date + pd.tseries.frequencies.to_offset(freq),
                         end=end_date, freq=freq
                     )
-
-                    # --- Holt’s linear smoothing (simple numpy version) ---
                     y = df[col].astype(float).values
-                    alpha, beta = 0.4, 0.2  # smoothing params; tweakable
-
-                    l, b = y[0], y[1] - y[0]  # initial level and trend
+                    l, b = y[0], y[1] - y[0]  # initial level & trend
                     for t in range(1, len(y)):
                         prev_l = l
                         l = alpha * y[t] + (1 - alpha) * (l + b)
-                        b = beta * (l - prev_l) + (1 - beta) * b
-
+                        b = beta  * (l - prev_l) + (1 - beta)  * b
                     steps = np.arange(1, len(future_index) + 1)
                     ypred = l + steps * b
-
-                    # crude confidence band from residuals
                     preds_in, lvl, tr = [], y[0], y[1] - y[0]
                     for t in range(1, len(y)):
                         preds_in.append(lvl + tr)
                         prev_lvl = lvl
                         lvl = alpha * y[t] + (1 - alpha) * (lvl + tr)
-                        tr = beta * (lvl - prev_lvl) + (1 - beta) * tr
+                        tr = beta  * (lvl - prev_lvl) + (1 - beta)  * tr
                     resid = y[1:] - np.array(preds_in)
                     resid_sd = float(np.std(resid, ddof=1)) if len(resid) > 2 else 0.0
-
                     lower = ypred - 1.96 * resid_sd
                     upper = ypred + 1.96 * resid_sd
-
                     forecast_df = pd.DataFrame({
                         "period_date": future_index,
                         col: ypred,     # same y field as actuals → same scale
@@ -404,32 +389,31 @@ if len(teams_in_view) == 1:
                         "upper": upper,
                         "metric": metric,
                     })
-
                     band = alt.Chart(forecast_df).mark_area(opacity=0.15).encode(
                         x=alt.X("period_date:T", title="Week"),
-                        y=alt.Y("lower:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                        y=alt.Y("lower:Q", axis=y_axis_for(metric)),
                         y2="upper:Q",
                         color=alt.Color("metric:N", legend=None),
                     )
-
-                    tip = tooltip_for(metric)
                     f_line = alt.Chart(forecast_df).mark_line(point=True, strokeDash=[5, 5]).encode(
                         x="period_date:T",
-                        y=alt.Y(f"{col}:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                        y=alt.Y(f"{col}:Q", axis=y_axis_for(metric)),
                         color=color_enc,
-                        tooltip=tip,
+                        tooltip=tooltip_for(metric),
                     )
                     layers.extend([band, f_line])
                 else:
                     st.info("Not enough historical points to forecast. Need at least 3.")
         if layers:
             if shared_scale:
-                combo = alt.layer(*layers).properties(height=320)  # shared axis for actual+forecast
+                combo = alt.layer(*layers).properties(height=320)  # shared y for actual+forecast (single series)
             else:
                 combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
             st.altair_chart(combo, use_container_width=True)
         else:
             st.info("Select at least one series to display.")
+    else:
+        st.info("Select at least one series to display.")
         layers = []
         def side(i: int) -> str:
             return "left" if (i % 2 == 0) else "right"
