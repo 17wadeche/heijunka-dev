@@ -322,8 +322,8 @@ if len(teams_in_view) == 1:
         if "HC in WIP" in selected and "HC in WIP" in single.columns:
             layers.append(
                 base.mark_line(point=True).encode(
-                    y=alt.Y("HC in WIP:Q",
-                            axis=alt.Axis(title="HC in WIP", orient=side(i))),
+                    y=alt.Y("HC in WIP:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("steelblue"),
                     tooltip=["period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
                 )
             )
@@ -331,8 +331,8 @@ if len(teams_in_view) == 1:
         if "Open Complaint Timeliness" in selected and "Open Complaint Timeliness" in single.columns:
             layers.append(
                 base.mark_line(point=True).encode(
-                    y=alt.Y("Open Complaint Timeliness:Q",
-                            axis=alt.Axis(title="Timeliness", orient=side(i), format="%")),
+                    y=alt.Y("Open Complaint Timeliness:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("orange"),
                     tooltip=["period_date:T", alt.Tooltip("Open Complaint Timeliness:Q", format=".0%")]
                 )
             )
@@ -340,8 +340,8 @@ if len(teams_in_view) == 1:
         if "Actual UPLH" in selected and "Actual UPLH" in single.columns:
             layers.append(
                 base.mark_line(point=True).encode(
-                    y=alt.Y("Actual UPLH:Q",
-                            axis=alt.Axis(title="Actual UPLH", orient=side(i))),
+                    y=alt.Y("Actual UPLH:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("green"),
                     tooltip=["period_date:T", alt.Tooltip("Actual UPLH:Q", format=".2f")]
                 )
             )
@@ -349,8 +349,8 @@ if len(teams_in_view) == 1:
         if "Actual Output" in selected and "Actual Output" in single.columns:
             layers.append(
                 base.mark_line(point=True).encode(
-                    y=alt.Y("Actual Output:Q",
-                            axis=alt.Axis(title="Actual Output", orient=side(i))),
+                    y=alt.Y("Actual Output:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("red"),
                     tooltip=["period_date:T", alt.Tooltip("Actual Output:Q", format=",.0f")]
                 )
             )
@@ -358,16 +358,14 @@ if len(teams_in_view) == 1:
         if "Actual Hours" in selected and "Completed Hours" in single.columns:
             layers.append(
                 base.mark_line(point=True).encode(
-                    y=alt.Y("Completed Hours:Q",
-                            axis=alt.Axis(title="Actual Hours", orient=side(i))),
+                    y=alt.Y("Completed Hours:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("purple"),
                     tooltip=["period_date:T", alt.Tooltip("Completed Hours:Q", format=",.0f")]
                 )
             )
             i += 1
         combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
         st.altair_chart(combo, use_container_width=True)
-    else:
-        st.info("Select at least one series to display.")
 st.subheader("Efficiency vs Target (Actual / Target)")
 eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
 eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
