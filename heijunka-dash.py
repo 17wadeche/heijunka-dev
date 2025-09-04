@@ -37,8 +37,18 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         return df
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    if "Open Complaint Timeliness" in df.columns:
+        s = (df["Open Complaint Timeliness"]
+                .astype(str)
+                .str.strip()
+                .replace({"": np.nan, "—": np.nan, "-": np.nan}))
+        s = s.str.replace("%", "", regex=False).str.replace(",", "", regex=False)
+        v = pd.to_numeric(s, errors="coerce")
+        if pd.notna(v.max()) and float(v.max()) > 1.5:
+            v = v / 100.0
+        df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP", "Open Complaint Timeliness"]:
+                "Target UPLH", "Actual UPLH", "HC in WIP"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     if {"Actual Output", "Target Output"}.issubset(df.columns):
@@ -115,9 +125,9 @@ kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi(kpi_cols2[2], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{:.2f}")
 kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
-kpi_cols3 = st.columns(2)
-kpi(kpi_cols3[0], "HC in WIP", tot_hc_wip, "{:,.0f}")
-kpi(kpi_cols3[1], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
+kpi_cols3 = st.columns(4)
+kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
+kpi(kpi_cols3[2], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
