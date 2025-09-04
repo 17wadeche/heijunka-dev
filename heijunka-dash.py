@@ -334,7 +334,7 @@ if len(teams_in_view) == 1:
             show = single_sel
             kwargs = dict(title=title, labels=show, ticks=show, domain=show)
             if metric == "Open Complaint Timeliness":
-                kwargs["format"] = "%"  
+                kwargs["format"] = "%"
             return alt.Axis(**kwargs)
         layers = []
         for metric in selected:
@@ -365,15 +365,21 @@ if len(teams_in_view) == 1:
                         end=end_date, freq=freq
                     )
                     y = df[col].astype(float).values
+                    alpha = float(np.clip(2.0 / (len(y) + 1), 0.2, 0.8))
+                    beta  = alpha / 2.0
                     l, b = y[0], y[1] - y[0]  # initial level & trend
                     for t in range(1, len(y)):
                         prev_l = l
+                        l = alpha * y[t] + (1 - alpha) * (l + b)
+                        b = beta  * (l - prev_l) + (1 - beta)  * b
                     steps = np.arange(1, len(future_index) + 1)
                     ypred = l + steps * b
                     preds_in, lvl, tr = [], y[0], y[1] - y[0]
                     for t in range(1, len(y)):
                         preds_in.append(lvl + tr)
                         prev_lvl = lvl
+                        lvl = alpha * y[t] + (1 - alpha) * (lvl + tr)
+                        tr = beta  * (lvl - prev_lvl) + (1 - beta)  * tr
                     resid = y[1:] - np.array(preds_in)
                     resid_sd = float(np.std(resid, ddof=1)) if len(resid) > 2 else 0.0
                     lower = ypred - 1.96 * resid_sd
