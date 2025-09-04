@@ -312,48 +312,92 @@ if len(teams_in_view) == 1:
             available.append(opt)
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
     if selected:
-        # Map display names to actual columns
         display_to_col = {
             "HC in WIP": "HC in WIP",
             "Open Complaint Timeliness": "Open Complaint Timeliness",
             "Actual UPLH": "Actual UPLH",
             "Actual Output": "Actual Output",
-            "Actual Hours": "Completed Hours",  # <- maps to real column
+            "Actual Hours": "Completed Hours",  # map friendly -> real
         }
-
-        # Base chart with x encoding only
         base = alt.Chart(single).encode(
             x=alt.X("period_date:T", title="Week")
         )
-
-        # Helper for tooltip format per metric
         def tooltip_for(metric: str):
+            col = display_to_col[metric]
             if metric == "Open Complaint Timeliness":
-                return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=".0%")]
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".0%")]
             if metric == "Actual UPLH":
-                return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=".2f")]
-            # integers for counts/hours/output
-            return ["period_date:T", "metric:N", alt.Tooltip(f"{display_to_col[metric]}:Q", format=",.0f")]
-
-        # Build one layer per selected metric
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
+            return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
+        color_enc = alt.Color("metric:N", title="Series")
         layers = []
         for metric in selected:
             col = display_to_col.get(metric)
             if not col or col not in single.columns:
                 continue
-
             layer = (
                 base
-                .transform_calculate(metric=f'"{metric}"')  # constant field so color/legend can bind
+                .transform_calculate(metric=f'"{metric}"')  # constant field for color/legend
                 .mark_line(point=True)
                 .encode(
                     y=alt.Y(f"{col}:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
-                    color=alt.Color("metric:N", title="Series"),  # one legend across layers
+                    color=color_enc,
                     tooltip=tooltip_for(metric),
                 )
             )
             layers.append(layer)
-
+        if len(selected) == 1:
+            metric = selected[0]
+            col = display_to_col[metric]
+            if st.button("Show 3-month forecast"):
+                df = single[["period_date", col]].dropna().sort_values("period_date").copy()
+                if len(df) >= 2:
+                    freq = pd.infer_freq(df["period_date"])
+                    if freq is None:
+                        freq = "W"
+                    t0 = df["period_date"].min()
+                    x = (df["period_date"] - t0).dt.total_seconds() / (24*3600)  # days as float
+                    y = df[col].astype(float).values
+                    a, b = np.polyfit(x, y, 1)
+                    yhat_in = a * x + b
+                    resid_sd = float(np.std(y - yhat_in, ddof=1)) if len(df) > 2 else 0.0
+                    last_date = df["period_date"].max()
+                    end_date = last_date + pd.DateOffset(months=3)
+                    future_index = pd.date_range(start=last_date + pd.tseries.frequencies.to_offset(freq),
+                                                end=end_date, freq=freq)
+                    if len(future_index) > 0:
+                        xf = (future_index - t0).days.astype(float)
+                        ypred = a * xf + b
+                        lower = ypred - 1.96 * resid_sd
+                        upper = ypred + 1.96 * resid_sd
+                        forecast_df = pd.DataFrame({
+                            "period_date": future_index,
+                            "value_pred": ypred,
+                            "lower": lower,
+                            "upper": upper,
+                            "metric": metric,  # same category -> same color in legend
+                        })
+                        band = alt.Chart(forecast_df).mark_area(opacity=0.15).encode(
+                            x=alt.X("period_date:T", title="Week"),
+                            y=alt.Y("lower:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                            y2="upper:Q",
+                            color=alt.Color("metric:N", legend=None),
+                        )
+                        if metric == "Open Complaint Timeliness":
+                            tip = ["period_date:T", "metric:N", alt.Tooltip("value_pred:Q", format=".0%")]
+                        elif metric == "Actual UPLH":
+                            tip = ["period_date:T", "metric:N", alt.Tooltip("value_pred:Q", format=".2f")]
+                        else:
+                            tip = ["period_date:T", "metric:N", alt.Tooltip("value_pred:Q", format=",.0f")]
+                        f_line = alt.Chart(forecast_df).mark_line(point=True, strokeDash=[5, 5]).encode(
+                            x="period_date:T",
+                            y=alt.Y("value_pred:Q", axis=alt.Axis(title=None, labels=False, ticks=False, domain=False)),
+                            color=color_enc,
+                            tooltip=tip,
+                        )
+                        layers.extend([band, f_line])
+                else:
+                    st.info("Not enough historical points to forecast. Need at least 2.")
         if layers:
             combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
             st.altair_chart(combo, use_container_width=True)
