@@ -312,18 +312,47 @@ if len(teams_in_view) == 1:
             available.append(opt)
     selected = st.multiselect("Series", available, default=available, key="single_team_series")
     if selected:
-        melted = single.melt(
-            id_vars=["period_date"], 
-            value_vars=selected,
-            var_name="metric", 
-            value_name="value"
-        ).dropna()
+        # map UI labels to real columns
+        display_to_col = {
+            "HC in WIP": "HC in WIP",
+            "Open Complaint Timeliness": "Open Complaint Timeliness",
+            "Actual UPLH": "Actual UPLH",
+            "Actual Output": "Actual Output",
+            "Actual Hours": "Completed Hours",  # <— the culprit
+        }
+
+        # keep only columns that actually exist (defensive)
+        cols = [display_to_col[s] for s in selected if display_to_col.get(s) in single.columns]
+
+        # rename to display names so legend is pretty
+        df_for_plot = (
+            single[["period_date"] + cols]
+            .rename(columns={display_to_col[k]: k for k in selected if display_to_col.get(k) in single.columns})
+        )
+
+        # long form
+        melted = (
+            df_for_plot.melt(
+                id_vars=["period_date"],
+                value_vars=[c for c in df_for_plot.columns if c != "period_date"],
+                var_name="metric",
+                value_name="value",
+            )
+            .dropna()
+        )
+
+        # chart: hide y labels, show legend via color
         base = alt.Chart(melted).mark_line(point=True).encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("value:Q", axis=alt.Axis(title=None, labels=False)),  # hide y labels
-            color=alt.Color("metric:N", title="Series"),  # legend appears here
-            tooltip=["period_date:T", "metric:N", alt.Tooltip("value:Q", format=",.2f")]
+            y=alt.Y("value:Q", axis=alt.Axis(title=None, labels=False, ticks=False)),
+            color=alt.Color("metric:N", title="Series", legend=alt.Legend(orient="top")),
+            tooltip=[
+                "period_date:T",
+                "metric:N",
+                alt.Tooltip("value:Q", format=",.2f"),
+            ],
         )
+
         chart = base.properties(height=320)
         st.altair_chart(chart, use_container_width=True)
     else:
