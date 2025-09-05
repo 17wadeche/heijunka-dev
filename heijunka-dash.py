@@ -153,32 +153,25 @@ def kpi(col, label, value, fmt="{:,.2f}"):
             col.metric(label, fmt.format(value))
         except Exception:
             col.metric(label, str(value))
-def kpi_colored(col, label, value, good: bool | None, fmt="{:,.2f}"):
-    """Render a KPI with the value colored green/red based on `good`."""
-    if pd.isna(value) or good is None:
+def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}"):
+    if pd.isna(actual) or pd.isna(target) or not target:
         col.metric(label, "—")
         return
     try:
-        val_str = fmt.format(value)
+        value_str = fmt_val.format(actual)
     except Exception:
-        val_str = str(value)
-
-    color = "#2ca02c" if good else "#d62728"  # green / red
-    col.markdown(f"""
-        <div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);
-                    background:rgba(0,0,0,0.02)">
-            <div style="font-size:0.9rem;color:#667085;margin-bottom:4px;">{label}</div>
-            <div style="font-size:1.7rem;font-weight:700;color:{color};">{val_str}</div>
-        </div>
-    """, unsafe_allow_html=True)
+        value_str = str(actual)
+    diff = (float(actual) - float(target)) / float(target)
+    delta_str = f"{diff:+.0%} vs target"
+    col.metric(label, value_str, delta=delta_str, delta_color="normal")
 tot_target = latest["Target Output"].sum(skipna=True)
 tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
-target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
-actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
 tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan  # <-- add
+target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
+actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -194,13 +187,11 @@ timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
-good_actual_vs_target = None if pd.isna(tot_actual) or pd.isna(tot_target) else (tot_actual >= tot_target)
-kpi_colored(kpi_cols[2], "Actual Output", tot_actual, good_actual_vs_target, "{:,.0f}")
+kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}")
 kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
-good_uplh = None if pd.isna(actual_uplh) or pd.isna(target_uplh) else (actual_uplh >= target_uplh)
-kpi_colored(kpi_cols2[2], "Actual UPLH", actual_uplh, good_uplh, "{:.2f}")
+kpi_vs_target(kpi_cols2[2], "Actual UPLH", actual_uplh, target_uplh, "{:.2f}")
 kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
 kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
