@@ -1,29 +1,24 @@
 name: keepalive
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes UTC
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Streamlit health endpoint
+      - name: Ping Streamlit app root
         env:
-          # Set this secret once to your BASE url, WITH trailing slash:
-          # https://heijunka-dev-wvh3i6pcrtcki2gx25wotl.streamlit.app/
-          BASE_URL: ${{ secrets.KEEPALIVE_URL }}
+          URL: ${{ secrets.KEEPALIVE_URL }}
         shell: bash
         run: |
-          set +e  # don't fail the job if curl returns non-zero
-          TARGET="${BASE_URL%/}/_stcore/health"
-          echo "Pinging: $TARGET"
-          # GET, follow a few redirects, short timeout; print status and final URL
+          set +e
+          echo "Pinging: $URL"
           RESP=$(curl -L --max-redirs 5 --max-time 20 --retry 2 --retry-delay 2 \
                     -A "Mozilla/5.0 (keepalive)" \
                     -H "Cache-Control: no-cache" \
                     -s -o /dev/null -w "%{http_code} %{url_effective}" \
-                    "$TARGET")
+                    "$URL?ping=$(date +%s)")
           echo "Result: $RESP"
-          # always succeed; purpose is to keep the app warm
           exit 0
