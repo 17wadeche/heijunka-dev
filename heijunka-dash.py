@@ -270,7 +270,7 @@ def create_modern_team_selector(teams, initial_selection, key="teams_sel"):
     with col1:
         st.markdown(f"""
         <div class="selector-header">
-            <h3 class="selector-title">🎯 Select Teams</h3>
+            <h3 class="selector-title">Select Teams</h3>
             <span class="team-count-badge">{len(st.session_state[f"{key}_selected"])} of {len(teams)} selected</span>
         </div>
         """, unsafe_allow_html=True)
