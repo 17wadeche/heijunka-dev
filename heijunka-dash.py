@@ -91,21 +91,37 @@ st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", u
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
+def _get_qp_teams() -> list[str]:
+    try:
+        qp = st.query_params
+        vals = qp.get_all("teams") if hasattr(qp, "get_all") else qp.get("teams", [])
+    except Exception:
+        qp = st.experimental_get_query_params()
+        vals = qp.get("teams", [])
+    if vals is None:
+        return []
+    if isinstance(vals, str):
+        return [vals]
+    return [str(v) for v in vals]
+def _set_qp_teams(values: list[str]) -> None:
+    try:
+        st.query_params["teams"] = values
+    except Exception:
+        st.experimental_set_query_params(teams=values)
+def _sets_equal(a, b) -> bool:
+    return set(a) == set(b)
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = [teams[0]] if teams else [] 
-try:
-    params = st.query_params
-    saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
-except Exception:
-    params = st.experimental_get_query_params()
-    saved = params.get("teams", [])
-initial_selection = [t for t in teams if t in saved] if saved else default_teams
-col1, col2, col3 = st.columns([2,2,6], gap="large")
+default_teams = [teams[0]] if teams else []
+if "teams_sel" not in st.session_state:
+    saved = [t for t in teams if t in _get_qp_teams()]
+    st.session_state.teams_sel = saved or default_teams
+col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
-    selected_teams = st.multiselect("Teams", teams, default=initial_selection, key="teams_sel")
+    selected_teams = st.multiselect("Teams", teams, default=st.session_state.teams_sel, key="teams_sel")
 with col2:
-    min_date = pd.to_datetime(df["period_date"].min()).date() if df["period_date"].notna().any() else None
-    max_date = pd.to_datetime(df["period_date"].max()).date() if df["period_date"].notna().any() else None
+    has_dates = df["period_date"].notna().any()
+    min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
+    max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
     if min_date and max_date:
         date_col1, date_col2 = st.columns(2)
         with date_col1:
@@ -117,22 +133,12 @@ with col2:
             start, end = None, None
     else:
         start, end = None, None
-def _sets_equal(a, b):
-    return set(a) == set(b)
-try:
-    current_params = st.query_params
-    current_saved = current_params.get_all("teams") if hasattr(current_params, "get_all") else current_params.get("teams", [])
-except Exception:
-    current_params = st.experimental_get_query_params()
-    current_saved = current_params.get("teams", [])
-if not _sets_equal(selected_teams, current_saved):
-    try:
-        st.query_params["teams"] = selected_teams
-    except Exception:
-        st.experimental_set_query_params(teams=selected_teams)
+current_qp = _get_qp_teams()
+if not _sets_equal(st.session_state.teams_sel, current_qp):
+    _set_qp_teams(sorted(st.session_state.teams_sel))
 f = df.copy()
-if selected_teams:
-    f = f[f["team"].isin(selected_teams)]
+if st.session_state.teams_sel:
+    f = f[f["team"].isin(st.session_state.teams_sel)]
 if start and end:
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
 if f.empty:
