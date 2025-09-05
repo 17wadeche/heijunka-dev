@@ -94,125 +94,15 @@ st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", u
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
-# ---------- Modern Teams picker (Data Editor) ----------
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = [teams[0]] if teams else []
-
-# Read saved URL params, support old/new APIs
-def _get_params():
-    try:
-        p = st.query_params
-        saved = p.get_all("teams") if hasattr(p, "get_all") else p.get("teams", [])
-    except Exception:
-        p = st.experimental_get_query_params()
-        saved = p.get("teams", [])
-    return p, [t for t in teams if t in saved]
-
-params, saved = _get_params()
-initial_selection = saved if saved else default_teams
-
-# Precompute a compact, modern table with latest metrics per team
-_last = (df.dropna(subset=["team"])
-           .sort_values(["team", "period_date"])
-           .groupby("team", as_index=False)
-           .tail(1))
-
-def _fmt_pct(x):
-    if pd.isna(x): return np.nan
-    try:
-        x = float(x)
-        return x if x <= 1.0 else x/100.0
-    except Exception:
-        return np.nan
-
-overview_cols = {
-    "team": "Team",
-    "Actual Output": "Actual",
-    "Target Output": "Target",
-    "Actual UPLH": "UPLH",
-    "Open Complaint Timeliness": "Timeliness",
-}
-ov = (_last.assign(
-        **{
-            "Efficiency": _last["Actual Output"] / _last["Target Output"],
-            "Timeliness": _last["Open Complaint Timeliness"].map(_fmt_pct),
-        }
-    )[["team", "Actual Output", "Target Output", "Efficiency", "Actual UPLH", "Timeliness"]]
-    .rename(columns=overview_cols)
-    .sort_values("Team")
-)
-
-# Data Editor model: a boolean checkbox column drives selection
-if "teams_model" not in st.session_state:
-    st.session_state.teams_model = pd.DataFrame({
-        "✓": [t in set(initial_selection) for t in teams],
-        "Team": teams
-    }).merge(ov, on="Team", how="left")
-
-def _sets_equal(a, b): return set(a) == set(b)
-
-def _sync_query_params(new_sel: list[str]):
-    try:
-        cur = st.query_params
-        cur_saved = cur.get_all("teams") if hasattr(cur, "get_all") else cur.get("teams", [])
-    except Exception:
-        cur = st.experimental_get_query_params()
-        cur_saved = cur.get("teams", [])
-    if not _sets_equal(new_sel, cur_saved):
-        try:
-            st.query_params["teams"] = new_sel
-        except Exception:
-            st.experimental_set_query_params(teams=new_sel)
-
-# Toolbar
-tcol1, tcol2, tcol3, tcol4, tcol5 = st.columns([3,1,1,1,6], gap="small")
-with tcol1:
-    q = st.text_input("Teams", "", placeholder="Search teams…", label_visibility="collapsed")
-with tcol2:
-    if st.button("All"): 
-        st.session_state.teams_model["✓"] = True
-with tcol3:
-    if st.button("None"): 
-        st.session_state.teams_model["✓"] = False
-with tcol4:
-    if st.button("Invert"): 
-        st.session_state.teams_model["✓"] = ~st.session_state.teams_model["✓"]
-
-# Filter view by search (does not change underlying selection)
-_view = st.session_state.teams_model.copy()
-if q:
-    ql = q.strip().lower()
-    _view = _view[_view["Team"].str.lower().str.contains(ql)]
-
-edited = st.data_editor(
-    _view,
-    use_container_width=True,
-    height=320,
-    hide_index=True,
-    column_config={
-        "✓": st.column_config.CheckboxColumn(width="small", help="Select team"),
-        "Team": st.column_config.TextColumn(),
-        "Actual": st.column_config.NumberColumn(format="%,.0f", help="Latest Actual Output"),
-        "Target": st.column_config.NumberColumn(format="%,.0f", help="Latest Target Output"),
-        "Efficiency": st.column_config.NumberColumn(format="0.00x", help="Actual / Target"),
-        "UPLH": st.column_config.NumberColumn(format="0.00"),
-        "Timeliness": st.column_config.NumberColumn(format="0%"),
-    },
-    disabled=["Team","Actual","Target","Efficiency","UPLH","Timeliness"],
-    key="teams_grid",
-)
-
-# Push checkbox edits back to the full model
-if len(edited) == len(_view):
-    st.session_state.teams_model.loc[_view.index, "✓"] = edited["✓"].values
-
-selected_teams = st.session_state.teams_model.loc[st.session_state.teams_model["✓"], "Team"].tolist()
-_sync_query_params(selected_teams)
-
-# Tiny status line
-st.caption(f"Selected: {len(selected_teams)} / {len(teams)}")
-# ---------- End modern Teams picker ----------
-
+default_teams = [teams[0]] if teams else [] 
+try:
+    params = st.query_params
+    saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
+except Exception:
+    params = st.experimental_get_query_params()
+    saved = params.get("teams", [])
+initial_selection = [t for t in teams if t in saved] if saved else default_teams
 
 
 
