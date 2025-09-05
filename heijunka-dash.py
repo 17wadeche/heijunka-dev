@@ -8,6 +8,18 @@ import altair as alt
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.xlsx")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
+hide_streamlit_style = """
+    <style>
+    /* Hide the top-right toolbar (includes "View source on GitHub") */
+    [data-testid="stToolbar"] { display: none; }
+
+    /* Optional: also hide Streamlit's hamburger menu, header, and footer */
+    #MainMenu { visibility: hidden; }
+    header { visibility: hidden; }
+    footer { visibility: hidden; }
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
