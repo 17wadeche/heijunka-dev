@@ -10,10 +10,7 @@ DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 hide_streamlit_style = """
     <style>
-    /* Hide the top-right toolbar (includes "View source on GitHub") */
     [data-testid="stToolbar"] { display: none; }
-
-    /* Optional: also hide Streamlit's hamburger menu, header, and footer */
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
     footer { visibility: hidden; }
@@ -90,7 +87,7 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
-st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color:#006C9A;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
