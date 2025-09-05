@@ -1,26 +1,24 @@
 name: keepalive
 on:
   schedule:
-    - cron: "*/5 * * * *"     # every 5 minutes (UTC)
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Streamlit app
+      - name: Ping Streamlit app root
         env:
           URL: ${{ secrets.KEEPALIVE_URL }}
+        shell: bash
         run: |
-          if [ -z "$URL" ]; then
-            echo "KEEPALIVE_URL secret not set"; exit 1
-          fi
+          set +e
           echo "Pinging: $URL"
-          CODE=$(curl -L --max-redirs 10 --max-time 20 --retry 2 --retry-delay 2 \
-                  -A "Mozilla/5.0 (keepalive)" \
-                  -H "Cache-Control: no-cache" \
-                  -s -o /dev/null -w "%{http_code} %{url_effective}" \
-                  "$URL?ping=$(date +%s)")
-          echo "Result: $CODE"
-          # Don't fail the job if the app is waking up; we just want to keep it warm
+          RESP=$(curl -L --max-redirs 5 --max-time 20 --retry 2 --retry-delay 2 \
+                    -A "Mozilla/5.0 (keepalive)" \
+                    -H "Cache-Control: no-cache" \
+                    -s -o /dev/null -w "%{http_code} %{url_effective}" \
+                    "$URL?ping=$(date +%s)")
+          echo "Result: $RESP"
           exit 0
