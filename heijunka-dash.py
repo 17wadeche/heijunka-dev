@@ -159,14 +159,7 @@ tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
 tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
-tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
-actual_output_color = None
-if not pd.isna(tot_actual) and not pd.isna(tot_target) and tot_target > 0:
-    efficiency = tot_actual / tot_target
-    if efficiency >= 1.0:
-        actual_output_color = "#2ca02c"  # Green when meeting/exceeding target
-    else:
-        actual_output_color = "#d62728"
+tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan  # <-- add
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -182,7 +175,7 @@ timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
-kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}", color=actual_output_color)
+kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}")
 kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
