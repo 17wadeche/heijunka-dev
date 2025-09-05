@@ -96,9 +96,16 @@ if df.empty:
     st.stop()
 teams = sorted([t for t in df["team"].dropna().unique()])
 default_teams = teams
+try:
+    params = st.query_params
+    saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
+except Exception:
+    params = st.experimental_get_query_params()
+    saved = params.get("teams", [])
+initial_selection = [t for t in teams if t in saved] if saved else default_teams
 col1, col2, col3 = st.columns([2,2,6], gap="large")
 with col1:
-    selected_teams = st.multiselect("Teams", teams, default=default_teams)
+    selected_teams = st.multiselect("Teams", teams, default=initial_selection, key="teams_sel")
 with col2:
     min_date = pd.to_datetime(df["period_date"].min()).date() if df["period_date"].notna().any() else None
     max_date = pd.to_datetime(df["period_date"].max()).date() if df["period_date"].notna().any() else None
@@ -106,6 +113,20 @@ with col2:
         start, end = st.date_input("Date range", (min_date, max_date))
     else:
         start, end = None, None
+def _sets_equal(a, b):
+    return set(a) == set(b)
+try:
+    current_params = st.query_params
+    current_saved = current_params.get_all("teams") if hasattr(current_params, "get_all") else current_params.get("teams", [])
+except Exception:
+    current_params = st.experimental_get_query_params()
+    current_saved = current_params.get("teams", [])
+
+if not _sets_equal(selected_teams, current_saved):
+    try:
+        st.query_params["teams"] = selected_teams  # triggers a rerun only if changed
+    except Exception:
+        st.experimental_set_query_params(teams=selected_teams)
 f = df.copy()
 if selected_teams:
     f = f[f["team"].isin(selected_teams)]
