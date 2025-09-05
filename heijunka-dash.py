@@ -110,7 +110,14 @@ with col2:
     min_date = pd.to_datetime(df["period_date"].min()).date() if df["period_date"].notna().any() else None
     max_date = pd.to_datetime(df["period_date"].max()).date() if df["period_date"].notna().any() else None
     if min_date and max_date:
-        start, end = st.date_input("Date range", (min_date, max_date))
+        date_col1, date_col2 = st.columns(2)
+        with date_col1:
+            start = st.date_input("Start", value=min_date, min_value=min_date, max_value=max_date, key="start_date")
+        with date_col2:
+            end = st.date_input("End", value=max_date, min_value=min_date, max_value=max_date, key="end_date")
+        if start > end:
+            st.error("Start date cannot be after end date!")
+            start, end = None, None
     else:
         start, end = None, None
 def _sets_equal(a, b):
