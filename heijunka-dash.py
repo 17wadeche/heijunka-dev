@@ -104,8 +104,211 @@ except Exception:
     saved = params.get("teams", [])
 initial_selection = [t for t in teams if t in saved] if saved else default_teams
 col1, col2, col3 = st.columns([2,2,6], gap="large")
+def create_modern_team_selector(teams, initial_selection, key="teams_sel"):
+
+    team_selector_css = """
+    <style>
+    .team-selector {
+        margin: 1rem 0;
+    }
+    
+    .team-pills-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    
+    .team-pill {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        color: white;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+        backdrop-filter: blur(10px);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .team-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .team-pill.selected {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border-color: #4facfe;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        transform: translateY(-1px);
+    }
+    
+    .team-pill.selected:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+    }
+    
+    .team-pill::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.6);
+        transform: translateY(-50%);
+        transition: all 0.3s ease;
+    }
+    
+    .team-pill.selected::before {
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    }
+    
+    .team-pill-text {
+        margin-left: 10px;
+    }
+    
+    .selector-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .selector-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+    
+    .team-count-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .select-all-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .control-btn {
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        color: #6b7280;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .control-btn:hover {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .team-pills-container {
+        animation: slideIn 0.5s ease-out;
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .selector-title {
+            color: #f9fafb;
+        }
+        .control-btn {
+            background: rgba(31, 41, 55, 0.8);
+            border-color: #4b5563;
+            color: #d1d5db;
+        }
+        .control-btn:hover {
+            background: rgba(55, 65, 81, 0.8);
+            color: #f9fafb;
+        }
+    }
+    </style>
+    """
+    st.markdown(team_selector_css, unsafe_allow_html=True)
+    if f"{key}_selected" not in st.session_state:
+        st.session_state[f"{key}_selected"] = set(initial_selection)
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(f"""
+        <div class="selector-header">
+            <h3 class="selector-title">🎯 Select Teams</h3>
+            <span class="team-count-badge">{len(st.session_state[f"{key}_selected"])} of {len(teams)} selected</span>
+        </div>
+        """, unsafe_allow_html=True)
+    control_col1, control_col2, control_col3 = st.columns([1, 1, 2])
+    with control_col1:
+        if st.button("Select All", key=f"{key}_all", help="Select all teams"):
+            st.session_state[f"{key}_selected"] = set(teams)
+            st.experimental_rerun()
+    with control_col2:
+        if st.button("Clear All", key=f"{key}_clear", help="Deselect all teams"):
+            st.session_state[f"{key}_selected"] = set()
+            st.experimental_rerun()
+    pills_html = '<div class="team-pills-container">'
+    for team in teams:
+        selected_class = "selected" if team in st.session_state[f"{key}_selected"] else ""
+        pills_html += f"""
+        <div class="team-pill {selected_class}" onclick="toggleTeam('{team}', '{key}')">
+            <span class="team-pill-text">{team}</span>
+        </div>
+        """
+    pills_html += '</div>'
+    st.markdown(pills_html, unsafe_allow_html=True)
+    st.markdown("**Click teams to toggle selection:**")
+    cols = st.columns(min(4, len(teams)))
+    for i, team in enumerate(teams):
+        with cols[i % len(cols)]:
+            is_selected = team in st.session_state[f"{key}_selected"]
+            button_label = f"✓ {team}" if is_selected else f"○ {team}"
+            if st.button(button_label, key=f"{key}_{team}", 
+                        help=f"{'Remove' if is_selected else 'Add'} {team}"):
+                if is_selected:
+                    st.session_state[f"{key}_selected"].discard(team)
+                else:
+                    st.session_state[f"{key}_selected"].add(team)
+                st.experimental_rerun()
+    return list(st.session_state[f"{key}_selected"])
 with col1:
-    selected_teams = st.multiselect("Teams", teams, default=initial_selection, key="teams_sel")
+    selected_teams = create_modern_team_selector(teams, initial_selection, key="teams_sel")
 with col2:
     min_date = pd.to_datetime(df["period_date"].min()).date() if df["period_date"].notna().any() else None
     max_date = pd.to_datetime(df["period_date"].max()).date() if df["period_date"].notna().any() else None
