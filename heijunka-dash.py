@@ -282,8 +282,6 @@ with mid2:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
     st.subheader("Open Complaint Timeliness Trend")
-with right2:
-    st.subheader("Open Complaint Timeliness Trend")
     if "Open Complaint Timeliness" in f.columns and f["Open Complaint Timeliness"].notna().any():
         tml = f[["team", "period_date", "Open Complaint Timeliness"]].dropna().copy()
         max_val = tml["Open Complaint Timeliness"].max()
