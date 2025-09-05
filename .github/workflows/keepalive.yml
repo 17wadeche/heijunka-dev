@@ -1,0 +1,22 @@
+name: keepalive
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        env:
+          URL: ${{ secrets.KEEPALIVE_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "KEEPALIVE_URL secret not set"; exit 1
+          fi
+          # Use HEAD (lighter), follow redirects, short timeouts, silent output
+          curl -I -L --max-time 15 --retry 2 --retry-delay 2 -sS "$URL" >/dev/null || true
