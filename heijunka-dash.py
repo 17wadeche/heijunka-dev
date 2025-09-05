@@ -196,7 +196,7 @@ kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.
 kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
 kpi(kpi_cols3[2], "Actual HC used", tot_hc_used, "{:,.2f}")
-kpi(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, timeliness_fmt)
+kpi_vs_target(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, 0.87, "{:.0%}")
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
