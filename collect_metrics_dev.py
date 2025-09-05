@@ -1212,14 +1212,22 @@ def save_outputs(df: pd.DataFrame):
     )
     print(f"Saved Excel: {OUT_XLSX.resolve()}")
     print(f"Saved CSV:   {OUT_CSV.resolve()}")
+    REPO_DIR.mkdir(parents=True, exist_ok=True)
+    def _samefile(a: Path, b: Path) -> bool:
+        try:
+            return a.resolve().samefile(b.resolve())
+        except Exception:
+            return str(a.resolve()).lower() == str(b.resolve()).lower()
     try:
-        REPO_DIR.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(OUT_CSV, REPO_CSV) 
-        print(f"Copied CSV to: {REPO_CSV.resolve()}")
+        if not _samefile(OUT_CSV, REPO_CSV):
+            shutil.copyfile(OUT_CSV, REPO_CSV)
+            print(f"Copied CSV to: {REPO_CSV.resolve()}")
+        else:
+            print("[info] OUT_CSV and REPO_CSV are the same file; skipping copy.")
     except Exception as e:
-        print(f"[WARN] Could not copy CSV to {REPO_CSV}: {e}", file=sys.stderr)
-        return  
-    git_autocommit_and_push(REPO_DIR, REPO_CSV, branch=GIT_BRANCH)
+        print(f"[WARN] Copy step failed: {e}", file=sys.stderr)
+    target_for_git = REPO_CSV if REPO_CSV.exists() else OUT_CSV
+    git_autocommit_and_push(REPO_DIR, target_for_git, branch=GIT_BRANCH)
 def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     new_df = normalize_period_date(new_df)
     if not OUT_XLSX.exists():
