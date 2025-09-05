@@ -90,7 +90,7 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
-st.title("Heijunka Metrics Dashboard")
+st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
