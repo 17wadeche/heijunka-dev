@@ -95,14 +95,150 @@ if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = [teams[0]] if teams else [] 
+default_teams = [teams[0]] if teams else []
+
+# Read saved URL params (works with both new/old Streamlit)
 try:
     params = st.query_params
     saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
 except Exception:
     params = st.experimental_get_query_params()
     saved = params.get("teams", [])
+
 initial_selection = [t for t in teams if t in saved] if saved else default_teams
+
+# Small CSS for pretty chips and a compact filter bar
+st.markdown("""
+<style>
+.filter-bar { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+.filter-title { font-weight:600; opacity:.85; }
+.chips { display:flex; gap:.5rem; flex-wrap:wrap; }
+.chip {
+  display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .5rem;
+  border-radius:999px; background:rgba(127,127,127,.08);
+  border:1px solid rgba(127,127,127,.22); font-size:0.9rem;
+}
+.chip button {
+  all:unset; cursor:pointer; font-size:.9rem; line-height:1; opacity:.7;
+}
+.chip button:hover { opacity:1; }
+.quick-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+.quick-actions button {
+  all:unset; cursor:pointer; padding:.25rem .6rem; border-radius:8px;
+  border:1px solid rgba(127,127,127,.25); background:rgba(127,127,127,.06);
+  font-size:.85rem;
+}
+.quick-actions button:hover { background:rgba(127,127,127,.12); }
+@media (max-width: 900px) {.chips {width:100%;}}
+</style>
+""", unsafe_allow_html=True)
+
+# Session-backed selection to enable chip remove actions
+if "teams_sel" not in st.session_state:
+    st.session_state.teams_sel = initial_selection
+
+def _sets_equal(a, b): return set(a) == set(b)
+
+def _sync_query_params(new_sel: list[str]):
+    """Keep URL ?teams=... in sync without infinite reruns."""
+    try:
+        current_params = st.query_params
+        current_saved = current_params.get_all("teams") if hasattr(current_params, "get_all") else current_params.get("teams", [])
+    except Exception:
+        current_params = st.experimental_get_query_params()
+        current_saved = current_params.get("teams", [])
+    if not _sets_equal(new_sel, current_saved):
+        try:
+            st.query_params["teams"] = new_sel  # triggers rerun only if changed
+        except Exception:
+            st.experimental_set_query_params(teams=new_sel)
+
+# Helpers
+def _select_all():
+    st.session_state.teams_sel = teams.copy()
+    _sync_query_params(st.session_state.teams_sel)
+
+def _clear_all():
+    st.session_state.teams_sel = []
+    _sync_query_params(st.session_state.teams_sel)
+
+def _invert():
+    sel = set(st.session_state.teams_sel)
+    st.session_state.teams_sel = [t for t in teams if t not in sel]
+    _sync_query_params(st.session_state.teams_sel)
+
+def _remove_chip(team: str):
+    st.session_state.teams_sel = [t for t in st.session_state.teams_sel if t != team]
+    _sync_query_params(st.session_state.teams_sel)
+
+# UI: compact filter bar with popover (falls back if not available)
+left_area, right_area = st.columns([5, 7], gap="large")
+
+with left_area:
+    st.write("")  # vertical rhythm
+    if hasattr(st, "popover"):
+        with st.popover("Teams", use_container_width=True):
+            st.caption("Pick one or more teams")
+            _new = st.multiselect("",
+                                  teams,
+                                  default=st.session_state.teams_sel,
+                                  key="teams_multiselect_pop",
+                                  label_visibility="collapsed",
+                                  placeholder="Search or pick teams...")
+            # Quick actions
+            ca1, ca2, ca3 = st.columns(3)
+            with ca1:
+                if st.button("Select all", use_container_width=True):
+                    _select_all()
+                    _new = st.session_state.teams_sel
+            with ca2:
+                if st.button("Clear", use_container_width=True):
+                    _clear_all()
+                    _new = st.session_state.teams_sel
+            with ca3:
+                if st.button("Invert", use_container_width=True):
+                    _invert()
+                    _new = st.session_state.teams_sel
+
+            # Commit changes from the multiselect
+            if _new != st.session_state.teams_sel:
+                st.session_state.teams_sel = _new
+                _sync_query_params(st.session_state.teams_sel)
+    else:
+        # Fallback: standard multiselect but with quick actions inline
+        st.markdown("<div class='filter-title'>Teams</div>", unsafe_allow_html=True)
+        _new = st.multiselect("Teams",
+                              teams,
+                              default=st.session_state.teams_sel,
+                              key="teams_multiselect_fallback",
+                              placeholder="Search or pick teams...")
+        qa = st.columns(3)
+        if qa[0].button("Select all"): _select_all(); _new = st.session_state.teams_sel
+        if qa[1].button("Clear"): _clear_all(); _new = st.session_state.teams_sel
+        if qa[2].button("Invert"): _invert(); _new = st.session_state.teams_sel
+        if _new != st.session_state.teams_sel:
+            st.session_state.teams_sel = _new
+            _sync_query_params(st.session_state.teams_sel)
+
+with right_area:
+    st.markdown("<div class='filter-bar'>"
+                "<div class='filter-title'>Selected:</div>"
+                "<div class='chips'>", unsafe_allow_html=True)
+    if st.session_state.teams_sel:
+        # Render chips with tiny remove buttons
+        for t in st.session_state.teams_sel:
+            c1, c2 = st.columns([10,1])
+            with c1:
+                st.markdown(f"<span class='chip'>{t}</span>", unsafe_allow_html=True)
+            with c2:
+                if st.button("×", key=f"rm_{t}", help=f"Remove {t}"):
+                    _remove_chip(t)
+                    st.rerun()
+    else:
+        st.markdown("<span class='chip'>No team selected</span>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+selected_teams = st.session_state.teams_sel
 col1, col2, col3 = st.columns([2,2,6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, default=initial_selection, key="teams_sel")
