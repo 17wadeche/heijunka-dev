@@ -120,7 +120,7 @@ tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
 tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
-tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan  # <-- add
+tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -290,7 +290,7 @@ with right2:
         vmin = float(tml["Timeliness %"].min())
         vmax = float(tml["Timeliness %"].max())
         rng  = max(0.0, vmax - vmin)
-        pad  = max(0.02, rng * 0.15)  # at least 2% padding
+        pad  = max(0.02, rng * 0.15)
         lo   = max(0.0, vmin - pad)
         hi   = min(1.0, vmax + pad)
         base_tml = alt.Chart(tml).encode(
@@ -371,7 +371,7 @@ if len(teams_in_view) == 1:
                 else:
                     vmin, vmax = 0.0, 1.0
                 rng = max(0.0, vmax - vmin)
-                pad = max(0.02, rng * 0.15)   # >= 2% padding
+                pad = max(0.02, rng * 0.15) 
                 lo = max(0.0, vmin - pad)
                 hi = min(1.0, vmax + pad)
                 return alt.Y(f"{field}:Q", axis=ax, scale=alt.Scale(domain=[lo, hi], clamp=True, nice=False))
@@ -408,7 +408,7 @@ if len(teams_in_view) == 1:
                     y = df[col].astype(float).values
                     alpha = float(np.clip(2.0 / (len(y) + 1), 0.2, 0.8))
                     beta  = alpha / 2.0
-                    l, b = y[0], y[1] - y[0]  # initial level & trend
+                    l, b = y[0], y[1] - y[0]  
                     for t in range(1, len(y)):
                         prev_l = l
                         l = alpha * y[t] + (1 - alpha) * (l + b)
@@ -431,7 +431,7 @@ if len(teams_in_view) == 1:
                         upper = np.clip(upper, 0.0, 1.0)
                     forecast_df = pd.DataFrame({
                         "period_date": future_index,
-                        col: ypred,     # same y field as actuals → same scale
+                        col: ypred,
                         "lower": lower,
                         "upper": upper,
                         "metric": metric,
@@ -453,7 +453,7 @@ if len(teams_in_view) == 1:
                     st.info("Not enough historical points to forecast. Need at least 3.")
         if layers:
             if shared_scale:
-                combo = alt.layer(*layers).properties(height=320)  # shared y for actual+forecast (single series)
+                combo = alt.layer(*layers).properties(height=320)
             else:
                 combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
             st.altair_chart(combo, use_container_width=True)
