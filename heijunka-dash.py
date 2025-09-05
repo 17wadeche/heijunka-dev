@@ -103,9 +103,6 @@ except Exception:
     params = st.experimental_get_query_params()
     saved = params.get("teams", [])
 initial_selection = [t for t in teams if t in saved] if saved else default_teams
-
-
-
 col1, col2, col3 = st.columns([2,2,6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, default=initial_selection, key="teams_sel")
@@ -134,7 +131,7 @@ except Exception:
 
 if not _sets_equal(selected_teams, current_saved):
     try:
-        st.query_params["teams"] = selected_teams  # triggers a rerun only if changed
+        st.query_params["teams"] = selected_teams
     except Exception:
         st.experimental_set_query_params(teams=selected_teams)
 f = df.copy()
@@ -142,7 +139,6 @@ if selected_teams:
     f = f[f["team"].isin(selected_teams)]
 if start and end:
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
-
 if f.empty:
     st.info("No rows match your filters.")
     st.stop()
@@ -150,12 +146,21 @@ latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
             .tail(1))
 kpi_cols = st.columns(4)
-def kpi(col, label, value, fmt="{:,.2f}"):
+def kpi(col, label, value, fmt="{:,.2f}", color=None):
     if pd.isna(value):
         col.metric(label, "—")
     else:
         try:
-            col.metric(label, fmt.format(value))
+            formatted_value = fmt.format(value)
+            if color:
+                col.markdown(f"""
+                <div style="background-color: white; padding: 10px; border-radius: 5px; border-left: 4px solid {color};">
+                    <p style="font-size: 14px; color: #666; margin: 0;">{label}</p>
+                    <p style="font-size: 36px; font-weight: bold; color: {color}; margin: 0;">{formatted_value}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                col.metric(label, formatted_value)
         except Exception:
             col.metric(label, str(value))
 tot_target = latest["Target Output"].sum(skipna=True)
@@ -163,7 +168,14 @@ tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
 tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
-tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan  # <-- add
+tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
+actual_output_color = None
+if not pd.isna(tot_actual) and not pd.isna(tot_target) and tot_target > 0:
+    efficiency = tot_actual / tot_target
+    if efficiency >= 1.0:
+        actual_output_color = "#2ca02c"  # Green when meeting/exceeding target
+    else:
+        actual_output_color = "#d62728"
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -179,7 +191,7 @@ timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
-kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}")
+kpi(kpi_cols[2], "Actual Output", tot_actual, "{:,.0f}", color=actual_output_color)
 kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
