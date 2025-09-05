@@ -242,18 +242,15 @@ def _ensure_git_identity(repo_dir: Path):
     code, out, _ = _git(["git", "config", "--get", "user.name"], repo_dir)
     if code != 0 or not out:
         _git(["git", "config", "user.name", "Heijunka Bot"], repo_dir)
-def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main"):
+def git_autocommit_and_push_many(repo_dir: Path, files: list[Path], branch: str = "main"):
     if not (repo_dir / ".git").exists():
         print(f"[WARN] {repo_dir} is not a git repo; skipping auto-commit.")
         return
-    if not file_path.exists():
-        print(f"[WARN] {file_path} not found to commit.")
-        return
     _git(["git", "config", "--global", "--add", "safe.directory", str(repo_dir)], repo_dir)
     _ensure_git_identity(repo_dir)
-    code, _, err = _git(["git", "--version"], repo_dir)
+    code, _, _ = _git(["git", "--version"], repo_dir)
     if code != 0:
-        print("[WARN] Git not available on PATH. Install Git or adjust PATH.")
+        print("[WARN] Git not available on PATH.")
         return
     code, remotes, _ = _git(["git", "remote"], repo_dir)
     if code != 0 or not remotes.strip():
@@ -266,35 +263,44 @@ def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main
     else:
         _git(["git", "checkout", "-B", branch], repo_dir)
     _git(["git", "fetch", remote], repo_dir)
-    code, up, _ = _git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo_dir)
+    code, _, _ = _git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo_dir)
     if code != 0:
         _git(["git", "branch", "--set-upstream-to", f"{remote}/{branch}", branch], repo_dir)
     code, _, _ = _git(["git", "pull", "--rebase", remote, branch], repo_dir)
     if code != 0:
-        print("[WARN] 'git pull --rebase' failed; skipping commit to avoid conflicts. Resolve repo state manually.")
+        print("[WARN] 'git pull --rebase' failed; skipping commit to avoid conflicts.")
         return
-    try:
-        rel = file_path.relative_to(repo_dir).as_posix()
-    except Exception:
-        rel = str(file_path)
-    _git(["git", "add", "--", rel], repo_dir)
-    code, status, _ = _git(["git", "status", "--porcelain", "--", rel], repo_dir)
+    staged = []
+    for fp in files:
+        if not fp or not Path(fp).exists():
+            print(f"[git] Skip missing: {fp}")
+            continue
+        try:
+            rel = Path(fp).relative_to(repo_dir).as_posix()
+        except Exception:
+            rel = str(Path(fp))
+        _git(["git", "add", "--", rel], repo_dir)
+        staged.append(rel)
+    if not staged:
+        print("[git] Nothing to stage (no files existed).")
+        return
+    code, status, _ = _git(["git", "status", "--porcelain", "--"] + staged, repo_dir)
     if code != 0:
         print("[WARN] Could not check git status; aborting commit.")
         return
     if not status.strip():
-        print("[git] No changes in CSV; skipping push.")
+        print("[git] No changes in staged files; skipping push.")
         return
-    msg = f"Auto-update {rel} at {_dt.now().isoformat(timespec='seconds')}"
+    msg = f"Auto-update {', '.join(staged)} at {_dt.now().isoformat(timespec='seconds')}"
     code, _, _ = _git(["git", "commit", "-m", msg], repo_dir)
     if code != 0:
         print("[WARN] git commit failed; see logs above.")
         return
     code, _, _ = _git(["git", "push", "-u", remote, branch], repo_dir)
     if code != 0:
-        print("[WARN] git push failed; see logs above. Check credentials / PAT / VPN.")
+        print("[WARN] git push failed; see logs above.")
     else:
-        print("[git] Pushed CSV update to", f"{remote}/{branch}")
+        print("[git] Pushed update to", f"{remote}/{branch}")
 def _to_excel_com_value(v):
     if isinstance(v, (int, float, str)):
         return v
@@ -1226,8 +1232,8 @@ def save_outputs(df: pd.DataFrame):
             print("[info] OUT_CSV and REPO_CSV are the same file; skipping copy.")
     except Exception as e:
         print(f"[WARN] Copy step failed: {e}", file=sys.stderr)
-    target_for_git = REPO_CSV if REPO_CSV.exists() else OUT_CSV
-    git_autocommit_and_push(REPO_DIR, target_for_git, branch=GIT_BRANCH)
+    csv_for_git = REPO_CSV if REPO_CSV.exists() else OUT_CSV
+    git_autocommit_and_push_many(REPO_DIR, [csv_for_git, OUT_XLSX], branch=GIT_BRANCH)
 def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     new_df = normalize_period_date(new_df)
     if not OUT_XLSX.exists():
