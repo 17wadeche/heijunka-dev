@@ -47,6 +47,8 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             canon_map[c] = "HC in WIP"
         elif lc in ("open complaint timeliness", "open complaints timeliness", "complaint timeliness"):
             canon_map[c] = "Open Complaint Timeliness"
+        elif lc in ("actual hc used", "actual_hc_used", "actual-hc-used"):
+            canon_map[c] = "Actual HC used"
     if canon_map:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
@@ -62,7 +64,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             v = v / 100.0
         df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP"]:
+                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     if {"Actual Output", "Target Output"}.issubset(df.columns):
@@ -118,6 +120,7 @@ tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
 tot_chl   = latest["Completed Hours"].sum(skipna=True)
 tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
+tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan  # <-- add
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -141,7 +144,8 @@ kpi(kpi_cols2[2], "Actual UPLH", (tot_actual/tot_chl if tot_chl else np.nan), "{
 kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
 kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
-kpi(kpi_cols3[2], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
+kpi(kpi_cols3[2], "Actual HC used", tot_hc_used, "{:,.2f}")
+kpi(kpi_cols3[3], "Open Complaint Timeliness (avg)", timeliness_avg, timeliness_fmt)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
@@ -243,7 +247,7 @@ with right:
     )
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 st.markdown("---")
-left2, right2 = st.columns(2)
+left2, mid2, right2 = st.columns(3) 
 with left2:
     st.subheader("HC in WIP Trend")
     if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
@@ -260,6 +264,24 @@ with left2:
         )
     else:
         st.info("No 'HC in WIP' data available in the selected range.")
+with mid2:
+    st.subheader("Actual HC used Trend")
+    if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
+        ahu = f[["team", "period_date", "Actual HC used"]].dropna()
+        base_ahu = alt.Chart(ahu).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Actual HC used:Q", title="Actual HC used"),
+            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("indianred"),
+            tooltip=["team:N", "period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")]
+        )
+        st.altair_chart(
+            base_ahu.mark_line(point=True).properties(height=260),
+            use_container_width=True
+        )
+    else:
+        st.info("No 'Actual HC used' data available in the selected range.")
+with right2:
+    st.subheader("Open Complaint Timeliness Trend")
 with right2:
     st.subheader("Open Complaint Timeliness Trend")
     if "Open Complaint Timeliness" in f.columns and f["Open Complaint Timeliness"].notna().any():
@@ -302,6 +324,7 @@ if len(teams_in_view) == 1:
         "Actual UPLH",
         "Actual Output",
         "Actual Hours",
+        "Actual HC used"
     ]
     available = []
     for opt in metric_options:
@@ -318,12 +341,15 @@ if len(teams_in_view) == 1:
             "Actual UPLH": "Actual UPLH",
             "Actual Output": "Actual Output",
             "Actual Hours": "Completed Hours",
+            "Actual HC used": "Actual HC used",
         }
         base = alt.Chart(single).encode(x=alt.X("period_date:T", title="Week"))
         def tooltip_for(metric: str):
             col = display_to_col[metric]
             if metric == "Open Complaint Timeliness":
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".0%")]
+            if metric in ("Actual UPLH", "Actual HC used"):
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             if metric == "Actual UPLH":
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
@@ -483,6 +509,15 @@ if len(teams_in_view) == 1:
                     y=alt.Y("Completed Hours:Q", axis=alt.Axis(title=None, labels=False)),
                     color=alt.value("purple"),
                     tooltip=["period_date:T", alt.Tooltip("Completed Hours:Q", format=",.0f")]
+                )
+            )
+            i += 1
+        if "Actual HC used" in selected and "Actual HC used" in single.columns:
+            layers.append(
+                base.mark_line(point=True).encode(
+                    y=alt.Y("Actual HC used:Q", axis=alt.Axis(title=None, labels=False)),
+                    color=alt.value("indianred"),
+                    tooltip=["period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")]
                 )
             )
             i += 1

@@ -1154,7 +1154,7 @@ def save_outputs(df: pd.DataFrame):
         "Total Available Hours", "Completed Hours",
         "Target Output", "Actual Output",
         "Target UPLH", "Actual UPLH",
-        "HC in WIP",
+        "HC in WIP", "Actual HC Used",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
@@ -1163,7 +1163,7 @@ def save_outputs(df: pd.DataFrame):
     if "period_date" in out.columns:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
     numeric_cols = {"Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                    "Target UPLH", "Actual UPLH"} & set(out.columns)
+                    "Target UPLH", "Actual UPLH", "Actual HC Used"} & set(out.columns)
     for c in numeric_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.replace({np.nan: ""})
@@ -1315,6 +1315,8 @@ def run_once():
     df["Actual UPLH"] = df.apply(lambda r: safe_div(r.get("Actual Output"), r.get("Completed Hours")), axis=1)
     df["Target UPLH"] = df["Target UPLH"].round(2)
     df["Actual UPLH"] = df["Actual UPLH"].round(2)
+    df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 32.5
+    df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
     df = add_open_complaint_timeliness(df)
     save_outputs(df)
