@@ -95,7 +95,7 @@ if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = teams
+default_teams = [teams[0]] if teams else [] 
 try:
     params = st.query_params
     saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
