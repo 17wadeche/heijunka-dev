@@ -146,21 +146,12 @@ latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
             .tail(1))
 kpi_cols = st.columns(4)
-def kpi(col, label, value, fmt="{:,.2f}", color=None):
+def kpi(col, label, value, fmt="{:,.2f}"):
     if pd.isna(value):
         col.metric(label, "—")
     else:
         try:
-            formatted_value = fmt.format(value)
-            if color:
-                col.markdown(f"""
-                <div style="background-color: white; padding: 10px; border-radius: 5px; border-left: 4px solid {color};">
-                    <p style="font-size: 14px; color: #666; margin: 0;">{label}</p>
-                    <p style="font-size: 36px; font-weight: bold; color: {color}; margin: 0;">{formatted_value}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                col.metric(label, formatted_value)
+            col.metric(label, fmt.format(value))
         except Exception:
             col.metric(label, str(value))
 tot_target = latest["Target Output"].sum(skipna=True)
