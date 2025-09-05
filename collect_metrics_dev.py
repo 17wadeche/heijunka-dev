@@ -228,6 +228,12 @@ def _coerce_to_date_for_filter(v) -> _date | None:
 def _git(args: list[str], cwd: Path) -> tuple[int, str, str]:
     p = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     out, err = p.communicate()
+    cmd = " ".join(args)
+    if p.returncode != 0:
+        print(f"[git] {cmd} -> code={p.returncode}\nSTDERR: {err}\nSTDOUT: {out}")
+    else:
+        if err.strip():
+            print(f"[git] {cmd} (ok) stderr: {err.strip()}")
     return p.returncode, out.strip(), err.strip()
 def _ensure_git_identity(repo_dir: Path):
     code, out, _ = _git(["git", "config", "--get", "user.email"], repo_dir)
@@ -243,24 +249,52 @@ def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main
     if not file_path.exists():
         print(f"[WARN] {file_path} not found to commit.")
         return
+    _git(["git", "config", "--global", "--add", "safe.directory", str(repo_dir)], repo_dir)
     _ensure_git_identity(repo_dir)
-    _git(["git", "checkout", branch], repo_dir)
-    _git(["git", "pull", "--rebase"], repo_dir)
-    rel = file_path.relative_to(repo_dir).as_posix()
-    _git(["git", "add", rel], repo_dir)
-    msg = f"Auto-update {rel} at {_dt.now().isoformat(timespec='seconds')}"
-    code, out, err = _git(["git", "commit", "-m", msg], repo_dir)
+    code, _, err = _git(["git", "--version"], repo_dir)
     if code != 0:
-        if "nothing to commit" in (out + " " + err).lower():
-            print("[git] No changes in CSV; skipping push.")
-            return
-        print(f"[WARN] git commit failed: {out or err}")
+        print("[WARN] Git not available on PATH. Install Git or adjust PATH.")
         return
-    code, out, err = _git(["git", "push"], repo_dir)
-    if code != 0:
-        print(f"[WARN] git push failed: {out or err}")
+    code, remotes, _ = _git(["git", "remote"], repo_dir)
+    if code != 0 or not remotes.strip():
+        print("[WARN] No git remote configured (e.g., 'origin'); cannot push.")
+        return
+    remote = "origin" if "origin" in remotes.split() else remotes.split()[0]
+    code, heads, _ = _git(["git", "branch", "--list", branch], repo_dir)
+    if heads.strip():
+        _git(["git", "checkout", branch], repo_dir)
     else:
-        print("[git] Pushed CSV update.")
+        _git(["git", "checkout", "-B", branch], repo_dir)
+    _git(["git", "fetch", remote], repo_dir)
+    code, up, _ = _git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo_dir)
+    if code != 0:
+        _git(["git", "branch", "--set-upstream-to", f"{remote}/{branch}", branch], repo_dir)
+    code, _, _ = _git(["git", "pull", "--rebase", remote, branch], repo_dir)
+    if code != 0:
+        print("[WARN] 'git pull --rebase' failed; skipping commit to avoid conflicts. Resolve repo state manually.")
+        return
+    try:
+        rel = file_path.relative_to(repo_dir).as_posix()
+    except Exception:
+        rel = str(file_path)
+    _git(["git", "add", "--", rel], repo_dir)
+    code, status, _ = _git(["git", "status", "--porcelain", "--", rel], repo_dir)
+    if code != 0:
+        print("[WARN] Could not check git status; aborting commit.")
+        return
+    if not status.strip():
+        print("[git] No changes in CSV; skipping push.")
+        return
+    msg = f"Auto-update {rel} at {_dt.now().isoformat(timespec='seconds')}"
+    code, _, _ = _git(["git", "commit", "-m", msg], repo_dir)
+    if code != 0:
+        print("[WARN] git commit failed; see logs above.")
+        return
+    code, _, _ = _git(["git", "push", "-u", remote, branch], repo_dir)
+    if code != 0:
+        print("[WARN] git push failed; see logs above. Check credentials / PAT / VPN.")
+    else:
+        print("[git] Pushed CSV update to", f"{remote}/{branch}")
 def _to_excel_com_value(v):
     if isinstance(v, (int, float, str)):
         return v
@@ -1182,9 +1216,10 @@ def save_outputs(df: pd.DataFrame):
         REPO_DIR.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(OUT_CSV, REPO_CSV) 
         print(f"Copied CSV to: {REPO_CSV.resolve()}")
-        git_autocommit_and_push(REPO_DIR, REPO_CSV, branch=GIT_BRANCH)
     except Exception as e:
-        print(f"[WARN] Could not copy CSV to C:\\heijunka-dev: {e}", file=sys.stderr)
+        print(f"[WARN] Could not copy CSV to {REPO_CSV}: {e}", file=sys.stderr)
+        return  
+    git_autocommit_and_push(REPO_DIR, REPO_CSV, branch=GIT_BRANCH)
 def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     new_df = normalize_period_date(new_df)
     if not OUT_XLSX.exists():
