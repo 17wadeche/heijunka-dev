@@ -94,15 +94,97 @@ st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", u
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.xlsx exists and has the 'All Metrics' sheet.")
     st.stop()
+# ---------- Teams (same functionality, nicer UI) ----------
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = [teams[0]] if teams else [] 
+default_teams = [teams[0]] if teams else []
+
+# Read saved URL params (supports both new/old Streamlit APIs)
 try:
     params = st.query_params
     saved = params.get_all("teams") if hasattr(params, "get_all") else params.get("teams", [])
 except Exception:
     params = st.experimental_get_query_params()
     saved = params.get("teams", [])
+
 initial_selection = [t for t in teams if t in saved] if saved else default_teams
+
+# Subtle, modern styling for the multiselect + tags
+st.markdown("""
+<style>
+/* Card-ish container */
+.block-container .teams-field {
+  background: rgba(127,127,127,.05);
+  border: 1px solid rgba(127,127,127,.18);
+  border-radius: 14px;
+  padding: 10px 12px 6px 12px;
+}
+
+/* Label */
+.teams-field .label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: .01em;
+  margin-bottom: 6px;
+  opacity: .9;
+}
+
+/* Multiselect input shell */
+.teams-field [data-testid="stMultiSelect"] > div {
+  border-radius: 12px !important;
+  border: 1px solid rgba(127,127,127,.25) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+
+/* Focus state */
+.teams-field [data-testid="stMultiSelect"] > div:focus-within {
+  outline: 0;
+  border-color: #2d6cdf !important;
+  box-shadow: 0 0 0 3px rgba(45,108,223,.15);
+}
+
+/* Placeholder text */
+.teams-field [data-testid="stMultiSelect"] input::placeholder {
+  color: rgba(60,60,60,.55);
+}
+
+/* Selected tag “pills” (BaseWeb tag) */
+.teams-field [data-baseweb="tag"] {
+  background: rgba(45,108,223,.10) !important;
+  border: 1px solid rgba(45,108,223,.25) !important;
+  color: #12345b !important;
+  border-radius: 999px !important;
+  padding: 4px 8px !important;
+}
+
+/* Tag remove icon hover */
+.teams-field [data-baseweb="tag"] svg:hover {
+  filter: brightness(0.7);
+}
+
+/* Compact vertical rhythm on small screens */
+@media (max-width: 900px) {
+  .teams-field { padding: 8px 10px 4px 10px; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container():
+    st.markdown("<div class='teams-field'>"
+                "<div class='label'>Teams</div>", unsafe_allow_html=True)
+
+    selected_teams = st.multiselect(
+        label="Teams",
+        options=teams,
+        default=initial_selection,
+        key="teams_sel",
+        placeholder="Select teams…",
+        label_visibility="collapsed",
+        help="Type to filter. Selection syncs to ?teams=… in the URL."
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+# ---------- End Teams ----------
+
 
 
 
