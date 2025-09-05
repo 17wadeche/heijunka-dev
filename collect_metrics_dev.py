@@ -1257,7 +1257,6 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
     if not (team_col and date_col and val_col):
         t = t.iloc[:, :3].copy()
         t.columns = ["team", "period_date", "Open Complaint Timeliness"]
-        team_col, date_col, val_col = t.columns.tolist()
     else:
         t = t.rename(columns={
             team_col: "team",
@@ -1266,20 +1265,31 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
         })
     t["team"] = t["team"].astype(str).str.strip()
     t["period_date"] = pd.to_datetime(t["period_date"], errors="coerce").dt.normalize()
-    t = t.dropna(subset=["team", "period_date"])
-    t = t.drop_duplicates(subset=["team", "period_date"], keep="last")
+    t = t.dropna(subset=["team", "period_date"]).drop_duplicates(subset=["team", "period_date"], keep="last")
     out = df.copy()
     if "team" not in out.columns or "period_date" not in out.columns:
         print("[timeliness] 'team'/'period_date' not found in metrics df; skipping join.")
         return df
     out["team"] = out["team"].astype(str).str.strip()
     out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    out = out.merge(
+    merged = out.merge(
         t[["team", "period_date", "Open Complaint Timeliness"]],
         on=["team", "period_date"],
-        how="left"
+        how="left",
+        suffixes=("_left", "_right")
     )
-    return out
+    left_name  = "Open Complaint Timeliness_left"
+    right_name = "Open Complaint Timeliness_right"
+    left  = pd.to_numeric(merged[left_name], errors="coerce") if left_name in merged.columns else None
+    right = pd.to_numeric(merged[right_name], errors="coerce") if right_name in merged.columns else None
+    if left is not None and right is not None:
+        merged["Open Complaint Timeliness"] = left.combine_first(right)
+        merged = merged.drop(columns=[left_name, right_name])
+    elif right is not None:
+        merged = merged.rename(columns={right_name: "Open Complaint Timeliness"})
+    elif left is not None:
+        merged = merged.rename(columns={left_name: "Open Complaint Timeliness"})
+    return merged
 def run_once():
     all_rows = []
     for cfg in TEAM_CONFIG:
