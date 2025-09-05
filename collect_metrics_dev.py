@@ -251,7 +251,7 @@ def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main
         return
     _git(["git", "config", "--global", "--add", "safe.directory", str(repo_dir)], repo_dir)
     _ensure_git_identity(repo_dir)
-    code, _, err = _git(["git", "--version"], repo_dir)
+    code, _, _ = _git(["git", "--version"], repo_dir)
     if code != 0:
         print("[WARN] Git not available on PATH. Install Git or adjust PATH.")
         return
@@ -265,13 +265,16 @@ def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main
         _git(["git", "checkout", branch], repo_dir)
     else:
         _git(["git", "checkout", "-B", branch], repo_dir)
+    _, dirty, _ = _git(["git", "status", "--porcelain"], repo_dir)
+    if dirty.strip():
+        print("[git] Working tree has local changes; using --autostash during pull.")
     _git(["git", "fetch", remote], repo_dir)
-    code, up, _ = _git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo_dir)
+    code, _, _ = _git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], repo_dir)
     if code != 0:
         _git(["git", "branch", "--set-upstream-to", f"{remote}/{branch}", branch], repo_dir)
-    code, _, _ = _git(["git", "pull", "--rebase", remote, branch], repo_dir)
+    code, _, _ = _git(["git", "pull", "--rebase", "--autostash", remote, branch], repo_dir)
     if code != 0:
-        print("[WARN] 'git pull --rebase' failed; skipping commit to avoid conflicts. Resolve repo state manually.")
+        print("[WARN] 'git pull --rebase --autostash' failed; skipping commit to avoid conflicts. Resolve repo state manually.")
         return
     try:
         rel = file_path.relative_to(repo_dir).as_posix()
