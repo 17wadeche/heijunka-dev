@@ -117,7 +117,7 @@ if "teams_sel" not in st.session_state:
     st.session_state.teams_sel = saved or default_teams
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
-    selected_teams = st.multiselect("Teams", teams, default=st.session_state.teams_sel, key="teams_sel")
+    selected_teams = st.multiselect("Teams", teams, key="teams_sel")
 with col2:
     has_dates = df["period_date"].notna().any()
     min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
