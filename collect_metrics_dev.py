@@ -43,37 +43,6 @@ def _is_excluded_path(p: Path) -> bool:
     return False
 TEAM_CONFIG = [
     {
-        "name": "SVT",
-        "root": r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka",
-        "pattern": "*.xls*",
-        "cells": {
-            "Individual": {
-                "Total Available Hours": "I39",
-            }
-        },
-        "sum_columns": {
-            "#12 Production Analysis": {
-                "Target Output": "F",
-                "Actual Output": "I",
-                "Completed Hours": {
-                    "col": "G",
-                    "row_start": 1,
-                    "row_end": 200,
-                    "divide": 60,
-                    "skip_hidden": True,
-                },
-            }
-        },
-        "fallback_total_available_hours": {
-            "sheet": "Next Weeks Hours",
-            "column": "I",
-            "include_contains": {"B": "Available WIP Hours"},
-            "exclude_regex": {"A": r"^\s*(Team member|Total)\b"},
-            "skip_hidden": True,
-        },
-        "unique_key": ["team", "period_date"],
-    },
-    {
         "name": "TCT Commercial",
         "root": r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - Weekly Heijunka Archived",
         "pattern": "*.xlsb",
@@ -1260,20 +1229,25 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     old["_key"] = make_key(old)
     new_df["_key"] = make_key(new_df)
     combined = pd.concat([old, new_df], ignore_index=True)
-    combined = combined.drop_duplicates(subset=["_key"], keep="last").drop(columns=["_key"])
     combined = normalize_period_date(combined)
-    base_cols = ["team", "period_date", "source_file"]
-    metric_cols = [c for c in combined.columns if c not in base_cols + ["error"]]
-    cols = base_cols + metric_cols + (["error"] if "error" in combined.columns else [])
-    combined = combined.reindex(columns=cols)
-    if "period_date" in combined.columns:
-        combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
+    latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
+    is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
+    past = combined.loc[~is_latest].drop_duplicates(subset=["_key"], keep="first")
+    curr = combined.loc[is_latest].drop_duplicates(subset=["_key"], keep="last")
+    combined = pd.concat([past, curr], ignore_index=True).drop(columns=["_key"])
+    combined = normalize_period_date(combined)
     combined = _filter_pss_date_window(combined)
     if "source_file" in combined.columns:
         norm = combined["source_file"].astype(str).str.lower().str.replace("/", "\\")
         combined = combined[~norm.isin(EXCLUDED_SOURCE_FILES)]
         if EXCLUDED_DIRS:
             combined = combined[~norm.str.startswith(tuple(EXCLUDED_DIRS))]
+    base_cols = ["team", "period_date", "source_file"]
+    metric_cols = [c for c in combined.columns if c not in base_cols + ["error"]]
+    cols = base_cols + metric_cols + (["error"] if "error" in combined.columns else [])
+    combined = combined.reindex(columns=cols)
+    if "period_date" in combined.columns:
+        combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
     return combined
 def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
     try:
