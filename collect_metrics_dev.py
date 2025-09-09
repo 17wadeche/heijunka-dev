@@ -1233,11 +1233,13 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = normalize_period_date(combined)
     if "source_file" in combined.columns:
         norm = combined["source_file"].astype(str).str.lower().str.replace("/", "\\")
+        is_old = combined["_origin"] == "old"
         keep = pd.Series(True, index=combined.index)
         if EXCLUDED_SOURCE_FILES:
-            keep &= (combined["_origin"] == "old") | (~norm.isin(EXCLUDED_SOURCE_FILES))
+            keep &= is_old | (~norm.isin(EXCLUDED_SOURCE_FILES))
         if EXCLUDED_DIRS:
-            keep &= (combined["_origin"] == "old") | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
+            keep &= is_old | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
+
         combined = combined.loc[keep].copy()
     latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
     is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
