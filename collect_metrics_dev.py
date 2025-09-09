@@ -1203,11 +1203,27 @@ def save_outputs(df: pd.DataFrame):
     git_autocommit_and_push(REPO_DIR, target_for_git, branch=GIT_BRANCH)
 def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     new_df = normalize_period_date(new_df)
-    if not OUT_XLSX.exists():
-        return new_df
-    try:
-        old = pd.read_excel(OUT_XLSX, sheet_name="All Metrics")
-    except Exception:
+    old_frames = []
+    if OUT_XLSX.exists():
+        try:
+            old_xlsx = pd.read_excel(OUT_XLSX, sheet_name="All Metrics")
+            old_frames.append(old_xlsx)
+        except Exception:
+            pass
+    if REPO_CSV.exists():
+        try:
+            old_csv = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
+            for col in old_csv.columns:
+                if col.lower() in {"total available hours","completed hours","target output","actual output",
+                                   "target uplh","actual uplh","actual hc used","hc in wip",
+                                   "open complaint timeliness"}:
+                    old_csv[col] = pd.to_numeric(old_csv[col], errors="coerce")
+            old_frames.append(old_csv)
+        except Exception:
+            pass
+    if old_frames:
+        old = pd.concat(old_frames, ignore_index=True)
+    else:
         return new_df
     old = normalize_period_date(old)
     team_keys = {}
@@ -1246,11 +1262,11 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     past = (combined.loc[~is_latest]
             .assign(_origin_rank=origin_rank[~is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="first"))   # old wins
+            .drop_duplicates(subset=["_key"], keep="first"))   # old wins for past
     curr = (combined.loc[is_latest]
             .assign(_origin_rank=origin_rank[is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="last"))    # new wins
+            .drop_duplicates(subset=["_key"], keep="last"))    # new wins for latest
     combined = pd.concat([past, curr], ignore_index=True)
     combined = normalize_period_date(combined)
     combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
@@ -1332,11 +1348,6 @@ def run_once():
             all_rows.extend(collect_for_team(cfg))
     df = build_master(all_rows)
     df = _filter_pss_date_window(df)
-    if not df.empty and "source_file" in df.columns:
-        norm = df["source_file"].astype(str).str.lower().str.replace("/", "\\")
-        df = df[~norm.isin(EXCLUDED_SOURCE_FILES)]
-        if EXCLUDED_DIRS:
-            df = df[~norm.str.startswith(tuple(EXCLUDED_DIRS))]
     def safe_div(n, d):
         try:
             n = float(str(n).replace(",", "").strip())
@@ -1352,6 +1363,18 @@ def run_once():
     df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
     df = add_open_complaint_timeliness(df)
+    try:
+        if REPO_CSV.exists():
+            repo = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
+            repo_svt = repo[repo["team"] == "SVT"]
+            curr_svt = df[df["team"] == "SVT"]
+            r_n = pd.to_datetime(repo_svt["period_date"], errors="coerce").dt.normalize().nunique()
+            c_n = pd.to_datetime(curr_svt["period_date"], errors="coerce").dt.normalize().nunique()
+            if c_n + 3 < r_n:
+                print("[safety] SVT periods dropped unexpectedly; restoring repo history union.")
+                df = merge_with_existing(df)
+    except Exception:
+        pass
     save_outputs(df)
     if not df.empty:
         with pd.option_context("display.max_columns", None, "display.width", 180):
