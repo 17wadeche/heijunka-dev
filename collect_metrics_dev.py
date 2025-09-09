@@ -1227,42 +1227,39 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
                     parts.append(r.get(c))
             keys.append(tuple(parts))
         return pd.Series(keys, index=df.index)
-    old = old.copy()
-    new_df = new_df.copy()
-    old["_origin"] = "old"
-    new_df["_origin"] = "new"
-    old["_key"] = make_key(old)
-    new_df["_key"] = make_key(new_df)
+    old = old.copy();      old["_origin"] = "old";      old["_key"] = make_key(old)
+    new_df = new_df.copy(); new_df["_origin"] = "new";  new_df["_key"] = make_key(new_df)
     combined = pd.concat([old, new_df], ignore_index=True)
     combined = normalize_period_date(combined)
+    if "source_file" in combined.columns:
+        norm = combined["source_file"].astype(str).str.lower().str.replace("/", "\\")
+        keep = pd.Series(True, index=combined.index)
+        if EXCLUDED_SOURCE_FILES:
+            keep &= (combined["_origin"] == "old") | (~norm.isin(EXCLUDED_SOURCE_FILES))
+        if EXCLUDED_DIRS:
+            keep &= (combined["_origin"] == "old") | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
+        combined = combined.loc[keep].copy()
     latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
     is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
-    is_past = ~is_latest
     origin_rank = combined["_origin"].map({"old": 0, "new": 1}).fillna(1)
-    past = (combined.loc[is_past]
-            .assign(_origin_rank=origin_rank[is_past])
+    past = (combined.loc[~is_latest]
+            .assign(_origin_rank=origin_rank[~is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="first"))
+            .drop_duplicates(subset=["_key"], keep="first"))   # old wins
     curr = (combined.loc[is_latest]
             .assign(_origin_rank=origin_rank[is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="last"))
+            .drop_duplicates(subset=["_key"], keep="last"))    # new wins
     combined = pd.concat([past, curr], ignore_index=True)
-    combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
     combined = normalize_period_date(combined)
-    combined = _filter_pss_date_window(combined)
-    if "source_file" in combined.columns:
-        norm = combined["source_file"].astype(str).str.lower().str.replace("/", "\\")
-        combined = combined[~norm.isin(EXCLUDED_SOURCE_FILES)]
-        if EXCLUDED_DIRS:
-            combined = combined[~norm.str.startswith(tuple(EXCLUDED_DIRS))]
+    combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
     base_cols = ["team", "period_date", "source_file"]
     metric_cols = [c for c in combined.columns if c not in base_cols + ["error"]]
     cols = base_cols + metric_cols + (["error"] if "error" in combined.columns else [])
     combined = combined.reindex(columns=cols)
     if "period_date" in combined.columns:
-        combined = combined.sort_values(["team", "period_date", "source_file"],
-                                        ascending=[True, True, True])
+        combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
+    combined = _filter_pss_date_window(combined)
     return combined
 def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
     try:
