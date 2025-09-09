@@ -1239,7 +1239,6 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
             keep &= is_old | (~norm.isin(EXCLUDED_SOURCE_FILES))
         if EXCLUDED_DIRS:
             keep &= is_old | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
-
         combined = combined.loc[keep].copy()
     latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
     is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
