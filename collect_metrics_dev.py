@@ -187,6 +187,24 @@ def _excel_serial_to_date(n) -> _date | None:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
     except Exception:
         return None
+YEAR_RX = re.compile(r"\b(?:19|20)\d{2}\b")  # 1900–2099
+def _coerce_to_date_for_filter2(v, require_explicit_year: bool = False) -> _date | None:
+    if isinstance(v, _dt):
+        return v.date()
+    if isinstance(v, _date):
+        return v
+    if isinstance(v, (int, float)):
+        d = _excel_serial_to_date(v)
+        if d and _dt(1900, 1, 1).date() <= d <= _dt(2100, 1, 1).date():
+            return d
+        return None
+    s = str(v)
+    if require_explicit_year and not YEAR_RX.search(s):
+        return None
+    try:
+        return dateparser.parse(s, dayfirst=False, yearfirst=False).date()
+    except Exception:
+        return None
 def _coerce_to_date_for_filter(v) -> _date | None:
     if isinstance(v, _dt):
         return v.date()
@@ -289,14 +307,12 @@ def collect_ph_team(cfg: dict) -> list[dict]:
     src_display = str(file_path) if file_path else (cfg.get("file") or "")
     if not file_path or not file_path.exists():
         return [{"team": team_name, "source_file": src_display, "error": "PH file not found"}]
-
     try:
         import win32com.client as win32
         import pywintypes
     except Exception:
         return [{"team": team_name, "source_file": src_display,
                  "error": "pywin32 not installed; run 'pip install pywin32' to enable PH mode"}]
-
     def _to_float(v):
         if v is None:
             return None
@@ -304,7 +320,6 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             return float(str(v).replace(",", "").strip())
         except Exception:
             return None
-
     rows: list[dict] = []
     excel = win32.DispatchEx("Excel.Application")
     excel.Visible = False
@@ -318,7 +333,6 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             excel.EnableEvents = False
         except Exception:
             pass
-
         wb = None
         try:
             wb = excel.Workbooks.Open(
@@ -330,10 +344,11 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             sheet_count = int(wb.Worksheets.Count)
             for idx in range(1, sheet_count + 1):
                 ws = wb.Worksheets(idx)
-                period_date = _coerce_to_date_for_filter(ws.Name)
-                if period_date is None:
+                name = str(ws.Name)
+                if not re.search(r"\b(?:19|20)\d{2}\b", name):
                     del ws
                     continue
+                period_date = _coerce_to_date_for_filter2(name)
                 try:
                     ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                     ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
