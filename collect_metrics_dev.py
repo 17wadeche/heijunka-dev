@@ -182,6 +182,13 @@ def parse_date_from_text(text: str):
             except Exception:
                 pass
     return None
+def _filter_future_periods(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "period_date" not in df.columns:
+        return df
+    today = pd.Timestamp.today().normalize()
+    d = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    keep = d.isna() | (d <= today)      # keep blanks and dates up to today
+    return df.loc[keep].copy()
 def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "Total Available Hours" not in df.columns:
         return df
@@ -362,6 +369,12 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     del ws
                     continue
                 period_date = _coerce_to_date_for_filter2(name)
+                try:
+                    if period_date and period_date > _dt.today().date():
+                        del ws
+                        continue
+                except Exception:
+                    pass
                 try:
                     ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                     ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
@@ -1442,6 +1455,7 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = combined.reindex(columns=cols)
     if "period_date" in combined.columns:
         combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
+    combined = _filter_future_periods(combined)
     combined = _filter_ph_zero_hours(combined)
     combined = _filter_pss_date_window(combined)
     return combined
@@ -1517,6 +1531,7 @@ def run_once():
             all_rows.extend(collect_for_team(cfg))
     df = build_master(all_rows)
     df = _filter_ph_zero_hours(df) 
+    df = _filter_future_periods(df)
     df = _filter_pss_date_window(df)
     def safe_div(n, d):
         try:
