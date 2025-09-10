@@ -344,6 +344,13 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             sheet_count = int(wb.Worksheets.Count)
             for idx in range(1, sheet_count + 1):
                 ws = wb.Worksheets(idx)
+                try:
+                    _vis = int(getattr(ws, "Visible", -1))
+                except Exception:
+                    _vis = -1
+                if _vis in (0, 2):
+                    del ws
+                    continue
                 name = str(ws.Name)
                 if not re.search(r"\b(?:19|20)\d{2}\b", name):
                     del ws
