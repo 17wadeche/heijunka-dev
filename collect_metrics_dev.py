@@ -354,7 +354,6 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                 UpdateLinks=0,          # 0 = don't update
                 IgnoreReadOnlyRecommended=True
             )
-            rows_candidates: list[dict] = []
             sheet_count = int(wb.Worksheets.Count)
             today_d = _dt.today().date()
             for idx in range(1, sheet_count + 1):
@@ -392,7 +391,6 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
                         tah =  _to_float(ws.Range("S59").Value)
                         hc_end = "Q"
-
                     if tah is None or float(tah) <= 0.0:
                         del ws
                         continue
@@ -412,11 +410,6 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     })
                 finally:
                     del ws
-            if rows_candidates:
-                rows_candidates.sort(key=lambda r: r["period_date"])
-                rows = [rows_candidates[-1]]
-            else:
-                rows = [] 
         except Exception as e:
             rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode failed: {e}"})
         finally:
