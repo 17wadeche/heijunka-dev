@@ -289,11 +289,14 @@ def collect_ph_team(cfg: dict) -> list[dict]:
     src_display = str(file_path) if file_path else (cfg.get("file") or "")
     if not file_path or not file_path.exists():
         return [{"team": team_name, "source_file": src_display, "error": "PH file not found"}]
+
     try:
         import win32com.client as win32
+        import pywintypes
     except Exception:
         return [{"team": team_name, "source_file": src_display,
                  "error": "pywin32 not installed; run 'pip install pywin32' to enable PH mode"}]
+
     def _to_float(v):
         if v is None:
             return None
@@ -301,42 +304,77 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             return float(str(v).replace(",", "").strip())
         except Exception:
             return None
-    rows: list[dict] = []
-    excel = win32.Dispatch("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
-    wb = None
-    try:
-        wb = excel.Workbooks.Open(str(file_path))
-        for ws in wb.Worksheets:
-            period_date = _coerce_to_date_for_filter(ws.Name)
-            if period_date is None:
-                continue
-            ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)  # Actual Output
-            ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)  # Completed Hours
-            to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)  # Target Output
-            tah = _to_float(ws.Range("S59").Value)  # You called these "target hours"; we store into Total Available Hours
-            try:
-                hc = _count_ph_hc_in_wip_com(ws)
-            except Exception:
-                hc = None
 
-            rows.append({
-                "team": team_name,
-                "source_file": src_display,
-                "period_date": period_date,
-                "Total Available Hours": tah,
-                "Completed Hours": ch,
-                "Target Output": to_,
-                "Actual Output": ao,
-                "HC in WIP": hc,
-            })
+    rows: list[dict] = []
+    excel = win32.DispatchEx("Excel.Application")
+    excel.Visible = False
+    try:
+        excel.DisplayAlerts = False
+        try:
+            excel.ScreenUpdating = False
+        except Exception:
+            pass
+        try:
+            excel.EnableEvents = False
+        except Exception:
+            pass
+
+        wb = None
+        try:
+            wb = excel.Workbooks.Open(
+                str(file_path),
+                ReadOnly=True,
+                UpdateLinks=0,          # 0 = don't update
+                IgnoreReadOnlyRecommended=True
+            )
+            sheet_count = int(wb.Worksheets.Count)
+            for idx in range(1, sheet_count + 1):
+                ws = wb.Worksheets(idx)
+                period_date = _coerce_to_date_for_filter(ws.Name)
+                if period_date is None:
+                    del ws
+                    continue
+                try:
+                    ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
+                    ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
+                    to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
+                    tah = _to_float(ws.Range("S59").Value)
+                    try:
+                        hc = _count_ph_hc_in_wip_com(ws)
+                    except Exception:
+                        hc = None
+                    rows.append({
+                        "team": team_name,
+                        "source_file": src_display,
+                        "period_date": period_date,
+                        "Total Available Hours": tah,
+                        "Completed Hours": ch,
+                        "Target Output": to_,
+                        "Actual Output": ao,
+                        "HC in WIP": hc,
+                    })
+                finally:
+                    del ws
+        except Exception as e:
+            rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode failed: {e}"})
+        finally:
+            try:
+                if wb is not None:
+                    try:
+                        wb.Close(SaveChanges=0)  # xlDoNotSaveChanges
+                    except pywintypes.com_error:
+                        pass
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    excel.Quit()
+                except pywintypes.com_error:
+                    pass
+                except Exception:
+                    pass
     except Exception as e:
-        rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode failed: {e}"})
-    finally:
-        if wb:
-            wb.Close(SaveChanges=False)
-        excel.Quit()
+        rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode init failed: {e}"})
     return rows
 def _get_validation_values_via_com(excel, ws, a1_cell: str, source_hint: str | None = None):
     vals = []
