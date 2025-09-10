@@ -1414,6 +1414,8 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     else:
         return new_df
     old = normalize_period_date(old)
+    if "team" in old.columns:
+        old = old.loc[old["team"] != "PH"].copy()
     team_keys = {}
     for cfg in TEAM_CONFIG:
         key = cfg.get("unique_key", ["team", "period_date", "source_file"])
