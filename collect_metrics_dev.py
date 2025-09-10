@@ -362,6 +362,11 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
                     tah = _to_float(ws.Range("S59").Value)
                     try:
+                        if tah is None or float(tah) == 0.0:
+                            continue
+                    except Exception:
+                        continue
+                    try:
                         hc = _count_ph_hc_in_wip_com(ws)
                     except Exception:
                         hc = None
