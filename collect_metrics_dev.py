@@ -182,6 +182,12 @@ def parse_date_from_text(text: str):
             except Exception:
                 pass
     return None
+def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "team" not in df.columns or "Total Available Hours" not in df.columns:
+        return df
+    tah = pd.to_numeric(df["Total Available Hours"], errors="coerce")
+    keep = ~((df["team"] == "PH") & (tah.isna() | (tah <= 0)))
+    return df.loc[keep].copy()
 def _excel_serial_to_date(n) -> _date | None:
     try:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
@@ -1436,6 +1442,7 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = combined.reindex(columns=cols)
     if "period_date" in combined.columns:
         combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
+    combined = _filter_ph_zero_hours(combined)
     combined = _filter_pss_date_window(combined)
     return combined
 def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
@@ -1509,6 +1516,7 @@ def run_once():
         else:
             all_rows.extend(collect_for_team(cfg))
     df = build_master(all_rows)
+    df = _filter_ph_zero_hours(df) 
     df = _filter_pss_date_window(df)
     def safe_div(n, d):
         try:
