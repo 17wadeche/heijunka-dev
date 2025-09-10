@@ -60,7 +60,8 @@ TEAM_CONFIG = [
                 "Actual Output": "J",
             }
         },
-    },{
+    },
+    {
         "name": "TCT Clinical",
         "root": r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - Weekly Heijunka Archived",
         "pattern": "*.xlsb",
@@ -151,6 +152,12 @@ TEAM_CONFIG = [
             "Target Output": ["X10", "Z10"],
             "Actual Output": ["X5",  "Z5"],
         },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "PH",
+        "ph_mode": True,
+        "file": r"C:\Users\wadec8\Medtronic PLC\Daily Tracker\PH Cell Heijunka.xlsx",
         "unique_key": ["team", "period_date"],
     },
 ]
@@ -276,6 +283,61 @@ def _to_excel_com_value(v):
     if isinstance(v, _date):
         return _dt(v.year, v.month, v.day)
     return str(v)
+def collect_ph_team(cfg: dict) -> list[dict]:
+    file_path = Path(cfg.get("file", ""))
+    team_name = cfg.get("name", "PH")
+    src_display = str(file_path) if file_path else (cfg.get("file") or "")
+    if not file_path or not file_path.exists():
+        return [{"team": team_name, "source_file": src_display, "error": "PH file not found"}]
+    try:
+        import win32com.client as win32
+    except Exception:
+        return [{"team": team_name, "source_file": src_display,
+                 "error": "pywin32 not installed; run 'pip install pywin32' to enable PH mode"}]
+    def _to_float(v):
+        if v is None:
+            return None
+        try:
+            return float(str(v).replace(",", "").strip())
+        except Exception:
+            return None
+    rows: list[dict] = []
+    excel = win32.Dispatch("Excel.Application")
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    wb = None
+    try:
+        wb = excel.Workbooks.Open(str(file_path))
+        for ws in wb.Worksheets:
+            period_date = _coerce_to_date_for_filter(ws.Name)
+            if period_date is None:
+                continue
+            ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)  # Actual Output
+            ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)  # Completed Hours
+            to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)  # Target Output
+            tah = _to_float(ws.Range("S59").Value)  # You called these "target hours"; we store into Total Available Hours
+            try:
+                hc = _count_ph_hc_in_wip_com(ws)
+            except Exception:
+                hc = None
+
+            rows.append({
+                "team": team_name,
+                "source_file": src_display,
+                "period_date": period_date,
+                "Total Available Hours": tah,
+                "Completed Hours": ch,
+                "Target Output": to_,
+                "Actual Output": ao,
+                "HC in WIP": hc,
+            })
+    except Exception as e:
+        rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode failed: {e}"})
+    finally:
+        if wb:
+            wb.Close(SaveChanges=False)
+        excel.Quit()
+    return rows
 def _get_validation_values_via_com(excel, ws, a1_cell: str, source_hint: str | None = None):
     vals = []
     formula = source_hint
@@ -363,6 +425,39 @@ def _sum_pairs_from_excel_com(ws, sum_pairs: dict[str, list[str]]) -> dict:
 def _count_pss_hc_in_wip_com(ws, row_indices=None, col_start="B", col_end="O") -> int:
     if row_indices is None:
         row_indices = [34, 35, 38, 39, 42, 43, 46, 47, 50, 51]
+    rmin, rmax = min(row_indices), max(row_indices)
+    rng = ws.Range(f"{col_start}{rmin}:{col_end}{rmax}").Value  
+    if not isinstance(rng, (tuple, list)) or not isinstance(rng[0], (tuple, list)):
+        rng = (rng,)
+    wanted_offsets = {ri - rmin for ri in row_indices}
+    def _is_zero_or_blank(v):
+        if v is None:
+            return True
+        s = str(v).strip()
+        if not s:
+            return True
+        try:
+            return float(s) == 0.0
+        except Exception:
+            return False
+    cols = len(rng[0])
+    count = 0
+    for c in range(cols):
+        any_nonzero = False
+        for r_off in wanted_offsets:
+            try:
+                v = rng[r_off][c]
+            except Exception:
+                v = None
+            if not _is_zero_or_blank(v):
+                any_nonzero = True
+                break
+        if any_nonzero:
+            count += 1
+    return count
+def _count_ph_hc_in_wip_com(ws, row_indices=None, col_start="B", col_end="Q") -> int:
+    if row_indices is None:
+        row_indices = [31, 32, 35, 36, 39, 40, 43, 44, 47, 48]
     rmin, rmax = min(row_indices), max(row_indices)
     rng = ws.Range(f"{col_start}{rmin}:{col_end}{rmax}").Value  
     if not isinstance(rng, (tuple, list)) or not isinstance(rng[0], (tuple, list)):
@@ -1344,6 +1439,8 @@ def run_once():
     for cfg in TEAM_CONFIG:
         if cfg.get("pss_mode"):
             all_rows.extend(collect_pss_team(cfg))
+        elif cfg.get("ph_mode"):
+            all_rows.extend(collect_ph_team(cfg))
         else:
             all_rows.extend(collect_for_team(cfg))
     df = build_master(all_rows)
