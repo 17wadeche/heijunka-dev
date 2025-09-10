@@ -379,15 +379,25 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     del ws
                     continue
                 try:
-                    ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
-                    ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
-                    to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
-                    tah = _to_float(ws.Range("S59").Value)
+                    new_layout = bool(period_date and period_date > _dt(2025, 8, 30).date())
+                    if new_layout:
+                        ao  = (_to_float(ws.Range("Z2").Value)  or 0.0) + (_to_float(ws.Range("AB2").Value) or 0.0)
+                        ch  = (_to_float(ws.Range("Z4").Value)  or 0.0) + (_to_float(ws.Range("AB4").Value) or 0.0)
+                        to_ = (_to_float(ws.Range("Z7").Value)  or 0.0) + (_to_float(ws.Range("AB7").Value) or 0.0)
+                        tah =  _to_float(ws.Range("T59").Value)
+                        hc_end = "R"   # end column moved to R
+                    else:
+                        ao  = (_to_float(ws.Range("Y2").Value)  or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
+                        ch  = (_to_float(ws.Range("Y4").Value)  or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
+                        to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
+                        tah =  _to_float(ws.Range("S59").Value)
+                        hc_end = "Q"
+
                     if tah is None or float(tah) <= 0.0:
                         del ws
                         continue
                     try:
-                        hc = _count_ph_hc_in_wip_com(ws)
+                        hc = _count_ph_hc_in_wip_com(ws, col_end=hc_end)
                     except Exception:
                         hc = None
                     rows.append({
