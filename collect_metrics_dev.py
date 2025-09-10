@@ -354,7 +354,9 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                 UpdateLinks=0,          # 0 = don't update
                 IgnoreReadOnlyRecommended=True
             )
+            rows_candidates: list[dict] = []
             sheet_count = int(wb.Worksheets.Count)
+            today_d = _dt.today().date()
             for idx in range(1, sheet_count + 1):
                 ws = wb.Worksheets(idx)
                 try:
@@ -364,26 +366,25 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                 if _vis in (0, 2):
                     del ws
                     continue
-                name = str(ws.Name)
-                if not re.search(r"\b(?:19|20)\d{2}\b", name):
+                name = str(ws.Name).strip()
+                if not re.search(r"\b(?:19|20)\d{4}\b", name) and not re.search(r"\b(?:19|20)\d{2}\b", name):
                     del ws
                     continue
-                period_date = _coerce_to_date_for_filter2(name)
+                period_date = None
                 try:
-                    if period_date and period_date > _dt.today().date():
-                        del ws
-                        continue
+                    period_date = _coerce_to_date_for_filter2(name, require_explicit_year=True)
                 except Exception:
-                    pass
+                    period_date = None
+                if not period_date or period_date > today_d:
+                    del ws
+                    continue
                 try:
                     ao = (_to_float(ws.Range("Y2").Value) or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                     ch = (_to_float(ws.Range("Y4").Value) or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
                     to_ = (_to_float(ws.Range("Y7").Value) or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
                     tah = _to_float(ws.Range("S59").Value)
-                    try:
-                        if tah is None or float(tah) == 0.0:
-                            continue
-                    except Exception:
+                    if tah is None or float(tah) <= 0.0:
+                        del ws
                         continue
                     try:
                         hc = _count_ph_hc_in_wip_com(ws)
@@ -401,6 +402,11 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     })
                 finally:
                     del ws
+            if rows_candidates:
+                rows_candidates.sort(key=lambda r: r["period_date"])
+                rows = [rows_candidates[-1]]
+            else:
+                rows = [] 
         except Exception as e:
             rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode failed: {e}"})
         finally:
@@ -421,6 +427,9 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     pass
     except Exception as e:
         rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode init failed: {e}"})
+    DEBUG_PH = True
+    if DEBUG_PH:
+        print("[PH] picked:", rows[0]["period_date"], "from", src_display) if rows else print("[PH] no valid week found")
     return rows
 def _get_validation_values_via_com(excel, ws, a1_cell: str, source_hint: str | None = None):
     vals = []
