@@ -264,7 +264,7 @@ with left:
             }))
         )
         team_sel = alt.selection_point(fields=["team"], bind="legend") if int(alt.__version__.split(".")[0]) >= 5 \
-                   else alt.selection_multi(fields=["team"], bind="legend")
+                   else alt.selection_point(fields=["team"], bind="legend")
         if ph_only and not ph_people.empty:
             try:
                 alt_major = int(alt.__version__.split(".")[0])
@@ -284,7 +284,7 @@ with left:
                 add_team = lambda chart: chart.add_params(team_sel)
                 filter_sel = sel_week
             else:
-                sel_week = alt.selection_single(
+                sel_week = alt.selection_point(
                     name="week_sel",
                     fields=["period_date"],
                     on="click",
@@ -370,7 +370,7 @@ with left:
                 if len(teams_in_view) > 1 else alt.value(1.0)
             )
             st.altair_chart((line + pts).properties(height=280).add_params(team_sel) if int(alt.__version__.split(".")[0]) >= 5
-                            else (line + pts).properties(height=280).add_selection(team_sel),
+                            else (line + pts).properties(height=280).add_params(team_sel),
                             use_container_width=True)
 
 with mid:
