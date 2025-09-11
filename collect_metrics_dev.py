@@ -476,6 +476,14 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         del ws
                         continue
                     try:
+                        ppl_in_wip_list = [
+                            nm for nm, vals in (per_person or {}).items()
+                            if vals is not None and float(vals.get("actual") or 0) > 0
+                        ]
+                    except Exception:
+                        ppl_in_wip_list = []
+                    ppl_in_wip = ", ".join(ppl_in_wip_list) if ppl_in_wip_list else ""
+                    try:
                         hc = _count_ph_hc_in_wip_com(ws, col_end=hc_end)
                     except Exception:
                         hc = None
@@ -490,6 +498,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         "HC in WIP": hc,
                         "UPLH WP1": uplh_wp1,
                         "UPLH WP2": uplh_wp2,
+                        "People in WIP": ppl_in_wip,
                         "PH Person Hours": json.dumps(per_person, ensure_ascii=False)
                     })
                 finally:
@@ -1448,7 +1457,7 @@ def save_outputs(df: pd.DataFrame):
         "Target UPLH", "Actual UPLH",
         "UPLH WP1", "UPLH WP2",
         "HC in WIP", "Actual HC Used",
-        "PH Person Hours",
+        "People in WIP", "PH Person Hours",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
