@@ -343,6 +343,7 @@ with left:
             chart = (line + pts).properties(height=280)
             chart = add_team(chart)
             st.altair_chart(chart, use_container_width=True)
+st.write("Altair", alt.__version__, "PH rows:", len(ph_people), "hrs_long rows:", len(hrs_long), "PH-only:", ph_only)
 with mid:
     st.subheader("Output Trend")
     out_long = (
