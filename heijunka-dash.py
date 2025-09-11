@@ -459,9 +459,11 @@ with mid:
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
+
     team_sel = alt.selection_point(fields=["team"], bind="legend")
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
+
     uplh_long = (
         f.melt(
             id_vars=["team", "period_date"],
@@ -471,25 +473,24 @@ with right:
         )
         .dropna(subset=["Value"])
     )
+
+    # Click to select a week; double-click to clear.
     sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["period_date"],   # <-- project real field, not a transformed alias
+        fields=["period_date"],   # project the real field
         on="click",
         clear="dblclick",
         empty="none",
     )
+
+    # ---- Top trend (unchanged behavior) ----
     trend_base = (
         alt.Chart(uplh_long)
         .encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="UPLH"),
             color=alt.Color("Metric:N", title="Series"),
-            tooltip=[
-                "team:N",
-                "period_date:T",
-                "Metric:N",
-                alt.Tooltip("Value:Q", format=",.2f"),
-            ],
+            tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")],
         )
     )
     line = trend_base.mark_line().encode(
@@ -507,6 +508,8 @@ with right:
         .encode(x="period_date:T")
     )
     top = alt.layer(line, pts, rule).properties(height=280).add_params(team_sel, sel_wk)
+
+    # ---- Breakdown only when a week is selected ----
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -518,8 +521,10 @@ with right:
             if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
                 wp2 = c
         return wp1, wp2
+
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
     st.caption("Click a week to drill down (double-click to clear).")
+
     if wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
@@ -527,11 +532,20 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
+
+        # Dynamic title: show the selected week; empty when nothing selected.
+        # NOTE: timeFormat pattern uses Vega syntax.
+        dynamic_title = {
+            "expr": "wk_uplh && isValid(wk_uplh.period_date) ? "
+                    "'WP1 vs WP2 UPLH (' + timeFormat(wk_uplh.period_date, '%Y-%m-%d') + ')' : ''"
+        }
+
         base_wp = (
             alt.Chart(wp_long)
-            .transform_filter(sel_wk)
+            .transform_filter(sel_wk)     # hides marks entirely when selection is cleared
             .transform_filter(team_sel)
         )
+
         if multi_team:
             wp_chart = (
                 base_wp.mark_bar()
@@ -546,7 +560,7 @@ with right:
                         alt.Tooltip("UPLH:Q", format=",.2f"),
                     ],
                 )
-                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+                .properties(height=230, title=dynamic_title)
             )
         else:
             wp_chart = (
@@ -561,13 +575,17 @@ with right:
                         alt.Tooltip("UPLH:Q", format=",.2f"),
                     ],
                 )
-                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+                .properties(height=230, title=dynamic_title)
             )
-        combined = alt.vconcat(top, wp_chart).add_params(team_sel, sel_wk)
+
+        # Use very small vconcat spacing so when the breakdown is empty, it visually "disappears".
+        combined = alt.vconcat(top, wp_chart, spacing=0).add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     else:
         st.altair_chart(top, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+
+    
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
