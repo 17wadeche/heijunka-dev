@@ -396,31 +396,124 @@ with mid:
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
+
+    # --- build main UPLH trend (Actual [+ Target if present]) ---
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
     uplh_long = (
         f.melt(
             id_vars=["team", "period_date"],
             value_vars=uplh_vars,
-            var_name="Metric", value_name="Value"
+            var_name="Metric",
+            value_name="Value",
         ).dropna(subset=["Value"])
     )
-    base = alt.Chart(uplh_long).encode(
-        x=alt.X("period_date:T", title="Week"),
-        y=alt.Y("Value:Q", title="UPLH"),
-        color=alt.Color("Metric:N", title="Series"),
-        tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")]
+
+    # Click selection for week drilldown (dbl-click to clear)
+    sel_week_uplh = alt.selection_point(
+        name="wk_uplh",
+        fields=["period_date"],
+        on="click",
+        nearest=True,
+        clear="dblclick",
+        empty="none",
     )
+
+    base = (
+        alt.Chart(uplh_long)
+        .encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="UPLH"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=[
+                "team:N",
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.2f"),
+            ],
+        )
+        .add_params(team_sel, sel_week_uplh)
+    )
+
     line = base.mark_line().encode(
         detail="team:N",
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
     )
-    pts = base.mark_point().encode(
+    pts = base.mark_point(size=70).encode(
         shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-        size=alt.value(45),
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
+        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
     )
-    st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+    rule = (
+        alt.Chart(uplh_long)
+        .transform_filter(sel_week_uplh)
+        .mark_rule(strokeDash=[4, 3])
+        .encode(x="period_date:T")
+    )
+
+    st.caption("Click a week to drill down (double-click to clear).")
+    st.altair_chart((line + pts + rule).properties(height=280), use_container_width=True)
+
+    # --- WP1 vs WP2 breakdown for the selected week ---
+    # Find likely WP1/WP2 UPLH columns (robust to naming like 'WP 1 UPLH', 'UPLH WP2', etc.)
+    def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
+        wp1, wp2 = None, None
+        for c in df.columns:
+            lc = str(c).lower().replace(" ", "")
+            if "uplh" not in lc:
+                continue
+            if any(tag in lc for tag in ("wp1", "wp01", "wp_1", "wp-1")) and wp1 is None:
+                wp1 = c
+            if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
+                wp2 = c
+        return wp1, wp2
+
+    wp1_col, wp2_col = _find_wp_uplh_cols(f)
+
+    if wp1_col and wp2_col:
+        wp_long = (
+            f[["team", "period_date", wp1_col, wp2_col]]
+            .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
+            .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
+        )
+        wp_long["UPLH"] = pd.to_numeric(wp_long["UPLH"], errors="coerce")
+        wp_long = wp_long.dropna(subset=["UPLH"])
+
+        # Respect legend filtering if multiple teams are visible
+        base_wp = (
+            alt.Chart(wp_long)
+            .transform_filter(sel_week_uplh)
+            .transform_filter(team_sel)
+        )
+
+        if multi_team:
+            wp_chart = base_wp.mark_bar().encode(
+                x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
+                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                color=alt.Color("WP:N", title="Work Package"),
+                tooltip=[
+                    "team:N",
+                    "period_date:T",
+                    "WP:N",
+                    alt.Tooltip("UPLH:Q", format=",.2f"),
+                ],
+            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+        else:
+            # Single team: simpler, bars by WP
+            wp_chart = base_wp.mark_bar().encode(
+                x=alt.X("WP:N", title="Work Package"),
+                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                color=alt.Color("WP:N", title="Work Package"),
+                tooltip=[
+                    "period_date:T",
+                    "WP:N",
+                    alt.Tooltip("UPLH:Q", format=",.2f"),
+                ],
+            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+
+        st.altair_chart(wp_chart, use_container_width=True)
+    else:
+        st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
