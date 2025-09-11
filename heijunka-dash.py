@@ -459,11 +459,7 @@ with mid:
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
-
-    # Legend-bound team selector (shows a Team legend via shape encoding)
     team_sel = alt.selection_point(fields=["team"], bind="legend")
-
-    # --- Trend data ---
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
     uplh_long = (
@@ -475,8 +471,6 @@ with right:
         )
         .dropna(subset=["Value"])
     )
-
-    # Click selection on a stable, date-only key shared by BOTH charts
     sel_wk = alt.selection_point(
         name="wk_uplh",
         fields=["_wk"],        # computed below via transform_timeunit
@@ -488,7 +482,7 @@ with right:
     )
     trend_base = (
         alt.Chart(uplh_long)
-        .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as="_wk")
+        .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as_="_wk")
         .encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="UPLH"),
@@ -501,7 +495,6 @@ with right:
             ],
         )
     )
-
     line = trend_base.mark_line().encode(
         detail="team:N",
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
@@ -512,16 +505,12 @@ with right:
     )
     rule = (
         alt.Chart(uplh_long)
-        .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as="_wk")
+        .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as_="_wk")
         .transform_filter(sel_wk)
         .mark_rule(strokeDash=[4, 3])
         .encode(x="period_date:T")
     )
-
-    # Hoist params to the layered chart so both the marks and the rule share them
     top = alt.layer(line, pts, rule).properties(height=280).add_params(team_sel, sel_wk)
-
-    # --- WP1 vs WP2 breakdown (filtered by the SAME selection & team legend) ---
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -533,9 +522,7 @@ with right:
             if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
                 wp2 = c
         return wp1, wp2
-
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
-
     if wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
@@ -543,14 +530,12 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
-
         base_wp = (
             alt.Chart(wp_long)
-            .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as="_wk")  # SAME key
+            .transform_timeunit(timeUnit="yearmonthdate", field="period_date", as_="_wk")  # SAME key
             .transform_filter(sel_wk)                                                     # clicked week
             .transform_filter(team_sel)                                                   # legend filter
         )
-
         if multi_team:
             wp_chart = (
                 base_wp.mark_bar()
@@ -582,17 +567,13 @@ with right:
                 )
                 .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
             )
-
         st.caption("Click a week to drill down (double-click to clear).")
-
-        # Define the params at the container level too, so the bottom chart can read them
         combined = alt.vconcat(top, wp_chart).add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     else:
         st.caption("Click a week to drill down (double-click to clear).")
         st.altair_chart(top, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
