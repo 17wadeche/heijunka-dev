@@ -284,7 +284,6 @@ with left:
                 rule_df = pd.DataFrame({"period_date": [picked_week]})
                 rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
                 top = (top + rule)
-            st.caption("Clicking no longer required. Use the dropdown to change the drilldown week.")
             st.altair_chart(top.properties(height=280), use_container_width=True)
             ph_week = (
                 ph_people.loc[ph_people["period_date"] == picked_week]
@@ -353,7 +352,6 @@ with left:
                 if len(teams_in_view) > 1 else alt.value(1.0)
             )
             st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
-st.write("Altair", alt.__version__, "PH rows:", len(ph_people), "hrs_long rows:", len(hrs_long), "PH-only:", ph_only)
 with mid:
     st.subheader("Output Trend")
     out_long = (
@@ -382,7 +380,7 @@ with mid:
 with right:
     st.subheader("UPLH Trend")
 
-    # --- build main UPLH trend (Actual [+ Target if present]) ---
+    # --- Trend data ---
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
     uplh_long = (
@@ -391,13 +389,14 @@ with right:
             value_vars=uplh_vars,
             var_name="Metric",
             value_name="Value",
-        ).dropna(subset=["Value"])
+        )
+        .dropna(subset=["Value"])
     )
 
-    # Click selection for week drilldown (dbl-click to clear)
-    sel_week_uplh = alt.selection_point(
+    # Click on a stable, date-only key to avoid tz/hh:mm mismatches
+    sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["period_date"],
+        fields=["_wk"],          # <-- derived below via transform_calculate
         on="click",
         nearest=True,
         clear="dblclick",
@@ -406,6 +405,7 @@ with right:
 
     base = (
         alt.Chart(uplh_long)
+        .transform_calculate(_wk="toDate(datum.period_date)")  # derive date-only key
         .encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="UPLH"),
@@ -417,7 +417,7 @@ with right:
                 alt.Tooltip("Value:Q", format=",.2f"),
             ],
         )
-        .add_params(team_sel, sel_week_uplh)
+        .add_params(team_sel, sel_wk)
     )
 
     line = base.mark_line().encode(
@@ -430,13 +430,16 @@ with right:
     )
     rule = (
         alt.Chart(uplh_long)
-        .transform_filter(sel_week_uplh)
+        .transform_calculate(_wk="toDate(datum.period_date)")
+        .transform_filter(sel_wk)
         .mark_rule(strokeDash=[4, 3])
         .encode(x="period_date:T")
     )
 
     st.caption("Click a week to drill down (double-click to clear).")
     st.altair_chart((line + pts + rule).properties(height=280), use_container_width=True)
+
+    # --- WP1 vs WP2 breakdown for the selected week ---
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -456,15 +459,14 @@ with right:
             f[["team", "period_date", wp1_col, wp2_col]]
             .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
+            .dropna(subset=["UPLH"])
         )
-        wp_long["UPLH"] = pd.to_numeric(wp_long["UPLH"], errors="coerce")
-        wp_long = wp_long.dropna(subset=["UPLH"])
 
-        # Respect legend filtering if multiple teams are visible
         base_wp = (
             alt.Chart(wp_long)
-            .transform_filter(sel_week_uplh)
-            .transform_filter(team_sel)
+            .transform_calculate(_wk="toDate(datum.period_date)")  # SAME key
+            .transform_filter(sel_wk)                              # filter by the click
+            .transform_filter(team_sel)                            # respect legend
         )
 
         if multi_team:
@@ -480,7 +482,6 @@ with right:
                 ],
             ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
         else:
-            # Single team: simpler, bars by WP
             wp_chart = base_wp.mark_bar().encode(
                 x=alt.X("WP:N", title="Work Package"),
                 y=alt.Y("UPLH:Q", title="Actual UPLH"),
