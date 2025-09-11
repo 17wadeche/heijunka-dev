@@ -551,7 +551,11 @@ with right:
             base_wp.mark_bar()
             .encode(
                 x=alt.X("WP:N", title="WP"),
-                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                y=alt.Y(
+                    "UPLH:Q",
+                    title="Actual UPLH",
+                    axis=alt.Axis(titlePadding=12, labelPadding=6)  # prevents cut-off
+                ),
                 color=alt.Color("WP:N", legend=None),
                 tooltip=[
                     "period_date:T",
@@ -561,7 +565,7 @@ with right:
             )
             .properties(height=230)
         )
-        combined = alt.vconcat(top, title_text, wp_chart, spacing=0).add_params(team_sel, sel_wk)
+        combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     else:
         st.altair_chart(top, use_container_width=True)
