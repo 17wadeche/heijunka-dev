@@ -269,22 +269,16 @@ with left:
                 on="click",
                 nearest=True,
                 clear="dblclick",
-                empty="all",
+                empty="none",  # top stays visible; bars/util show only after a click
             )
             trend_base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
                 color=alt.Color("Metric:N", title="Series"),
                 tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-            )
+            ).add_params(sel_week)
             trend = trend_base.mark_line()
             pts   = trend_base.mark_point(size=70)
-            overlay = (
-                alt.Chart(hrs_long)
-                .mark_rect(opacity=0)
-                .encode(x="period_date:T")
-                .add_params(sel_week)
-            )
             rule = (
                 alt.Chart(hrs_long)
                 .transform_filter(sel_week)
@@ -325,10 +319,10 @@ with left:
                 )
                 .properties(height=230)
             )
-            top = alt.layer(trend, pts, overlay, rule).properties(height=280)
-            combined = alt.vconcat(top, (bars | util).resolve_scale(y="independent"))
+            top = alt.layer(trend, pts, rule).properties(height=280)
             st.caption("Click a week to drill down (double-click to clear).")
-            st.altair_chart(combined, use_container_width=True)
+            st.altair_chart(alt.vconcat(top, (bars | util).resolve_scale(y="independent")),
+                            use_container_width=True)
         else:
             team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
