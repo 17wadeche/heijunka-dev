@@ -299,9 +299,12 @@ with left:
                         Diff=lambda d: d["Actual"] - d["Avail"],
                     )
                     .assign(DiffRounded=lambda d: d["Diff"].round(1))
-                    .loc[~((ph_week["Actual Hours"].fillna(0) == 0) & (ph_week["DiffRounded"] == 0.0))]
-                    .assign(DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}"))
                 )
+                ph_week2 = ph_week2.loc[
+                        ~((ph_week2["Actual"].fillna(0) == 0) & (ph_week2["DiffRounded"] == 0.0))
+                ].assign(
+                        DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}") 
+                ) 
                 if ph_week2.empty:
                     st.info("Nobody to show after filtering zero-hour +0.0 entries.")
                 else:
