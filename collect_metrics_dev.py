@@ -432,7 +432,12 @@ def collect_ph_team(cfg: dict) -> list[dict]:
         rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode init failed: {e}"})
     DEBUG_PH = True
     if DEBUG_PH:
-        print("[PH] picked:", rows[0]["period_date"], "from", src_display) if rows else print("[PH] no valid week found")
+        picked = next((r for r in rows if isinstance(r, dict) and r.get("period_date") is not None), None)
+        if picked:
+            print("[PH] picked:", picked["period_date"], "from", src_display)
+        else:
+            msg = rows[0].get("error") if rows and isinstance(rows[0], dict) else "no valid rows"
+            print(f"[PH] no valid week found ({msg})")
     return rows
 def _get_validation_values_via_com(excel, ws, a1_cell: str, source_hint: str | None = None):
     vals = []
