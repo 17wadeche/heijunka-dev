@@ -606,8 +606,6 @@ with mid2:
             base_ahu.mark_line(point=True).properties(height=260),
             use_container_width=True
         )
-
-        # --- Per-person composition drilldown (PH only; exclude zero-share people) ---
         if len(teams_in_view) == 1 and teams_in_view[0] == "PH":
             ahu_ph = ahu.loc[ahu["team"] == "PH"]
             all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()))
@@ -620,8 +618,6 @@ with mid2:
                     format_func=lambda d: pd.to_datetime(d).date().isoformat(),
                     key="ahu_week_select_ph",
                 )
-
-                # Compute shares; filter out zero/NaN people
                 comp = ahu_person_share_for_week(f, picked_ahu_week, ["PH"], ph_people)
                 if not comp.empty:
                     comp = comp.loc[(comp["percent"].astype(float) > 0) & comp["person"].notna()].copy()
