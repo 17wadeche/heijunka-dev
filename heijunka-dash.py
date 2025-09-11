@@ -289,49 +289,40 @@ with left:
                 ph_people.loc[ph_people["period_date"] == picked_week]
                 if picked_week is not None else ph_people.iloc[0:0]
             )
-
             if ph_week.empty:
                 st.info("No per-person data for the selected week.")
             else:
-                c1, c2 = st.columns(2)
-
+                ph_week2 = ph_week.assign(
+                    Diff=lambda d: (d["Actual Hours"].astype(float) - d["Available Hours"].astype(float)),
+                    DiffLabel=lambda d: d["Diff"].map(lambda x: f"{x:+.1f}")
+                )
                 bars = (
-                    alt.Chart(ph_week)
-                    .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
+                    alt.Chart(ph_week2)
                     .mark_bar()
                     .encode(
                         x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                        y=alt.Y("Value:Q", title="Hours"),
-                        color=alt.Color("Metric:N", title="Series"),
-                        tooltip=[
-                            "person:N", "Metric:N",
-                            alt.Tooltip("Value:Q", format=",.1f"),
-                            alt.Tooltip("period_date:T", title="Week"),
-                        ],
-                    )
-                    .properties(height=230, title="Per-person Hours")
-                )
-                util = (
-                    alt.Chart(ph_week)
-                    .mark_point()
-                    .encode(
-                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                        y=alt.Y("Utilization:Q", axis=alt.Axis(title="Utilization", format="%")),
+                        y=alt.Y("Actual Hours:Q", title="Actual Hours"),
                         tooltip=[
                             "person:N",
-                            alt.Tooltip("Utilization:Q", format=".0%"),
                             alt.Tooltip("Actual Hours:Q", format=",.1f"),
                             alt.Tooltip("Available Hours:Q", format=",.1f"),
+                            alt.Tooltip("Diff:Q", title="Over / Under", format="+.1f"),
                             alt.Tooltip("period_date:T", title="Week"),
                         ],
                     )
-                    .properties(height=230, title="Per-person Utilization")
+                    .properties(height=260, title="Per-person Hours (labels show over/under vs available)")
                 )
-
-                with c1:
-                    st.altair_chart(bars, use_container_width=True)
-                with c2:
-                    st.altair_chart(util, use_container_width=True)
+                labels = (
+                    alt.Chart(ph_week2)
+                    .mark_text(dy=-6)
+                    .encode(
+                        x="person:N",
+                        y="Actual Hours:Q",
+                        text=alt.Text("DiffLabel:N"),
+                        color=alt.condition("datum.Diff >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                    )
+                )
+                st.altair_chart(bars + labels, use_container_width=True)
         else:
             team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
