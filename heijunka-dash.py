@@ -246,7 +246,6 @@ with left:
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
     teams_in_view = sorted([t for t in f["team"].dropna().unique()])
     ph_only = (len(teams_in_view) == 1 and teams_in_view[0] == "PH")
-    ph_people = explode_ph_person_hours(f) if "PH Person Hours" in f.columns else pd.DataFrame()
     if not have_hours:
         st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
     else:
@@ -263,68 +262,76 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        try:
-            ALT_MAJOR = int(alt.__version__.split(".")[0])
-        except Exception:
-            ALT_MAJOR = 4
-        if ALT_MAJOR >= 5:
-            team_sel = alt.selection_point(fields=["team"], bind="legend")
-            sel_week = alt.selection_point(fields=["period_date"], on="click", nearest=True, empty="none", clear="dblclick")
-            add_team  = lambda ch: ch.add_params(team_sel)
-            add_week  = lambda ch: ch.add_params(sel_week)
-            filter_week = sel_week
+        if ph_only and "PH Person Hours" in f.columns:
+            ph_people = explode_ph_person_hours(f)
         else:
-            team_sel = alt.selection_multi(fields=["team"], bind="legend")
-            sel_week = alt.selection_single(fields=["period_date"], on="click", nearest=True, empty="none", clear="dblclick")
-            add_team  = lambda ch: ch.add_selection(team_sel)
-            add_week  = lambda ch: ch.add_selection(sel_week)
-            filter_week = sel_week
+            ph_people = pd.DataFrame()
         if ph_only and not ph_people.empty:
-            trend_base = alt.Chart(hrs_long).encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("Value:Q", title="Hours"),
-                color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
+            sel_week = alt.selection_point(
+                fields=["period_date"],
+                on="click",
+                nearest=True,
+                clear="dblclick"
             )
             trend = (
-                trend_base.mark_line() + trend_base.mark_point(size=60) +
-                alt.Chart(hrs_long).transform_filter(filter_week).mark_rule(strokeDash=[4,3]).encode(x="period_date:T")
-            ).properties(height=280)
+                alt.Chart(hrs_long)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("Value:Q", title="Hours"),
+                    color=alt.Color("Metric:N", title="Series"),
+                    tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
+                )
+                .properties(height=280)
+            )
+            rule = (
+                alt.Chart(hrs_long)
+                .transform_filter(sel_week)
+                .mark_rule(strokeDash=[4, 3])
+                .encode(x="period_date:T")
+            )
             bars = (
                 alt.Chart(ph_people)
-                .transform_filter(filter_week)
+                .transform_filter(sel_week)
                 .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
                 .mark_bar()
                 .encode(
                     x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
                     y=alt.Y("Value:Q", title="Hours"),
                     color=alt.Color("Metric:N", title="Series"),
-                    tooltip=["person:N", "Metric:N", alt.Tooltip("Value:Q", format=",.1f"), alt.Tooltip("period_date:T", title="Week")],
+                    tooltip=[
+                        "person:N", "Metric:N",
+                        alt.Tooltip("Value:Q", format=",.1f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                    ],
                 )
                 .properties(height=230, title="Per-person (click a point above; double-click to clear)")
             )
             util = (
                 alt.Chart(ph_people)
-                .transform_filter(filter_week)
+                .transform_filter(sel_week)
                 .mark_point()
                 .encode(
                     x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
                     y=alt.Y("Utilization:Q", axis=alt.Axis(title="Utilization", format="%")),
-                    tooltip=["person:N", alt.Tooltip("Utilization:Q", format=".0%"),
-                             alt.Tooltip("Actual Hours:Q", format=",.1f"),
-                             alt.Tooltip("Available Hours:Q", format=",.1f"),
-                             alt.Tooltip("period_date:T", title="Week")],
+                    tooltip=[
+                        "person:N",
+                        alt.Tooltip("Utilization:Q", format=".0%"),
+                        alt.Tooltip("Actual Hours:Q", format=",.1f"),
+                        alt.Tooltip("Available Hours:Q", format=",.1f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                    ],
                 )
                 .properties(height=230)
             )
             combined = alt.vconcat(
-                add_team(add_week(trend)),
+                (trend + rule),
                 (bars | util).resolve_scale(y="independent")
-            )
-            combined = add_team(add_week(combined)) 
+            ).add_params(sel_week)
             st.caption("Click a week to drill down (double-click to clear).")
             st.altair_chart(combined, use_container_width=True)
         else:
+            team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
@@ -333,16 +340,16 @@ with left:
             )
             line = base.mark_line(point=False).encode(
                 detail="team:N",
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+                if len(teams_in_view) > 1 else alt.value(1.0)
             )
             pts = base.mark_point().encode(
                 shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
                 size=alt.value(45),
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+                if len(teams_in_view) > 1 else alt.value(1.0)
             )
-            chart = (line + pts).properties(height=280)
-            chart = add_team(chart)
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 st.write("Altair", alt.__version__, "PH rows:", len(ph_people), "hrs_long rows:", len(hrs_long), "PH-only:", ph_only)
 with mid:
     st.subheader("Output Trend")
