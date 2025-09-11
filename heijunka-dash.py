@@ -371,6 +371,9 @@ with mid:
 with right:
     st.subheader("UPLH Trend")
 
+    # Recreate a legend-bound team selector (scoped to this block)
+    team_sel = alt.selection_point(fields=["team"], bind="legend")
+
     # --- Trend data ---
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
@@ -387,16 +390,16 @@ with right:
     # Click on a stable, date-only key to avoid tz/hh:mm mismatches
     sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["_wk"],          # <-- derived below via transform_calculate
+        fields=["_wk"],          # derived below
         on="click",
         nearest=True,
         clear="dblclick",
         empty="none",
     )
 
-    base = (
+    trend_base = (
         alt.Chart(uplh_long)
-        .transform_calculate(_wk="toDate(datum.period_date)")  # derive date-only key
+        .transform_calculate(_wk="toDate(datum.period_date)")  # date-only key
         .encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="UPLH"),
@@ -411,11 +414,11 @@ with right:
         .add_params(team_sel, sel_wk)
     )
 
-    line = base.mark_line().encode(
+    line = trend_base.mark_line().encode(
         detail="team:N",
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
     )
-    pts = base.mark_point(size=70).encode(
+    pts = trend_base.mark_point(size=70).encode(
         shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
     )
@@ -426,11 +429,9 @@ with right:
         .mark_rule(strokeDash=[4, 3])
         .encode(x="period_date:T")
     )
+    top = (line + pts + rule).properties(height=280)
 
-    st.caption("Click a week to drill down (double-click to clear).")
-    st.altair_chart((line + pts + rule).properties(height=280), use_container_width=True)
-
-    # --- WP1 vs WP2 breakdown for the selected week ---
+    # --- WP1 vs WP2 breakdown (filtered by the SAME selection) ---
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -457,7 +458,7 @@ with right:
             alt.Chart(wp_long)
             .transform_calculate(_wk="toDate(datum.period_date)")  # SAME key
             .transform_filter(sel_wk)                              # filter by the click
-            .transform_filter(team_sel)                            # respect legend
+            .transform_filter(team_sel)                            # respect team legend
         )
 
         if multi_team:
@@ -483,11 +484,12 @@ with right:
                     alt.Tooltip("UPLH:Q", format=",.2f"),
                 ],
             ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
-
-        st.altair_chart(wp_chart, use_container_width=True)
+        st.caption("Click a week to drill down (double-click to clear).")
+        st.altair_chart(alt.vconcat(top, wp_chart), use_container_width=True)
     else:
+        st.caption("Click a week to drill down (double-click to clear).")
+        st.altair_chart(top, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
