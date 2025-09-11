@@ -532,14 +532,21 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
-
-        # Dynamic title: show the selected week; empty when nothing selected.
-        # NOTE: timeFormat pattern uses Vega syntax.
-        dynamic_title = {
-            "expr": "wk_uplh && isValid(wk_uplh.period_date) ? "
-                    "'WP1 vs WP2 UPLH (' + timeFormat(wk_uplh.period_date, '%Y-%m-%d') + ')' : ''"
-        }
-
+        title_text = (
+            alt.Chart(uplh_long)
+            .transform_filter(sel_wk)
+            .transform_aggregate(period_date="min(period_date)")  # single row
+            .transform_calculate(
+                label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'"
+            )
+            .mark_text(align="left", baseline="top")
+            .encode(
+                x=alt.value(0),
+                y=alt.value(0),
+                text="label:N",
+            )
+            .properties(height=18)  # very short; vanishes when no selection
+        )
         base_wp = (
             alt.Chart(wp_long)
             .transform_filter(sel_wk)     # hides marks entirely when selection is cleared
@@ -560,7 +567,7 @@ with right:
                         alt.Tooltip("UPLH:Q", format=",.2f"),
                     ],
                 )
-                .properties(height=230, title=dynamic_title)
+                .properties(height=230)  # no title here
             )
         else:
             wp_chart = (
@@ -575,12 +582,14 @@ with right:
                         alt.Tooltip("UPLH:Q", format=",.2f"),
                     ],
                 )
-                .properties(height=230, title=dynamic_title)
+                .properties(height=230)  # no title here
             )
 
-        # Use very small vconcat spacing so when the breakdown is empty, it visually "disappears".
-        combined = alt.vconcat(top, wp_chart, spacing=0).add_params(team_sel, sel_wk)
+        # Stack: trend, then tiny dynamic text, then bars.
+        # When selection is cleared, both title_text and wp_chart have no data and render nothing.
+        combined = alt.vconcat(top, title_text, wp_chart, spacing=0).add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
+
     else:
         st.altair_chart(top, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
