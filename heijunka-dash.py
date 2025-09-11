@@ -262,42 +262,32 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        if ph_only and "PH Person Hours" in f.columns:
-            ph_people = explode_ph_person_hours(f)
-        else:
-            ph_people = pd.DataFrame()
         if ph_only and not ph_people.empty:
             sel_week = alt.selection_point(
-                fields=["period_date"],     # same field name in both charts
-                encodings=["x"],            # tie selection to the x channel
+                name="wk",
+                fields=["period_date"],
                 on="click",
                 nearest=True,
-                empty="none",               # nothing selected => hide drill-down
-                clear="dblclick"
+                clear="dblclick",
+                empty="all",
             )
-            trend_line = (
-                alt.Chart(hrs_long)
-                .mark_line()
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("Value:Q", title="Hours"),
-                    color=alt.Color("Metric:N", title="Series"),
-                    tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-                )
+            trend_base = alt.Chart(hrs_long).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Value:Q", title="Hours"),
+                color=alt.Color("Metric:N", title="Series"),
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             )
-            trend_pts = (
+            trend = trend_base.mark_line()
+            pts   = trend_base.mark_point(size=70)
+            overlay = (
                 alt.Chart(hrs_long)
-                .mark_point(size=70)
-                .encode(
-                    x=alt.X("period_date:T"),
-                    y=alt.Y("Value:Q"),
-                    color=alt.Color("Metric:N", title="Series"),
-                )
-                .add_params(sel_week)  # <-- selection is bound to the points
+                .mark_rect(opacity=0)
+                .encode(x="period_date:T")
+                .add_params(sel_week)
             )
             rule = (
-                alt.Chart(hrs_long)              # same dataset is fine
-                .transform_filter(sel_week)    # only when a week is selected
+                alt.Chart(hrs_long)
+                .transform_filter(sel_week)
                 .mark_rule(strokeDash=[4, 3])
                 .encode(x="period_date:T")
             )
@@ -316,7 +306,7 @@ with left:
                         alt.Tooltip("period_date:T", title="Week"),
                     ],
                 )
-                .properties(height=230, title="Per-person (click a point above; double-click to clear)")
+                .properties(height=230, title="Per-person (click a week above; double-click to clear)")
             )
             util = (
                 alt.Chart(ph_people)
@@ -335,7 +325,7 @@ with left:
                 )
                 .properties(height=230)
             )
-            top = (trend_line + trend_pts + rule).properties(height=280)
+            top = alt.layer(trend, pts, overlay, rule).properties(height=280)
             combined = alt.vconcat(top, (bars | util).resolve_scale(y="independent"))
             st.caption("Click a week to drill down (double-click to clear).")
             st.altair_chart(combined, use_container_width=True)
