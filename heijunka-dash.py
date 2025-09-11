@@ -562,9 +562,9 @@ with right:
         wp_chart = (
             base_wp.mark_bar()
             .encode(
-                x=alt.X("WP:N", title="Work Package"),
+                x=alt.X("WP:N", title="WP"),
                 y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                color=alt.Color("WP:N", title="Work Package"),
+                color=alt.Color("WP:N", title="WP"),
                 tooltip=[
                     "period_date:T",
                     "WP:N",
