@@ -266,7 +266,7 @@ with left:
             all_weeks = sorted(pd.to_datetime(ph_people["period_date"].dropna().unique()))
             default_week = max(all_weeks) if all_weeks else None
             picked_week = st.selectbox(
-                "Or pick a week for drilldown:",
+                "Pick a week for drilldown:",
                 options=all_weeks,
                 index=(all_weeks.index(default_week) if default_week in all_weeks else 0) if all_weeks else None,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
