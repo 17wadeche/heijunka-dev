@@ -639,7 +639,7 @@ with mid2:
                             ],
                             color=alt.value("indianred"),
                         )
-                        .properties(height=240, title="PH — Per-person share of Actual HC used (selected week)")
+                        .properties(height=240)
                     )
                     st.altair_chart(chart, use_container_width=True)
                     st.caption("Weighted by per-person Actual Hours when available; otherwise evenly split across People in WIP.")
