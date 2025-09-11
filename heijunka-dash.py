@@ -263,40 +263,8 @@ with left:
             }))
         )
         if ph_only and not ph_people.empty:
-            # --- Top trend with clickable points ---
-            sel_week = alt.selection_point(
-                name="wk",
-                fields=["period_date"],
-                encodings=["x"],   # make it explicit that the selection is on the x channel
-                on="click",
-                nearest=True,
-                clear="dblclick",
-                empty="none",      # top always visible; drilldown shows after selection (or via dropdown)
-            )
-
-            trend_base = alt.Chart(hrs_long).encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("Value:Q", title="Hours"),
-                color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-            ).add_params(sel_week)
-
-            trend = trend_base.mark_line()
-            pts   = trend_base.mark_point(size=70)
-
-            rule = (
-                alt.Chart(hrs_long)
-                .transform_filter(sel_week)
-                .mark_rule(strokeDash=[4, 3])
-                .encode(x="period_date:T")
-            )
-
-            top = alt.layer(trend, pts, rule).properties(height=280)
-
-            # --- Reliable fallback control (always works) ---
-            # Default to latest week; user can pick any if clicking doesn't populate the drilldown
-            all_weeks = sorted(ph_people["period_date"].dropna().unique())
-            default_week = max(all_weeks) if len(all_weeks) else None
+            all_weeks = sorted(pd.to_datetime(ph_people["period_date"].dropna().unique()))
+            default_week = max(all_weeks) if all_weeks else None
             picked_week = st.selectbox(
                 "Or pick a week for drilldown:",
                 options=all_weeks,
@@ -304,50 +272,67 @@ with left:
                 format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
                 key="ph_week_select",
             )
-
-            # Data for bars/util: if a click exists, Altair will filter via sel_week;
-            # otherwise show the dropdown's week.
-            # We implement the dropdown path by pre-filtering the DataFrame.
-            ph_people_drop = ph_people[ph_people["period_date"] == picked_week] if picked_week is not None else ph_people.iloc[0:0]
-
-            bars = (
-                alt.Chart(ph_people_drop)
-                .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
-                .mark_bar()
-                .encode(
-                    x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                    y=alt.Y("Value:Q", title="Hours"),
-                    color=alt.Color("Metric:N", title="Series"),
-                    tooltip=[
-                        "person:N", "Metric:N",
-                        alt.Tooltip("Value:Q", format=",.1f"),
-                        alt.Tooltip("period_date:T", title="Week"),
-                    ],
-                )
-                .properties(height=230, title="Per-person (click a week above or use the dropdown)")
+            trend_base = alt.Chart(hrs_long).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Value:Q", title="Hours"),
+                color=alt.Color("Metric:N", title="Series"),
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
+            )
+            top = trend_base.mark_line() + trend_base.mark_point(size=70)
+            if picked_week is not None:
+                picked_week = pd.to_datetime(picked_week)
+                rule_df = pd.DataFrame({"period_date": [picked_week]})
+                rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+                top = (top + rule)
+            st.caption("Clicking no longer required. Use the dropdown to change the drilldown week.")
+            st.altair_chart(top.properties(height=280), use_container_width=True)
+            ph_week = (
+                ph_people.loc[ph_people["period_date"] == picked_week]
+                if picked_week is not None else ph_people.iloc[0:0]
             )
 
-            util = (
-                alt.Chart(ph_people_drop)
-                .mark_point()
-                .encode(
-                    x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                    y=alt.Y("Utilization:Q", axis=alt.Axis(title="Utilization", format="%")),
-                    tooltip=[
-                        "person:N",
-                        alt.Tooltip("Utilization:Q", format=".0%"),
-                        alt.Tooltip("Actual Hours:Q", format=",.1f"),
-                        alt.Tooltip("Available Hours:Q", format=",.1f"),
-                        alt.Tooltip("period_date:T", title="Week"),
-                    ],
+            if ph_week.empty:
+                st.info("No per-person data for the selected week.")
+            else:
+                c1, c2 = st.columns(2)
+
+                bars = (
+                    alt.Chart(ph_week)
+                    .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                        y=alt.Y("Value:Q", title="Hours"),
+                        color=alt.Color("Metric:N", title="Series"),
+                        tooltip=[
+                            "person:N", "Metric:N",
+                            alt.Tooltip("Value:Q", format=",.1f"),
+                            alt.Tooltip("period_date:T", title="Week"),
+                        ],
+                    )
+                    .properties(height=230, title="Per-person Hours")
                 )
-                .properties(height=230)
-            )
+                util = (
+                    alt.Chart(ph_week)
+                    .mark_point()
+                    .encode(
+                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                        y=alt.Y("Utilization:Q", axis=alt.Axis(title="Utilization", format="%")),
+                        tooltip=[
+                            "person:N",
+                            alt.Tooltip("Utilization:Q", format=".0%"),
+                            alt.Tooltip("Actual Hours:Q", format=",.1f"),
+                            alt.Tooltip("Available Hours:Q", format=",.1f"),
+                            alt.Tooltip("period_date:T", title="Week"),
+                        ],
+                    )
+                    .properties(height=230, title="Per-person Utilization")
+                )
 
-            st.caption("Click a week to drill down (double-click to clear). If nothing happens, use the dropdown.")
-            st.altair_chart(alt.vconcat(top, (bars | util).resolve_scale(y="independent")),
-                            use_container_width=True)
-
+                with c1:
+                    st.altair_chart(bars, use_container_width=True)
+                with c2:
+                    st.altair_chart(util, use_container_width=True)
         else:
             team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
@@ -452,9 +437,6 @@ with right:
 
     st.caption("Click a week to drill down (double-click to clear).")
     st.altair_chart((line + pts + rule).properties(height=280), use_container_width=True)
-
-    # --- WP1 vs WP2 breakdown for the selected week ---
-    # Find likely WP1/WP2 UPLH columns (robust to naming like 'WP 1 UPLH', 'UPLH WP2', etc.)
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
