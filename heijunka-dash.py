@@ -570,7 +570,7 @@ with right:
             .encode(
                 x=alt.X("WP:N", title="Work Package"),
                 y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                color=alt.Color("WP:N", title="Work Package"),
+                color=alt.Color("WP:N", legend=None),
                 tooltip=[
                     "period_date:T",
                     "WP:N",
