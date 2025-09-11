@@ -292,37 +292,46 @@ with left:
             if ph_week.empty:
                 st.info("No per-person data for the selected week.")
             else:
-                ph_week2 = ph_week.assign(
-                    Diff=lambda d: (d["Actual Hours"].astype(float) - d["Available Hours"].astype(float)),
-                    DiffLabel=lambda d: d["Diff"].map(lambda x: f"{x:+.1f}")
-                )
-                bars = (
-                    alt.Chart(ph_week2)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                        y=alt.Y("Actual Hours:Q", title="Actual Hours"),
-                        tooltip=[
-                            "person:N",
-                            alt.Tooltip("Actual Hours:Q", format=",.1f"),
-                            alt.Tooltip("Available Hours:Q", format=",.1f"),
-                            alt.Tooltip("Diff:Q", title="Over / Under", format="+.1f"),
-                            alt.Tooltip("period_date:T", title="Week"),
-                        ],
+                ph_week2 = (
+                    ph_week.assign(
+                        Actual=lambda d: d["Actual Hours"].astype(float),
+                        Avail=lambda d: d["Available Hours"].astype(float),
+                        Diff=lambda d: d["Actual"] - d["Avail"],
                     )
-                    .properties(height=260, title="Per-person Hours (labels show over/under vs available)")
+                    .assign(DiffRounded=lambda d: d["Diff"].round(1))
+                    .loc[~((ph_week["Actual Hours"].fillna(0) == 0) & (ph_week["DiffRounded"] == 0.0))]
+                    .assign(DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}"))
                 )
-                labels = (
-                    alt.Chart(ph_week2)
-                    .mark_text(dy=-6)
-                    .encode(
-                        x="person:N",
-                        y="Actual Hours:Q",
-                        text=alt.Text("DiffLabel:N"),
-                        color=alt.condition("datum.Diff >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                if ph_week2.empty:
+                    st.info("Nobody to show after filtering zero-hour +0.0 entries.")
+                else:
+                    bars = (
+                        alt.Chart(ph_week2)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                            y=alt.Y("Actual:Q", title="Actual Hours"),
+                            tooltip=[
+                                "person:N",
+                                alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
+                                alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
+                                alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
+                                alt.Tooltip("period_date:T", title="Week"),
+                            ],
+                        )
+                        .properties(height=260, title="Per-person Hours (labels show over/under vs available)")
                     )
-                )
-                st.altair_chart(bars + labels, use_container_width=True)
+                    labels = (
+                        alt.Chart(ph_week2)
+                        .mark_text(dy=-6)
+                        .encode(
+                            x="person:N",
+                            y="Actual:Q",
+                            text=alt.Text("DiffLabel:N"),
+                            color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                        )
+                    )
+                    st.altair_chart(bars + labels, use_container_width=True)
         else:
             team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
