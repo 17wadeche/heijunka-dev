@@ -533,62 +533,44 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
-
-        # Dynamic label for the selected week (hidden when selection is cleared)
         title_text = (
             alt.Chart(uplh_long)
             .transform_filter(sel_wk)
             .transform_aggregate(period_date="min(period_date)")
             .transform_calculate(label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'")
             .mark_text(align="left", baseline="top")
-            .encode(x=alt.value(0), y=alt.value(16), text="label:N")
+            .encode(x=alt.value(0), y=alt.value(16), text="label:N")  # y=16 and a bit taller to avoid cutoff
             .properties(height=24)
         )
-
-        # Bars layer: no axes, so nothing renders when selection is empty
-        wp_bars = (
+        base_wp = (
             alt.Chart(wp_long)
             .transform_filter(sel_wk)
             .transform_filter(team_sel)
-            .mark_bar()
+        )
+        wp_chart = (
+            base_wp.mark_bar()
             .encode(
-                x=alt.X("WP:N", title="WP", axis=None),
-                y=alt.Y("UPLH:Q", title="Actual UPLH", axis=None),
-                color=alt.Color("WP:N", legend=None),  # hide WP legend only
+                x=alt.X("WP:N", title="WP"),
+                y=alt.Y(
+                    "UPLH:Q",
+                    title="Actual UPLH",
+                    axis=alt.Axis(titlePadding=12, labelPadding=6)  # prevents cut-off
+                ),
+                color=alt.Color("WP:N", legend=None),
                 tooltip=[
                     "period_date:T",
                     "WP:N",
                     alt.Tooltip("UPLH:Q", format=",.2f"),
                 ],
             )
+            .properties(height=230)
         )
-
-        # Axes layer: invisible points JUST to show axes; also filtered by the selection
-        wp_axes = (
-            alt.Chart(wp_long)
-            .transform_filter(sel_wk)
-            .transform_filter(team_sel)
-            .mark_point(opacity=0)
-            .encode(
-                x=alt.X("WP:N", title="WP", axis=alt.Axis(titlePadding=12, labelPadding=6)),
-                y=alt.Y("UPLH:Q", title="Actual UPLH", axis=alt.Axis(titlePadding=12, labelPadding=6)),
-            )
-        )
-
-        wp_chart = alt.layer(wp_bars, wp_axes).properties(height=230)
-
-        combined = (
-            alt.vconcat(top, title_text, wp_chart, spacing=0)
-            .resolve_legend(color="independent")  # keep Series legend on top chart
-            .add_params(team_sel, sel_wk)
-        )
+        combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     else:
-        # Multiple teams selected OR missing WP cols → only show the trend
         st.altair_chart(top, use_container_width=True)
         if (not multi_team) and not (wp1_col and wp2_col):
             st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
