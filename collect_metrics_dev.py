@@ -13,6 +13,7 @@ import shutil
 import subprocess
 from openpyxl import load_workbook
 import tempfile, uuid
+import json
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 GIT_BRANCH = "main"
@@ -307,6 +308,55 @@ def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main
         print("[WARN] git push failed; see logs above. Check credentials / PAT / VPN.")
     else:
         print("[git] Pushed CSV update to", f"{remote}/{branch}")
+def _ph_values_by_person(ws, col_end: str) -> tuple[dict, float | None, float | None]:
+    def _to_float(v):
+        if v is None: 
+            return None
+        try:
+            return float(str(v).replace(",", "").strip())
+        except Exception:
+            return None
+    rng_names = ws.Range(f"B30:{col_end}30").Value
+    rng_actual = ws.Range(f"B50:{col_end}50").Value
+    rng_avail  = ws.Range(f"B59:{col_end}59").Value
+    if isinstance(rng_names, (tuple, list)) and isinstance(rng_names[0], (tuple, list)):
+        names = list(rng_names[0])
+    else:
+        names = list(rng_names if isinstance(rng_names, (tuple, list)) else [rng_names])
+
+    if isinstance(rng_actual, (tuple, list)) and isinstance(rng_actual[0], (tuple, list)):
+        actuals = list(rng_actual[0])
+    else:
+        actuals = list(rng_actual if isinstance(rng_actual, (tuple, list)) else [rng_actual])
+
+    if isinstance(rng_avail, (tuple, list)) and isinstance(rng_avail[0], (tuple, list)):
+        avails = list(rng_avail[0])
+    else:
+        avails = list(rng_avail if isinstance(rng_avail, (tuple, list)) else [rng_avail])
+    m = max(len(names), len(actuals), len(avails))
+    names  += [None] * (m - len(names))
+    actuals += [None] * (m - len(actuals))
+    avails  += [None] * (m - len(avails))
+    per = {}
+    tot_actual = 0.0
+    tot_avail  = 0.0
+    any_actual = False
+    any_avail  = False
+    for nm, a, t in zip(names, actuals, avails):
+        nm_str = (str(nm).strip() if nm is not None else "")
+        if not nm_str:
+            continue
+        a_f = _to_float(a)
+        t_f = _to_float(t)
+        if a_f is not None:
+            any_actual = True
+            tot_actual += a_f
+        if t_f is not None:
+            any_avail = True
+            tot_avail += t_f
+        per[nm_str] = {"actual": (a_f if a_f is not None else 0.0),
+                       "available": (t_f if t_f is not None else 0.0)}
+    return per, (tot_actual if any_actual else None), (tot_avail if any_avail else None)
 def _to_excel_com_value(v):
     if isinstance(v, (int, float, str)):
         return v
@@ -413,6 +463,11 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
                         tah =  _to_float(ws.Range("S59").Value)
                         hc_end = "Q"
+                    per_person, sum_actual_row50, sum_avail_row59 = _ph_values_by_person(ws, hc_end)
+                    if sum_actual_row50 is not None:
+                        ch = sum_actual_row50
+                    if sum_avail_row59 is not None:
+                        tah = sum_avail_row59
                     if tah is None or float(tah) <= 0.0:
                         del ws
                         continue
@@ -429,6 +484,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         "Target Output": to_,
                         "Actual Output": ao,
                         "HC in WIP": hc,
+                        "PH Person Hours": json.dumps(per_person, ensure_ascii=False)
                     })
                 finally:
                     del ws
@@ -1385,6 +1441,7 @@ def save_outputs(df: pd.DataFrame):
         "Target Output", "Actual Output",
         "Target UPLH", "Actual UPLH",
         "HC in WIP", "Actual HC Used",
+        "PH Person Hours",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
