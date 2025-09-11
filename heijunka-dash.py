@@ -59,6 +59,8 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             canon_map[c] = "Open Complaint Timeliness"
         elif lc in ("actual hc used", "actual_hc_used", "actual-hc-used"):
             canon_map[c] = "Actual HC used"
+        elif lc in ("people in wip", "people_wip", "people-in-wip", "people_wip_list"):
+            canon_map[c] = "People in WIP"
     if canon_map:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
@@ -82,6 +84,42 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
+def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "People in WIP" not in df.columns:
+        return pd.DataFrame(columns=["team", "period_date", "person"])
+    sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
+    rows: list[dict] = []
+    def _as_names(x) -> list[str]:
+        if isinstance(x, list):
+            return [str(s).strip() for s in x if str(s).strip()]
+        if isinstance(x, str):
+            s = x.strip()
+            try:
+                obj = json.loads(s)
+                if isinstance(obj, list):
+                    return [str(v).strip() for v in obj if str(v).strip()]
+                if isinstance(obj, dict):
+                    return [str(k).strip() for k, v in obj.items() if str(k).strip()]
+            except Exception:
+                pass
+            parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if p.strip()]
+            return parts
+        if isinstance(x, dict):
+            return [str(k).strip() for k in x.keys() if str(k).strip()]
+        return []
+    import re
+    for _, r in sub.iterrows():
+        people = _as_names(r["People in WIP"])
+        for person in people:
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": person
+            })
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
 def explode_ph_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "PH Person Hours" not in df.columns:
         return pd.DataFrame(columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"])
@@ -383,7 +421,7 @@ with mid:
 with right:
     st.subheader("UPLH Trend")
 
-    # Recreate a legend-bound team selector (scoped to this block)
+    # Legend-bound team selector (scoped to this block)
     team_sel = alt.selection_point(fields=["team"], bind="legend")
 
     # --- Trend data ---
@@ -399,16 +437,18 @@ with right:
         .dropna(subset=["Value"])
     )
 
-    # Click on a stable, date-only key to avoid tz/hh:mm mismatches
+    # Click selection on a stable, date-only key (shared across charts)
     sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["_wk"],          # derived below
+        fields=["_wk"],        # derived below
+        encodings=["x"],       # improves hit-testing along x-axis
         on="click",
         nearest=True,
         clear="dblclick",
         empty="none",
     )
 
+    # --- Top trend chart (do NOT add params here; we hoist them to the container) ---
     trend_base = (
         alt.Chart(uplh_long)
         .transform_calculate(_wk="toDate(datum.period_date)")  # date-only key
@@ -423,9 +463,7 @@ with right:
                 alt.Tooltip("Value:Q", format=",.2f"),
             ],
         )
-        .add_params(team_sel, sel_wk)
     )
-
     line = trend_base.mark_line().encode(
         detail="team:N",
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
@@ -474,50 +512,120 @@ with right:
         )
 
         if multi_team:
-            wp_chart = base_wp.mark_bar().encode(
-                x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
-                y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                color=alt.Color("WP:N", title="Work Package"),
-                tooltip=[
-                    "team:N",
-                    "period_date:T",
-                    "WP:N",
-                    alt.Tooltip("UPLH:Q", format=",.2f"),
-                ],
-            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+            wp_chart = (
+                base_wp.mark_bar()
+                .encode(
+                    x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
+                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                    color=alt.Color("WP:N", title="Work Package"),
+                    tooltip=[
+                        "team:N",
+                        "period_date:T",
+                        "WP:N",
+                        alt.Tooltip("UPLH:Q", format=",.2f"),
+                    ],
+                )
+                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+            )
         else:
-            wp_chart = base_wp.mark_bar().encode(
-                x=alt.X("WP:N", title="Work Package"),
-                y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                color=alt.Color("WP:N", title="Work Package"),
-                tooltip=[
-                    "period_date:T",
-                    "WP:N",
-                    alt.Tooltip("UPLH:Q", format=",.2f"),
-                ],
-            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+            wp_chart = (
+                base_wp.mark_bar()
+                .encode(
+                    x=alt.X("WP:N", title="Work Package"),
+                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                    color=alt.Color("WP:N", title="Work Package"),
+                    tooltip=[
+                        "period_date:T",
+                        "WP:N",
+                        alt.Tooltip("UPLH:Q", format=",.2f"),
+                    ],
+                )
+                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
+            )
+
         st.caption("Click a week to drill down (double-click to clear).")
-        st.altair_chart(alt.vconcat(top, wp_chart), use_container_width=True)
+        combined = alt.vconcat(top, wp_chart).add_params(team_sel, sel_wk)
+        st.altair_chart(combined, use_container_width=True)
     else:
         st.caption("Click a week to drill down (double-click to clear).")
-        st.altair_chart(top, use_container_width=True)
+        combined = top.add_params(team_sel, sel_wk)
+        st.altair_chart(combined, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
     st.subheader("HC in WIP Trend")
     if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
         hc = f[["team", "period_date", "HC in WIP"]].dropna()
-        base_hc = alt.Chart(hc).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("HC in WIP:Q", title="HC in WIP"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
+        ppl = explode_people_in_wip(f)
+        sel_hc = alt.selection_point(
+            name="hc_pick",
+            fields=["team", "_wk"],
+            on="click",
+            nearest=True,
+            clear="dblclick",
+            empty="none",
         )
-        st.altair_chart(
-            base_hc.mark_line(point=True).properties(height=260),
-            use_container_width=True
+        base_hc = (
+            alt.Chart(hc)
+            .transform_calculate(_wk="toDate(datum.period_date)")  # date-only key (no hh:mm/tz)
+            .encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("HC in WIP:Q", title="HC in WIP"),
+                color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
+                tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")],
+            )
+            .add_params(sel_hc)
         )
+        line = base_hc.mark_line()
+        pts  = base_hc.mark_point(size=70)
+        rule = (
+            alt.Chart(hc)
+            .transform_calculate(_wk="toDate(datum.period_date)")
+            .transform_filter(sel_hc)
+            .mark_rule(strokeDash=[4, 3])
+            .encode(x="period_date:T")
+        )
+        top = (line + pts + rule).properties(height=260)
+        if ppl.empty:
+            st.caption("Click a point to drill down (double-click to clear).")
+            st.altair_chart(top, use_container_width=True)
+            st.info("No 'People in WIP' data found to drill down into.")
+        else:
+            if len(teams_in_view) > 1:
+                people_chart = (
+                    alt.Chart(ppl)
+                    .transform_calculate(_wk="toDate(datum.period_date)")
+                    .transform_filter(sel_hc)
+                    .mark_text(align="left")
+                    .encode(
+                        y=alt.Y("person:N", title="Person", sort=alt.Sort(field="person")),
+                        x=alt.value(5),
+                        text="person:N",
+                        tooltip=["team:N", "period_date:T", "person:N"],
+                    )
+                    .properties(height=220)
+                    .facet(
+                        row=alt.Row("team:N", header=alt.Header(title="Team", labelFontWeight="bold"))
+                    )
+                )
+            else:
+                people_chart = (
+                    alt.Chart(ppl)
+                    .transform_calculate(_wk="toDate(datum.period_date)")
+                    .transform_filter(sel_hc)
+                    .mark_text(align="left")
+                    .encode(
+                        y=alt.Y("person:N", title="Person", sort=alt.Sort(field="person")),
+                        x=alt.value(5),
+                        text="person:N",
+                        tooltip=["period_date:T", "person:N"],
+                    )
+                    .properties(height=220, title="People in WIP (selected week)")
+                )
+            st.caption("Click a point to drill down (double-click to clear).")
+            st.altair_chart(alt.vconcat(top, people_chart).resolve_scale(y="independent"), use_container_width=True)
     else:
         st.info("No 'HC in WIP' data available in the selected range.")
 with mid2:
