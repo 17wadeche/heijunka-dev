@@ -12,6 +12,7 @@ import numpy as np
 import shutil
 import subprocess
 from openpyxl import load_workbook
+import tempfile, uuid
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 GIT_BRANCH = "main"
@@ -326,6 +327,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
     except Exception:
         return [{"team": team_name, "source_file": src_display,
                  "error": "pywin32 not installed; run 'pip install pywin32' to enable PH mode"}]
+    import tempfile, uuid
     def _to_float(v):
         if v is None:
             return None
@@ -347,13 +349,33 @@ def collect_ph_team(cfg: dict) -> list[dict]:
         except Exception:
             pass
         wb = None
+        tmp_copy = None
+        open_path = str(file_path)
         try:
-            wb = excel.Workbooks.Open(
-                str(file_path),
-                ReadOnly=True,
-                UpdateLinks=0,          # 0 = don't update
-                IgnoreReadOnlyRecommended=True
-            )
+            tmp_copy = Path(tempfile.gettempdir()) / f"ph_heijunka_{uuid.uuid4().hex}{file_path.suffix}"
+            shutil.copy2(file_path, tmp_copy)  # also forces hydration if available locally
+            open_path = str(tmp_copy)
+        except Exception:
+            open_path = str(file_path)
+        last_exc = None
+        for _attempt in range(3):
+            try:
+                wb = excel.Workbooks.Open(
+                    Filename=open_path,
+                    ReadOnly=True,
+                    UpdateLinks=0,                  # 0 = don't update
+                    IgnoreReadOnlyRecommended=True,
+                    Local=True                      # helps with localized paths
+                )
+                break
+            except Exception as e:
+                last_exc = e
+                time.sleep(1.0)
+        if wb is None:
+            rows.append({"team": team_name, "source_file": src_display,
+                        "error": f"PH mode failed after retries: {last_exc}"})
+            return rows
+        try:
             sheet_count = int(wb.Worksheets.Count)
             today_d = _dt.today().date()
             for idx in range(1, sheet_count + 1):
@@ -428,6 +450,11 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     pass
                 except Exception:
                     pass
+                if tmp_copy and Path(tmp_copy).exists():
+                    try:
+                        Path(tmp_copy).unlink()
+                    except Exception:
+                        pass
     except Exception as e:
         rows.append({"team": team_name, "source_file": src_display, "error": f"PH mode init failed: {e}"})
     DEBUG_PH = True
