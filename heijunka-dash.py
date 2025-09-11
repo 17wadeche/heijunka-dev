@@ -523,78 +523,62 @@ with right:
         return wp1, wp2
 
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
-    st.caption("Click a week to drill down (double-click to clear).")
 
-    if wp1_col and wp2_col:
+    # Caption changes depending on whether breakdown is possible
+    if multi_team:
+        st.caption("Click a week to highlight (WP breakdown requires selecting a single team).")
+    else:
+        st.caption("Click a week to drill down (double-click to clear).")
+
+    # Show WP1/WP2 breakdown ONLY when a single team is selected
+    if not multi_team and wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
             .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
+
+        # Small dynamic label showing the selected week; disappears when selection is cleared
         title_text = (
             alt.Chart(uplh_long)
             .transform_filter(sel_wk)
-            .transform_aggregate(period_date="min(period_date)")  # single row
+            .transform_aggregate(period_date="min(period_date)")
             .transform_calculate(
                 label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'"
             )
             .mark_text(align="left", baseline="top")
-            .encode(
-                x=alt.value(0),
-                y=alt.value(0),
-                text="label:N",
-            )
-            .properties(height=18)  # very short; vanishes when no selection
+            .encode(x=alt.value(0), y=alt.value(0), text="label:N")
+            .properties(height=18)
         )
+
         base_wp = (
             alt.Chart(wp_long)
-            .transform_filter(sel_wk)     # hides marks entirely when selection is cleared
-            .transform_filter(team_sel)
+            .transform_filter(sel_wk)   # hidden when selection cleared
+            .transform_filter(team_sel) # respects legend filter (still single team)
         )
 
-        if multi_team:
-            wp_chart = (
-                base_wp.mark_bar()
-                .encode(
-                    x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
-                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                    color=alt.Color("WP:N", title="Work Package"),
-                    tooltip=[
-                        "team:N",
-                        "period_date:T",
-                        "WP:N",
-                        alt.Tooltip("UPLH:Q", format=",.2f"),
-                    ],
-                )
-                .properties(height=230)  # no title here
+        # Single-team breakdown: WP on x-axis
+        wp_chart = (
+            base_wp.mark_bar()
+            .encode(
+                x=alt.X("WP:N", title="Work Package"),
+                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                color=alt.Color("WP:N", title="Work Package"),
+                tooltip=[
+                    "period_date:T",
+                    "WP:N",
+                    alt.Tooltip("UPLH:Q", format=",.2f"),
+                ],
             )
-        else:
-            wp_chart = (
-                base_wp.mark_bar()
-                .encode(
-                    x=alt.X("WP:N", title="Work Package"),
-                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                    color=alt.Color("WP:N", title="Work Package"),
-                    tooltip=[
-                        "period_date:T",
-                        "WP:N",
-                        alt.Tooltip("UPLH:Q", format=",.2f"),
-                    ],
-                )
-                .properties(height=230)  # no title here
-            )
-
-        # Stack: trend, then tiny dynamic text, then bars.
-        # When selection is cleared, both title_text and wp_chart have no data and render nothing.
+            .properties(height=230)
+        )
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
-
     else:
         st.altair_chart(top, use_container_width=True)
-        st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-
-    
+        if not multi_team and not (wp1_col and wp2_col):
+            st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
