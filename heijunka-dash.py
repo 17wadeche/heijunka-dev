@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import altair as alt
+import json
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.xlsx")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
@@ -81,6 +82,35 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
+def explode_ph_person_hours(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "PH Person Hours" not in df.columns:
+        return pd.DataFrame(columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"])
+    sub = df.loc[df["team"] == "PH", ["team", "period_date", "PH Person Hours"]].dropna(subset=["PH Person Hours"]).copy()
+    rows: list[dict] = []
+    for _, r in sub.iterrows():
+        payload = r["PH Person Hours"]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for person, vals in obj.items():
+            a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
+            t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
+            util = (a / t) if (pd.notna(a) and pd.notna(t) and t != 0) else np.nan
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce"),
+                "person": str(person),
+                "Actual Hours": a,
+                "Available Hours": t,
+                "Utilization": util
+            })
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
@@ -144,6 +174,7 @@ if start and end:
 if f.empty:
     st.info("No rows match your filters.")
     st.stop()
+ph_people = explode_ph_person_hours(f)
 latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
             .tail(1))
@@ -200,6 +231,66 @@ kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
 kpi(kpi_cols3[2], "Actual HC used", tot_hc_used, "{:,.2f}")
 kpi_vs_target(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, 0.87, "{:.0%}")
+if "PH" in f["team"].unique() and not ph_people.empty:
+    st.markdown("---")
+    st.subheader("Pelvic Health — Person Drilldown")
+    latest_ph_week = ph_people["period_date"].max()
+    ph_latest = ph_people[ph_people["period_date"] == latest_ph_week].copy()
+    colA, colB, colC = st.columns([2, 3, 3], gap="large")
+    with colA:
+        st.write(f"**Latest PH Week:** {latest_ph_week.date() if pd.notna(latest_ph_week) else '—'}")
+        people_all = sorted(ph_latest["person"].dropna().unique().tolist())
+        selected_people = st.multiselect("People", options=people_all, default=people_all, key="ph_people_sel")
+        filt = ph_latest[ph_latest["person"].isin(selected_people)] if selected_people else ph_latest
+        tot_a = filt["Actual Hours"].sum(skipna=True)
+        tot_t = filt["Available Hours"].sum(skipna=True)
+        util  = (tot_a / tot_t) if tot_t else np.nan
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Actual Hours (sum)", f"{tot_a:,.0f}" if pd.notna(tot_a) else "—")
+        k2.metric("Available Hours (sum)", f"{tot_t:,.0f}" if pd.notna(tot_t) else "—")
+        k3.metric("Utilization", ("{:.0%}".format(util) if pd.notna(util) else "—"))
+    with colB:
+        st.caption("Actual vs Available by person (latest week)")
+        bars = filt.melt(
+            id_vars=["person"],
+            value_vars=["Actual Hours", "Available Hours"],
+            var_name="Metric", value_name="Value"
+        ).dropna(subset=["Value"])
+        bar_chart = (
+            alt.Chart(bars)
+            .mark_bar()
+            .encode(
+                x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                y=alt.Y("Value:Q", title="Hours"),
+                color=alt.Color("Metric:N", title="Series"),
+                tooltip=[ "person:N", "Metric:N", alt.Tooltip("Value:Q", format=",.1f") ],
+            )
+            .properties(height=280)
+        )
+        st.altair_chart(bar_chart, use_container_width=True)
+    with colC:
+        st.caption("Utilization over time (pick people)")
+        ts = ph_people.copy()
+        if selected_people:
+            ts = ts[ts["person"].isin(selected_people)]
+        util_chart = (
+            alt.Chart(ts.dropna(subset=["Utilization"]))
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Utilization:Q", title="Utilization", axis=alt.Axis(format="%")),
+                color=alt.Color("person:N", title="Person"),
+                tooltip=[
+                    "person:N",
+                    "period_date:T",
+                    alt.Tooltip("Actual Hours:Q", format=",.1f"),
+                    alt.Tooltip("Available Hours:Q", format=",.1f"),
+                    alt.Tooltip("Utilization:Q", format=".0%")
+                ],
+            )
+            .properties(height=280)
+        )
+        st.altair_chart(util_chart, use_container_width=True)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
@@ -602,7 +693,7 @@ ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).enc
 st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
 st.markdown("---")
 st.subheader("Detailed Rows")
-hide_cols = {"source_file", "fallback_used", "error"}
+hide_cols = {"source_file", "fallback_used", "error", "PH Person Hours"}
 drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = f.drop(columns=drop_these, errors="ignore").sort_values(["team", "period_date"])
 st.dataframe(f_table, use_container_width=True)
