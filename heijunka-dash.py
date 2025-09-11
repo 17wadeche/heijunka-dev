@@ -245,7 +245,7 @@ with left:
     st.subheader("Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
     ph_only = (len(teams_in_view) == 1 and teams_in_view[0] == "PH")
-    ph_can_drill = ph_only and ("PH Person Hours" in f.columns) and not ph_people.empty
+    ph_people = explode_ph_person_hours(f) if "PH Person Hours" in f.columns else pd.DataFrame()
     if not have_hours:
         st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
     else:
@@ -263,38 +263,30 @@ with left:
             }))
         )
         team_sel = alt.selection_point(fields=["team"], bind="legend")
-        if ph_can_drill:
-            sel_week = alt.selection_point(fields=["period_date"], on="click", nearest=True, empty="none")
+        if ph_only and not ph_people.empty:
+            sel_week = alt.selection_point(
+                name="week_sel",
+                fields=["period_date"],
+                on="click",
+                nearest=True,
+                empty="none",
+                clear="dblclick"
+            )
             trend_base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
                 color=alt.Color("Metric:N", title="Series"),
                 tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
             )
-            line = trend_base.mark_line().encode(
-                detail="team:N",
-                opacity=alt.value(1.0)
-            )
-            pts = trend_base.mark_point(size=45).encode(
-                shape=alt.value("circle")
-            )
-            vrule = (
-                alt.Chart(hrs_long)
-                .transform_filter(sel_week)
-                .mark_rule(strokeDash=[4, 3])
-                .encode(x="period_date:T")
-            )
-            trend_chart = (line + pts + vrule).properties(height=280).add_params(team_sel, sel_week)
-            bars_data = (
+            trend = (
+                trend_base.mark_line()
+                + trend_base.mark_point(size=60)
+                + alt.Chart(hrs_long).transform_filter(sel_week).mark_rule(strokeDash=[4,3]).encode(x="period_date:T")
+            ).properties(height=280)
+            bars = (
                 alt.Chart(ph_people)
                 .transform_filter(sel_week)
-                .transform_fold(
-                    ["Actual Hours", "Available Hours"],
-                    as_=["Metric", "Value"]
-                )
-            )
-            bars = (
-                bars_data
+                .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
                 .mark_bar()
                 .encode(
                     x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
@@ -307,9 +299,9 @@ with left:
                         alt.Tooltip("period_date:T", title="Week"),
                     ],
                 )
-                .properties(height=220)
+                .properties(height=230, title="Per-person (click a point above; double-click to clear)")
             )
-            util_line = (
+            util = (
                 alt.Chart(ph_people)
                 .transform_filter(sel_week)
                 .mark_point()
@@ -323,13 +315,17 @@ with left:
                         alt.Tooltip("Available Hours:Q", format=",.1f"),
                         alt.Tooltip("period_date:T", title="Week"),
                     ],
-                    color=alt.value("#666666")
+                    color=alt.value("#666666"),
+                    shape=alt.value("circle"),
+                    size=alt.value(60),
                 )
-                .properties(height=220)
+                .properties(height=230)
             )
-            st.caption("Click a week to drill down.")
-            st.altair_chart(trend_chart, use_container_width=True)
-            st.altair_chart((bars | util_line).resolve_scale(y="independent"), use_container_width=True)
+            combined = alt.vconcat(
+                trend.add_params(team_sel),
+                (bars | util).resolve_scale(y="independent")
+            ).add_params(sel_week)
+            st.altair_chart(combined, use_container_width=True)
         else:
             base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
