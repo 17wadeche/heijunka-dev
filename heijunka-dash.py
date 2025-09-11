@@ -606,42 +606,29 @@ with mid2:
             base_ahu.mark_line(point=True).properties(height=260),
             use_container_width=True
         )
-        all_weeks_ahu = sorted(pd.to_datetime(ahu["period_date"].dropna().unique()))
-        if all_weeks_ahu:
-            default_week = max(all_weeks_ahu)
-            picked_ahu_week = st.selectbox(
-                "Pick a week to see each person's % of Actual HC used:",
-                options=all_weeks_ahu,
-                index=all_weeks_ahu.index(default_week) if default_week in all_weeks_ahu else 0,
-                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                key="ahu_week_select",
-            )
-            comp = ahu_person_share_for_week(f, picked_ahu_week, teams_in_view, ph_people)
-            if comp.empty:
-                st.info("No people data available for that week.")
-            else:
-                comp = comp.sort_values(["team", "percent"], ascending=[True, False])
-                title = "Per-person share of Actual HC used (selected week)"
-                multi_team = len(teams_in_view) > 1
-                if multi_team:
-                    bar = (
-                        alt.Chart(comp)
-                        .mark_bar()
-                        .encode(
-                            x=alt.X("person:N", title="Person", sort="-y"),
-                            y=alt.Y("percent:Q", title="% of Actual HC used", axis=alt.Axis(format="%")),
-                            tooltip=[
-                                "team:N",
-                                "person:N",
-                                alt.Tooltip("percent:Q", title="% of AHU", format=".0%"),
-                                "period_date:T",
-                            ],
-                            color=alt.value("indianred"),
-                        )
-                    )
-                    chart = bar.properties(height=240, title=title).facet(
-                        column=alt.Column("team:N", title="Team")
-                    )
+
+        # --- Per-person composition drilldown (PH only; exclude zero-share people) ---
+        if len(teams_in_view) == 1 and teams_in_view[0] == "PH":
+            ahu_ph = ahu.loc[ahu["team"] == "PH"]
+            all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()))
+            if all_weeks_ahu_ph:
+                default_week = max(all_weeks_ahu_ph)
+                picked_ahu_week = st.selectbox(
+                    "Pick a week to see each PH person's % of Actual HC used:",
+                    options=all_weeks_ahu_ph,
+                    index=all_weeks_ahu_ph.index(default_week) if default_week in all_weeks_ahu_ph else 0,
+                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                    key="ahu_week_select_ph",
+                )
+
+                # Compute shares; filter out zero/NaN people
+                comp = ahu_person_share_for_week(f, picked_ahu_week, ["PH"], ph_people)
+                if not comp.empty:
+                    comp = comp.loc[(comp["percent"].astype(float) > 0) & comp["person"].notna()].copy()
+                    comp = comp.sort_values(["percent", "person"], ascending=[False, True])
+
+                if comp.empty:
+                    st.info("No PH people with a non-zero share for that week.")
                 else:
                     chart = (
                         alt.Chart(comp)
@@ -656,12 +643,12 @@ with mid2:
                             ],
                             color=alt.value("indianred"),
                         )
-                        .properties(height=240, title=title)
+                        .properties(height=240, title="PH — Per-person share of Actual HC used (selected week)")
                     )
-                st.altair_chart(chart, use_container_width=True)
-                st.caption("PH weighting uses per-person Actual Hours when available; otherwise shares are split evenly across People in WIP.")
-        else:
-            st.info("No weeks available to drill down.")
+                    st.altair_chart(chart, use_container_width=True)
+                    st.caption("Weighted by per-person Actual Hours when available; otherwise evenly split across People in WIP.")
+            else:
+                st.info("No weeks available to drill down for PH.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
