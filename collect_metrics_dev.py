@@ -108,7 +108,7 @@ TEAM_CONFIG = [
             }
         },
         "sum_columns": {
-            "Commercial #12 Prod Analysis": {
+            "Clinical #12 Prod Analysis": {
                 "Target Output": "G",
                 "Actual Output": "J",
             }
