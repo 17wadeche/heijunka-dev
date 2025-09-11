@@ -244,6 +244,7 @@ team_sel = alt.selection_point(fields=["team"], bind="legend")
 with left:
     st.subheader("Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
+    teams_in_view = sorted([t for t in f["team"].dropna().unique()])
     ph_only = (len(teams_in_view) == 1 and teams_in_view[0] == "PH")
     ph_people = explode_ph_person_hours(f) if "PH Person Hours" in f.columns else pd.DataFrame()
     if not have_hours:
@@ -262,30 +263,52 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        team_sel = alt.selection_point(fields=["team"], bind="legend")
+        team_sel = alt.selection_point(fields=["team"], bind="legend") if int(alt.__version__.split(".")[0]) >= 5 \
+                   else alt.selection_multi(fields=["team"], bind="legend")
         if ph_only and not ph_people.empty:
-            sel_week = alt.selection_point(
-                name="week_sel",
-                fields=["period_date"],
-                on="click",
-                nearest=True,
-                empty="none",
-                clear="dblclick"
-            )
+            try:
+                alt_major = int(alt.__version__.split(".")[0])
+            except Exception:
+                alt_major = 4
+
+            if alt_major >= 5:
+                sel_week = alt.selection_point(
+                    name="week_sel",
+                    fields=["period_date"],
+                    on="click",
+                    nearest=True,
+                    empty="none",
+                    clear="dblclick",
+                )
+                add_sel = lambda chart: chart.add_params(sel_week, team_sel)
+                add_team = lambda chart: chart.add_params(team_sel)
+                filter_sel = sel_week
+            else:
+                sel_week = alt.selection_single(
+                    name="week_sel",
+                    fields=["period_date"],
+                    on="click",
+                    nearest=True,
+                    empty="none",
+                    clear="dblclick",
+                )
+                add_sel = lambda chart: chart.add_selection(sel_week, team_sel)
+                add_team = lambda chart: chart.add_selection(team_sel)
+                filter_sel = sel_week
             trend_base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
                 color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             )
             trend = (
-                trend_base.mark_line()
-                + trend_base.mark_point(size=60)
-                + alt.Chart(hrs_long).transform_filter(sel_week).mark_rule(strokeDash=[4,3]).encode(x="period_date:T")
+                (trend_base.mark_line() + trend_base.mark_point(size=60))
+                + alt.Chart(hrs_long).transform_filter(filter_sel).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
             ).properties(height=280)
+            trend = add_sel(trend) 
             bars = (
                 alt.Chart(ph_people)
-                .transform_filter(sel_week)
+                .transform_filter(filter_sel)
                 .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
                 .mark_bar()
                 .encode(
@@ -303,7 +326,7 @@ with left:
             )
             util = (
                 alt.Chart(ph_people)
-                .transform_filter(sel_week)
+                .transform_filter(filter_sel)
                 .mark_point()
                 .encode(
                     x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
@@ -322,27 +345,34 @@ with left:
                 .properties(height=230)
             )
             combined = alt.vconcat(
-                trend.add_params(team_sel),
+                trend,
                 (bars | util).resolve_scale(y="independent")
-            ).add_params(sel_week)
+            )
+            combined = add_team(combined)
+            st.caption("Click a week to drill down (double-click to clear).")
             st.altair_chart(combined, use_container_width=True)
         else:
             base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
                 color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             )
             line = base.mark_line(point=False).encode(
                 detail="team:N",
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+                if len(teams_in_view) > 1 else alt.value(1.0)
             )
             pts = base.mark_point().encode(
                 shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
                 size=alt.value(45),
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+                if len(teams_in_view) > 1 else alt.value(1.0)
             )
-            st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+            st.altair_chart((line + pts).properties(height=280).add_params(team_sel) if int(alt.__version__.split(".")[0]) >= 5
+                            else (line + pts).properties(height=280).add_selection(team_sel),
+                            use_container_width=True)
+
 with mid:
     st.subheader("Output Trend")
     out_long = (
