@@ -474,21 +474,33 @@ with right:
         .dropna(subset=["Value"])
     )
 
+    # --- y-domain padding to prevent clipping at the top ---
+    if not uplh_long.empty:
+        vmin = float(pd.to_numeric(uplh_long["Value"], errors="coerce").min())
+        vmax = float(pd.to_numeric(uplh_long["Value"], errors="coerce").max())
+        rng  = max(0.0, vmax - vmin)
+        pad  = max(0.2, rng * 0.15)               # at least 0.2 UPLH headroom
+        lo   = max(0.0, vmin - pad)
+        hi   = vmax + pad
+        y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
+    else:
+        y_scale = alt.Scale()
+
     # Click to select a week; double-click to clear.
     sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["period_date"],   # project the real field
+        fields=["period_date"],
         on="click",
         clear="dblclick",
         empty="none",
     )
 
-    # ---- Top trend (unchanged behavior) ----
+    # ---- Top trend ----
     trend_base = (
         alt.Chart(uplh_long)
         .encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="UPLH"),
+            y=alt.Y("Value:Q", title="UPLH", scale=y_scale),  # <- padded scale
             color=alt.Color("Metric:N", title="Series"),
             tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")],
         )
@@ -509,7 +521,7 @@ with right:
     )
     top = alt.layer(line, pts, rule).properties(height=280).add_params(team_sel, sel_wk)
 
-    # ---- Breakdown only when a week is selected ----
+    # ----- WP breakdown (only when exactly one team is selected) -----
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -524,14 +536,11 @@ with right:
 
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
 
-    # Caption changes depending on whether breakdown is possible
-    if multi_team:
-        st.caption("Click a week to highlight (WP breakdown requires selecting a single team).")
-    else:
+    # No caption at all when multiple teams are in view.
+    if not multi_team:
         st.caption("Click a week to drill down (double-click to clear).")
 
-    # Show WP1/WP2 breakdown ONLY when a single team is selected
-    if not multi_team and wp1_col and wp2_col:
+    if (not multi_team) and wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
             .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
@@ -539,32 +548,29 @@ with right:
             .dropna(subset=["UPLH"])
         )
 
-        # Small dynamic label showing the selected week; disappears when selection is cleared
+        # Dynamic label for the selected week (hidden when selection is cleared)
         title_text = (
             alt.Chart(uplh_long)
             .transform_filter(sel_wk)
             .transform_aggregate(period_date="min(period_date)")
-            .transform_calculate(
-                label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'"
-            )
+            .transform_calculate(label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'")
             .mark_text(align="left", baseline="top")
-            .encode(x=alt.value(0), y=alt.value(0), text="label:N")
-            .properties(height=18)
+            .encode(x=alt.value(0), y=alt.value(16), text="label:N")  # y=16 and a bit taller to avoid cutoff
+            .properties(height=24)
         )
 
         base_wp = (
             alt.Chart(wp_long)
-            .transform_filter(sel_wk)   # hidden when selection cleared
-            .transform_filter(team_sel) # respects legend filter (still single team)
+            .transform_filter(sel_wk)
+            .transform_filter(team_sel)
         )
 
-        # Single-team breakdown: WP on x-axis
         wp_chart = (
             base_wp.mark_bar()
             .encode(
-                x=alt.X("WP:N", title="WP"),
+                x=alt.X("WP:N", title="Work Package"),
                 y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                color=alt.Color("WP:N", title="WP"),
+                color=alt.Color("WP:N", title="Work Package"),
                 tooltip=[
                     "period_date:T",
                     "WP:N",
@@ -573,12 +579,15 @@ with right:
             )
             .properties(height=230)
         )
+
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     else:
+        # Multiple teams selected OR missing WP cols → only show the trend
         st.altair_chart(top, use_container_width=True)
-        if not multi_team and not (wp1_col and wp2_col):
+        if (not multi_team) and not (wp1_col and wp2_col):
             st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
