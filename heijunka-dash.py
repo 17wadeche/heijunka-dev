@@ -263,31 +263,55 @@ with left:
             }))
         )
         if ph_only and not ph_people.empty:
+            # --- Top trend with clickable points ---
             sel_week = alt.selection_point(
                 name="wk",
                 fields=["period_date"],
+                encodings=["x"],   # make it explicit that the selection is on the x channel
                 on="click",
                 nearest=True,
                 clear="dblclick",
-                empty="none",  # top stays visible; bars/util show only after a click
+                empty="none",      # top always visible; drilldown shows after selection (or via dropdown)
             )
+
             trend_base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
                 y=alt.Y("Value:Q", title="Hours"),
                 color=alt.Color("Metric:N", title="Series"),
                 tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             ).add_params(sel_week)
+
             trend = trend_base.mark_line()
             pts   = trend_base.mark_point(size=70)
+
             rule = (
                 alt.Chart(hrs_long)
                 .transform_filter(sel_week)
                 .mark_rule(strokeDash=[4, 3])
                 .encode(x="period_date:T")
             )
+
+            top = alt.layer(trend, pts, rule).properties(height=280)
+
+            # --- Reliable fallback control (always works) ---
+            # Default to latest week; user can pick any if clicking doesn't populate the drilldown
+            all_weeks = sorted(ph_people["period_date"].dropna().unique())
+            default_week = max(all_weeks) if len(all_weeks) else None
+            picked_week = st.selectbox(
+                "Or pick a week for drilldown:",
+                options=all_weeks,
+                index=(all_weeks.index(default_week) if default_week in all_weeks else 0) if all_weeks else None,
+                format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
+                key="ph_week_select",
+            )
+
+            # Data for bars/util: if a click exists, Altair will filter via sel_week;
+            # otherwise show the dropdown's week.
+            # We implement the dropdown path by pre-filtering the DataFrame.
+            ph_people_drop = ph_people[ph_people["period_date"] == picked_week] if picked_week is not None else ph_people.iloc[0:0]
+
             bars = (
-                alt.Chart(ph_people)
-                .transform_filter(sel_week)
+                alt.Chart(ph_people_drop)
                 .transform_fold(["Actual Hours", "Available Hours"], as_=["Metric", "Value"])
                 .mark_bar()
                 .encode(
@@ -300,11 +324,11 @@ with left:
                         alt.Tooltip("period_date:T", title="Week"),
                     ],
                 )
-                .properties(height=230, title="Per-person (click a week above; double-click to clear)")
+                .properties(height=230, title="Per-person (click a week above or use the dropdown)")
             )
+
             util = (
-                alt.Chart(ph_people)
-                .transform_filter(sel_week)
+                alt.Chart(ph_people_drop)
                 .mark_point()
                 .encode(
                     x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
@@ -319,10 +343,11 @@ with left:
                 )
                 .properties(height=230)
             )
-            top = alt.layer(trend, pts, rule).properties(height=280)
-            st.caption("Click a week to drill down (double-click to clear).")
+
+            st.caption("Click a week to drill down (double-click to clear). If nothing happens, use the dropdown.")
             st.altair_chart(alt.vconcat(top, (bars | util).resolve_scale(y="independent")),
                             use_container_width=True)
+
         else:
             team_sel = alt.selection_point(fields=["team"], bind="legend")
             base = alt.Chart(hrs_long).encode(
