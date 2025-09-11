@@ -231,66 +231,6 @@ kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
 kpi(kpi_cols3[2], "Actual HC used", tot_hc_used, "{:,.2f}")
 kpi_vs_target(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, 0.87, "{:.0%}")
-if "PH" in f["team"].unique() and not ph_people.empty:
-    st.markdown("---")
-    st.subheader("Pelvic Health — Person Drilldown")
-    latest_ph_week = ph_people["period_date"].max()
-    ph_latest = ph_people[ph_people["period_date"] == latest_ph_week].copy()
-    colA, colB, colC = st.columns([2, 3, 3], gap="large")
-    with colA:
-        st.write(f"**Latest PH Week:** {latest_ph_week.date() if pd.notna(latest_ph_week) else '—'}")
-        people_all = sorted(ph_latest["person"].dropna().unique().tolist())
-        selected_people = st.multiselect("People", options=people_all, default=people_all, key="ph_people_sel")
-        filt = ph_latest[ph_latest["person"].isin(selected_people)] if selected_people else ph_latest
-        tot_a = filt["Actual Hours"].sum(skipna=True)
-        tot_t = filt["Available Hours"].sum(skipna=True)
-        util  = (tot_a / tot_t) if tot_t else np.nan
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Actual Hours (sum)", f"{tot_a:,.0f}" if pd.notna(tot_a) else "—")
-        k2.metric("Available Hours (sum)", f"{tot_t:,.0f}" if pd.notna(tot_t) else "—")
-        k3.metric("Utilization", ("{:.0%}".format(util) if pd.notna(util) else "—"))
-    with colB:
-        st.caption("Actual vs Available by person (latest week)")
-        bars = filt.melt(
-            id_vars=["person"],
-            value_vars=["Actual Hours", "Available Hours"],
-            var_name="Metric", value_name="Value"
-        ).dropna(subset=["Value"])
-        bar_chart = (
-            alt.Chart(bars)
-            .mark_bar()
-            .encode(
-                x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                y=alt.Y("Value:Q", title="Hours"),
-                color=alt.Color("Metric:N", title="Series"),
-                tooltip=[ "person:N", "Metric:N", alt.Tooltip("Value:Q", format=",.1f") ],
-            )
-            .properties(height=280)
-        )
-        st.altair_chart(bar_chart, use_container_width=True)
-    with colC:
-        st.caption("Utilization over time (pick people)")
-        ts = ph_people.copy()
-        if selected_people:
-            ts = ts[ts["person"].isin(selected_people)]
-        util_chart = (
-            alt.Chart(ts.dropna(subset=["Utilization"]))
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("Utilization:Q", title="Utilization", axis=alt.Axis(format="%")),
-                color=alt.Color("person:N", title="Person"),
-                tooltip=[
-                    "person:N",
-                    "period_date:T",
-                    alt.Tooltip("Actual Hours:Q", format=",.1f"),
-                    alt.Tooltip("Available Hours:Q", format=",.1f"),
-                    alt.Tooltip("Utilization:Q", format=".0%")
-                ],
-            )
-            .properties(height=280)
-        )
-        st.altair_chart(util_chart, use_container_width=True)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
@@ -304,7 +244,11 @@ team_sel = alt.selection_point(fields=["team"], bind="legend")
 with left:
     st.subheader("Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
-    if have_hours:
+    ph_only = (len(teams_in_view) == 1 and teams_in_view[0] == "PH")
+    ph_can_drill = ph_only and ("PH Person Hours" in f.columns) and not ph_people.empty
+    if not have_hours:
+        st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
+    else:
         hrs_long = (
             f.melt(
                 id_vars=["team", "period_date"],
@@ -318,27 +262,91 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        base = alt.Chart(hrs_long).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="Hours"),
-            color=alt.Color("Metric:N", title="Series"),
-            tooltip=[
-                "team:N", "period_date:T", "Metric:N",
-                alt.Tooltip("Value:Q", format=",.0f")
-            ]
-        )
-        line = base.mark_line(point=False).encode(
-            detail="team:N",
-            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
-        )
-        pts = base.mark_point().encode(
-            shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-            size=alt.value(45),
-            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
-        )
-        st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
-    else:
-        st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
+        team_sel = alt.selection_point(fields=["team"], bind="legend")
+        if ph_can_drill:
+            sel_week = alt.selection_point(fields=["period_date"], on="click", nearest=True, empty="none")
+            trend_base = alt.Chart(hrs_long).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Value:Q", title="Hours"),
+                color=alt.Color("Metric:N", title="Series"),
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
+            )
+            line = trend_base.mark_line().encode(
+                detail="team:N",
+                opacity=alt.value(1.0)
+            )
+            pts = trend_base.mark_point(size=45).encode(
+                shape=alt.value("circle")
+            )
+            vrule = (
+                alt.Chart(hrs_long)
+                .transform_filter(sel_week)
+                .mark_rule(strokeDash=[4, 3])
+                .encode(x="period_date:T")
+            )
+            trend_chart = (line + pts + vrule).properties(height=280).add_params(team_sel, sel_week)
+            bars_data = (
+                alt.Chart(ph_people)
+                .transform_filter(sel_week)
+                .transform_fold(
+                    ["Actual Hours", "Available Hours"],
+                    as_=["Metric", "Value"]
+                )
+            )
+            bars = (
+                bars_data
+                .mark_bar()
+                .encode(
+                    x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                    y=alt.Y("Value:Q", title="Hours"),
+                    color=alt.Color("Metric:N", title="Series"),
+                    tooltip=[
+                        "person:N",
+                        "Metric:N",
+                        alt.Tooltip("Value:Q", format=",.1f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                    ],
+                )
+                .properties(height=220)
+            )
+            util_line = (
+                alt.Chart(ph_people)
+                .transform_filter(sel_week)
+                .mark_point()
+                .encode(
+                    x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                    y=alt.Y("Utilization:Q", axis=alt.Axis(title="Utilization", format="%")),
+                    tooltip=[
+                        "person:N",
+                        alt.Tooltip("Utilization:Q", format=".0%"),
+                        alt.Tooltip("Actual Hours:Q", format=",.1f"),
+                        alt.Tooltip("Available Hours:Q", format=",.1f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                    ],
+                    color=alt.value("#666666")
+                )
+                .properties(height=220)
+            )
+            st.caption("Click a week to drill down.")
+            st.altair_chart(trend_chart, use_container_width=True)
+            st.altair_chart((bars | util_line).resolve_scale(y="independent"), use_container_width=True)
+        else:
+            base = alt.Chart(hrs_long).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Value:Q", title="Hours"),
+                color=alt.Color("Metric:N", title="Series"),
+                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
+            )
+            line = base.mark_line(point=False).encode(
+                detail="team:N",
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+            )
+            pts = base.mark_point().encode(
+                shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
+                size=alt.value(45),
+                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if len(teams_in_view) > 1 else alt.value(1.0)
+            )
+            st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with mid:
     st.subheader("Output Trend")
     out_long = (
