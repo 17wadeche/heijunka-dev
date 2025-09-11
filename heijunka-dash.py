@@ -268,25 +268,36 @@ with left:
             ph_people = pd.DataFrame()
         if ph_only and not ph_people.empty:
             sel_week = alt.selection_point(
-                fields=["period_date"],
+                fields=["period_date"],     # same field name in both charts
+                encodings=["x"],            # tie selection to the x channel
                 on="click",
                 nearest=True,
+                empty="none",               # nothing selected => hide drill-down
                 clear="dblclick"
             )
-            trend = (
+            trend_line = (
                 alt.Chart(hrs_long)
-                .mark_line(point=True)
+                .mark_line()
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
                     y=alt.Y("Value:Q", title="Hours"),
                     color=alt.Color("Metric:N", title="Series"),
                     tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
                 )
-                .properties(height=280)
+            )
+            trend_pts = (
+                alt.Chart(hrs_long)
+                .mark_point(size=70)
+                .encode(
+                    x=alt.X("period_date:T"),
+                    y=alt.Y("Value:Q"),
+                    color=alt.Color("Metric:N", title="Series"),
+                )
+                .add_params(sel_week)  # <-- selection is bound to the points
             )
             rule = (
-                alt.Chart(hrs_long)
-                .transform_filter(sel_week)
+                alt.Chart(hrs_long)              # same dataset is fine
+                .transform_filter(sel_week)    # only when a week is selected
                 .mark_rule(strokeDash=[4, 3])
                 .encode(x="period_date:T")
             )
@@ -324,11 +335,8 @@ with left:
                 )
                 .properties(height=230)
             )
-            top = (trend + rule).add_params(sel_week)
-            combined = alt.vconcat(
-                top,
-                (bars | util).resolve_scale(y="independent")
-            )
+            top = (trend_line + trend_pts + rule).properties(height=280)
+            combined = alt.vconcat(top, (bars | util).resolve_scale(y="independent"))
             st.caption("Click a week to drill down (double-click to clear).")
             st.altair_chart(combined, use_container_width=True)
         else:

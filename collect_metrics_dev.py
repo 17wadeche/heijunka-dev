@@ -457,12 +457,16 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         to_ = (_to_float(ws.Range("Z7").Value)  or 0.0) + (_to_float(ws.Range("AB7").Value) or 0.0)
                         tah =  _to_float(ws.Range("T59").Value)
                         hc_end = "R"
+                        uplh_wp1 = _to_float(ws.Range("Z5").Value)
+                        uplh_wp2 = _to_float(ws.Range("AB5").Value)
                     else:
                         ao  = (_to_float(ws.Range("Y2").Value)  or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                         ch  = (_to_float(ws.Range("Y4").Value)  or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
                         to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
                         tah =  _to_float(ws.Range("S59").Value)
                         hc_end = "Q"
+                        uplh_wp1 = _to_float(ws.Range("Y5").Value)
+                        uplh_wp2 = _to_float(ws.Range("AA5").Value)
                     per_person, sum_actual_row50, sum_avail_row59 = _ph_values_by_person(ws, hc_end)
                     if sum_actual_row50 is not None:
                         ch = sum_actual_row50
@@ -484,6 +488,8 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         "Target Output": to_,
                         "Actual Output": ao,
                         "HC in WIP": hc,
+                        "UPLH WP1": uplh_wp1,
+                        "UPLH WP2": uplh_wp2,
                         "PH Person Hours": json.dumps(per_person, ensure_ascii=False)
                     })
                 finally:
@@ -1440,6 +1446,7 @@ def save_outputs(df: pd.DataFrame):
         "Total Available Hours", "Completed Hours",
         "Target Output", "Actual Output",
         "Target UPLH", "Actual UPLH",
+        "UPLH WP1", "UPLH WP2",
         "HC in WIP", "Actual HC Used",
         "PH Person Hours",
         "Open Complaint Timeliness",
@@ -1450,7 +1457,7 @@ def save_outputs(df: pd.DataFrame):
     if "period_date" in out.columns:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
     numeric_cols = {"Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                    "Target UPLH", "Actual UPLH", "Actual HC Used"} & set(out.columns)
+                    "Target UPLH", "Actual UPLH", "Actual HC Used", "UPLH WP1", "UPLH WP2"} & set(out.columns)
     for c in numeric_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.replace({np.nan: ""})
@@ -1647,6 +1654,8 @@ def run_once():
     df["Actual UPLH"] = df.apply(lambda r: safe_div(r.get("Actual Output"), r.get("Completed Hours")), axis=1)
     df["Target UPLH"] = df["Target UPLH"].round(2)
     df["Actual UPLH"] = df["Actual UPLH"].round(2)
+    if "UPLH WP1" in df.columns: df["UPLH WP1"] = pd.to_numeric(df["UPLH WP1"], errors="coerce").round(2)
+    if "UPLH WP2" in df.columns: df["UPLH WP2"] = pd.to_numeric(df["UPLH WP2"], errors="coerce").round(2)
     df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 32.5
     df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
