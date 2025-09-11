@@ -324,10 +324,11 @@ with left:
                 )
                 .properties(height=230)
             )
+            top = (trend + rule).add_params(sel_week)
             combined = alt.vconcat(
-                (trend + rule),
+                top,
                 (bars | util).resolve_scale(y="independent")
-            ).add_params(sel_week)
+            )
             st.caption("Click a week to drill down (double-click to clear).")
             st.altair_chart(combined, use_container_width=True)
         else:
