@@ -459,11 +459,9 @@ with mid:
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
-
     team_sel = alt.selection_point(fields=["team"], bind="legend")
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
-
     uplh_long = (
         f.melt(
             id_vars=["team", "period_date"],
@@ -473,8 +471,6 @@ with right:
         )
         .dropna(subset=["Value"])
     )
-
-    # ✅ Selection now projects the actual data field we encode on the x-axis.
     sel_wk = alt.selection_point(
         name="wk_uplh",
         fields=["period_date"],   # <-- project real field, not a transformed alias
@@ -482,7 +478,6 @@ with right:
         clear="dblclick",
         empty="none",
     )
-
     trend_base = (
         alt.Chart(uplh_long)
         .encode(
@@ -497,7 +492,6 @@ with right:
             ],
         )
     )
-
     line = trend_base.mark_line().encode(
         detail="team:N",
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
@@ -506,17 +500,13 @@ with right:
         shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
     )
-
-    # ✅ Rule filters directly by the selection on period_date.
     rule = (
         alt.Chart(uplh_long)
         .transform_filter(sel_wk)
         .mark_rule(strokeDash=[4, 3])
         .encode(x="period_date:T")
     )
-
     top = alt.layer(line, pts, rule).properties(height=280).add_params(team_sel, sel_wk)
-
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -528,11 +518,8 @@ with right:
             if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
                 wp2 = c
         return wp1, wp2
-
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
-
     st.caption("Click a week to drill down (double-click to clear).")
-
     if wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
@@ -540,14 +527,11 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
-
-        # ✅ Filter the breakdown by the same selection (no _wk, no timeunit needed).
         base_wp = (
             alt.Chart(wp_long)
             .transform_filter(sel_wk)
             .transform_filter(team_sel)
         )
-
         if multi_team:
             wp_chart = (
                 base_wp.mark_bar()
