@@ -420,11 +420,7 @@ with mid:
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
-
-    # Legend-bound team selector (scoped to this block)
     team_sel = alt.selection_point(fields=["team"], bind="legend")
-
-    # --- Trend data ---
     have_target_uplh = "Target UPLH" in f.columns
     uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
     uplh_long = (
@@ -436,19 +432,14 @@ with right:
         )
         .dropna(subset=["Value"])
     )
-
-    # Click selection on a stable, date-only key (shared across charts)
     sel_wk = alt.selection_point(
         name="wk_uplh",
-        fields=["_wk"],        # derived below
-        encodings=["x"],       # improves hit-testing along x-axis
+        fields=["_wk"],          # derived below
         on="click",
         nearest=True,
         clear="dblclick",
         empty="none",
     )
-
-    # --- Top trend chart (do NOT add params here; we hoist them to the container) ---
     trend_base = (
         alt.Chart(uplh_long)
         .transform_calculate(_wk="toDate(datum.period_date)")  # date-only key
@@ -463,6 +454,7 @@ with right:
                 alt.Tooltip("Value:Q", format=",.2f"),
             ],
         )
+        .add_params(team_sel, sel_wk)
     )
     line = trend_base.mark_line().encode(
         detail="team:N",
@@ -480,8 +472,6 @@ with right:
         .encode(x="period_date:T")
     )
     top = (line + pts + rule).properties(height=280)
-
-    # --- WP1 vs WP2 breakdown (filtered by the SAME selection) ---
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
@@ -493,9 +483,7 @@ with right:
             if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
                 wp2 = c
         return wp1, wp2
-
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
-
     if wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
@@ -503,129 +491,57 @@ with right:
             .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
             .dropna(subset=["UPLH"])
         )
-
         base_wp = (
             alt.Chart(wp_long)
             .transform_calculate(_wk="toDate(datum.period_date)")  # SAME key
             .transform_filter(sel_wk)                              # filter by the click
             .transform_filter(team_sel)                            # respect team legend
         )
-
         if multi_team:
-            wp_chart = (
-                base_wp.mark_bar()
-                .encode(
-                    x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
-                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                    color=alt.Color("WP:N", title="Work Package"),
-                    tooltip=[
-                        "team:N",
-                        "period_date:T",
-                        "WP:N",
-                        alt.Tooltip("UPLH:Q", format=",.2f"),
-                    ],
-                )
-                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
-            )
+            wp_chart = base_wp.mark_bar().encode(
+                x=alt.X("team:N", title="Team", sort=alt.Sort(field="team")),
+                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                color=alt.Color("WP:N", title="Work Package"),
+                tooltip=[
+                    "team:N",
+                    "period_date:T",
+                    "WP:N",
+                    alt.Tooltip("UPLH:Q", format=",.2f"),
+                ],
+            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
         else:
-            wp_chart = (
-                base_wp.mark_bar()
-                .encode(
-                    x=alt.X("WP:N", title="Work Package"),
-                    y=alt.Y("UPLH:Q", title="Actual UPLH"),
-                    color=alt.Color("WP:N", title="Work Package"),
-                    tooltip=[
-                        "period_date:T",
-                        "WP:N",
-                        alt.Tooltip("UPLH:Q", format=",.2f"),
-                    ],
-                )
-                .properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
-            )
-
+            wp_chart = base_wp.mark_bar().encode(
+                x=alt.X("WP:N", title="Work Package"),
+                y=alt.Y("UPLH:Q", title="Actual UPLH"),
+                color=alt.Color("WP:N", title="Work Package"),
+                tooltip=[
+                    "period_date:T",
+                    "WP:N",
+                    alt.Tooltip("UPLH:Q", format=",.2f"),
+                ],
+            ).properties(height=230, title="WP1 vs WP2 UPLH (selected week)")
         st.caption("Click a week to drill down (double-click to clear).")
-        combined = alt.vconcat(top, wp_chart).add_params(team_sel, sel_wk)
-        st.altair_chart(combined, use_container_width=True)
+        st.altair_chart(alt.vconcat(top, wp_chart), use_container_width=True)
     else:
         st.caption("Click a week to drill down (double-click to clear).")
-        combined = top.add_params(team_sel, sel_wk)
-        st.altair_chart(combined, use_container_width=True)
+        st.altair_chart(top, use_container_width=True)
         st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
     st.subheader("HC in WIP Trend")
     if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
         hc = f[["team", "period_date", "HC in WIP"]].dropna()
-        ppl = explode_people_in_wip(f)
-        sel_hc = alt.selection_point(
-            name="hc_pick",
-            fields=["team", "_wk"],
-            on="click",
-            nearest=True,
-            clear="dblclick",
-            empty="none",
+        base_hc = alt.Chart(hc).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("HC in WIP:Q", title="HC in WIP"),
+            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
+            tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
         )
-        base_hc = (
-            alt.Chart(hc)
-            .transform_calculate(_wk="toDate(datum.period_date)")  # date-only key (no hh:mm/tz)
-            .encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("HC in WIP:Q", title="HC in WIP"),
-                color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
-                tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")],
-            )
-            .add_params(sel_hc)
+        st.altair_chart(
+            base_hc.mark_line(point=True).properties(height=260),
+            use_container_width=True
         )
-        line = base_hc.mark_line()
-        pts  = base_hc.mark_point(size=70)
-        rule = (
-            alt.Chart(hc)
-            .transform_calculate(_wk="toDate(datum.period_date)")
-            .transform_filter(sel_hc)
-            .mark_rule(strokeDash=[4, 3])
-            .encode(x="period_date:T")
-        )
-        top = (line + pts + rule).properties(height=260)
-        if ppl.empty:
-            st.caption("Click a point to drill down (double-click to clear).")
-            st.altair_chart(top, use_container_width=True)
-            st.info("No 'People in WIP' data found to drill down into.")
-        else:
-            if len(teams_in_view) > 1:
-                people_chart = (
-                    alt.Chart(ppl)
-                    .transform_calculate(_wk="toDate(datum.period_date)")
-                    .transform_filter(sel_hc)
-                    .mark_text(align="left")
-                    .encode(
-                        y=alt.Y("person:N", title="Person", sort=alt.Sort(field="person")),
-                        x=alt.value(5),
-                        text="person:N",
-                        tooltip=["team:N", "period_date:T", "person:N"],
-                    )
-                    .properties(height=220)
-                    .facet(
-                        row=alt.Row("team:N", header=alt.Header(title="Team", labelFontWeight="bold"))
-                    )
-                )
-            else:
-                people_chart = (
-                    alt.Chart(ppl)
-                    .transform_calculate(_wk="toDate(datum.period_date)")
-                    .transform_filter(sel_hc)
-                    .mark_text(align="left")
-                    .encode(
-                        y=alt.Y("person:N", title="Person", sort=alt.Sort(field="person")),
-                        x=alt.value(5),
-                        text="person:N",
-                        tooltip=["period_date:T", "person:N"],
-                    )
-                    .properties(height=220, title="People in WIP (selected week)")
-                )
-            st.caption("Click a point to drill down (double-click to clear).")
-            st.altair_chart(alt.vconcat(top, people_chart).resolve_scale(y="independent"), use_container_width=True)
     else:
         st.info("No 'HC in WIP' data available in the selected range.")
 with mid2:
