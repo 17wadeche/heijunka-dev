@@ -634,7 +634,7 @@ with mid2:
                             y=alt.Y("percent:Q", title="% of Actual HC used", axis=alt.Axis(format="%")),
                             tooltip=[
                                 "person:N",
-                                alt.Tooltip("percent:Q", title="% of AHU", format=".0%"),
+                                alt.Tooltip("percent:Q", title="% of All HC used", format=".0%"),
                                 "period_date:T",
                             ],
                             color=alt.value("indianred"),
@@ -642,7 +642,6 @@ with mid2:
                         .properties(height=240)
                     )
                     st.altair_chart(chart, use_container_width=True)
-                    st.caption("Weighted by per-person Actual Hours when available; otherwise evenly split across People in WIP.")
             else:
                 st.info("No weeks available to drill down for PH.")
     else:
