@@ -1592,7 +1592,7 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
         print(f"[timeliness] Failed to read {p}: {e}")
         return df
     if t.shape[1] < 3:
-        print("[timeliness] Expected at least 3 columns (A, B, value). Skipping join.")
+        print("[timeliness] Expected at least 3 columns (team, date/period_date, value). Skipping join.")
         return df
     lower_cols = [str(c).strip().lower() for c in t.columns]
     def _first_match(names):
@@ -1612,33 +1612,81 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
             date_col: "period_date",
             val_col:  "Open Complaint Timeliness"
         })
+    def _team_key(s: pd.Series) -> pd.Series:
+        return s.astype(str).str.strip().str.casefold()
+    def _to_num(series: pd.Series) -> pd.Series:
+        s = series.astype(str).str.strip()
+        s = s.str.replace("%", "", regex=False)
+        extracted = s.str.extract(r'([+-]?\d+(?:\.\d+)?)', expand=False)
+        return pd.to_numeric(extracted, errors="coerce")
     t["team"] = t["team"].astype(str).str.strip()
+    t["_team_key"] = _team_key(t["team"])
     t["period_date"] = pd.to_datetime(t["period_date"], errors="coerce").dt.normalize()
-    t = t.dropna(subset=["team", "period_date"]).drop_duplicates(subset=["team", "period_date"], keep="last")
+    t["Open Complaint Timeliness"] = _to_num(t["Open Complaint Timeliness"])
+    t = t.dropna(subset=["_team_key", "period_date"]).drop_duplicates(subset=["_team_key", "period_date"], keep="last")
     out = df.copy()
     if "team" not in out.columns or "period_date" not in out.columns:
         print("[timeliness] 'team'/'period_date' not found in metrics df; skipping join.")
         return df
     out["team"] = out["team"].astype(str).str.strip()
+    out["_team_key"] = _team_key(out["team"])
     out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    merged = out.merge(
-        t[["team", "period_date", "Open Complaint Timeliness"]],
-        on=["team", "period_date"],
+    exact = out.merge(
+        t[["_team_key", "period_date", "Open Complaint Timeliness"]],
+        on=["_team_key", "period_date"],
         how="left",
-        suffixes=("_left", "_right")
+        suffixes=("", "_t")
     )
-    left_name  = "Open Complaint Timeliness_left"
-    right_name = "Open Complaint Timeliness_right"
-    left  = pd.to_numeric(merged[left_name], errors="coerce") if left_name in merged.columns else None
-    right = pd.to_numeric(merged[right_name], errors="coerce") if right_name in merged.columns else None
-    if left is not None and right is not None:
-        merged["Open Complaint Timeliness"] = left.combine_first(right)
-        merged = merged.drop(columns=[left_name, right_name])
-    elif right is not None:
-        merged = merged.rename(columns={right_name: "Open Complaint Timeliness"})
-    elif left is not None:
-        merged = merged.rename(columns={left_name: "Open Complaint Timeliness"})
-    return merged
+    if "Open Complaint Timeliness" in out.columns:
+        left_vals  = pd.to_numeric(exact["Open Complaint Timeliness"], errors="coerce")
+        right_vals = pd.to_numeric(exact.get("Open Complaint Timeliness_t"), errors="coerce")
+        exact["Open Complaint Timeliness"] = right_vals.combine_first(left_vals)
+        if "Open Complaint Timeliness_t" in exact.columns:
+            exact = exact.drop(columns=["Open Complaint Timeliness_t"])
+    else:
+        if "Open Complaint Timeliness_t" in exact.columns and "Open Complaint Timeliness" not in exact.columns:
+            exact = exact.rename(columns={"Open Complaint Timeliness_t": "Open Complaint Timeliness"})
+    mask_missing = exact["Open Complaint Timeliness"].isna() if "Open Complaint Timeliness" in exact.columns else pd.Series(False, index=exact.index)
+    def _week_monday(s: pd.Series) -> pd.Series:
+        d = pd.to_datetime(s, errors="coerce").dt.normalize()
+        return d - pd.to_timedelta(d.dt.weekday, unit="D")
+    if mask_missing.any():
+        tmp = exact.loc[mask_missing].copy()
+        tmp["_week_key"] = _week_monday(tmp["period_date"])
+        t2 = t.copy()
+        t2["_week_key"] = _week_monday(t2["period_date"])
+        wk = tmp.merge(
+            t2[["_team_key", "_week_key", "Open Complaint Timeliness"]],
+            on=["_team_key", "_week_key"],
+            how="left",
+            suffixes=("", "_wk")
+        )
+        fill = pd.to_numeric(wk["Open Complaint Timeliness"], errors="coerce")
+        exact.loc[mask_missing, "Open Complaint Timeliness"] = fill.values
+        mask_missing = exact["Open Complaint Timeliness"].isna()
+    if mask_missing.any():
+        tol = pd.Timedelta(days=6)
+        left_near = exact.loc[mask_missing, ["_team_key", "period_date"]].copy()
+        left_near = left_near.sort_values(["_team_key", "period_date"])
+        right_near = t[["_team_key", "period_date", "Open Complaint Timeliness"]].copy()
+        right_near = right_near.sort_values(["_team_key", "period_date"])
+        filled_vals = []
+        for team_key, left_g in left_near.groupby("_team_key"):
+            r_g = right_near[right_near["_team_key"] == team_key]
+            if r_g.empty:
+                filled_vals.extend([np.nan] * len(left_g))
+                continue
+            merged_g = pd.merge_asof(
+                left_g.sort_values("period_date"),
+                r_g.sort_values("period_date"),
+                on="period_date",
+                direction="nearest",
+                tolerance=tol
+            )
+            filled_vals.extend(merged_g["Open Complaint Timeliness"].tolist())
+        exact.loc[mask_missing, "Open Complaint Timeliness"] = pd.to_numeric(filled_vals, errors="coerce")
+    exact = exact.drop(columns=[c for c in ["_team_key"] if c in exact.columns])
+    return exact
 def run_once():
     all_rows = []
     for cfg in TEAM_CONFIG:
