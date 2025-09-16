@@ -1716,7 +1716,6 @@ def run_once():
     df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 32.5
     df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
-    df = add_open_complaint_timeliness(df)
     try:
         if REPO_CSV.exists():
             repo = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
@@ -1729,6 +1728,7 @@ def run_once():
                 df = merge_with_existing(df)
     except Exception:
         pass
+    df = add_open_complaint_timeliness(df)
     save_outputs(df)
     if not df.empty:
         with pd.option_context("display.max_columns", None, "display.width", 180):
