@@ -13,24 +13,17 @@ DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 st.markdown("""
 <style>
-:root {
-  --card-bg: rgba(255,255,255,0.65);
-  --card-border: rgba(0,0,0,0.06);
+/* Give all metric cards the same minimum height and reserve space for the delta row */
+div[data-testid="stMetric"]{
+  min-height: 116px;        /* tune if you want taller cards */
 }
-html, body, [data-testid="stAppViewContainer"] { 
-  background: radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 40%),
-              radial-gradient(1200px 700px at 110% 10%, #ecfeff 0%, transparent 40%);
+div[data-testid="stMetricDelta"]{
+  min-height: 22px;         /* creates a “phantom” delta row when there isn't one */
+  display: inline-block;
 }
-* { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
-h1, h2, h3 { letter-spacing: .2px; }
-div[data-testid="stMetric"] {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  padding: 12px 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.04);
-}
-hr { border: none; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent); }
+/* Improve contrast of labels/values on dark backgrounds */
+div[data-testid="stMetricLabel"] { color: #e5e7eb !important; }   /* slate-200 */
+div[data-testid="stMetricValue"] { color: #f9fafb !important; }   /* zinc-50  */
 </style>
 """, unsafe_allow_html=True)
 def _clean_altair_theme():
