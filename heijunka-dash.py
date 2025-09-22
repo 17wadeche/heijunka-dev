@@ -313,7 +313,7 @@ def _set_qp_values(**kwargs) -> None:
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 _df = load_data(data_path, DATA_URL)
 
-st.markdown("<h1 style='text-align:center;'>Heijunka Metrics Dashboard ✨</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 
 if _df.empty:
     st.warning("No data found yet. Ensure the source exists and has the 'All Metrics' sheet.")
