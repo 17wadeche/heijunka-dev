@@ -371,7 +371,9 @@ if st.session_state.teams_sel:
 if start and end:
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
 
-if f.empty:\n    st.info("No rows match your filters.")\n    st.stop()\n\n# Put the download button *after* filters are applied, and supply bytes/string (not a lambda)
+if f.empty:
+    st.info("No rows match your filters.")
+    st.stop()
 with st.sidebar:
     st.download_button(
         label="Download filtered CSV",
