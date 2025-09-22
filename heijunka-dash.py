@@ -6,43 +6,18 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
-from datetime import datetime, timezone
-import io
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.xlsx")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
-st.markdown("""
-<style>
-/* Give all metric cards the same minimum height and reserve space for the delta row */
-div[data-testid="stMetric"]{
-  min-height: 116px;        /* tune if you want taller cards */
-}
-div[data-testid="stMetricDelta"]{
-  min-height: 22px;         /* creates a “phantom” delta row when there isn't one */
-  display: inline-block;
-}
-/* Improve contrast of labels/values on dark backgrounds */
-div[data-testid="stMetricLabel"] { color: #e5e7eb !important; }   /* slate-200 */
-div[data-testid="stMetricValue"] { color: #f9fafb !important; }   /* zinc-50  */
-</style>
-""", unsafe_allow_html=True)
-def _clean_altair_theme():
-    return {
-        "config": {
-            "view": {"continuousWidth": 400, "continuousHeight": 280, "stroke": "transparent"},
-            "axis": {
-                "labelFontSize": 12, "titleFontSize": 12,
-                "labelColor": "#1f2937", "titleColor": "#111827",
-                "gridColor": "#f1f5f9", "tickColor": "#e5e7eb"
-            },
-            "legend": {"labelFontSize": 12, "titleFontSize": 12, "symbolType": "circle"},
-            "line": {"strokeWidth": 3},
-            "point": {"filled": True, "size": 70},
-            "range": {"category": ["#2563eb","#f59e0b","#10b981","#ef4444","#8b5cf6","#14b8a6"]}
-        }
-    }
-alt.themes.register("clean", _clean_altair_theme)
-alt.themes.enable("clean")
+hide_streamlit_style = """
+    <style>
+    [data-testid="stToolbar"] { display: none; }
+    #MainMenu { visibility: hidden; }
+    header { visibility: hidden; }
+    footer { visibility: hidden; }
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
@@ -324,13 +299,7 @@ with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
 kpi_vs_target(kpi_cols[2], "Actual Output", tot_actual, tot_target, "{:,.0f}")
-ratio = (tot_actual/tot_target) if tot_target else np.nan
-if pd.isna(ratio):
-    kpi(kpi_cols[3], "Actual vs Target", np.nan, "{:.2f}x")
-else:
-    sign = "↑" if ratio >= 1 else "↓"
-    kpi_cols[3].metric("Actual vs Target", f"{ratio:.2f}x", delta=f"{sign} {abs(1-ratio):.0%}",
-                       delta_color="normal")
+kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi_vs_target(kpi_cols2[2], "Actual UPLH", actual_uplh, target_uplh, "{:.2f}")
@@ -387,7 +356,6 @@ with left:
                 tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             )
             top = trend_base.mark_line() + trend_base.mark_point(size=70)
-            base.mark_line(interpolate="monotone")
             if picked_week is not None:
                 picked_week = pd.to_datetime(picked_week)
                 rule_df = pd.DataFrame({"period_date": [picked_week]})
