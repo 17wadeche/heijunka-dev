@@ -362,13 +362,7 @@ with st.sidebar:
     st.markdown("---")
     st.caption("Share this view")
     st.code(str(st.query_params), language="python")
-    st.download_button(
-        label="Download filtered CSV",
-        data=lambda: _df.to_csv(index=False),
-        file_name="heijunka_filtered.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
+    # (Download button moved below after filters are applied to ensure correct data & type)
 
 # Apply filters
 f = _df.copy()
@@ -377,9 +371,15 @@ if st.session_state.teams_sel:
 if start and end:
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
 
-if f.empty:
-    st.info("No rows match your filters.")
-    st.stop()
+if f.empty:\n    st.info("No rows match your filters.")\n    st.stop()\n\n# Put the download button *after* filters are applied, and supply bytes/string (not a lambda)
+with st.sidebar:
+    st.download_button(
+        label="Download filtered CSV",
+        data=f.to_csv(index=False).encode("utf-8"),
+        file_name="heijunka_filtered.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
 
 ph_people = explode_ph_person_hours(f)
 latest = (
@@ -734,6 +734,7 @@ with people:
                 tooltip=["team:N", "period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")],
             )
             st.altair_chart(base_ahu.mark_line(point=True).properties(height=260), use_container_width=True)
+
             if len(teams_in_view) == 1 and teams_in_view[0] == "PH":
                 ahu_ph = ahu.loc[ahu["team"] == "PH"]
                 all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()))
@@ -773,6 +774,7 @@ with people:
                     st.info("No weeks available to drill down for PH.")
         else:
             st.info("No 'Actual HC used' data available in the selected range.")
+
     with right2:
         st.subheader("Open Complaint Timeliness Trend")
         if "Open Complaint Timeliness" in f.columns and f["Open Complaint Timeliness"].notna().any():
@@ -795,6 +797,8 @@ with people:
             st.altair_chart(base_tml.mark_line(point=True).properties(height=260), use_container_width=True)
         else:
             st.info("No 'Open Complaint Timeliness' data available in the selected range.")
+
+# -------- Table: detailed rows (with nicer defaults) --------
 with table:
     st.subheader("Detailed Rows")
     hide_cols = {"source_file", "fallback_used", "error", "PH Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP"}
