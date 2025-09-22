@@ -331,7 +331,13 @@ with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
 kpi_vs_target(kpi_cols[2], "Actual Output", tot_actual, tot_target, "{:,.0f}")
-kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
+ratio = (tot_actual/tot_target) if tot_target else np.nan
+if pd.isna(ratio):
+    kpi(kpi_cols[3], "Actual vs Target", np.nan, "{:.2f}x")
+else:
+    sign = "↑" if ratio >= 1 else "↓"
+    kpi_cols[3].metric("Actual vs Target", f"{ratio:.2f}x", delta=f"{sign} {abs(1-ratio):.0%}",
+                       delta_color="normal")
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi_vs_target(kpi_cols2[2], "Actual UPLH", actual_uplh, target_uplh, "{:.2f}")
@@ -388,6 +394,7 @@ with left:
                 tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
             )
             top = trend_base.mark_line() + trend_base.mark_point(size=70)
+            base.mark_line(interpolate="monotone")
             if picked_week is not None:
                 picked_week = pd.to_datetime(picked_week)
                 rule_df = pd.DataFrame({"period_date": [picked_week]})
