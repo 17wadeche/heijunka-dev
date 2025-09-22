@@ -6,18 +6,50 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+from datetime import datetime, timezone
+import io
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.xlsx")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
-hide_streamlit_style = """
-    <style>
-    [data-testid="stToolbar"] { display: none; }
-    #MainMenu { visibility: hidden; }
-    header { visibility: hidden; }
-    footer { visibility: hidden; }
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown("""
+<style>
+:root {
+  --card-bg: rgba(255,255,255,0.65);
+  --card-border: rgba(0,0,0,0.06);
+}
+html, body, [data-testid="stAppViewContainer"] { 
+  background: radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 40%),
+              radial-gradient(1200px 700px at 110% 10%, #ecfeff 0%, transparent 40%);
+}
+* { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+h1, h2, h3 { letter-spacing: .2px; }
+div[data-testid="stMetric"] {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.04);
+}
+hr { border: none; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent); }
+</style>
+""", unsafe_allow_html=True)
+def _clean_altair_theme():
+    return {
+        "config": {
+            "view": {"continuousWidth": 400, "continuousHeight": 280, "stroke": "transparent"},
+            "axis": {
+                "labelFontSize": 12, "titleFontSize": 12,
+                "labelColor": "#1f2937", "titleColor": "#111827",
+                "gridColor": "#f1f5f9", "tickColor": "#e5e7eb"
+            },
+            "legend": {"labelFontSize": 12, "titleFontSize": 12, "symbolType": "circle"},
+            "line": {"strokeWidth": 3},
+            "point": {"filled": True, "size": 70},
+            "range": {"category": ["#2563eb","#f59e0b","#10b981","#ef4444","#8b5cf6","#14b8a6"]}
+        }
+    }
+alt.themes.register("clean", _clean_altair_theme)
+alt.themes.enable("clean")
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
