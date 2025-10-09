@@ -775,14 +775,14 @@ with right:
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     elif not multi_team and team_for_drill is not None:
-        top_ph = st.empty()
-        top_ph.altair_chart(top, use_container_width=True)
+        st.altair_chart(top, use_container_width=True)
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
             index=0,
             key="uplh_by_select",
         )
+        lower = None
         if by_choice == "Person":
             uplh_person = build_uplh_by_person_long(f, team_for_drill)
             if uplh_person.empty:
@@ -790,7 +790,7 @@ with right:
             else:
                 lower = (
                     alt.Chart(uplh_person)
-                    .transform_filter(sel_wk)
+                    .transform_filter(sel_wk)                           # keep click-to-filter behavior
                     .transform_filter(alt.datum.team == team_for_drill)
                     .mark_bar()
                     .encode(
@@ -810,11 +810,10 @@ with right:
             uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
             if uplh_cell.empty:
                 st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
-                lower = None
             else:
                 lower = (
                     alt.Chart(uplh_cell)
-                    .transform_filter(sel_wk)
+                    .transform_filter(sel_wk)                           # keep click-to-filter behavior
                     .transform_filter(alt.datum.team == team_for_drill)
                     .mark_bar()
                     .encode(
@@ -831,11 +830,11 @@ with right:
                     .properties(height=230, title="UPLH by Cell/Station (click a week above)")
                 )
         if lower is not None:
-            st.altair_chart(alt.vconcat(top, lower, spacing=6).add_params(team_sel, sel_wk), use_container_width=True)
-    else:
-        st.altair_chart(top, use_container_width=True)
-        if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
-            st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+            st.altair_chart(lower.add_params(team_sel, sel_wk), use_container_width=True)
+        else:
+            st.altair_chart(top, use_container_width=True)
+            if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
+                st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
