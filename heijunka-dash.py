@@ -738,8 +738,6 @@ with right:
                 wp2 = c
         return wp1, wp2
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
-    if not multi_team:
-        st.caption("Click a week to drill down (double-click to clear).")
     team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
     if (not multi_team) and team_for_drill == "PH" and wp1_col and wp2_col:
         wp_long = (
