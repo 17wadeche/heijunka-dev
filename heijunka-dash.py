@@ -773,62 +773,96 @@ with right:
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     elif not multi_team and team_for_drill is not None:
-        st.altair_chart(top, use_container_width=True)
+        # render TOP chart first (no click dependency for drilldown)
+        top_ph = st.empty()
+        top_ph.altair_chart(top, use_container_width=True)
+
+        # 1) Grouping dropdown
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
             index=0,
             key="uplh_by_select",
         )
-        lower = None
-        if by_choice == "Person":
-            uplh_person = build_uplh_by_person_long(f, team_for_drill)
-            if uplh_person.empty:
-                st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
-            else:
-                lower = (
-                    alt.Chart(uplh_person)
-                    .transform_filter(sel_wk)                           # keep click-to-filter behavior
-                    .transform_filter(alt.datum.team == team_for_drill)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("person:N", title="Person", sort="-y"),
-                        y=alt.Y("UPLH:Q", title="UPLH"),
-                        tooltip=[
-                            "period_date:T",
-                            "person:N",
-                            alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                            alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
-                            alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
-                        ],
-                    )
-                    .properties(height=230, title="UPLH by Person (click a week above)")
-                )
+
+        # 2) Week dropdown (drives drilldown)
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()))
+        if team_weeks:
+            default_week = max(team_weeks)
+            picked_week = st.selectbox(
+                "Week:",
+                options=team_weeks,
+                index=team_weeks.index(default_week),
+                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                key="uplh_week_select",
+            )
+            picked_week = pd.to_datetime(picked_week).normalize()
+
+            # light rule on the TOP chart for the selected week
+            rule_df = pd.DataFrame({"period_date": [picked_week]})
+            rule_week = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+            top_ph.altair_chart(alt.layer(line, pts, rule_week).properties(height=280).add_params(team_sel), use_container_width=True)
         else:
-            uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
-            if uplh_cell.empty:
-                st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
+            picked_week = None
+            st.info("No weeks available for drilldown.")
+
+        # 3) Build LOWER chart for the selected grouping + week
+        lower = None
+        if picked_week is not None:
+            if by_choice == "Person":
+                uplh_person = build_uplh_by_person_long(f, team_for_drill)
+                if uplh_person.empty:
+                    st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
+                else:
+                    wk = uplh_person.loc[uplh_person["period_date"] == picked_week].copy()
+                    if wk.empty:
+                        st.info("No UPLH-by-person records for that week.")
+                    else:
+                        lower = (
+                            alt.Chart(wk)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("person:N", title="Person", sort="-y"),
+                                y=alt.Y("UPLH:Q", title="UPLH"),
+                                tooltip=[
+                                    "period_date:T",
+                                    "person:N",
+                                    alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
+                                    alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                                    alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                                ],
+                            )
+                            .properties(height=230, title=f"UPLH by Person • {picked_week.date().isoformat()}")
+                        )
             else:
-                lower = (
-                    alt.Chart(uplh_cell)
-                    .transform_filter(sel_wk)                           # keep click-to-filter behavior
-                    .transform_filter(alt.datum.team == team_for_drill)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("cell_station:N", title="Cell/Station", sort="-y"),
-                        y=alt.Y("UPLH:Q", title="UPLH"),
-                        tooltip=[
-                            "period_date:T",
-                            alt.Tooltip("cell_station:N", title="Cell/Station"),
-                            alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                            alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
-                            alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
-                        ],
-                    )
-                    .properties(height=230, title="UPLH by Cell/Station (click a week above)")
-                )
+                uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
+                if uplh_cell.empty:
+                    st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
+                else:
+                    wk = uplh_cell.loc[uplh_cell["period_date"] == picked_week].copy()
+                    if wk.empty:
+                        st.info("No UPLH-by-cell/station records for that week.")
+                    else:
+                        lower = (
+                            alt.Chart(wk)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("cell_station:N", title="Cell/Station", sort="-y"),
+                                y=alt.Y("UPLH:Q", title="UPLH"),
+                                tooltip=[
+                                    "period_date:T",
+                                    alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                    alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
+                                    alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                                    alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                                ],
+                            )
+                            .properties(height=230, title=f"UPLH by Cell/Station • {picked_week.date().isoformat()}")
+                        )
+
         if lower is not None:
-            st.altair_chart(lower.add_params(team_sel, sel_wk), use_container_width=True)
+            st.altair_chart(lower, use_container_width=True)
+
         else:
             st.altair_chart(top, use_container_width=True)
             if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
