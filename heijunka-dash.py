@@ -225,6 +225,68 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
+    col = _find_first_col(
+        df,
+        ["Cell/Station Hours", "Cell Station Hours", "Hours by Cell/Station", "Cell Hours", "Station Hours"]
+    )
+    if not col or df.empty or col not in df.columns:
+        return pd.DataFrame(columns=["team", "period_date", "cell_station", "Actual Hours", "Available Hours"])
+    sub = df.loc[:, ["team", "period_date", col]].dropna(subset=[col]).copy()
+    rows: list[dict] = []
+    for _, r in sub.iterrows():
+        payload = r[col]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for cell, vals in obj.items():
+            if isinstance(vals, dict):
+                a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
+                t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
+            else:
+                a = pd.to_numeric(vals, errors="coerce")
+                t = np.nan
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "cell_station": str(cell).strip(),
+                "Actual Hours": a,
+                "Available Hours": t,
+            })
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
+    outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
+    if outp.empty:
+        return pd.DataFrame(columns=["team", "period_date", "person", "Actual", "Actual Hours", "UPLH"])
+    hrs = explode_person_hours(frame[frame["team"] == team])[["period_date", "person", "Actual Hours"]]
+    m = (outp
+         .merge(hrs, on=["period_date", "person"], how="left")
+         .rename(columns={"Actual": "Actual Output"}))
+    m["UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["team"] = team
+    return m[["team", "period_date", "person", "Actual Output", "Actual Hours", "UPLH"]].dropna(subset=["UPLH"])
+def build_uplh_by_cell_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
+    outc = explode_outputs_json(frame[frame["team"] == team], "Outputs by Cell/Station", "cell_station")
+    if outc.empty:
+        return pd.DataFrame(columns=["team", "period_date", "cell_station", "Actual", "Actual Hours", "UPLH"])
+    hc = explode_cell_station_hours(frame[frame["team"] == team])[["period_date", "cell_station", "Actual Hours"]]
+    m = (outc
+         .merge(hc, on=["period_date", "cell_station"], how="left")
+         .rename(columns={"Actual": "Actual Output"}))
+    m["UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["team"] = team
+    return m[["team", "period_date", "cell_station", "Actual Output", "Actual Hours", "UPLH"]].dropna(subset=["UPLH"])
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
@@ -668,7 +730,8 @@ with right:
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
     if not multi_team:
         st.caption("Click a week to drill down (double-click to clear).")
-    if (not multi_team) and wp1_col and wp2_col:
+    team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
+    if (not multi_team) and team_for_drill == "PH" and wp1_col and wp2_col:
         wp_long = (
             f[["team", "period_date", wp1_col, wp2_col]]
             .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
@@ -681,7 +744,7 @@ with right:
             .transform_aggregate(period_date="min(period_date)")
             .transform_calculate(label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'")
             .mark_text(align="left", baseline="top")
-            .encode(x=alt.value(0), y=alt.value(16), text="label:N")  # y=16 and a bit taller to avoid cutoff
+            .encode(x=alt.value(0), y=alt.value(16), text="label:N")
             .properties(height=24)
         )
         base_wp = (
@@ -693,11 +756,8 @@ with right:
             base_wp.mark_bar()
             .encode(
                 x=alt.X("WP:N", title="WP"),
-                y=alt.Y(
-                    "UPLH:Q",
-                    title="Actual UPLH",
-                    axis=alt.Axis(titlePadding=12, labelPadding=6)  # prevents cut-off
-                ),
+                y=alt.Y("UPLH:Q", title="Actual UPLH",
+                        axis=alt.Axis(titlePadding=12, labelPadding=6)),
                 color=alt.Color("WP:N", legend=None),
                 tooltip=[
                     "period_date:T",
@@ -709,9 +769,64 @@ with right:
         )
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
+    elif not multi_team and team_for_drill is not None:
+        by_choice = st.selectbox(
+            "UPLH by:",
+            options=["Person", "Cell/Station"],
+            index=0,
+            key="uplh_by_select"
+        )
+        if by_choice == "Person":
+            uplh_person = build_uplh_by_person_long(f, team_for_drill)
+            if uplh_person.empty:
+                st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
+            else:
+                chart = (
+                    alt.Chart(uplh_person)
+                    .transform_filter(sel_wk)
+                    .transform_filter(alt.datum.team == team_for_drill)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("person:N", title="Person", sort="-y"),
+                        y=alt.Y("UPLH:Q", title="UPLH"),
+                        tooltip=[
+                            "period_date:T",
+                            "person:N",
+                            alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
+                            alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                            alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                        ],
+                    )
+                    .properties(height=230, title="UPLH by Person (click a week above)")
+                )
+                st.altair_chart(alt.vconcat(top, chart, spacing=6), use_container_width=True)
+        else:  # Cell/Station
+            uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
+            if uplh_cell.empty:
+                st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
+            else:
+                chart = (
+                    alt.Chart(uplh_cell)
+                    .transform_filter(sel_wk)
+                    .transform_filter(alt.datum.team == team_for_drill)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("cell_station:N", title="Cell/Station", sort="-y"),
+                        y=alt.Y("UPLH:Q", title="UPLH"),
+                        tooltip=[
+                            "period_date:T",
+                            alt.Tooltip("cell_station:N", title="Cell/Station"),
+                            alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
+                            alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                            alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                        ],
+                    )
+                    .properties(height=230, title="UPLH by Cell/Station (click a week above)")
+                )
+                st.altair_chart(alt.vconcat(top, chart, spacing=6), use_container_width=True)
     else:
         st.altair_chart(top, use_container_width=True)
-        if (not multi_team) and not (wp1_col and wp2_col):
+        if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
             st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
