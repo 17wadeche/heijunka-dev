@@ -836,7 +836,6 @@ def _svt_hc_in_wip_openpyxl(ws,
             unique_keys.add(key_str)
     return len(unique_keys)
 def _svt_people_available_openpyxl(ws_individual) -> list[tuple[str, float | None]]:
-    # Rows where each person's merged name starts, and the matching I-col row for available hours
     row_starts = [24, 27, 30, 33, 36]
     out = []
     for r in row_starts:
@@ -851,7 +850,6 @@ def _svt_people_available_openpyxl(ws_individual) -> list[tuple[str, float | Non
             avail = None
         out.append((nm, avail))
     return out
-
 def _svt_completed_hours_by_person_openpyxl(ws_pa,
                                             people: list[str],
                                             name_col: str = "C",
@@ -890,6 +888,50 @@ def _svt_completed_hours_by_person_openpyxl(ws_pa,
     out = {}
     for key, total_m in totals_min.items():
         out[want[key]] = round(total_m / 60.0, 2)
+    return out
+def _tct_people_available_openpyxl(ws, name_col: str, avail_col: str,
+                                   start_row: int = 24, end_row: int = 68, step: int = 3) -> list[tuple[str, float | None]]:
+    rows = list(range(start_row, end_row + 1, step))
+    out: list[tuple[str, float | None]] = []
+    for r in rows:
+        nm = ws[f"{name_col}{r}"].value
+        nm = (str(nm).strip() if nm is not None else "")
+        if not nm:
+            continue
+        avail = safe_numeric(ws[f"{avail_col}{r}"].value)
+        out.append((nm, avail))
+    return out
+def _tct_people_available_xlsb(file_path: Path, sheet: str, name_col: str, avail_col: str,
+                               start_row: int = 24, end_row: int = 68, step: int = 3) -> list[tuple[str, float | None]]:
+    out: list[tuple[str, float | None]] = []
+    for r in range(start_row, end_row + 1, step):
+        nm = read_one_cell_xlsb(file_path, sheet, f"{name_col}{r}")
+        nm = (str(nm).strip() if nm is not None else "")
+        if not nm:
+            continue
+        av = read_one_cell_xlsb(file_path, sheet, f"{avail_col}{r}")
+        out.append((nm, safe_numeric(av)))
+    return out
+def _completed_hours_by_person_pyxlsb(file_path: Path, sheet: str, people: list[str],
+                                      name_col: str = "C", minutes_col: str = "H",
+                                      row_start: int = 1, row_end: int = 200) -> dict[str, float]:
+    from pandas import read_excel
+    df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+    rn = slice(row_start - 1, row_end)
+    c_name = col_letter_to_index(name_col) - 1
+    c_min  = col_letter_to_index(minutes_col) - 1
+    sub = df.iloc[rn, [c_name, c_min]].copy()
+    sub.columns = ["name", "mins"]
+    sub["name_key"] = sub["name"].astype(str).str.strip().str.casefold()
+    sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
+    want = {p.strip().casefold(): p.strip() for p in people if str(p).strip()}
+    sub = sub[sub["name_key"].isin(want.keys())]
+    grp = sub.dropna(subset=["mins"]).groupby("name_key")["mins"].sum()
+    out = {}
+    for k, mins in grp.items():
+        out[want[k]] = round(float(mins) / 60.0, 2)
+    for k, disp in want.items():
+        out.setdefault(disp, 0.0)
     return out
 def _hc_in_wip_from_file(file_path: Path, sheet_name: str,
                          key_col_letter: str = "C", cond_col_letter: str = "G",
@@ -1138,6 +1180,40 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                             per_person[str(name).strip()] = {
                                 "actual":   round(float(a or 0.0), 2),
                                 "available": round(float(avail_f), 2),
+                            }
+                        row["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
+            if team_name in ("TCT Commercial", "TCT Clinical"):
+                try:
+                    ind_sheet = "Individual(WIP-Non WIP)"
+                    pa_sheet  = ("Commercial #12 Prod Analysis" if team_name == "TCT Commercial"
+                                 else "Clinical #12 Prod Analysis")
+                    if ind_sheet in wb.sheetnames:
+                        ws_ind = wb[ind_sheet]
+                        if team_name == "TCT Commercial":
+                            people_avail = _tct_people_available_openpyxl(ws_ind, name_col="A", avail_col="I",
+                                                                          start_row=24, end_row=68, step=3)
+                        else:
+                            people_avail = _tct_people_available_openpyxl(ws_ind, name_col="Z", avail_col="AG",
+                                                                          start_row=24, end_row=68, step=3)
+                    else:
+                        people_avail = []
+                    names = [n for n, _ in people_avail]
+                    completed_hours = {}
+                    if pa_sheet in wb.sheetnames and names:
+                        ws_pa = wb[pa_sheet]
+                        completed_hours = _svt_completed_hours_by_person_openpyxl(
+                            ws_pa=ws_pa, people=names, name_col="C", minutes_col="H",
+                            row_start=1, row_end=500, skip_hidden=True
+                        )
+                    if people_avail:
+                        per_person = {}
+                        for name, avail in people_avail:
+                            a = completed_hours.get(name, 0.0)
+                            per_person[str(name).strip()] = {
+                                "actual":   round(float(a or 0.0), 2),
+                                "available": round(float(avail or 0.0), 2),
                             }
                         row["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
                 except Exception:
@@ -1433,6 +1509,36 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         values["HC in WIP"] = _svt_hc_in_wip_openpyxl(ws_hc)
                 except Exception:
                     values["HC in WIP"] = None
+            if p.suffix.lower() == ".xlsb" and team_name in ("TCT Commercial", "TCT Clinical"):
+                try:
+                    ind_sheet = "Individual(WIP-Non WIP)"
+                    pa_sheet  = ("Commercial #12 Prod Analysis" if team_name == "TCT Commercial"
+                                else "Clinical #12 Prod Analysis")
+                    if team_name == "TCT Commercial":
+                        people_avail = _tct_people_available_xlsb(
+                            p, ind_sheet, name_col="A", avail_col="I", start_row=24, end_row=68, step=3
+                        )
+                    else:
+                        people_avail = _tct_people_available_xlsb(
+                            p, ind_sheet, name_col="Z", avail_col="AG", start_row=24, end_row=68, step=3
+                        )
+                    names = [n for n, _ in people_avail]
+                    completed_hours = {}
+                    if names:
+                        completed_hours = _completed_hours_by_person_pyxlsb(
+                            p, pa_sheet, names, name_col="C", minutes_col="H", row_start=1, row_end=200
+                        )
+                    if people_avail:
+                        per_person = {}
+                        for name, avail in people_avail:
+                            a = completed_hours.get(name, 0.0)
+                            per_person[str(name).strip()] = {
+                                "actual":    round(float(a or 0.0), 2),
+                                "available": round(float(avail or 0.0), 2),
+                            }
+                        values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
             rows.append({
                 "team": team_name,
                 "period_date": period,
