@@ -561,12 +561,21 @@ with mid:
                         )
                         wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))]
                         order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
+                        if not wk2.empty:
+                            vmax = float(pd.to_numeric(wk2["Actual"], errors="coerce").max())
+                            rng  = max(0.0, vmax)                    # treat as 0 if all zeros
+                            pad  = max(3.0, rng * 0.15)              # at least 3 units or 15%
+                            lo   = 0.0
+                            hi   = vmax + pad
+                            y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
+                        else:
+                            y_scale = alt.Scale()
                         bars = (
                             alt.Chart(wk2)
                             .mark_bar()
                             .encode(
                                 x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
-                                y=alt.Y("Actual:Q", title="Actual Output"),
+                                y=alt.Y("Actual:Q", title="Actual Output", scale=y_scale),
                                 tooltip=[
                                     alt.Tooltip(f"{key_label}:N", title=by_choice),
                                     alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
@@ -575,14 +584,16 @@ with mid:
                                     alt.Tooltip("period_date:T", title="Week"),
                                 ],
                             )
-                            .properties(height=260)
+                            .properties(height=260, padding={"top": 24})  # <- NEW top padding
                         )
                         labels = (
                             alt.Chart(wk2)
-                            .mark_text(dy=-6)
+                            .transform_calculate(yOffset="datum.DiffRounded >= 0 ? -6 : 12")
+                            .mark_text()
                             .encode(
                                 x=f"{key_label}:N",
-                                y="Actual:Q",
+                                y=alt.Y("Actual:Q", scale=y_scale),
+                                yOffset=alt.YOffset("yOffset:Q"),
                                 text="DiffLabel:N",
                                 color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                             )
