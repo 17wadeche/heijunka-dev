@@ -136,15 +136,22 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
         payload = r[col_name]
         try:
             obj = json.loads(payload) if isinstance(payload, str) else payload
-            if not isinstance(obj, dict):
-                continue
         except Exception:
+            continue
+        if not isinstance(obj, dict):
             continue
         for k, vals in obj.items():
             if _bad_key(k):
                 continue
-            outv = pd.to_numeric((vals or {}).get("output"), errors="coerce")
-            tgtv = pd.to_numeric((vals or {}).get("target"), errors="coerce")
+            if isinstance(vals, dict):
+                outv = (vals.get("output", None) if "output" in vals else
+                        vals.get("actual", None) if "actual" in vals else
+                        vals.get("Actual", None))
+                tgtv = vals.get("target", vals.get("Target"))
+            else:
+                outv, tgtv = vals, np.nan
+            outv = pd.to_numeric(outv, errors="coerce")
+            tgtv = pd.to_numeric(tgtv, errors="coerce")
             if pd.isna(outv) and pd.isna(tgtv):
                 continue
             rows.append({
@@ -847,7 +854,7 @@ with right:
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230)
+                            .properties(height=230, title=f"UPLH by Cell/Station • {picked_week.date().isoformat()}")
                         )
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
