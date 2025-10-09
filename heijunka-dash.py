@@ -256,17 +256,17 @@ latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
             .tail(1))
 kpi_cols = st.columns(4)
-def kpi(col, label, value, fmt="{:,.2f}"):
+def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
     if pd.isna(value):
-        col.metric(label, "—")
+        col.metric(label, "—", help=help)
     else:
         try:
-            col.metric(label, fmt.format(value))
+            col.metric(label, fmt.format(value), help=help)
         except Exception:
-            col.metric(label, str(value))
-def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}"):
+            col.metric(label, str(value), help=help)
+def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | None = None):
     if pd.isna(actual) or pd.isna(target) or not target:
-        col.metric(label, "—")
+        col.metric(label, "—", help=help)
         return
     try:
         value_str = fmt_val.format(actual)
@@ -274,7 +274,7 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}"):
         value_str = str(actual)
     diff = (float(actual) - float(target)) / float(target)
     delta_str = f"{diff:+.0%} vs target"
-    col.metric(label, value_str, delta=delta_str, delta_color="normal")
+    col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
 tot_target = latest["Target Output"].sum(skipna=True)
 tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
@@ -303,10 +303,20 @@ kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else n
 kpi_cols2 = st.columns(4)
 kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
 kpi_vs_target(kpi_cols2[2], "Actual UPLH", actual_uplh, target_uplh, "{:.2f}")
-kpi(kpi_cols2[3], "Capacity Utilization", (tot_chl/tot_tahl if tot_tahl else np.nan), "{:.0%}")
+kpi(kpi_cols2[3],
+    "Capacity Utilization",
+    (tot_chl/tot_tahl if tot_tahl else np.nan),
+    "{:.0%}",
+    help="Completed vs Available hours"
+)
 kpi_cols3 = st.columns(4)
 kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
-kpi(kpi_cols3[2], "Actual HC used", tot_hc_used, "{:,.2f}")
+kpi(kpi_cols3[2],
+    "Actual HC used",
+    tot_hc_used,
+    "{:,.2f}",
+    help="Based on 6.5 hours per person in WIP per day"
+)
 kpi_vs_target(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, 0.87, "{:.0%}")
 st.markdown("---")
 left, mid, right = st.columns(3)
