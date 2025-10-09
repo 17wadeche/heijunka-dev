@@ -449,23 +449,6 @@ with left:
             }))
         )
         team_sel = alt.selection_point(fields=["team"], bind="legend")
-        picked_week = None
-        team_name = None
-        team_people = None
-        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
-            team_name = teams_in_view[0]
-            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
-            if not team_people.empty:
-                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
-                default_week = max(all_weeks) if all_weeks else None
-                picked_week = st.selectbox(
-                    f"Pick a week for {team_name} drilldown:",
-                    options=all_weeks,
-                    index=(all_weeks.index(default_week) if (all_weeks and default_week in all_weeks) else 0) if all_weeks else None,
-                    format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
-                    key="per_person_week_select",
-                )
-                picked_week = pd.to_datetime(picked_week) if picked_week is not None else None
         base_trend = alt.Chart(hrs_long).encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="Hours"),
@@ -483,12 +466,39 @@ with left:
             opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
             if len(teams_in_view) > 1 else alt.value(1.0)
         )
-        layers = [line, pts]
-        if single_team and picked_week is not None:
-            rule_df = pd.DataFrame({"period_date": [picked_week]})
-            rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
-            layers.append(rule)
-        st.altair_chart(alt.layer(*layers).properties(height=280).add_params(team_sel), use_container_width=True)
+        chart_ph = st.empty()
+        chart_ph.altair_chart(
+            alt.layer(line, pts).properties(height=280).add_params(team_sel),
+            use_container_width=True
+        )
+        picked_week = None
+        team_name = None
+        team_people = None
+        all_weeks = []
+        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
+            team_name = teams_in_view[0]
+            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+            if not team_people.empty:
+                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
+        if single_team and all_weeks:
+            default_week = max(all_weeks)
+            picked_week = st.selectbox(
+                f"Pick a week for {team_name} drilldown:",
+                options=all_weeks,
+                index=(all_weeks.index(default_week) if default_week in all_weeks else 0),
+                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                key="per_person_week_select",
+            )
+            picked_week = pd.to_datetime(picked_week) if picked_week is not None else None
+            layers = [line, pts]
+            if picked_week is not None:
+                rule_df = pd.DataFrame({"period_date": [picked_week]})
+                rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+                layers.append(rule)
+            chart_ph.altair_chart(
+                alt.layer(*layers).properties(height=280).add_params(team_sel),
+                use_container_width=True
+            )
         if single_team and (team_people is None or team_people.empty):
             st.caption(f"No per-person data available for {teams_in_view[0]}.")
         elif single_team and picked_week is not None and team_people is not None:
@@ -800,7 +810,7 @@ with right:
                     .properties(height=230, title="UPLH by Person (click a week above)")
                 )
                 st.altair_chart(alt.vconcat(top, chart, spacing=6), use_container_width=True)
-        else:  # Cell/Station
+        else:
             uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
             if uplh_cell.empty:
                 st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
