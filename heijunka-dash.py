@@ -123,6 +123,40 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
     if not out_rows:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
+def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.DataFrame:
+    if df.empty or col_name not in df.columns:
+        return pd.DataFrame(columns=["team", "period_date", key_label, "Actual", "Target"])
+    def _bad_key(k: str) -> bool:
+        s = str(k).strip()
+        return s in {"", "-", "–", "—"}  # guard even though upstream filters them out
+    rows: list[dict] = []
+    sub = df.loc[:, ["team", "period_date", col_name]].dropna(subset=[col_name]).copy()
+    for _, r in sub.iterrows():
+        payload = r[col_name]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for k, vals in obj.items():
+            if _bad_key(k):
+                continue
+            outv = pd.to_numeric((vals or {}).get("output"), errors="coerce")
+            tgtv = pd.to_numeric((vals or {}).get("target"), errors="coerce")
+            if pd.isna(outv) and pd.isna(tgtv):
+                continue
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                key_label: str(k).strip(),
+                "Actual": outv,
+                "Target": tgtv
+            })
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
@@ -472,6 +506,70 @@ with mid:
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
     )
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+    st.markdown("##### Drilldown")
+    if len(teams_in_view) != 1:
+        st.caption("Select exactly one team to enable week drilldown.")
+    else:
+        team_name = teams_in_view[0]
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()))
+        if not team_weeks:
+            st.info("No weeks available for drilldown.")
+        else:
+            by_choice = st.selectbox(
+                "Output by:",
+                options=["Cell/Station", "Person"],
+                index=0,
+                key="output_by_select"
+            )
+            col_map = {
+                "Person": ("Outputs by Person", "person"),
+                "Cell/Station": ("Outputs by Cell/Station", "cell_station"),
+            }
+            col_name, key_label = col_map[by_choice]
+            default_week = max(team_weeks)
+            picked_week = st.selectbox(
+                "Week:",
+                options=team_weeks,
+                index=team_weeks.index(default_week),
+                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                key="output_by_week_select"
+            )
+            picked_week = pd.to_datetime(picked_week).normalize()
+
+            if col_name not in f.columns:
+                st.info(f"No '{col_name}' data available.")
+            else:
+                exploded = explode_outputs_json(f[f["team"] == team_name], col_name, key_label)
+                wk = exploded.loc[exploded["period_date"] == picked_week].copy()
+                if wk.empty:
+                    st.info("No data for the selected week.")
+                else:
+                    wk_long = (
+                        wk.melt(
+                            id_vars=[key_label, "period_date"],
+                            value_vars=["Actual", "Target"],
+                            var_name="Metric",
+                            value_name="Value",
+                        ).dropna(subset=["Value"])
+                    )
+                    order_keys = (wk.sort_values("Actual", ascending=False)[key_label].tolist())
+                    chart = (
+                        alt.Chart(wk_long)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
+                            y=alt.Y("Value:Q", title="Output"),
+                            color=alt.Color("Metric:N", title=""),
+                            tooltip=[
+                                alt.Tooltip(f"{key_label}:N", title=by_choice),
+                                alt.Tooltip("Metric:N", title="Series"),
+                                alt.Tooltip("Value:Q", format=",.0f"),
+                                alt.Tooltip("period_date:T", title="Week"),
+                            ],
+                        )
+                        .properties(height=260)
+                    )
+                    st.altair_chart(chart, use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
