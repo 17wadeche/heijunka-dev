@@ -689,7 +689,7 @@ with right:
         vmin = float(pd.to_numeric(uplh_long["Value"], errors="coerce").min())
         vmax = float(pd.to_numeric(uplh_long["Value"], errors="coerce").max())
         rng  = max(0.0, vmax - vmin)
-        pad  = max(0.2, rng * 0.15)               # at least 0.2 UPLH headroom
+        pad  = max(0.2, rng * 0.15)
         lo   = max(0.0, vmin - pad)
         hi   = vmax + pad
         y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
@@ -706,7 +706,7 @@ with right:
         alt.Chart(uplh_long)
         .encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="UPLH", scale=y_scale),  # <- padded scale
+            y=alt.Y("Value:Q", title="UPLH", scale=y_scale),
             color=alt.Color("Metric:N", title="Series"),
             tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")],
         )
@@ -766,32 +766,29 @@ with right:
             base_wp.mark_bar()
             .encode(
                 x=alt.X("WP:N", title="WP"),
-                y=alt.Y("UPLH:Q", title="Actual UPLH",
-                        axis=alt.Axis(titlePadding=12, labelPadding=6)),
+                y=alt.Y("UPLH:Q", title="Actual UPLH", axis=alt.Axis(titlePadding=12, labelPadding=6)),
                 color=alt.Color("WP:N", legend=None),
-                tooltip=[
-                    "period_date:T",
-                    "WP:N",
-                    alt.Tooltip("UPLH:Q", format=",.2f"),
-                ],
+                tooltip=["period_date:T", "WP:N", alt.Tooltip("UPLH:Q", format=",.2f")],
             )
             .properties(height=230)
         )
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     elif not multi_team and team_for_drill is not None:
+        top_ph = st.empty()
+        top_ph.altair_chart(top, use_container_width=True)
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
             index=0,
-            key="uplh_by_select"
+            key="uplh_by_select",
         )
         if by_choice == "Person":
             uplh_person = build_uplh_by_person_long(f, team_for_drill)
             if uplh_person.empty:
                 st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
             else:
-                chart = (
+                lower = (
                     alt.Chart(uplh_person)
                     .transform_filter(sel_wk)
                     .transform_filter(alt.datum.team == team_for_drill)
@@ -809,13 +806,13 @@ with right:
                     )
                     .properties(height=230, title="UPLH by Person (click a week above)")
                 )
-                st.altair_chart(alt.vconcat(top, chart, spacing=6), use_container_width=True)
         else:
             uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
             if uplh_cell.empty:
                 st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
+                lower = None
             else:
-                chart = (
+                lower = (
                     alt.Chart(uplh_cell)
                     .transform_filter(sel_wk)
                     .transform_filter(alt.datum.team == team_for_drill)
@@ -833,7 +830,8 @@ with right:
                     )
                     .properties(height=230, title="UPLH by Cell/Station (click a week above)")
                 )
-                st.altair_chart(alt.vconcat(top, chart, spacing=6), use_container_width=True)
+        if lower is not None:
+            st.altair_chart(alt.vconcat(top, lower, spacing=6).add_params(team_sel, sel_wk), use_container_width=True)
     else:
         st.altair_chart(top, use_container_width=True)
         if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
