@@ -124,11 +124,12 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
 def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.DataFrame:
+    cols = ["team", "period_date", key_label, "Actual", "Target"]
     if df.empty or col_name not in df.columns:
-        return pd.DataFrame(columns=["team", "period_date", key_label, "Actual", "Target"])
+        return pd.DataFrame(columns=cols)
     def _bad_key(k: str) -> bool:
         s = str(k).strip()
-        return s in {"", "-", "–", "—"}  # guard even though upstream filters them out
+        return s in {"", "-", "–", "—"}
     rows: list[dict] = []
     sub = df.loc[:, ["team", "period_date", col_name]].dropna(subset=[col_name]).copy()
     for _, r in sub.iterrows():
@@ -153,7 +154,7 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
                 "Actual": outv,
                 "Target": tgtv
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
@@ -535,12 +536,14 @@ with mid:
                 key="output_by_week_select"
             )
             picked_week = pd.to_datetime(picked_week).normalize()
-
             if col_name not in f.columns:
                 st.info(f"No '{col_name}' data available.")
             else:
                 exploded = explode_outputs_json(f[f["team"] == team_name], col_name, key_label)
-                wk = exploded.loc[exploded["period_date"] == picked_week].copy()
+                if exploded.empty or "period_date" not in exploded.columns:
+                    st.info("No drilldown records for the selected grouping.")
+                else:
+                    wk = exploded.loc[exploded["period_date"] == picked_week].copy()
                 if wk.empty:
                     st.info("No data for the selected week.")
                 else:
