@@ -6,7 +6,7 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
-DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.xlsx")
+DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 hide_streamlit_style = """
@@ -412,7 +412,6 @@ with left:
                 ].assign(
                     DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                 )
-
                 if wk2.empty:
                     st.info("Nobody to show after filtering zero-hour +0.0 entries.")
                 else:
