@@ -1184,6 +1184,15 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                         row["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
                 except Exception:
                     pass
+                if team_name == "SVT":
+                    try:
+                        by_person, by_cell = _outputs_person_and_cell_for_team(file_path, team_name)
+                        if by_person:
+                            row["Outputs by Person"] = json.dumps(by_person, ensure_ascii=False)
+                        if by_cell:
+                            row["Outputs by Cell/Station"] = json.dumps(by_cell, ensure_ascii=False)
+                    except Exception:
+                        pass
             if team_name in ("TCT Commercial", "TCT Clinical"):
                 try:
                     ind_sheet = "Individual(WIP-Non WIP)"
@@ -1455,9 +1464,9 @@ def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, 
     sub = df.iloc[:, cols].copy()
     sub.columns = ["key", "output", "target"]
     sub["key"] = sub["key"].astype(str).str.strip()
-    bad_keys = {"", "-", "–", "—"}  # empty, hyphen, en-dash, em-dash
+    bad_keys = {"", "-", "–", "—", "nan"}  
     sub = sub[~sub["key"].isin(bad_keys)]
-    sub = sub[sub["key"].str.len() > 0]  # extra guard in case of weird whitespace
+    sub = sub[sub["key"].str.len() > 0] 
     sub["output"] = pd.to_numeric(sub["output"], errors="coerce")
     sub["target"] = pd.to_numeric(sub["target"], errors="coerce")
     sub = sub[sub[["output", "target"]].notna().any(axis=1)]
