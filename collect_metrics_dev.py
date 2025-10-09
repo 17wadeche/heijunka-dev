@@ -323,12 +323,10 @@ def _ph_values_by_person(ws, col_end: str) -> tuple[dict, float | None, float | 
         names = list(rng_names[0])
     else:
         names = list(rng_names if isinstance(rng_names, (tuple, list)) else [rng_names])
-
     if isinstance(rng_actual, (tuple, list)) and isinstance(rng_actual[0], (tuple, list)):
         actuals = list(rng_actual[0])
     else:
         actuals = list(rng_actual if isinstance(rng_actual, (tuple, list)) else [rng_actual])
-
     if isinstance(rng_avail, (tuple, list)) and isinstance(rng_avail[0], (tuple, list)):
         avails = list(rng_avail[0])
     else:
@@ -499,7 +497,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         "UPLH WP1": uplh_wp1,
                         "UPLH WP2": uplh_wp2,
                         "People in WIP": ppl_in_wip,
-                        "PH Person Hours": json.dumps(per_person, ensure_ascii=False)
+                        "Person Hours": json.dumps(per_person, ensure_ascii=False)
                     })
                 finally:
                     del ws
@@ -837,6 +835,62 @@ def _svt_hc_in_wip_openpyxl(ws,
         if key_str:
             unique_keys.add(key_str)
     return len(unique_keys)
+def _svt_people_available_openpyxl(ws_individual) -> list[tuple[str, float | None]]:
+    # Rows where each person's merged name starts, and the matching I-col row for available hours
+    row_starts = [24, 27, 30, 33, 36]
+    out = []
+    for r in row_starts:
+        nm = ws_individual[f"A{r}"].value
+        nm = (str(nm).strip() if nm is not None else "")
+        if not nm:
+            continue
+        try:
+            v = ws_individual[f"I{r}"].value
+            avail = safe_numeric(v)
+        except Exception:
+            avail = None
+        out.append((nm, avail))
+    return out
+
+def _svt_completed_hours_by_person_openpyxl(ws_pa,
+                                            people: list[str],
+                                            name_col: str = "C",
+                                            minutes_col: str = "G",
+                                            row_start: int = 1,
+                                            row_end:   int = 200,
+                                            skip_hidden: bool = True) -> dict[str, float]:
+    kc = col_letter_to_index(name_col)
+    mc = col_letter_to_index(minutes_col)
+    want = {p.strip().casefold(): p.strip() for p in people if str(p).strip()}
+    totals_min = {canonical: 0.0 for canonical in want.keys()}
+    min_c = min(kc, mc)
+    max_c = max(kc, mc)
+    for r_idx, row_vals in enumerate(
+        ws_pa.iter_rows(min_row=row_start, max_row=row_end,
+                        min_col=min_c, max_col=max_c, values_only=True),
+        start=row_start
+    ):
+        if skip_hidden and hasattr(ws_pa, "row_dimensions"):
+            rd = ws_pa.row_dimensions.get(r_idx) if hasattr(ws_pa.row_dimensions, "get") else None
+            if rd is not None and getattr(rd, "hidden", False):
+                continue
+        name_val = row_vals[kc - min_c]
+        mins_val = row_vals[mc - min_c]
+        if name_val is None or mins_val is None:
+            continue
+        name_key = str(name_val).strip().casefold()
+        if name_key not in totals_min:
+            continue
+        try:
+            mins = float(str(mins_val).replace(",", "").strip())
+            if mins > 0:
+                totals_min[name_key] += mins
+        except Exception:
+            continue
+    out = {}
+    for key, total_m in totals_min.items():
+        out[want[key]] = round(total_m / 60.0, 2)
+    return out
 def _hc_in_wip_from_file(file_path: Path, sheet_name: str,
                          key_col_letter: str = "C", cond_col_letter: str = "G",
                          row_start: int = 7, row_end: int = 200) -> int | None:
@@ -1059,6 +1113,35 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                         row["HC in WIP"] = _svt_hc_in_wip_openpyxl(ws_hc)
                 except Exception:
                     row["HC in WIP"] = None  
+                try:
+                    if "Individual" in wb.sheetnames and "#12 Production Analysis" in wb.sheetnames:
+                        ws_ind = wb["Individual"]
+                        ws_pa  = wb["#12 Production Analysis"]
+                        people_avail = _svt_people_available_openpyxl(ws_individual=ws_ind)  
+                        names = [n for n, _ in people_avail]
+                        completed_hours = _svt_completed_hours_by_person_openpyxl(
+                            ws_pa=ws_pa,
+                            people=names,
+                            name_col="C",
+                            minutes_col="G",
+                            row_start=1,
+                            row_end=200,
+                            skip_hidden=True
+                        )
+                        per_person = {}
+                        for name, avail in people_avail:
+                            a = completed_hours.get(name, 0.0)
+                            try:
+                                avail_f = float(avail) if avail is not None else 0.0
+                            except Exception:
+                                avail_f = 0.0
+                            per_person[str(name).strip()] = {
+                                "actual":   round(float(a or 0.0), 2),
+                                "available": round(float(avail_f), 2),
+                            }
+                        row["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
         rows.append(row)
         if "Current Week" in wb.sheetnames:
             ws_cw = wb["Current Week"]
@@ -1457,7 +1540,7 @@ def save_outputs(df: pd.DataFrame):
         "Target UPLH", "Actual UPLH",
         "UPLH WP1", "UPLH WP2",
         "HC in WIP", "Actual HC Used",
-        "People in WIP", "PH Person Hours",
+        "People in WIP", "Person Hours",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]

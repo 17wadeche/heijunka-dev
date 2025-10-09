@@ -160,12 +160,12 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 def explode_ph_person_hours(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty or "PH Person Hours" not in df.columns:
+    if df.empty or "Person Hours" not in df.columns:
         return pd.DataFrame(columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"])
-    sub = df.loc[df["team"] == "PH", ["team", "period_date", "PH Person Hours"]].dropna(subset=["PH Person Hours"]).copy()
+    sub = df.loc[df["team"] == "PH", ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
     rows: list[dict] = []
     for _, r in sub.iterrows():
-        payload = r["PH Person Hours"]
+        payload = r["Person Hours"]
         try:
             obj = json.loads(payload) if isinstance(payload, str) else payload
             if not isinstance(obj, dict):
@@ -921,7 +921,7 @@ ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).enc
 st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
 st.markdown("---")
 st.subheader("Detailed Rows")
-hide_cols = {"source_file", "fallback_used", "error", "PH Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP"}
+hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP"}
 drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = f.drop(columns=drop_these, errors="ignore").sort_values(["team", "period_date"])
 st.dataframe(f_table, use_container_width=True)
