@@ -1437,6 +1437,65 @@ def read_with_pyxlsb(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dic
             except Exception:
                 out[out_name] = None
     return out
+def _read_sheet_as_df(file_path: Path, sheet_name: str):
+    from pandas import read_excel
+    ext = file_path.suffix.lower()
+    engine = "pyxlsb" if ext == ".xlsb" else None
+    try:
+        return read_excel(file_path, sheet_name=sheet_name, engine=engine, header=None)
+    except Exception:
+        return None
+def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, tgt_col_idx: int) -> dict:
+    if df is None or df.empty:
+        return {}
+    cols = [key_col_idx, out_col_idx, tgt_col_idx]
+    n = df.shape[1]
+    if any(i >= n for i in cols):
+        return {}
+    sub = df.iloc[:, cols].copy()
+    sub.columns = ["key", "output", "target"]
+    sub["key"] = sub["key"].astype(str).str.strip()
+    sub["output"] = pd.to_numeric(sub["output"], errors="coerce")
+    sub["target"] = pd.to_numeric(sub["target"], errors="coerce")
+    sub = sub[(sub["key"].astype(bool)) & (sub[["output","target"]].notna().any(axis=1))]
+    if sub.empty:
+        return {}
+    grp = sub.groupby("key", dropna=False, sort=True).agg({"output":"sum", "target":"sum"})
+    out = {}
+    for k, row in grp.iterrows():
+        out[k] = {
+            "output": float(round(row.get("output", 0.0) if pd.notna(row.get("output")) else 0.0, 2)),
+            "target": float(round(row.get("target", 0.0) if pd.notna(row.get("target")) else 0.0, 2)),
+        }
+    return out
+def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
+    team = (team_name or "").strip().casefold()
+    if team == "svt":
+        sheet = "#12 Production Analysis"
+        person_idx = 2   # C
+        cell_idx   = 3   # D
+        target_idx = 5   # F
+        output_idx = 8   # I
+    elif team == "tct clinical":
+        sheet = "Clinical #12 Prod Analysis"
+        person_idx = 2   # C
+        cell_idx   = 3   # D
+        target_idx = 6   # G
+        output_idx = 9   # J
+    elif team == "tct commercial":
+        sheet = "Commercial #12 Prod Analysis"
+        person_idx = 2   # C
+        cell_idx   = 3   # D
+        target_idx = 6   # G
+        output_idx = 9   # J
+    else:
+        return {}, {}
+    df = _read_sheet_as_df(file_path, sheet)
+    if df is None:
+        return {}, {}
+    by_person = _sum_output_target_by(df, key_col_idx=person_idx, out_col_idx=output_idx, tgt_col_idx=target_idx)
+    by_cell   = _sum_output_target_by(df, key_col_idx=cell_idx,   out_col_idx=output_idx, tgt_col_idx=target_idx)
+    return by_person, by_cell
 def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dict:
     ext = file_path.suffix.lower()
     if ext in (".xlsx", ".xlsm"):
@@ -1494,6 +1553,15 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
+            if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
+                try:
+                    by_person, by_cell = _outputs_person_and_cell_for_team(p, team_name)
+                    if by_person:
+                        values["Outputs by Person"] = json.dumps(by_person, ensure_ascii=False)
+                    if by_cell:
+                        values["Outputs by Cell/Station"] = json.dumps(by_cell, ensure_ascii=False)
+                except Exception:
+                    pass
             sheet_for_hc = None
             if team_name == "TCT Commercial":
                 sheet_for_hc = "Commercial #12 Prod Analysis"
@@ -1647,6 +1715,7 @@ def save_outputs(df: pd.DataFrame):
         "UPLH WP1", "UPLH WP2",
         "HC in WIP", "Actual HC Used",
         "People in WIP", "Person Hours",
+        "Outputs by Person", "Outputs by Cell/Station",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
