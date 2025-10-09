@@ -1508,6 +1508,40 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
     by_person = _sum_output_target_by(df, key_col_idx=person_idx, out_col_idx=output_idx, tgt_col_idx=target_idx)
     by_cell   = _sum_output_target_by(df, key_col_idx=cell_idx,   out_col_idx=output_idx, tgt_col_idx=target_idx)
     return by_person, by_cell
+def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
+    team = (team_name or "").strip().casefold()
+    if team == "svt":
+        sheet = "#12 Production Analysis"
+        key_idx = 3     # D (0-based)
+        mins_idx = 6    # G (0-based)
+    elif team == "tct clinical":
+        sheet = "Clinical #12 Prod Analysis"
+        key_idx = 3     # D
+        mins_idx = 7    # H
+    elif team == "tct commercial":
+        sheet = "Commercial #12 Prod Analysis"
+        key_idx = 3     # D
+        mins_idx = 7    # H
+    else:
+        return {}
+    df = _read_sheet_as_df(file_path, sheet)
+    if df is None or df.empty:
+        return {}
+    n = df.shape[1]
+    if key_idx >= n or mins_idx >= n:
+        return {}
+    sub = df.iloc[:, [key_idx, mins_idx]].copy()
+    sub.columns = ["cell_station", "mins"]
+    sub["cell_station"] = sub["cell_station"].astype(str).str.strip()
+    bad = {"", "-", "–", "—", "nan"}
+    sub = sub[~sub["cell_station"].isin(bad)]
+    sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
+    sub = sub.dropna(subset=["mins"])
+    if sub.empty:
+        return {}
+    agg = sub.groupby("cell_station", dropna=False)["mins"].sum()
+    out = {k: round(float(v) / 60.0, 2) for k, v in agg.items() if pd.notna(v) and float(v) > 0}
+    return out
 def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dict:
     ext = file_path.suffix.lower()
     if ext in (".xlsx", ".xlsm"):
@@ -1572,6 +1606,12 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         values["Outputs by Person"] = json.dumps(by_person, ensure_ascii=False)
                     if by_cell:
                         values["Outputs by Cell/Station"] = json.dumps(by_cell, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
+                    cs_hours = _cell_station_hours_for_team(p, team_name)
+                    if cs_hours:
+                        values["Cell/Station Hours"] = json.dumps(cs_hours, ensure_ascii=False)
                 except Exception:
                     pass
             sheet_for_hc = None
@@ -1728,6 +1768,7 @@ def save_outputs(df: pd.DataFrame):
         "HC in WIP", "Actual HC Used",
         "People in WIP", "Person Hours",
         "Outputs by Person", "Outputs by Cell/Station",
+        "Cell/Station Hours",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
