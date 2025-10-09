@@ -547,32 +547,47 @@ with mid:
                     if wk.empty:
                         st.info("No data for the selected week.")
                     else:
-                        wk_long = (
-                            wk.melt(
-                                id_vars=[key_label, "period_date"],
-                                value_vars=["Actual", "Target"],
-                                var_name="Metric",
-                                value_name="Value",
-                            ).dropna(subset=["Value"])
+                        wk2 = (
+                            wk.assign(
+                                Actual=pd.to_numeric(wk["Actual"], errors="coerce"),
+                                Target=pd.to_numeric(wk["Target"], errors="coerce"),
+                            )
+                            .dropna(subset=["Actual"])
+                            .assign(
+                                Diff=lambda d: d["Actual"] - d["Target"],
+                                DiffRounded=lambda d: d["Diff"].round(1),
+                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
+                            )
                         )
-                        order_keys = (wk.sort_values("Actual", ascending=False)[key_label].tolist())
-                        chart = (
-                            alt.Chart(wk_long)
+                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))]
+                        order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
+                        bars = (
+                            alt.Chart(wk2)
                             .mark_bar()
                             .encode(
                                 x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
-                                y=alt.Y("Value:Q", title="Output"),
-                                color=alt.Color("Metric:N", title=""),
+                                y=alt.Y("Actual:Q", title="Actual Output"),
                                 tooltip=[
                                     alt.Tooltip(f"{key_label}:N", title=by_choice),
-                                    alt.Tooltip("Metric:N", title="Series"),
-                                    alt.Tooltip("Value:Q", format=",.0f"),
+                                    alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                    alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                    alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
                                     alt.Tooltip("period_date:T", title="Week"),
                                 ],
                             )
                             .properties(height=260)
                         )
-                        st.altair_chart(chart, use_container_width=True)
+                        labels = (
+                            alt.Chart(wk2)
+                            .mark_text(dy=-6)
+                            .encode(
+                                x=f"{key_label}:N",
+                                y="Actual:Q",
+                                text="DiffLabel:N",
+                                color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                            )
+                        )
+                        st.altair_chart(bars + labels, use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
