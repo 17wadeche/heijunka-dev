@@ -544,35 +544,35 @@ with mid:
                     st.info("No drilldown records for the selected grouping.")
                 else:
                     wk = exploded.loc[exploded["period_date"] == picked_week].copy()
-                if wk.empty:
-                    st.info("No data for the selected week.")
-                else:
-                    wk_long = (
-                        wk.melt(
-                            id_vars=[key_label, "period_date"],
-                            value_vars=["Actual", "Target"],
-                            var_name="Metric",
-                            value_name="Value",
-                        ).dropna(subset=["Value"])
-                    )
-                    order_keys = (wk.sort_values("Actual", ascending=False)[key_label].tolist())
-                    chart = (
-                        alt.Chart(wk_long)
-                        .mark_bar()
-                        .encode(
-                            x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
-                            y=alt.Y("Value:Q", title="Output"),
-                            color=alt.Color("Metric:N", title=""),
-                            tooltip=[
-                                alt.Tooltip(f"{key_label}:N", title=by_choice),
-                                alt.Tooltip("Metric:N", title="Series"),
-                                alt.Tooltip("Value:Q", format=",.0f"),
-                                alt.Tooltip("period_date:T", title="Week"),
-                            ],
+                    if wk.empty:
+                        st.info("No data for the selected week.")
+                    else:
+                        wk_long = (
+                            wk.melt(
+                                id_vars=[key_label, "period_date"],
+                                value_vars=["Actual", "Target"],
+                                var_name="Metric",
+                                value_name="Value",
+                            ).dropna(subset=["Value"])
                         )
-                        .properties(height=260)
-                    )
-                    st.altair_chart(chart, use_container_width=True)
+                        order_keys = (wk.sort_values("Actual", ascending=False)[key_label].tolist())
+                        chart = (
+                            alt.Chart(wk_long)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
+                                y=alt.Y("Value:Q", title="Output"),
+                                color=alt.Color("Metric:N", title=""),
+                                tooltip=[
+                                    alt.Tooltip(f"{key_label}:N", title=by_choice),
+                                    alt.Tooltip("Metric:N", title="Series"),
+                                    alt.Tooltip("Value:Q", format=",.0f"),
+                                    alt.Tooltip("period_date:T", title="Week"),
+                                ],
+                            )
+                            .properties(height=260)
+                        )
+                        st.altair_chart(chart, use_container_width=True)
 with right:
     st.subheader("UPLH Trend")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
