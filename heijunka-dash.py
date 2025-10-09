@@ -829,7 +829,7 @@ with right:
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"UPLH by Person • {picked_week.date().isoformat()}")
+                            .properties(height=230)
                         )
             else:
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
@@ -854,7 +854,7 @@ with right:
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"UPLH by Cell/Station • {picked_week.date().isoformat()}")
+                            .properties(height=230)
                         )
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
