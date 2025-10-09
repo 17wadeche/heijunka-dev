@@ -656,7 +656,7 @@ with mid2:
                     )
                     st.altair_chart(chart, use_container_width=True)
             else:
-                st.info("No weeks available to drill down for PH.")
+                st.info("No weeks available to drill down.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
