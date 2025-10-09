@@ -847,11 +847,10 @@ with right:
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"UPLH by Cell/Station • {picked_week.date().isoformat()}")
+                            .properties(height=230)
                         )
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
-
         else:
             st.altair_chart(top, use_container_width=True)
             if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
