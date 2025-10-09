@@ -579,7 +579,6 @@ with mid:
         opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
     )
     st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
-    st.markdown("##### Drilldown")
     if len(teams_in_view) != 1:
         st.caption("Select exactly one team to enable week drilldown.")
     else:
@@ -773,19 +772,14 @@ with right:
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
     elif not multi_team and team_for_drill is not None:
-        # render TOP chart first (no click dependency for drilldown)
         top_ph = st.empty()
         top_ph.altair_chart(top, use_container_width=True)
-
-        # 1) Grouping dropdown
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
             index=0,
             key="uplh_by_select",
         )
-
-        # 2) Week dropdown (drives drilldown)
         team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()))
         if team_weeks:
             default_week = max(team_weeks)
@@ -797,16 +791,12 @@ with right:
                 key="uplh_week_select",
             )
             picked_week = pd.to_datetime(picked_week).normalize()
-
-            # light rule on the TOP chart for the selected week
             rule_df = pd.DataFrame({"period_date": [picked_week]})
             rule_week = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
             top_ph.altair_chart(alt.layer(line, pts, rule_week).properties(height=280).add_params(team_sel), use_container_width=True)
         else:
             picked_week = None
             st.info("No weeks available for drilldown.")
-
-        # 3) Build LOWER chart for the selected grouping + week
         lower = None
         if picked_week is not None:
             if by_choice == "Person":
@@ -859,7 +849,6 @@ with right:
                             )
                             .properties(height=230, title=f"UPLH by Cell/Station • {picked_week.date().isoformat()}")
                         )
-
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
 
