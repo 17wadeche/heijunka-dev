@@ -559,17 +559,19 @@ with mid:
                                 DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                             )
                         )
-                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))]
+                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))].copy()
                         order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
                         if not wk2.empty:
                             vmax = float(pd.to_numeric(wk2["Actual"], errors="coerce").max())
-                            rng  = max(0.0, vmax)                    # treat as 0 if all zeros
-                            pad  = max(3.0, rng * 0.15)              # at least 3 units or 15%
-                            lo   = 0.0
-                            hi   = vmax + pad
+                            rng  = max(0.0, vmax)
+                            pad  = max(3.0, rng * 0.22)    # a bit more headroom to avoid clipping labels
+                            lo, hi = 0.0, vmax + pad
                             y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
+                            label_pad = max(1.0, (hi - lo) * 0.04)
+                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"] >= 0, label_pad, -label_pad)
                         else:
                             y_scale = alt.Scale()
+                            wk2["LabelY"] = wk2["Actual"]  # safe default
                         bars = (
                             alt.Chart(wk2)
                             .mark_bar()
@@ -584,16 +586,14 @@ with mid:
                                     alt.Tooltip("period_date:T", title="Week"),
                                 ],
                             )
-                            .properties(height=260, padding={"top": 24})  # <- NEW top padding
+                            .properties(height=260)
                         )
                         labels = (
                             alt.Chart(wk2)
-                            .transform_calculate(yOffset="datum.DiffRounded >= 0 ? -6 : 12")
                             .mark_text()
                             .encode(
                                 x=f"{key_label}:N",
-                                y=alt.Y("Actual:Q", scale=y_scale),
-                                yOffset=alt.YOffset("yOffset:Q"),
+                                y=alt.Y("LabelY:Q", scale=y_scale),
                                 text="DiffLabel:N",
                                 color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                             )
