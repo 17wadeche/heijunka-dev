@@ -1193,6 +1193,12 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                             row["Outputs by Cell/Station"] = json.dumps(by_cell, ensure_ascii=False)
                     except Exception:
                         pass
+                try:
+                    cs_hours = _cell_station_hours_for_team(file_path, team_name)
+                    if cs_hours:
+                        row["Cell/Station Hours"] = json.dumps(cs_hours, ensure_ascii=False)
+                except Exception:
+                    pass
             if team_name in ("TCT Commercial", "TCT Clinical"):
                 try:
                     ind_sheet = "Individual(WIP-Non WIP)"
