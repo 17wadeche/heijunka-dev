@@ -334,7 +334,6 @@ with left:
     st.subheader("Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
     teams_in_view = sorted([t for t in f["team"].dropna().unique()])
-    single_team = (len(teams_in_view) == 1)
     if not have_hours:
         st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
     else:
@@ -351,33 +350,49 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
-            team_name = teams_in_view[0]
-            team_people = ppl_hours.loc[ppl_hours["team"] == team_name]
+        teams_with_person = []
+        if 'ppl_hours' in locals() and not ppl_hours.empty:
+            teams_with_person = sorted(
+                set(teams_in_view).intersection(set(ppl_hours["team"].dropna().unique()))
+            )
+        team_sel = alt.selection_point(fields=["team"], bind="legend")
+        base_trend = alt.Chart(hrs_long).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Hours"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
+        )
+        line = base_trend.mark_line(point=False).encode(
+            detail="team:N",
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if len(teams_in_view) > 1 else alt.value(1.0)
+        )
+        pts = base_trend.mark_point().encode(
+            shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
+            size=alt.value(45),
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if len(teams_in_view) > 1 else alt.value(1.0)
+        )
+        st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+        if teams_with_person:
+            dd_team = st.selectbox(
+                "Pick a team for per-person drilldown:",
+                options=teams_with_person,
+                index=0,
+                key="per_person_team_select"
+            )
+            team_people = ppl_hours.loc[ppl_hours["team"] == dd_team].copy()
             all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
             default_week = max(all_weeks) if all_weeks else None
             picked_week = st.selectbox(
-                "Pick a week for drilldown:",
+                "Pick a week:",
                 options=all_weeks,
-                index=(all_weeks.index(default_week) if default_week in all_weeks else 0) if all_weeks else None,
+                index=(all_weeks.index(default_week) if (all_weeks and default_week in all_weeks) else 0) if all_weeks else None,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
                 key="per_person_week_select",
             )
-            trend_base = alt.Chart(hrs_long).encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("Value:Q", title="Hours"),
-                color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-            )
-            top = trend_base.mark_line() + trend_base.mark_point(size=70)
-            if picked_week is not None:
-                picked_week = pd.to_datetime(picked_week)
-                rule_df = pd.DataFrame({"period_date": [picked_week]})
-                rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
-                top = (top + rule)
-            st.altair_chart(top.properties(height=280), use_container_width=True)
             wk_people = (
-                team_people.loc[team_people["period_date"] == picked_week]
+                team_people.loc[team_people["period_date"] == pd.to_datetime(picked_week)]
                 if picked_week is not None else team_people.iloc[0:0]
             )
             if wk_people.empty:
@@ -385,10 +400,10 @@ with left:
             else:
                 wk2 = (
                     wk_people.assign(
-                        Actual=lambda d: d["Actual Hours"].astype(float),
-                        Avail=lambda d: d["Available Hours"].astype(float),
-                        Diff=lambda d: d["Actual"] - d["Avail"],
+                        Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
+                        Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
                     )
+                    .assign(Diff=lambda d: d["Actual"] - d["Avail"])
                     .assign(DiffRounded=lambda d: d["Diff"].round(1))
                 )
                 wk2 = wk2.loc[
@@ -396,6 +411,7 @@ with left:
                 ].assign(
                     DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                 )
+
                 if wk2.empty:
                     st.info("Nobody to show after filtering zero-hour +0.0 entries.")
                 else:
@@ -413,7 +429,7 @@ with left:
                                 alt.Tooltip("period_date:T", title="Week"),
                             ],
                         )
-                        .properties(height=260, title="Per-person Hours (labels show over/under vs available)")
+                        .properties(height=260, title=f"{dd_team} • Per-person Hours (labels show over/under vs available)")
                     )
                     labels = (
                         alt.Chart(wk2)
@@ -427,25 +443,7 @@ with left:
                     )
                     st.altair_chart(bars + labels, use_container_width=True)
         else:
-            team_sel = alt.selection_point(fields=["team"], bind="legend")
-            base = alt.Chart(hrs_long).encode(
-                x=alt.X("period_date:T", title="Week"),
-                y=alt.Y("Value:Q", title="Hours"),
-                color=alt.Color("Metric:N", title="Series"),
-                tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-            )
-            line = base.mark_line(point=False).encode(
-                detail="team:N",
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-                if len(teams_in_view) > 1 else alt.value(1.0)
-            )
-            pts = base.mark_point().encode(
-                shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
-                size=alt.value(45),
-                opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-                if len(teams_in_view) > 1 else alt.value(1.0)
-            )
-            st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+            st.caption("Per-person drilldown not available for the current selection (no 'Person Hours' found).")
 with mid:
     st.subheader("Output Trend")
     out_long = (
