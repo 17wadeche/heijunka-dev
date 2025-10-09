@@ -352,6 +352,23 @@ with left:
             }))
         )
         team_sel = alt.selection_point(fields=["team"], bind="legend")
+        picked_week = None
+        team_name = None
+        team_people = None
+        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
+            team_name = teams_in_view[0]
+            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+            if not team_people.empty:
+                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
+                default_week = max(all_weeks) if all_weeks else None
+                picked_week = st.selectbox(
+                    f"Pick a week for {team_name} drilldown:",
+                    options=all_weeks,
+                    index=(all_weeks.index(default_week) if (all_weeks and default_week in all_weeks) else 0) if all_weeks else None,
+                    format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
+                    key="per_person_week_select",
+                )
+                picked_week = pd.to_datetime(picked_week) if picked_week is not None else None
         base_trend = alt.Chart(hrs_long).encode(
             x=alt.X("period_date:T", title="Week"),
             y=alt.Y("Value:Q", title="Hours"),
@@ -369,78 +386,63 @@ with left:
             opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
             if len(teams_in_view) > 1 else alt.value(1.0)
         )
-        st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
-        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
-            team_name = teams_in_view[0]
-            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
-
-            if team_people.empty:
-                st.caption(f"No per-person data available for {team_name}.")
+        layers = [line, pts]
+        if single_team and picked_week is not None:
+            rule_df = pd.DataFrame({"period_date": [picked_week]})
+            rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+            layers.append(rule)
+        st.altair_chart(alt.layer(*layers).properties(height=280).add_params(team_sel), use_container_width=True)
+        if single_team and (team_people is None or team_people.empty):
+            st.caption(f"No per-person data available for {teams_in_view[0]}.")
+        elif single_team and picked_week is not None and team_people is not None:
+            wk_people = team_people.loc[team_people["period_date"] == picked_week]
+            if wk_people.empty:
+                st.info("No per-person data for the selected week.")
             else:
-                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
-                default_week = max(all_weeks) if all_weeks else None
-                picked_week = st.selectbox(
-                    f"Pick a week for {team_name} drilldown:",
-                    options=all_weeks,
-                    index=(all_weeks.index(default_week) if (all_weeks and default_week in all_weeks) else 0) if all_weeks else None,
-                    format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
-                    key="per_person_week_select",
+                wk2 = (
+                    wk_people.assign(
+                        Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
+                        Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
+                    )
+                    .assign(Diff=lambda d: d["Actual"] - d["Avail"])
+                    .assign(DiffRounded=lambda d: d["Diff"].round(1))
                 )
-                if picked_week is not None:
-                    picked_week = pd.to_datetime(picked_week)
-                    rule_df = pd.DataFrame({"period_date": [picked_week]})
-                    rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
-                    st.altair_chart(((line + pts + rule).properties(height=280)).add_params(team_sel), use_container_width=True)
-                wk_people = (
-                    team_people.loc[team_people["period_date"] == picked_week]
-                    if picked_week is not None else team_people.iloc[0:0]
+                wk2 = wk2.loc[
+                    ~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))
+                ].assign(
+                    DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                 )
-                if wk_people.empty:
-                    st.info("No per-person data for the selected week.")
+
+                if wk2.empty:
+                    st.info("Nobody to show after filtering zero-hour +0.0 entries.")
                 else:
-                    wk2 = (
-                        wk_people.assign(
-                            Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
-                            Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
+                    bars = (
+                        alt.Chart(wk2)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                            y=alt.Y("Actual:Q", title="Actual Hours"),
+                            tooltip=[
+                                "person:N",
+                                alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
+                                alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
+                                alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
+                                alt.Tooltip("period_date:T", title="Week"),
+                            ],
                         )
-                        .assign(Diff=lambda d: d["Actual"] - d["Avail"])
-                        .assign(DiffRounded=lambda d: d["Diff"].round(1))
+                        .properties(height=260, title=f"{team_name} • Per-person Hours (labels show over/under vs available)")
                     )
-                    wk2 = wk2.loc[
-                        ~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))
-                    ].assign(
-                        DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
+                    labels = (
+                        alt.Chart(wk2)
+                        .mark_text(dy=-6)
+                        .encode(
+                            x="person:N",
+                            y="Actual:Q",
+                            text=alt.Text("DiffLabel:N"),
+                            color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                        )
                     )
-                    if wk2.empty:
-                        st.info("Nobody to show after filtering zero-hour +0.0 entries.")
-                    else:
-                        bars = (
-                            alt.Chart(wk2)
-                            .mark_bar()
-                            .encode(
-                                x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                                y=alt.Y("Actual:Q", title="Actual Hours"),
-                                tooltip=[
-                                    "person:N",
-                                    alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
-                                    alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
-                                    alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
-                                    alt.Tooltip("period_date:T", title="Week"),
-                                ],
-                            )
-                            .properties(height=260, title=f"{team_name} • Per-person Hours (labels show over/under vs available)")
-                        )
-                        labels = (
-                            alt.Chart(wk2)
-                            .mark_text(dy=-6)
-                            .encode(
-                                x="person:N",
-                                y="Actual:Q",
-                                text=alt.Text("DiffLabel:N"),
-                                color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
-                            )
-                        )
-                        st.altair_chart(bars + labels, use_container_width=True)
+                    st.altair_chart(bars + labels, use_container_width=True)
         else:
             if not single_team:
                 st.caption("Per-person drilldown is available when exactly one team is selected.")
