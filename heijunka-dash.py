@@ -84,7 +84,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
-def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], ph_people_df: pd.DataFrame) -> pd.DataFrame:
+def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     wk = pd.to_datetime(week, errors="coerce").normalize()
@@ -100,12 +100,12 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
         if team_ahu_series.empty:
             continue
         per_df = None
-        if team == "PH" and ph_people_df is not None and not ph_people_df.empty:
-            phw = ph_people_df.loc[
-                (ph_people_df["team"] == "PH") & (ph_people_df["period_date"] == wk)
+        if people_df is not None and not people_df.empty:
+            teamw = people_df.loc[
+                (people_df["team"] == team) & (people_df["period_date"] == wk)
             ]
-            if not phw.empty and phw["Actual Hours"].notna().any():
-                g = phw.groupby("person", as_index=False)["Actual Hours"].sum()
+            if not teamw.empty and teamw["Actual Hours"].notna().any():
+                g = teamw.groupby("person", as_index=False)["Actual Hours"].sum()
                 tot = float(g["Actual Hours"].sum())
                 if tot > 0:
                     per_df = g.assign(percent=lambda d: d["Actual Hours"] / tot)[["person", "percent"]]
@@ -159,10 +159,12 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
-def explode_ph_person_hours(df: pd.DataFrame) -> pd.DataFrame:
+def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Person Hours" not in df.columns:
-        return pd.DataFrame(columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"])
-    sub = df.loc[df["team"] == "PH", ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
+        return pd.DataFrame(columns=[
+            "team","period_date","person","Actual Hours","Available Hours","Utilization"
+        ])
+    sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
     rows: list[dict] = []
     for _, r in sub.iterrows():
         payload = r["Person Hours"]
@@ -175,7 +177,7 @@ def explode_ph_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         for person, vals in obj.items():
             a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
-            util = (a / t) if (pd.notna(a) and pd.notna(t) and t != 0) else np.nan
+            util = (a / t) if (pd.notna(a) and pd.notna(t) and t not in (0, 0.0)) else np.nan
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce"),
@@ -251,7 +253,7 @@ if start and end:
 if f.empty:
     st.info("No rows match your filters.")
     st.stop()
-ph_people = explode_ph_person_hours(f)
+ppl_hours = explode_person_hours(f)
 latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
             .tail(1))
@@ -332,7 +334,7 @@ with left:
     st.subheader("Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
     teams_in_view = sorted([t for t in f["team"].dropna().unique()])
-    ph_only = (len(teams_in_view) == 1 and teams_in_view[0] == "PH")
+    single_team = (len(teams_in_view) == 1)
     if not have_hours:
         st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
     else:
@@ -349,15 +351,17 @@ with left:
                 "Completed Hours": "Actual Hours"
             }))
         )
-        if ph_only and not ph_people.empty:
-            all_weeks = sorted(pd.to_datetime(ph_people["period_date"].dropna().unique()))
+        if single_team and 'ppl_hours' in locals() and not ppl_hours.empty:
+            team_name = teams_in_view[0]
+            team_people = ppl_hours.loc[ppl_hours["team"] == team_name]
+            all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
             default_week = max(all_weeks) if all_weeks else None
             picked_week = st.selectbox(
                 "Pick a week for drilldown:",
                 options=all_weeks,
                 index=(all_weeks.index(default_week) if default_week in all_weeks else 0) if all_weeks else None,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat() if pd.notna(d) else "—",
-                key="ph_week_select",
+                key="per_person_week_select",
             )
             trend_base = alt.Chart(hrs_long).encode(
                 x=alt.X("period_date:T", title="Week"),
@@ -372,31 +376,31 @@ with left:
                 rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
                 top = (top + rule)
             st.altair_chart(top.properties(height=280), use_container_width=True)
-            ph_week = (
-                ph_people.loc[ph_people["period_date"] == picked_week]
-                if picked_week is not None else ph_people.iloc[0:0]
+            wk_people = (
+                team_people.loc[team_people["period_date"] == picked_week]
+                if picked_week is not None else team_people.iloc[0:0]
             )
-            if ph_week.empty:
+            if wk_people.empty:
                 st.info("No per-person data for the selected week.")
             else:
-                ph_week2 = (
-                    ph_week.assign(
+                wk2 = (
+                    wk_people.assign(
                         Actual=lambda d: d["Actual Hours"].astype(float),
                         Avail=lambda d: d["Available Hours"].astype(float),
                         Diff=lambda d: d["Actual"] - d["Avail"],
                     )
                     .assign(DiffRounded=lambda d: d["Diff"].round(1))
                 )
-                ph_week2 = ph_week2.loc[
-                        ~((ph_week2["Actual"].fillna(0) == 0) & (ph_week2["DiffRounded"] == 0.0))
+                wk2 = wk2.loc[
+                    ~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))
                 ].assign(
-                        DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}") 
-                ) 
-                if ph_week2.empty:
+                    DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
+                )
+                if wk2.empty:
                     st.info("Nobody to show after filtering zero-hour +0.0 entries.")
                 else:
                     bars = (
-                        alt.Chart(ph_week2)
+                        alt.Chart(wk2)
                         .mark_bar()
                         .encode(
                             x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
@@ -412,7 +416,7 @@ with left:
                         .properties(height=260, title="Per-person Hours (labels show over/under vs available)")
                     )
                     labels = (
-                        alt.Chart(ph_week2)
+                        alt.Chart(wk2)
                         .mark_text(dy=-6)
                         .encode(
                             x="person:N",
@@ -613,7 +617,7 @@ with mid2:
             base_ahu.mark_line(point=True).properties(height=260),
             use_container_width=True
         )
-        if len(teams_in_view) == 1 and teams_in_view[0] == "PH":
+        if len(teams_in_view) == 1:
             ahu_ph = ahu.loc[ahu["team"] == "PH"]
             all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()))
             if all_weeks_ahu_ph:
@@ -625,7 +629,7 @@ with mid2:
                     format_func=lambda d: pd.to_datetime(d).date().isoformat(),
                     key="ahu_week_select_ph",
                 )
-                comp = ahu_person_share_for_week(f, picked_ahu_week, ["PH"], ph_people)
+                comp = ahu_person_share_for_week(f, picked_ahu_week, [teams_in_view[0]], ppl_hours)
                 if not comp.empty:
                     comp = comp.loc[(comp["percent"].astype(float) > 0) & comp["person"].notna()].copy()
                     comp = comp.sort_values(["percent", "person"], ascending=[False, True])
