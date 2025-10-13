@@ -45,7 +45,8 @@ EXCLUDED_DIRS = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Smartsheet Gameboard",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Standard Works",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Upcoming Weeks Heijunka Drafts",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Templates"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Templates",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\Archived\Archived Heijunka 2024"
 }
 EXCLUDED_DIRS = {s.lower().rstrip("\\").replace("/", "\\") for s in EXCLUDED_DIRS}
 EXCLUDED_SOURCE_FILES = {s.lower().replace("/", "\\") for s in EXCLUDED_SOURCE_FILES}
