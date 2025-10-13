@@ -2331,8 +2331,13 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
         tmp["_week_key"] = _week_monday(tmp["period_date"])
         t2 = t.copy()
         t2["_week_key"] = _week_monday(t2["period_date"])
+        t2_week = (
+            t2[["_team_key", "_week_key", "Open Complaint Timeliness"]]
+            .sort_values(["_team_key", "_week_key", "period_date"])
+            .drop_duplicates(["_team_key", "_week_key"], keep="last")
+        )
         wk = tmp.merge(
-            t2[["_team_key", "_week_key", "Open Complaint Timeliness"]],
+            t2_week,
             on=["_team_key", "_week_key"],
             how="left",
             suffixes=("", "_wk")
