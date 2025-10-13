@@ -1754,6 +1754,55 @@ def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) 
         return read_with_pyxlsb(file_path, cells_cfg, sumcols_cfg)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
+def _aortic_hc_in_wip_from_file(file_path: Path,
+                                sheet: str = "#12 Production Analysis",
+                                col_c: str = "C",
+                                row_start: int = 7,
+                                row_end: int = 199,
+                                skip_hidden: bool = True) -> int | None:
+    ext = file_path.suffix.lower()
+    def _unique_from_openpyxl(ws) -> int:
+        c_idx = col_letter_to_index(col_c)
+        names = set()
+        for r_idx, row_vals in enumerate(
+            ws.iter_rows(min_row=row_start, max_row=row_end,
+                         min_col=c_idx, max_col=c_idx, values_only=True),
+            start=row_start
+        ):
+            if skip_hidden and hasattr(ws, "row_dimensions"):
+                rd = ws.row_dimensions.get(r_idx) if hasattr(ws.row_dimensions, "get") else None
+                if rd is not None and getattr(rd, "hidden", False):
+                    continue
+            v = row_vals[0]
+            s = str(v).strip() if v is not None else ""
+            if s and s != "#REF!" and s != "0":
+                names.add(s)
+        return len(names)
+
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(file_path, data_only=True, read_only=skip_hidden is False)
+            if sheet not in wb.sheetnames:
+                return None
+            return _unique_from_openpyxl(wb[sheet])
+        except Exception:
+            return None
+    elif ext == ".xlsb":
+        from pandas import read_excel
+        try:
+            df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+            c = col_letter_to_index(col_c) - 1
+            series = df.iloc[row_start-1:row_end, c].astype(str)
+            names = set()
+            for s in series:
+                s = s.strip()
+                if s and s.lower() != "nan" and s != "#REF!" and s != "0":
+                    names.add(s)
+            return len(names)
+        except Exception:
+            return None
+    else:
+        return None
 def _aortic_completed_hours_from_file(file_path: Path,
                                       sheet: str = "#12 Production Analysis",
                                       col_c: str = "C",
@@ -1827,8 +1876,13 @@ def _aortic_hours_by_col(file_path: Path,
                     continue
             v = row_vals[0]
             s = str(v).strip() if v is not None else ""
-            if s and s.upper() != "#REF!":
-                out[s] = round(out.get(s, 0.0) + 2.0, 2)
+            bad = {"", "#REF!"}
+            if col_letter.upper() == "C":
+                bad |= {"0"}
+            if col_letter.upper() == "D":
+                bad |= {"-", "–", "—"}
+            if s not in bad:
+                out[s] = round(out.get(s, 0.0) + 2.0, 2)  # Rule 3/5: +2 hours per occurrence
         return out
     ext = file_path.suffix.lower()
     try:
@@ -1845,8 +1899,13 @@ def _aortic_hours_by_col(file_path: Path,
             out: dict[str, float] = {}
             for s in series:
                 s = s.strip()
-                if s and s.lower() != "nan" and s != "#REF!":
-                    out[s] = round(out.get(s, 0.0) + 2.0, 2)
+                bad = {"", "#REF!", "nan"}
+                if col_letter.upper() == "C":
+                    bad |= {"0"}            # Rule 2
+                if col_letter.upper() == "D":
+                    bad |= {"-", "–", "—"}  # Rule 4
+                if s not in bad:
+                    out[s] = round(out.get(s, 0.0) + 2.0, 2)  # Rule 3/5
             return out
         else:
             return {}
@@ -1909,7 +1968,11 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
             if team_name in ("ECT", "PVH", "CRDN", "Aortic"):
                 try:
-                    values["HC in WIP"] = _hc_in_wip_from_file(p, "#12 Production Analysis")
+                    if team_name == "Aortic":
+                        values["HC in WIP"] = _aortic_hc_in_wip_from_file(p, "#12 Production Analysis", col_c="C",
+                                                                        row_start=7, row_end=199, skip_hidden=True)
+                    else:
+                        values["HC in WIP"] = _hc_in_wip_from_file(p, "#12 Production Analysis")
                 except Exception:
                     values["HC in WIP"] = None
                 try:
