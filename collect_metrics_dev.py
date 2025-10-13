@@ -50,6 +50,126 @@ def _is_excluded_path(p: Path) -> bool:
     return False
 TEAM_CONFIG = [
     {
+        "name": "ECT",
+        "root": r"C:\Users\wadec8\Medtronic PLC\Doran, Elaine - Heijunka Production Analysis",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "ECT",
+        "root": r"C:\Users\wadec8\Medtronic PLC\Doran, Elaine - Heijunka Production Analysis\Archived Heijunka",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "CRDN",
+        "root": r"C:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "CRDN",
+        "root": r"C:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\Archived\Archived Heijunka 2025",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "PVH",
+        "root": r"C:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "PVH",
+        "root": r"C:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\2025",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+                "Completed Hours":       "I40",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "F", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+                "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
         "name": "TCT Commercial",
         "root": r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - Weekly Heijunka Archived",
         "pattern": "*.xlsb",
@@ -206,7 +326,7 @@ def _excel_serial_to_date(n) -> _date | None:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
     except Exception:
         return None
-YEAR_RX = re.compile(r"\b(?:19|20)\d{2}\b")  # 1900–2099
+YEAR_RX = re.compile(r"\b(?:19|20)\d{2}\b")
 def _coerce_to_date_for_filter2(v, require_explicit_year: bool = False) -> _date | None:
     if isinstance(v, _dt):
         return v.date()
@@ -854,6 +974,21 @@ def _svt_people_available_openpyxl(ws_individual) -> list[tuple[str, float | Non
             avail = None
         out.append((nm, avail))
     return out
+def _people_available_openpyxl_generic(ws,
+                                       name_col: str = "A",
+                                       avail_col: str = "I",
+                                       start_row: int = 6,
+                                       end_row: int = 32,
+                                       step: int = 3) -> list[tuple[str, float | None]]:
+    out: list[tuple[str, float | None]] = []
+    for r in range(start_row, end_row + 1, step):
+        nm = ws[f"{name_col}{r}"].value
+        nm = (str(nm).strip() if nm is not None else "")
+        if not nm or nm.upper() == "#REF!":
+            continue
+        avail = safe_numeric(ws[f"{avail_col}{r}"].value)
+        out.append((nm, avail))
+    return out
 def _svt_completed_hours_by_person_openpyxl(ws_pa,
                                             people: list[str],
                                             name_col: str = "C",
@@ -1492,7 +1627,7 @@ def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, 
     return out
 def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
     team = (team_name or "").strip().casefold()
-    if team == "svt":
+    if team in ("svt", "ect", "pvh", "crdn"):
         sheet = "#12 Production Analysis"
         person_idx = 2   # C
         cell_idx   = 3   # D
@@ -1518,28 +1653,44 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
     by_person = _sum_output_target_by(df, key_col_idx=person_idx, out_col_idx=output_idx, tgt_col_idx=target_idx)
     by_cell   = _sum_output_target_by(df, key_col_idx=cell_idx,   out_col_idx=output_idx, tgt_col_idx=target_idx)
     return by_person, by_cell
-def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
+def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
     team = (team_name or "").strip().casefold()
-    if team == "svt":
+    if team in ("svt", "ect", "pvh", "crdn"):
         sheet = "#12 Production Analysis"
-        key_idx = 3     # D (0-based)
-        mins_idx = 6    # G (0-based)
+        person_idx = 2   # C
+        cell_idx   = 3   # D
+        target_idx = 5   # F
+        output_idx = 8   # I
     elif team == "tct clinical":
         sheet = "Clinical #12 Prod Analysis"
-        key_idx = 3     # D
-        mins_idx = 7    # H
+        person_idx = 2; cell_idx = 3; target_idx = 6; output_idx = 9
     elif team == "tct commercial":
         sheet = "Commercial #12 Prod Analysis"
-        key_idx = 3     # D
-        mins_idx = 7    # H
+        person_idx = 2; cell_idx = 3; target_idx = 6; output_idx = 9
+    else:
+        return {}, {}
+    df = _read_sheet_as_df(file_path, sheet)
+    if df is None:
+        return {}, {}
+    by_person = _sum_output_target_by(df, key_col_idx=person_idx, out_col_idx=output_idx, tgt_col_idx=target_idx)
+    by_cell   = _sum_output_target_by(df, key_col_idx=cell_idx,   out_col_idx=output_idx, tgt_col_idx=target_idx)
+    return by_person, by_cell
+def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
+    team = (team_name or "").strip().casefold()
+    if team in ("svt", "ect", "pvh", "crdn"):
+        sheet = "#12 Production Analysis"
+        key_idx = 3
+        mins_idx = 6
+    elif team == "tct clinical":
+        sheet = "Clinical #12 Prod Analysis"; key_idx = 3; mins_idx = 7
+    elif team == "tct commercial":
+        sheet = "Commercial #12 Prod Analysis"; key_idx = 3; mins_idx = 7
     else:
         return {}
     df = _read_sheet_as_df(file_path, sheet)
-    if df is None or df.empty:
-        return {}
+    if df is None or df.empty: return {}
     n = df.shape[1]
-    if key_idx >= n or mins_idx >= n:
-        return {}
+    if key_idx >= n or mins_idx >= n: return {}
     sub = df.iloc[:, [key_idx, mins_idx]].copy()
     sub.columns = ["cell_station", "mins"]
     sub["cell_station"] = sub["cell_station"].astype(str).str.strip()
@@ -1547,11 +1698,9 @@ def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
     sub = sub[~sub["cell_station"].isin(bad)]
     sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
     sub = sub.dropna(subset=["mins"])
-    if sub.empty:
-        return {}
+    if sub.empty: return {}
     agg = sub.groupby("cell_station", dropna=False)["mins"].sum()
-    out = {k: round(float(v) / 60.0, 2) for k, v in agg.items() if pd.notna(v) and float(v) > 0}
-    return out
+    return {k: round(float(v) / 60.0, 2) for k, v in agg.items() if pd.notna(v) and float(v) > 0}
 def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dict:
     ext = file_path.suffix.lower()
     if ext in (".xlsx", ".xlsm"):
@@ -1609,6 +1758,48 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
+            if team_name in ("ECT", "PVH", "CRDN"):
+                try:
+                    values["HC in WIP"] = _hc_in_wip_from_file(p, "#12 Production Analysis")
+                except Exception:
+                    values["HC in WIP"] = None
+                try:
+                    by_person, by_cell = _outputs_person_and_cell_for_team(p, team_name)
+                    if by_person:
+                        values["Outputs by Person"] = json.dumps(by_person, ensure_ascii=False)
+                    if by_cell:
+                        values["Outputs by Cell/Station"] = json.dumps(by_cell, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
+                    cs_hours = _cell_station_hours_for_team(p, team_name)
+                    if cs_hours:
+                        values["Cell/Station Hours"] = json.dumps(cs_hours, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
+                    wb_tmp = load_workbook(p, data_only=True, read_only=True)
+                    per_person = {}
+                    if "Individual (WIP-Non WIP)" in wb_tmp.sheetnames:
+                        ws_ind = wb_tmp["Individual (WIP-Non WIP)"]
+                        people_avail = _people_available_openpyxl_generic(
+                            ws_ind, name_col="A", avail_col="I", start_row=6, end_row=32, step=3
+                        )
+                        names = [n for n, _ in people_avail]
+                        if "#12 Production Analysis" in wb_tmp.sheetnames and names:
+                            ws_pa = wb_tmp["#12 Production Analysis"]
+                            completed_hours = _svt_completed_hours_by_person_openpyxl(
+                                ws_pa=ws_pa, people=names, name_col="C", minutes_col="G",
+                                row_start=7, row_end=199, skip_hidden=True
+                            )
+                            for name, avail in people_avail:
+                                a = completed_hours.get(name, 0.0)
+                                per_person[name] = {"actual": round(float(a or 0.0), 2),
+                                                    "available": round(float(avail or 0.0), 2)}
+                    if per_person:
+                        values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
             if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
                 try:
                     by_person, by_cell = _outputs_person_and_cell_for_team(p, team_name)
