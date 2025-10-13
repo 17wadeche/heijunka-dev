@@ -2502,13 +2502,6 @@ def run_once():
     df = _filter_future_periods(df)
     df = _filter_pss_date_window(df)
     df = _filter_ect_min_year(df)
-    def safe_div(n, d):
-        try:
-            n = float(str(n).replace(",", "").strip())
-            d = float(str(d).replace(",", "").strip())
-            return None if d == 0 else n / d
-        except Exception:
-            return None
     df["Target UPLH"] = df.apply(lambda r: safe_div(r.get("Target Output"), r.get("Total Available Hours")), axis=1)
     df["Actual UPLH"] = df.apply(lambda r: safe_div(r.get("Actual Output"), r.get("Completed Hours")), axis=1)
     df["Target UPLH"] = df["Target UPLH"].round(2)
