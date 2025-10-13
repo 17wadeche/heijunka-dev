@@ -1029,10 +1029,11 @@ def _people_available_openpyxl_generic(ws,
                                        end_row: int = 32,
                                        step: int = 3) -> list[tuple[str, float | None]]:
     out: list[tuple[str, float | None]] = []
+    BAD_NAMES = {"", "#REF!", "-", "–", "—", "0"}
     for r in range(start_row, end_row + 1, step):
         nm = ws[f"{name_col}{r}"].value
         nm = (str(nm).strip() if nm is not None else "")
-        if not nm or nm.upper() == "#REF!":
+        if nm in BAD_NAMES:
             continue
         avail = safe_numeric(ws[f"{avail_col}{r}"].value)
         out.append((nm, avail))
@@ -1853,9 +1854,9 @@ def _aortic_hours_by_col(file_path: Path,
                     continue
             v = row_vals[0]
             s = str(v).strip() if v is not None else ""
-            bad = {"", "#REF!"}
+            bad = {"", "#REF!", "nan"}
             if col_letter.upper() == "C":
-                bad |= {"0"}
+                bad |= {"0", "-", "–", "—"}
             if col_letter.upper() == "D":
                 bad |= {"-", "–", "—"}
             if s not in bad:
@@ -1878,9 +1879,9 @@ def _aortic_hours_by_col(file_path: Path,
                 s = s.strip()
                 bad = {"", "#REF!", "nan"}
                 if col_letter.upper() == "C":
-                    bad |= {"0"}            # Rule 2
+                    bad |= {"0", "-", "–", "—"}
                 if col_letter.upper() == "D":
-                    bad |= {"-", "–", "—"}  # Rule 4
+                    bad |= {"-", "–", "—"}
                 if s not in bad:
                     out[s] = round(out.get(s, 0.0) + 2.0, 2)  # Rule 3/5
             return out
@@ -1999,6 +2000,8 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                                 existing_pp = json.loads(values["Person Hours"])
                             except Exception:
                                 existing_pp = {}
+                        BAD_NAMES = {"", "#REF!", "nan", "0", "-", "–", "—"}
+                        existing_pp = {k: v for k, v in existing_pp.items() if str(k).strip() not in BAD_NAMES}
                         merged = {}
                         for name, hours in per_actual.items():
                             prev = existing_pp.get(name, {"actual": 0.0, "available": 0.0})
@@ -2013,6 +2016,15 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     cs_hours = _aortic_hours_by_col(p, sheet="#12 Production Analysis", col_letter="D")
                     if cs_hours:
                         values["Cell/Station Hours"] = json.dumps(cs_hours, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
+                    ch = _aortic_completed_hours_from_file(
+                        p, sheet="#12 Production Analysis", col_c="C", col_d="D",
+                        row_start=7, row_end=199, skip_hidden=True
+                    )
+                    if ch is not None:
+                        values["Completed Hours"] = ch
                 except Exception:
                     pass
             if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
@@ -2173,6 +2185,7 @@ def save_outputs(df: pd.DataFrame):
     if df.empty:
         print("No rows collected. Check paths/sheets/cells.")
         return
+    df = _dedupe_by_team_unique_key(df)
     with pd.ExcelWriter(OUT_XLSX, engine="openpyxl") as xlw:
         df.to_excel(xlw, index=False, sheet_name="All Metrics")
     preferred_cols = [
@@ -2197,6 +2210,7 @@ def save_outputs(df: pd.DataFrame):
     for c in numeric_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.replace({np.nan: ""})
+    out = out.drop_duplicates(keep="last")
     out.to_csv(
         OUT_CSV,
         index=False,
@@ -2306,6 +2320,30 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = _filter_pss_date_window(combined)
     combined = _filter_ect_min_year(combined)
     return combined
+def _dedupe_by_team_unique_key(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    team_keys = {}
+    for cfg in TEAM_CONFIG:
+        key = cfg.get("unique_key", ["team", "period_date", "source_file"])
+        team_keys[cfg["name"]] = key
+    def _make_key_row(r) -> tuple:
+        kcols = team_keys.get(r.get("team"), ["team", "period_date", "source_file"])
+        parts = []
+        for c in kcols:
+            if c == "period_date":
+                ts = pd.to_datetime(r.get(c), errors="coerce")
+                parts.append(ts.normalize().date().isoformat() if pd.notna(ts) else None)
+            else:
+                parts.append(r.get(c))
+        return tuple(parts)
+    df = df.copy()
+    df["_dedupe_key"] = df.apply(_make_key_row, axis=1)
+    df = (df
+          .sort_values(["team", "period_date", "source_file"], na_position="last")
+          .drop_duplicates(subset=["_dedupe_key"], keep="last")
+          .drop(columns=["_dedupe_key"]))
+    return df
 def _read_timeliness_csv_standardized() -> pd.DataFrame:
     p = TIMELINESS_CSV
     if not p.exists():
@@ -2525,6 +2563,7 @@ def run_once():
         pass
     ensure_timeliness_placeholders(df)
     df = add_open_complaint_timeliness(df)
+    df = _dedupe_by_team_unique_key(df)
     save_outputs(df)
     if not df.empty:
         with pd.option_context("display.max_columns", None, "display.width", 180):
