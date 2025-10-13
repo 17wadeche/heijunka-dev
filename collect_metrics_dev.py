@@ -23,7 +23,14 @@ EXCLUDED_SOURCE_FILES = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Heijunka Population & SW.xlsx",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Future Heijunka (UPDATE) Template.xlsm",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Versatility Matrix_June 2024.xlsx",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\CRDN Heijunka Template.xlsm"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\CRDN Heijunka Template.xlsm",
+    r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Scheduling Assistant.xlsx",
+    r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Aging FACs 26 09.xlsx",
+    r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Tier 1 Escalations and Recognition.pptx",
+    r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Time Studies.docx",
+    r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Updated Cryo Electronic data sheet.xlsx",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Aortic Heijunka Template 2.0.xlsm",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Aortic Heijunka Template 3.0.xlsm"
 }
 EXCLUDED_DIRS = {
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\Weekly Heijunka Archived",
@@ -37,7 +44,8 @@ EXCLUDED_DIRS = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Finding Work Tool",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Smartsheet Gameboard",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Standard Works",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Upcoming Weeks Heijunka Drafts"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Upcoming Weeks Heijunka Drafts",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Templates"
 }
 EXCLUDED_DIRS = {s.lower().rstrip("\\").replace("/", "\\") for s in EXCLUDED_DIRS}
 EXCLUDED_SOURCE_FILES = {s.lower().replace("/", "\\") for s in EXCLUDED_SOURCE_FILES}
