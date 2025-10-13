@@ -2186,6 +2186,74 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = _filter_ph_zero_hours(combined)
     combined = _filter_pss_date_window(combined)
     return combined
+def _read_timeliness_csv_standardized() -> pd.DataFrame:
+    p = TIMELINESS_CSV
+    if not p.exists():
+        return pd.DataFrame(columns=["team", "period_date", "Open Complaint Timeliness"])
+    try:
+        t = pd.read_csv(p, dtype=str, keep_default_na=False)
+    except Exception as e:
+        print(f"[timeliness] Failed to read {p}: {e}")
+        return pd.DataFrame(columns=["team", "period_date", "Open Complaint Timeliness"])
+    if t.shape[1] < 3:
+        t = t.iloc[:, :3].copy()
+        t.columns = ["team", "period_date", "Open Complaint Timeliness"]
+    else:
+        lower_cols = [str(c).strip().lower() for c in t.columns]
+        def _first_match(names):
+            for want in names:
+                if want in lower_cols:
+                    return t.columns[lower_cols.index(want)]
+            return None
+        team_col = _first_match(["team"])
+        date_col = _first_match(["period_date", "period", "date"])
+        val_col  = _first_match(["open complaint timeliness","timeliness","value","metric"])
+        if not (team_col and date_col and val_col):
+            t = t.iloc[:, :3].copy()
+            t.columns = ["team", "period_date", "Open Complaint Timeliness"]
+        else:
+            t = t.rename(columns={
+                team_col: "team", date_col: "period_date", val_col: "Open Complaint Timeliness"
+            })
+    t["team"] = t["team"].astype(str).str.strip()
+    t["period_date"] = pd.to_datetime(t["period_date"], errors="coerce").dt.normalize()
+    s = t["Open Complaint Timeliness"].astype(str).str.strip().str.replace("%","", regex=False)
+    t["Open Complaint Timeliness"] = pd.to_numeric(s.str.extract(r'([+-]?\d+(?:\.\d+)?)', expand=False), errors="coerce")
+    t = t.drop_duplicates(subset=["team","period_date"], keep="last")
+    return t
+def ensure_timeliness_placeholders(metrics_df: pd.DataFrame):
+    if metrics_df.empty or "team" not in metrics_df.columns or "period_date" not in metrics_df.columns:
+        return
+    pairs = (
+        metrics_df[["team","period_date"]]
+        .dropna()
+        .copy()
+    )
+    pairs["team"] = pairs["team"].astype(str).str.strip()
+    pairs["period_date"] = pd.to_datetime(pairs["period_date"], errors="coerce").dt.normalize()
+    pairs = pairs.dropna().drop_duplicates()
+    t = _read_timeliness_csv_standardized()
+    pairs["_team_key"] = pairs["team"].str.casefold()
+    t["_team_key"] = t["team"].str.casefold()
+    missing = (
+        pairs.merge(t[["_team_key","period_date"]], on=["_team_key","period_date"], how="left", indicator=True)
+             .loc[lambda d: d["_merge"] == "left_only", ["team","period_date"]]
+             .drop_duplicates()
+    )
+    if missing.empty:
+        print("[timeliness] No missing timeliness rows to add.")
+        return
+    placeholders = missing.copy()
+    placeholders["Open Complaint Timeliness"] = np.nan
+    out = pd.concat([t[["team","period_date","Open Complaint Timeliness"]], placeholders], ignore_index=True)
+    out = out.drop_duplicates(subset=["team","period_date"], keep="last")
+    out = out.sort_values(["team","period_date"]).reset_index(drop=True)
+    TIMELINESS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    out_to_csv = out.copy()
+    out_to_csv["period_date"] = pd.to_datetime(out_to_csv["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    out_to_csv.to_csv(TIMELINESS_CSV, index=False)
+    print(f"[timeliness] Added {len(placeholders)} placeholder row(s) to {TIMELINESS_CSV}.")
+    git_autocommit_and_push(REPO_DIR, TIMELINESS_CSV, branch=GIT_BRANCH)
 def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
     try:
         p = TIMELINESS_CSV
@@ -2336,6 +2404,7 @@ def run_once():
                 df = merge_with_existing(df)
     except Exception:
         pass
+    ensure_timeliness_placeholders(df)
     df = add_open_complaint_timeliness(df)
     save_outputs(df)
     if not df.empty:
