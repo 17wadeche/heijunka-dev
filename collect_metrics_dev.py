@@ -354,6 +354,13 @@ def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
     tah = pd.to_numeric(df["Total Available Hours"], errors="coerce")
     keep = ~((df["team"] == "PH") & (tah.isna() | (tah <= 0)))
     return df.loc[keep].copy()
+def _filter_ect_min_year(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "team" not in df.columns or "period_date" not in df.columns:
+        return df
+    cutoff = pd.Timestamp("2024-08-19")
+    d = pd.to_datetime(df["period_date"], errors="coerce")
+    keep = ~((df["team"] == "ECT") & (d < cutoff))
+    return df.loc[keep].copy()
 def _excel_serial_to_date(n) -> _date | None:
     try:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
@@ -1885,6 +1892,12 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         period = None
             if period is None:
                 period = infer_period_date(p)
+            if team_name == "ECT":
+                cutoff = _dt(2024, 8, 19).date()
+                if isinstance(period, _dt):
+                    period = period.date()
+                if isinstance(period, _date) and period < cutoff:
+                    continue
             if team_name.lower().startswith("tct"):
                 today = _dt.today().date()
                 if isinstance(period, _dt):
@@ -2250,6 +2263,7 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = _filter_future_periods(combined)
     combined = _filter_ph_zero_hours(combined)
     combined = _filter_pss_date_window(combined)
+    combined = _filter_ect_min_year(combined)
     return combined
 def _read_timeliness_csv_standardized() -> pd.DataFrame:
     p = TIMELINESS_CSV
@@ -2446,6 +2460,7 @@ def run_once():
     df = _filter_ph_zero_hours(df) 
     df = _filter_future_periods(df)
     df = _filter_pss_date_window(df)
+    df = _filter_ect_min_year(df)
     def safe_div(n, d):
         try:
             n = float(str(n).replace(",", "").strip())
