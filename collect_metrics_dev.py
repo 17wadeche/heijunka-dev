@@ -1679,36 +1679,6 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
         sheet = "#12 Production Analysis"
         person_idx = 2   # C
         cell_idx   = 3   # D
-        target_idx = 4   # E
-        output_idx = 8   # I
-        if team not in ("aortic",):
-            target_idx = 5
-    elif team == "tct clinical":
-        sheet = "Clinical #12 Prod Analysis"
-        person_idx = 2   # C
-        cell_idx   = 3   # D
-        target_idx = 6   # G
-        output_idx = 9   # J
-    elif team == "tct commercial":
-        sheet = "Commercial #12 Prod Analysis"
-        person_idx = 2   # C
-        cell_idx   = 3   # D
-        target_idx = 6   # G
-        output_idx = 9   # J
-    else:
-        return {}, {}
-    df = _read_sheet_as_df(file_path, sheet)
-    if df is None:
-        return {}, {}
-    by_person = _sum_output_target_by(df, key_col_idx=person_idx, out_col_idx=output_idx, tgt_col_idx=target_idx)
-    by_cell   = _sum_output_target_by(df, key_col_idx=cell_idx,   out_col_idx=output_idx, tgt_col_idx=target_idx)
-    return by_person, by_cell
-def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
-    team = (team_name or "").strip().casefold()
-    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
-        sheet = "#12 Production Analysis"
-        person_idx = 2   # C
-        cell_idx   = 3   # D
         target_idx = 4   # F
         output_idx = 8   # I
         if team not in ("aortic",):
