@@ -14,6 +14,28 @@ import subprocess
 from openpyxl import load_workbook
 import tempfile, uuid
 import json
+from functools import lru_cache
+def _file_sig(path: str | Path) -> tuple[str, int, int]:
+    p = Path(path)
+    try:
+        st = p.stat()
+        return (str(p), st.st_mtime_ns, st.st_size)
+    except Exception:
+        return (str(p), 0, 0)
+from openpyxl import load_workbook as _load_workbook_orig
+@lru_cache(maxsize=128)
+def _load_workbook_cached(path_str: str, data_only: bool, read_only: bool, mtime_ns: int, size: int):
+    return _load_workbook_orig(Path(path_str), data_only=data_only, read_only=read_only)
+def load_workbook_fast(path: Path, *, data_only: bool = True, read_only: bool = True):
+    sig_path, sig_mtime, sig_size = _file_sig(path)
+    return _load_workbook_cached(sig_path, data_only, read_only, sig_mtime, sig_size)
+@lru_cache(maxsize=256)
+def _read_excel_cached(path_str: str, sheet_name: str, engine: str | None, mtime_ns: int, size: int):
+    from pandas import read_excel
+    return read_excel(path_str, sheet_name=sheet_name, engine=engine, header=None)
+def read_excel_fast(path: Path, *, sheet_name: str, engine: str | None = None):
+    sig_path, sig_mtime, sig_size = _file_sig(path)
+    return _read_excel_cached(sig_path, sheet_name, engine, sig_mtime, sig_size)
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 GIT_BRANCH = "main"
@@ -57,6 +79,7 @@ EXCLUDED_DIRS = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\Archived\Archived Heijunka 2024"
 }
 EXCLUDED_DIRS = {s.lower().rstrip("\\").replace("/", "\\") for s in EXCLUDED_DIRS}
+A1_RE = re.compile(r"([A-Za-z]+)(\d+)")
 EXCLUDED_SOURCE_FILES = {s.lower().replace("/", "\\") for s in EXCLUDED_SOURCE_FILES}
 def _is_excluded_path(p: Path) -> bool:
     try:
@@ -760,9 +783,8 @@ def read_one_cell_openpyxl(ws, a1: str):
     vals = list(ws.iter_rows(min_row=r, max_row=r, min_col=c, max_col=c, values_only=True))
     return vals[0][0] if vals else None
 def read_one_cell_xlsb(file_path: Path, sheet: str, a1: str):
-    from pandas import read_excel
-    df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
-    m = re.fullmatch(r"([A-Za-z]+)(\d+)", a1.strip())
+    df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
+    m = A1_RE.fullmatch(a1.strip())
     if not m:
         return None
     col_letters, row_str = m.groups()
@@ -870,8 +892,7 @@ def sum_cells_openpyxl(ws, addrs: list[str]):
             pass
     return total if any_vals else None
 def sum_cells_xlsb(file_path: Path, sheet: str, addrs: list[str]):
-    from pandas import read_excel
-    df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+    df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
     total, any_vals = 0.0, False
     for a in addrs:
         m = re.fullmatch(r"([A-Za-z]+)(\d+)", a.strip())
@@ -917,7 +938,7 @@ def col_letter_to_index(letter: str) -> int:
         num = num * 26 + (ord(ch) - ord('A') + 1)
     return num
 def a1_to_rowcol(a1: str) -> tuple[int, int]:
-    m = re.fullmatch(r"([A-Za-z]+)(\d+)", a1.strip())
+    m = A1_RE.fullmatch(a1.strip())
     if not m:
         raise ValueError(f"Bad cell address: {a1}")
     letters, row = m.groups()
@@ -1103,8 +1124,7 @@ def _tct_people_available_xlsb(file_path: Path, sheet: str, name_col: str, avail
 def _completed_hours_by_person_pyxlsb(file_path: Path, sheet: str, people: list[str],
                                       name_col: str = "C", minutes_col: str = "H",
                                       row_start: int = 1, row_end: int = 200) -> dict[str, float]:
-    from pandas import read_excel
-    df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+    df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
     rn = slice(row_start - 1, row_end)
     c_name = col_letter_to_index(name_col) - 1
     c_min  = col_letter_to_index(minutes_col) - 1
@@ -1266,7 +1286,7 @@ def collect_pss_team(cfg: dict) -> list[dict]:
             for mapping in (cfg.get("sum_columns") or {}).values()
             for spec in mapping.values()
         )
-        wb = load_workbook(file_path, data_only=True, read_only=not need_visible_rows)
+        wb = load_workbook_fast(file_path, data_only=True, read_only=not need_visible_rows)
         period_date = None
         if "period" in cfg:
             ps = cfg["period"]
@@ -1452,9 +1472,8 @@ def sum_column_pyxlsb_filtered(file_path: Path, sheet: str, target_col: str,
                                exclude_regex: dict | None = None,
                                row_start: int | None = None,
                                row_end: int | None = None) -> float | None:
-    from pandas import read_excel
     try:
-        df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+        df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
         t = col_letter_to_index(target_col) - 1
         s = pd.to_numeric(df.iloc[:, t], errors="coerce")
         mask = pd.Series(True, index=df.index)
@@ -1537,7 +1556,7 @@ def read_with_openpyxl(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> d
         for mapping in (sumcols_cfg or {}).values()
         for spec in mapping.values()
     )
-    wb = load_workbook(file_path, data_only=True, read_only=not need_visible_rows)
+    wb = load_workbook_fast(file_path, data_only=True, read_only=not need_visible_rows)
     out = {}
     for sheet_name, mapping in (cells_cfg or {}).items():
         if sheet_name not in wb.sheetnames:
@@ -1641,11 +1660,10 @@ def read_with_pyxlsb(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dic
                 out[out_name] = None
     return out
 def _read_sheet_as_df(file_path: Path, sheet_name: str):
-    from pandas import read_excel
     ext = file_path.suffix.lower()
     engine = "pyxlsb" if ext == ".xlsb" else None
     try:
-        return read_excel(file_path, sheet_name=sheet_name, engine=engine, header=None)
+        return read_excel_fast(file_path, sheet_name=sheet_name, engine=engine)
     except Exception:
         return None
 def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, tgt_col_idx: int) -> dict:
@@ -1766,9 +1784,8 @@ def _aortic_hc_in_wip_from_file(file_path: Path,
         except Exception:
             return None
     elif ext == ".xlsb":
-        from pandas import read_excel
         try:
-            df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+            df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
             c = col_letter_to_index(col_c) - 1
             series = df.iloc[row_start-1:row_end, c].astype(str)
             names = set()
@@ -1818,9 +1835,8 @@ def _aortic_completed_hours_from_file(file_path: Path,
         except Exception:
             return None
     elif ext == ".xlsb":
-        from pandas import read_excel
         try:
-            df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+            df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
             c_i = col_letter_to_index(col_c) - 1
             d_i = col_letter_to_index(col_d) - 1
             sub = df.iloc[row_start-1:row_end, [c_i, d_i]].copy()
@@ -1870,8 +1886,7 @@ def _aortic_hours_by_col(file_path: Path,
                 return {}
             return _accumulate_openpyxl(wb[sheet])
         elif ext == ".xlsb":
-            from pandas import read_excel
-            df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+            df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
             c = col_letter_to_index(col_letter) - 1
             series = df.iloc[row_start-1:row_end, c].astype(str)
             out: dict[str, float] = {}
