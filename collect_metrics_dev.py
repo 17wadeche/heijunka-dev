@@ -19,7 +19,11 @@ REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 GIT_BRANCH = "main"
 TIMELINESS_CSV = REPO_DIR / "timeliness.csv"
 EXCLUDED_SOURCE_FILES = {
-    r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka\SVT Future Heijunka.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka\SVT Future Heijunka.xlsm",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Heijunka Population & SW.xlsx",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Future Heijunka (UPDATE) Template.xlsm",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Versatility Matrix_June 2024.xlsx",
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\CRDN Heijunka Template.xlsm"
 }
 EXCLUDED_DIRS = {
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\Weekly Heijunka Archived",
@@ -27,11 +31,7 @@ EXCLUDED_DIRS = {
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\Commercial",
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\Remediation",
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\WIP Blitz Power Hour",
-    r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Heijunka Population & SW.xlsx",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Future Heijunka (UPDATE) Template.xlsm",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Versatility Matrix_June 2024.xlsx",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\CRDN Heijunka Template.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Archived Heijunka"
 }
 EXCLUDED_DIRS = {s.lower().rstrip("\\").replace("/", "\\") for s in EXCLUDED_DIRS}
 EXCLUDED_SOURCE_FILES = {s.lower().replace("/", "\\") for s in EXCLUDED_SOURCE_FILES}
