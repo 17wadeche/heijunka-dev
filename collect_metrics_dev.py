@@ -64,6 +64,24 @@ def _is_excluded_path(p: Path) -> bool:
     return False
 TEAM_CONFIG = [
     {
+        "name": "Aortic",
+        "root": r"C:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka",
+        "pattern": "*.xls*",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells": {
+            "Individual (WIP-Non WIP)": {
+                "Total Available Hours": "I39",
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": {"col": "E", "row_start": 7, "row_end": 199},
+                "Actual Output": {"col": "I", "row_start": 7, "row_end": 199},
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
         "name": "ECT",
         "root": r"C:\Users\wadec8\Medtronic PLC\Doran, Elaine - Heijunka Production Analysis",
         "pattern": "*.xls*",
@@ -1641,12 +1659,14 @@ def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, 
     return out
 def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
     team = (team_name or "").strip().casefold()
-    if team in ("svt", "ect", "pvh", "crdn"):
+    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
         sheet = "#12 Production Analysis"
         person_idx = 2   # C
         cell_idx   = 3   # D
-        target_idx = 5   # F
+        target_idx = 4   # E
         output_idx = 8   # I
+        if team not in ("aortic",):
+            target_idx = 5
     elif team == "tct clinical":
         sheet = "Clinical #12 Prod Analysis"
         person_idx = 2   # C
@@ -1669,12 +1689,14 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
     return by_person, by_cell
 def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
     team = (team_name or "").strip().casefold()
-    if team in ("svt", "ect", "pvh", "crdn"):
+    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
         sheet = "#12 Production Analysis"
         person_idx = 2   # C
         cell_idx   = 3   # D
-        target_idx = 5   # F
+        target_idx = 4   # F
         output_idx = 8   # I
+        if team not in ("aortic",):
+            target_idx = 5
     elif team == "tct clinical":
         sheet = "Clinical #12 Prod Analysis"
         person_idx = 2; cell_idx = 3; target_idx = 6; output_idx = 9
@@ -1691,7 +1713,7 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
     return by_person, by_cell
 def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
     team = (team_name or "").strip().casefold()
-    if team in ("svt", "ect", "pvh", "crdn"):
+    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
         sheet = "#12 Production Analysis"
         key_idx = 3
         mins_idx = 6
@@ -1723,6 +1745,59 @@ def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) 
         return read_with_pyxlsb(file_path, cells_cfg, sumcols_cfg)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
+def _aortic_completed_hours_from_file(file_path: Path,
+                                      sheet: str = "#12 Production Analysis",
+                                      col_c: str = "C",
+                                      col_d: str = "D",
+                                      row_start: int = 7,
+                                      row_end: int = 199,
+                                      skip_hidden: bool = True) -> float | None:
+    ext = file_path.suffix.lower()
+    def _count_pairs_openpyxl(ws):
+        c_idx = col_letter_to_index(col_c)
+        d_idx = col_letter_to_index(col_d)
+        min_c, max_c = min(c_idx, d_idx), max(c_idx, d_idx)
+        hits = 0
+        for r_idx, row_vals in enumerate(
+            ws.iter_rows(min_row=row_start, max_row=row_end,
+                         min_col=min_c, max_col=max_c, values_only=True),
+            start=row_start
+        ):
+            if skip_hidden and hasattr(ws, "row_dimensions"):
+                rd = ws.row_dimensions.get(r_idx) if hasattr(ws.row_dimensions, "get") else None
+                if rd is not None and getattr(rd, "hidden", False):
+                    continue
+            c_val = row_vals[c_idx - min_c]
+            d_val = row_vals[d_idx - min_c]
+            if (str(c_val).strip() if c_val is not None else "") and (str(d_val).strip() if d_val is not None else ""):
+                hits += 1
+        return float(hits) * 2.0 if hits > 0 else 0.0
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(file_path, data_only=True, read_only=skip_hidden is False)
+            if sheet not in wb.sheetnames:
+                return None
+            ws = wb[sheet]
+            return _count_pairs_openpyxl(ws)
+        except Exception:
+            return None
+    elif ext == ".xlsb":
+        from pandas import read_excel
+        try:
+            df = read_excel(file_path, sheet_name=sheet, engine="pyxlsb", header=None)
+            c_i = col_letter_to_index(col_c) - 1
+            d_i = col_letter_to_index(col_d) - 1
+            sub = df.iloc[row_start-1:row_end, [c_i, d_i]].copy()
+            sub = sub.dropna(how="all")
+            def _nonempty(x): 
+                return isinstance(x, (int,float)) or (isinstance(x, str) and x.strip() != "")
+            mask = sub.iloc[:,0].apply(_nonempty) & sub.iloc[:,1].apply(_nonempty)
+            hits = int(mask.sum())
+            return float(hits) * 2.0 if hits > 0 else 0.0
+        except Exception:
+            return None
+    else:
+        return None
 def collect_for_team(team_cfg: dict) -> list[dict]:
     root = Path(team_cfg["root"])
     pattern = team_cfg.get("pattern", "*.xlsx")
@@ -1772,7 +1847,7 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
-            if team_name in ("ECT", "PVH", "CRDN"):
+            if team_name in ("ECT", "PVH", "CRDN", "Aortic"):
                 try:
                     values["HC in WIP"] = _hc_in_wip_from_file(p, "#12 Production Analysis")
                 except Exception:
@@ -1812,6 +1887,13 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                                                     "available": round(float(avail or 0.0), 2)}
                     if per_person:
                         values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
+            if team_name == "Aortic":
+                try:
+                    ch = _aortic_completed_hours_from_file(p)
+                    if ch is not None:
+                        values["Completed Hours"] = ch
                 except Exception:
                     pass
             if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
