@@ -1202,7 +1202,7 @@ ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).enc
 st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
 st.markdown("---")
 st.subheader("Detailed Rows")
-hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP"}
+hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP", "Cell/Station Hours", "Outputs by Cell/Station", "Outputs by Person"}
 drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = f.drop(columns=drop_these, errors="ignore").sort_values(["team", "period_date"])
 st.dataframe(f_table, use_container_width=True)
