@@ -30,7 +30,8 @@ EXCLUDED_SOURCE_FILES = {
     r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Time Studies.docx",
     r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\Updated Cryo Electronic data sheet.xlsx",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Aortic Heijunka Template 2.0.xlsm",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Aortic Heijunka Template 3.0.xlsm"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Aortic Heijunka Template 3.0.xlsm",
+    r"c:\Users\wadec8\Medtronic PLC\Doran, Elaine - Heijunka Production Analysis\Archived Heijunka\ECT Future Heijunka 04 August 2025.xlsm"
 }
 EXCLUDED_DIRS = {
     r"C:\Users\wadec8\Medtronic PLC\TCT CQXM - 1 WIP and Schedule\Weekly Heijunka Archived",
