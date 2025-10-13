@@ -377,7 +377,7 @@ def _filter_future_periods(df: pd.DataFrame) -> pd.DataFrame:
         return df
     today = pd.Timestamp.today().normalize()
     d = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    keep = d.isna() | (d <= today)      # keep blanks and dates up to today
+    keep = d.isna() | (d <= today)
     return df.loc[keep].copy()
 def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "Total Available Hours" not in df.columns:
@@ -596,7 +596,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
         open_path = str(file_path)
         try:
             tmp_copy = Path(tempfile.gettempdir()) / f"ph_heijunka_{uuid.uuid4().hex}{file_path.suffix}"
-            shutil.copy2(file_path, tmp_copy)  # also forces hydration if available locally
+            shutil.copy2(file_path, tmp_copy) 
             open_path = str(tmp_copy)
         except Exception:
             open_path = str(file_path)
@@ -606,9 +606,9 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                 wb = excel.Workbooks.Open(
                     Filename=open_path,
                     ReadOnly=True,
-                    UpdateLinks=0,                  # 0 = don't update
+                    UpdateLinks=0, 
                     IgnoreReadOnlyRecommended=True,
-                    Local=True                      # helps with localized paths
+                    Local=True 
                 )
                 break
             except Exception as e:
@@ -702,7 +702,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
             try:
                 if wb is not None:
                     try:
-                        wb.Close(SaveChanges=0)  # xlDoNotSaveChanges
+                        wb.Close(SaveChanges=0)
                     except pywintypes.com_error:
                         pass
                     except Exception:
@@ -985,7 +985,7 @@ def sum_column_openpyxl_filtered(ws, target_col: str,
                 continue
         row_map = {}
         for c_idx_off, val in enumerate(row_vals, start=min_c):
-            row_map[chr(ord('A') + c_idx_off - 1)] = val  # 'A', 'B', ...
+            row_map[chr(ord('A') + c_idx_off - 1)] = val
         if not _passes_filters(row_map, include_contains, exclude_regex):
             continue
         val = row_map.get(chr(ord('A') + t_idx - 1))
@@ -1156,7 +1156,7 @@ def _hc_in_wip_from_file(file_path: Path, sheet_name: str,
             from pandas import read_excel
             df = read_excel(file_path, sheet_name=sheet_name, engine="pyxlsb", header=None)
             rs = row_start - 1
-            re_ = row_end     # pandas slice end is exclusive
+            re_ = row_end 
             k = col_letter_to_index(key_col_letter) - 1
             c = col_letter_to_index(cond_col_letter) - 1
             cond_series = pd.to_numeric(df.iloc[rs:re_, c], errors="coerce")
@@ -1259,7 +1259,7 @@ def collect_pss_team(cfg: dict) -> list[dict]:
                 to_ = (_to_float(ws_cw.Range("X7").Value) or 0.0) + (_to_float(ws_cw.Range("Z7").Value) or 0.0)
                 ao  = (_to_float(ws_cw.Range("X2").Value) or 0.0) + (_to_float(ws_cw.Range("Z2").Value) or 0.0)
                 today = _dt.today().date()
-                week_start = today - timedelta(days=today.weekday())  # Monday
+                week_start = today - timedelta(days=today.weekday())
                 rows.append({
                     "team": team_name,
                     "source_file": src_display,
@@ -1696,10 +1696,10 @@ def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[
     team = (team_name or "").strip().casefold()
     if team in ("svt", "ect", "pvh", "crdn", "aortic"):
         sheet = "#12 Production Analysis"
-        person_idx = 2   # C
-        cell_idx   = 3   # D
-        target_idx = 4   # F
-        output_idx = 8   # I
+        person_idx = 2  
+        cell_idx   = 3  
+        target_idx = 4  
+        output_idx = 8  
         if team not in ("aortic",):
             target_idx = 5
     elif team == "tct clinical":
@@ -1876,7 +1876,7 @@ def _aortic_hours_by_col(file_path: Path,
             if col_letter.upper() == "D":
                 bad |= {"-", "–", "—"}
             if s not in bad:
-                out[s] = round(out.get(s, 0.0) + 2.0, 2)  # Rule 3/5: +2 hours per occurrence
+                out[s] = round(out.get(s, 0.0) + 2.0, 2)
         return out
     ext = file_path.suffix.lower()
     try:
@@ -1898,7 +1898,7 @@ def _aortic_hours_by_col(file_path: Path,
                 if col_letter.upper() == "D":
                     bad |= {"-", "–", "—"}
                 if s not in bad:
-                    out[s] = round(out.get(s, 0.0) + 2.0, 2)  # Rule 3/5
+                    out[s] = round(out.get(s, 0.0) + 2.0, 2)  
             return out
         else:
             return {}
@@ -2316,11 +2316,11 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     past = (combined.loc[~is_latest]
             .assign(_origin_rank=origin_rank[~is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="first"))   # old wins for past
+            .drop_duplicates(subset=["_key"], keep="first")) 
     curr = (combined.loc[is_latest]
             .assign(_origin_rank=origin_rank[is_latest])
             .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="last"))    # new wins for latest
+            .drop_duplicates(subset=["_key"], keep="last")) 
     combined = pd.concat([past, curr], ignore_index=True)
     combined = normalize_period_date(combined)
     combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
