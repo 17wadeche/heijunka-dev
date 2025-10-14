@@ -60,7 +60,7 @@ def load_data(data_path: str | None, data_url: str | None):
                 head = b[:2048].lstrip()
                 if head.startswith((b"{", b"[")):
                     df = pd.read_json(io.BytesIO(b))
-                elif b[:2] == b"PK":  # XLSX/ZIP magic bytes
+                elif b[:2] == b"PK":
                     df = pd.read_excel(io.BytesIO(b), sheet_name="All Metrics")
                 else:
                     df = pd.read_csv(
