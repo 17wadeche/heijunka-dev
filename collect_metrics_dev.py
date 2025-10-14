@@ -77,7 +77,8 @@ EXCLUDED_DIRS = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Standard Works",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Upcoming Weeks Heijunka Drafts",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - Aortic - Heijunka\Saved Heijunkas\Templates",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\Archived\Archived Heijunka 2024"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - Heijunka\Archived\Archived Heijunka 2024",
+    r"C:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\2024\8. Aug"
 }
 EXCLUDED_DIRS = {s.lower().rstrip("\\").replace("/", "\\") for s in EXCLUDED_DIRS}
 A1_RE = re.compile(r"([A-Za-z]+)(\d+)")
