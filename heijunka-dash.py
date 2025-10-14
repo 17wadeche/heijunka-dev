@@ -962,35 +962,70 @@ with mid2:
                     st.info("No per-person data for the selected week.")
                 else:
                     wk_people["Actual"] = pd.to_numeric(wk_people["Actual Hours"], errors="coerce")
-                    wk_people["Avg Daily Hours"] = (wk_people["Actual"] / 5.0).round(2)
-                    wk_people = wk_people.dropna(subset=["Avg Daily Hours"])
+                    wk_people = wk_people.loc[wk_people["Actual"].fillna(0) > 0].copy()
                     if wk_people.empty:
-                        st.info("Nobody to show after filtering invalid hours.")
+                        st.info("Nobody to show after filtering zero-hour entries.")
                     else:
-                        order_people = wk_people.sort_values("Avg Daily Hours", ascending=False)["person"].tolist()
-                        ref = pd.DataFrame({"y": [6.5]})
+                        wk_people["Avg Daily Hours"] = (wk_people["Actual"] / 5.0)
+                        wk_people["OverUnder"] = np.where(
+                            wk_people["Avg Daily Hours"] >= 6.5, "≥ 6.5 (Over)", "< 6.5 (Under)"
+                        )
+                        wk_people["Delta"] = wk_people["Avg Daily Hours"] - 6.5
+                        wk_people["DeltaLabel"] = wk_people["Delta"].map(lambda x: f"{x:+.2f}")
+                        vmax = float(pd.to_numeric(wk_people["Avg Daily Hours"], errors="coerce").max())
+                        pad  = max(0.3, (max(vmax, 6.5) * 0.12))  # a little headroom
+                        y_lo = 0.0
+                        y_hi = max(vmax, 6.5) + pad
+                        y_scale = alt.Scale(domain=[y_lo, y_hi], nice=False, clamp=False)
+                        order_people = (
+                            wk_people.sort_values("Avg Daily Hours", ascending=False)["person"].tolist()
+                        )
+                        color_enc = alt.Color(
+                            "OverUnder:N",
+                            title="vs 6.5",
+                            scale=alt.Scale(
+                                domain=["≥ 6.5 (Over)", "< 6.5 (Under)"],
+                                range=["#22c55e", "#ef4444"]  # green / red
+                            )
+                        )
                         bars = (
                             alt.Chart(wk_people)
                             .mark_bar()
                             .encode(
                                 x=alt.X("person:N", title="Person", sort=order_people),
-                                y=alt.Y("Avg Daily Hours:Q", title="Avg Daily Hours (Actual/5)"),
-                                color=alt.condition(
-                                    "datum['Avg Daily Hours'] >= 6.5",
-                                    alt.value("#22c55e"),  # green
-                                    alt.value("#ef4444"),  # red
-                                ),
+                                y=alt.Y("Avg Daily Hours:Q", title="Avg Daily Hours (Actual/5)", scale=y_scale),
+                                color=color_enc,
                                 tooltip=[
                                     "period_date:T",
                                     "person:N",
-                                    alt.Tooltip("Actual:Q", title="Actual Hours (week)", format=",.1f"),
+                                    alt.Tooltip("Actual:Q", title="Actual Hours (week)", format=",.2f"),
                                     alt.Tooltip("Avg Daily Hours:Q", title="Avg Daily Hours", format=",.2f"),
+                                    alt.Tooltip("Delta:Q", title="Over/Under vs 6.5", format="+.2f"),
                                 ],
                             )
                             .properties(height=240, title=f"{team_name} • Per-person Avg Daily Hours")
                         )
-                        rule = alt.Chart(ref).mark_rule(strokeDash=[4, 3]).encode(y="y:Q")
-                        st.altair_chart(bars + rule, use_container_width=True)
+                        label_pad = max(0.08, (y_hi - y_lo) * 0.03)
+                        labels = (
+                            alt.Chart(wk_people.assign(LabelY=lambda d: d["Avg Daily Hours"] + label_pad))
+                            .mark_text(dy=-4)
+                            .encode(
+                                x="person:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DeltaLabel:N",
+                                color=alt.Color(
+                                    "OverUnder:N",
+                                    legend=None,
+                                    scale=alt.Scale(
+                                        domain=["≥ 6.5 (Over)", "< 6.5 (Under)"],
+                                        range=["#22c55e", "#ef4444"]
+                                    ),
+                                ),
+                            )
+                        )
+                        ref = alt.Chart(pd.DataFrame({"y": [6.5]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
+
+                        st.altair_chart(bars + labels + ref, use_container_width=True)
         else:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
