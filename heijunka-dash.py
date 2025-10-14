@@ -942,9 +942,9 @@ with mid2:
         )
         if len(teams_in_view) == 1:
             ahu_ph = ahu.loc[ahu["team"] == "PH"]
-            all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()))
+            all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()), reverse=True)
             if all_weeks_ahu_ph:
-                default_week = max(all_weeks_ahu_ph)
+                default_week = all_weeks_ahu_ph[0]
                 picked_ahu_week = st.selectbox(
                     "Pick a week to see each PH person's % of Actual HC used:",
                     options=all_weeks_ahu_ph,
