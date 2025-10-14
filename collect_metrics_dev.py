@@ -663,6 +663,8 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                 try:
                     new_layout = bool(period_date and period_date > _dt(2025, 8, 30).date())
                     if new_layout:
+                        out_wp1 = _to_float(ws.Range("Z2").Value)  or 0.0  # WP1
+                        out_wp2 = _to_float(ws.Range("AB2").Value) or 0.0  # WP2
                         ao  = (_to_float(ws.Range("Z2").Value)  or 0.0) + (_to_float(ws.Range("AB2").Value) or 0.0)
                         ch  = (_to_float(ws.Range("Z4").Value)  or 0.0) + (_to_float(ws.Range("AB4").Value) or 0.0)
                         to_ = (_to_float(ws.Range("Z7").Value)  or 0.0) + (_to_float(ws.Range("AB7").Value) or 0.0)
@@ -671,6 +673,8 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         uplh_wp1 = _to_float(ws.Range("Z5").Value)
                         uplh_wp2 = _to_float(ws.Range("AB5").Value)
                     else:
+                        out_wp1 = _to_float(ws.Range("Y2").Value)  or 0.0  # WP1
+                        out_wp2 = _to_float(ws.Range("AA2").Value) or 0.0
                         ao  = (_to_float(ws.Range("Y2").Value)  or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                         ch  = (_to_float(ws.Range("Y4").Value)  or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
                         to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
@@ -698,6 +702,7 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         hc = _count_ph_hc_in_wip_com(ws, col_end=hc_end)
                     except Exception:
                         hc = None
+                    outputs_by_cell = {"WP1": float(out_wp1), "WP2": float(out_wp2)}
                     rows.append({
                         "team": team_name,
                         "source_file": src_display,
@@ -710,7 +715,8 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         "UPLH WP1": uplh_wp1,
                         "UPLH WP2": uplh_wp2,
                         "People in WIP": ppl_in_wip,
-                        "Person Hours": json.dumps(per_person, ensure_ascii=False)
+                        "Person Hours": json.dumps(per_person, ensure_ascii=False),
+                        "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False)
                     })
                 finally:
                     del ws
