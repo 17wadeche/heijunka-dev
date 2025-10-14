@@ -2296,6 +2296,17 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
             old_frames.append(old_csv)
         except Exception:
             pass
+    if OUT_CSV.exists():
+        try:
+            old_local = pd.read_csv(OUT_CSV, dtype=str, keep_default_na=False)
+            for col in old_local.columns:
+                if col.lower() in {"total available hours","completed hours","target output","actual output",
+                                   "target uplh","actual uplh","actual hc used","hc in wip",
+                                   "open complaint timeliness"}:
+                    old_local[col] = pd.to_numeric(old_local[col], errors="coerce")
+            old_frames.append(old_local)
+        except Exception:
+            pass
     if old_frames:
         old = pd.concat(old_frames, ignore_index=True)
     else:
@@ -2587,6 +2598,25 @@ def run_once():
     df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 32.5
     df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
+    try:
+        if REPO_CSV.exists():
+            repo = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
+        else:
+            repo = pd.DataFrame(columns=df.columns)
+        local_hist = pd.read_csv(OUT_CSV, dtype=str, keep_default_na=False) if OUT_CSV.exists() else pd.DataFrame(columns=df.columns)
+        def _norm_dates(s): return pd.to_datetime(s, errors="coerce").dt.normalize()
+        repo_svt  = repo[repo.get("team","") == "SVT"].copy()
+        local_svt = local_hist[local_hist.get("team","") == "SVT"].copy()
+        curr_svt  = df[df["team"] == "SVT"].copy()
+        r_dates = _norm_dates(repo_svt["period_date"])
+        l_dates = _norm_dates(local_svt["period_date"])
+        c_dates = _norm_dates(curr_svt["period_date"])
+        r_n, l_n, c_n = r_dates.nunique(), l_dates.nunique(), c_dates.nunique()
+        if (c_n + 1 < r_n) or (c_n + 1 < l_n):
+            print("[safety] SVT history shrank; restoring union of repo/local/current.")
+            df = merge_with_existing(df)
+    except Exception:
+        pass
     try:
         if REPO_CSV.exists():
             repo = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
