@@ -662,9 +662,13 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     continue
                 try:
                     new_layout = bool(period_date and period_date > _dt(2025, 8, 30).date())
+                    def _f(addr):
+                        return (_to_float(ws.Range(addr).Value) or 0.0)
                     if new_layout:
                         out_wp1 = _to_float(ws.Range("Z2").Value)  or 0.0  # WP1
                         out_wp2 = _to_float(ws.Range("AB2").Value) or 0.0  # WP2
+                        tgt_wp1 = _f("Z7")   # WP1 target
+                        tgt_wp2 = _f("AB7")
                         ao  = (_to_float(ws.Range("Z2").Value)  or 0.0) + (_to_float(ws.Range("AB2").Value) or 0.0)
                         ch  = (_to_float(ws.Range("Z4").Value)  or 0.0) + (_to_float(ws.Range("AB4").Value) or 0.0)
                         to_ = (_to_float(ws.Range("Z7").Value)  or 0.0) + (_to_float(ws.Range("AB7").Value) or 0.0)
@@ -675,6 +679,8 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                     else:
                         out_wp1 = _to_float(ws.Range("Y2").Value)  or 0.0  # WP1
                         out_wp2 = _to_float(ws.Range("AA2").Value) or 0.0
+                        tgt_wp1 = _f("Y7")   # WP1 target
+                        tgt_wp2 = _f("AA7")
                         ao  = (_to_float(ws.Range("Y2").Value)  or 0.0) + (_to_float(ws.Range("AA2").Value) or 0.0)
                         ch  = (_to_float(ws.Range("Y4").Value)  or 0.0) + (_to_float(ws.Range("AA4").Value) or 0.0)
                         to_ = (_to_float(ws.Range("Y7").Value)  or 0.0) + (_to_float(ws.Range("AA7").Value) or 0.0)
@@ -702,7 +708,10 @@ def collect_ph_team(cfg: dict) -> list[dict]:
                         hc = _count_ph_hc_in_wip_com(ws, col_end=hc_end)
                     except Exception:
                         hc = None
-                    outputs_by_cell = {"WP1": float(out_wp1), "WP2": float(out_wp2)}
+                    outputs_by_cell = {
+                        "WP1": {"output": float(out_wp1), "target": float(tgt_wp1)},
+                        "WP2": {"output": float(out_wp2), "target": float(tgt_wp2)},
+                    }
                     rows.append({
                         "team": team_name,
                         "source_file": src_display,
