@@ -307,7 +307,6 @@ TEAM_CONFIG = [
     },
     {
         "name": "SVT",
-        "pss_mode": True,
         "file_glob": r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Heijunka_Schedule_Finding Work\SVT Heijunka*.xls*",
         "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
         "cells_by_sheet": {
