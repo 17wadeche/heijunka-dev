@@ -2347,17 +2347,28 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
     is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
     origin_rank = combined["_origin"].map({"old": 0, "new": 1}).fillna(1)
+    combined["_team_key"] = combined["team"].astype(str).str.strip().str.casefold()
+    def coalesce_group(g: pd.DataFrame) -> pd.Series:
+        g = g.sort_values(["_origin_rank", "source_file"], ascending=[False, True])
+        out = g.iloc[0].copy()
+        for _, r in g.iloc[1:].iterrows():
+            for col in g.columns:
+                if col in {"_key", "_origin", "_origin_rank"}:
+                    continue
+                v = out.get(col)
+                if (pd.isna(v) or v == "") and not (pd.isna(r.get(col)) or r.get(col) == ""):
+                    out[col] = r.get(col)
+        return out
+    latest = combined.loc[is_latest].copy()
+    latest["_origin_rank"] = origin_rank[is_latest]
+    latest = latest.groupby("_key", as_index=False, group_keys=False).apply(coalesce_group)
     past = (combined.loc[~is_latest]
             .assign(_origin_rank=origin_rank[~is_latest])
-            .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="first")) 
-    curr = (combined.loc[is_latest]
-            .assign(_origin_rank=origin_rank[is_latest])
-            .sort_values(["team", "period_date", "_origin_rank", "source_file"])
-            .drop_duplicates(subset=["_key"], keep="last")) 
-    combined = pd.concat([past, curr], ignore_index=True)
+            .sort_values(["team","period_date","_origin_rank","source_file"])
+            .drop_duplicates(subset=["_key"], keep="first"))
+    combined = pd.concat([past, latest], ignore_index=True)
     combined = normalize_period_date(combined)
-    combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
+    combined = combined.drop(columns=[c for c in ["_key","_origin","_origin_rank"] if c in combined.columns])
     base_cols = ["team", "period_date", "source_file"]
     metric_cols = [c for c in combined.columns if c not in base_cols + ["error"]]
     cols = base_cols + metric_cols + (["error"] if "error" in combined.columns else [])
