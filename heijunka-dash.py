@@ -938,42 +938,61 @@ with mid2:
             use_container_width=True
         )
         if len(teams_in_view) == 1:
-            ahu_ph = ahu.loc[ahu["team"] == "PH"]
-            all_weeks_ahu_ph = sorted(pd.to_datetime(ahu_ph["period_date"].dropna().unique()), reverse=True)
-            if all_weeks_ahu_ph:
-                default_week = all_weeks_ahu_ph[0]
-                picked_ahu_week = st.selectbox(
-                    "Pick a week to see each PH person's % of Actual HC used:",
-                    options=all_weeks_ahu_ph,
-                    index=all_weeks_ahu_ph.index(default_week) if default_week in all_weeks_ahu_ph else 0,
-                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                    key="ahu_week_select_ph",
-                )
-                comp = ahu_person_share_for_week(f, picked_ahu_week, [teams_in_view[0]], ppl_hours)
-                if not comp.empty:
-                    comp = comp.loc[(comp["percent"].astype(float) > 0) & comp["person"].notna()].copy()
-                    comp = comp.sort_values(["percent", "person"], ascending=[False, True])
-                if comp.empty:
-                    st.info("No PH people with a non-zero share for that week.")
-                else:
-                    chart = (
-                        alt.Chart(comp)
-                        .mark_bar()
-                        .encode(
-                            x=alt.X("person:N", title="Person", sort="-y"),
-                            y=alt.Y("percent:Q", title="% of Actual HC used", axis=alt.Axis(format="%")),
-                            tooltip=[
-                                "person:N",
-                                alt.Tooltip("percent:Q", title="% of All HC used", format=".0%"),
-                                "period_date:T",
-                            ],
-                            color=alt.value("indianred"),
-                        )
-                        .properties(height=240)
-                    )
-                    st.altair_chart(chart, use_container_width=True)
+            team_name = teams_in_view[0]
+            if 'ppl_hours' not in locals():
+                ppl_hours = explode_person_hours(f)
+            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+            if team_people.empty:
+                st.info(f"No per-person data available for {team_name}.")
             else:
-                st.info("No weeks available to drill down.")
+                all_weeks = sorted(
+                    pd.to_datetime(team_people["period_date"].dropna().unique()),
+                    reverse=True
+                )
+                picked_week = st.selectbox(
+                    f"Pick a week for {team_name} per-person avg daily hours:",
+                    options=all_weeks,
+                    index=0,
+                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                    key="ahu_week_select_anyteam",
+                )
+                picked_week = pd.to_datetime(picked_week).normalize()
+                wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
+                if wk_people.empty:
+                    st.info("No per-person data for the selected week.")
+                else:
+                    wk_people["Actual"] = pd.to_numeric(wk_people["Actual Hours"], errors="coerce")
+                    wk_people["Avg Daily Hours"] = (wk_people["Actual"] / 5.0).round(2)
+                    wk_people = wk_people.dropna(subset=["Avg Daily Hours"])
+                    if wk_people.empty:
+                        st.info("Nobody to show after filtering invalid hours.")
+                    else:
+                        order_people = wk_people.sort_values("Avg Daily Hours", ascending=False)["person"].tolist()
+                        ref = pd.DataFrame({"y": [6.5]})
+                        bars = (
+                            alt.Chart(wk_people)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("person:N", title="Person", sort=order_people),
+                                y=alt.Y("Avg Daily Hours:Q", title="Avg Daily Hours (Actual/5)"),
+                                color=alt.condition(
+                                    "datum['Avg Daily Hours'] >= 6.5",
+                                    alt.value("#22c55e"),  # green
+                                    alt.value("#ef4444"),  # red
+                                ),
+                                tooltip=[
+                                    "period_date:T",
+                                    "person:N",
+                                    alt.Tooltip("Actual:Q", title="Actual Hours (week)", format=",.1f"),
+                                    alt.Tooltip("Avg Daily Hours:Q", title="Avg Daily Hours", format=",.2f"),
+                                ],
+                            )
+                            .properties(height=240, title=f"{team_name} • Per-person Avg Daily Hours")
+                        )
+                        rule = alt.Chart(ref).mark_rule(strokeDash=[4, 3]).encode(y="y:Q")
+                        st.altair_chart(bars + rule, use_container_width=True)
+        else:
+            st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
