@@ -85,13 +85,16 @@ A1_RE = re.compile(r"([A-Za-z]+)(\d+)")
 EXCLUDED_SOURCE_FILES = {s.lower().replace("/", "\\") for s in EXCLUDED_SOURCE_FILES}
 def _is_excluded_path(p: Path) -> bool:
     try:
-        sp = str(p).lower().replace("/", "\\")
+        sp = str(p).lower().replace("/", "\\").strip().rstrip("\\")
         if sp in EXCLUDED_SOURCE_FILES:
             return True
         for d in EXCLUDED_DIRS:
-            if sp == d or sp.startswith(d + "\\"):
+            d_norm = d.strip().rstrip("\\")
+            if sp == d_norm or sp.startswith(d_norm + "\\"):
                 return True
-        if p.name.lower() == "svt future heijunka.xlsm":
+            if ("\\" + d_norm + "\\") in ("\\" + sp + "\\"):
+                return True
+        if p.name.lower().strip() == "svt future heijunka.xlsm":
             return True
     except Exception:
         pass
@@ -2047,6 +2050,21 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
+            cbs = team_cfg.get("cells_by_sheet") or {}
+            if cbs:
+                try:
+                    wb = load_workbook_fast(p, data_only=True, read_only=True)
+                    for sheet_name, mapping in cbs.items():
+                        if sheet_name not in wb.sheetnames:
+                            continue
+                        ws = wb[sheet_name]
+                        for out_name, addr in mapping.items():
+                            if isinstance(addr, list):
+                                values[out_name] = sum_cells_openpyxl(ws, addr)
+                            else:
+                                values[out_name] = read_one_cell_openpyxl(ws, addr)
+                except Exception:
+                    pass
             if team_name in ("ECT", "PVH", "CRDN", "Aortic"):
                 try:
                     if team_name == "Aortic":
