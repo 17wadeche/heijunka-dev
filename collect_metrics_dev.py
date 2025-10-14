@@ -72,7 +72,7 @@ EXCLUDED_DIRS = {
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\2021",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\2020",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\2019",
-    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\Prod Analysis Drafts for upcoming weeks"
+    r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Archive_Production Analysis\Prod Analysis Drafts for upcoming weeks",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\PVH Smartsheet Gameboard",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Standard Works",
     r"c:\Users\wadec8\Medtronic PLC\CQXM - IV Resource Site - COS Supportive Materials\Upcoming Weeks Heijunka Drafts",
@@ -2541,7 +2541,7 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
             val_col:  "Open Complaint Timeliness"
         })
     def _team_key(s: pd.Series) -> pd.Series:
-        return s.astype(str).str.strip().str.casefold()
+        return s.astype(str).str.strip()
     def _to_num(series: pd.Series) -> pd.Series:
         s = series.astype(str).str.strip()
         s = s.str.replace("%", "", regex=False)
