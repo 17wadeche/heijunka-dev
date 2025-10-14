@@ -308,6 +308,27 @@ TEAM_CONFIG = [
     },
     {
         "name": "SVT",
+        "root": r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Heijunka_Schedule_Finding Work\Archived Heijunka",
+        "pattern": "*.xlsm",
+        "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
+        "cells_by_sheet": {
+            "Individual": {
+                "Total Available Hours": ["I24", "I27", "I30", "I33", "I36"],
+            }
+        },
+        "sum_columns": {
+            "#12 Production Analysis": {
+                "Target Output": "F",
+                "Actual Output": "I",
+                "Completed Hours": {
+                    "col": "G", "row_start": 1, "row_end": 200, "divide": 60, "skip_hidden": True
+                },
+            }
+        },
+        "unique_key": ["team", "period_date"],
+    },
+    {
+        "name": "SVT",
         "file_glob": r"C:\Users\wadec8\Medtronic PLC\SVT PXM Team - Heijunka_Schedule_Finding Work\SVT Heijunka*.xls*",
         "period": {"sheet": "#12 Production Analysis", "cell": "C4"},
         "cells_by_sheet": {
