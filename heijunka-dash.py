@@ -252,8 +252,8 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=[
             "team","period_date","person","Actual Hours","Available Hours","Utilization"
         ])
-    sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
     rows: list[dict] = []
+    sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
     for _, r in sub.iterrows():
         payload = r["Person Hours"]
         try:
@@ -265,10 +265,14 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         for person, vals in obj.items():
             a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
-            util = (a / t) if (pd.notna(a) and pd.notna(t) and t not in (0, 0.0)) else np.nan
+            a = float(a) if pd.notna(a) else 0.0
+            t = float(t) if pd.notna(t) else 0.0
+            if (a == 0.0) and (t == 0.0):
+                continue
+            util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce"),
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                 "person": str(person),
                 "Actual Hours": a,
                 "Available Hours": t,
@@ -567,7 +571,10 @@ with left:
                     .assign(DiffRounded=lambda d: d["Diff"].round(1))
                 )
                 wk2 = wk2.loc[
-                    ~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))
+                    ~(
+                        (wk2["Actual"].fillna(0) == 0) &
+                        (wk2["Avail"].fillna(0)  == 0)
+                    )
                 ].assign(
                     DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                 )
