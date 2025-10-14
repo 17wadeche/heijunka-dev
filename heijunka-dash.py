@@ -956,7 +956,6 @@ with mid2:
                 if not comp.empty:
                     comp = comp.loc[(comp["percent"].astype(float) > 0) & comp["person"].notna()].copy()
                     comp = comp.sort_values(["percent", "person"], ascending=[False, True])
-
                 if comp.empty:
                     st.info("No PH people with a non-zero share for that week.")
                 else:
