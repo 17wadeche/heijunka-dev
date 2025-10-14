@@ -532,13 +532,12 @@ with left:
             team_name = teams_in_view[0]
             team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
             if not team_people.empty:
-                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()))
+                all_weeks = sorted(pd.to_datetime(team_people["period_date"].dropna().unique()), reverse=True)
         if single_team and all_weeks:
-            default_week = max(all_weeks)
             picked_week = st.selectbox(
                 f"Pick a week for {team_name} drilldown:",
                 options=all_weeks,
-                index=(all_weeks.index(default_week) if default_week in all_weeks else 0),
+                index=0,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat(),
                 key="per_person_week_select",
             )
@@ -636,7 +635,7 @@ with mid:
         st.caption("Select exactly one team to enable week drilldown.")
     else:
         team_name = teams_in_view[0]
-        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()))
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()), reverse=True)
         if not team_weeks:
             st.info("No weeks available for drilldown.")
         else:
@@ -651,13 +650,12 @@ with mid:
                 "Cell/Station": ("Outputs by Cell/Station", "cell_station"),
             }
             col_name, key_label = col_map[by_choice]
-            default_week = max(team_weeks)
             picked_week = st.selectbox(
                 "Week:",
                 options=team_weeks,
-                index=team_weeks.index(default_week),
+                index=0,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                key="output_by_week_select"
+                key="output_by_week_select",
             )
             picked_week = pd.to_datetime(picked_week).normalize()
             if col_name not in f.columns:
@@ -833,13 +831,12 @@ with right:
             index=0,
             key="uplh_by_select",
         )
-        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()))
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()), reverse=True)
         if team_weeks:
-            default_week = max(team_weeks)
             picked_week = st.selectbox(
                 "Week:",
                 options=team_weeks,
-                index=team_weeks.index(default_week),
+                index=0,
                 format_func=lambda d: pd.to_datetime(d).date().isoformat(),
                 key="uplh_week_select",
             )
@@ -1249,5 +1246,8 @@ st.markdown("---")
 st.subheader("Detailed Rows")
 hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP", "Cell/Station Hours", "Outputs by Cell/Station", "Outputs by Person"}
 drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
-f_table = f.drop(columns=drop_these, errors="ignore").sort_values(["team", "period_date"])
+f_table = (
+    f.drop(columns=drop_these, errors="ignore")
+     .sort_values(["team", "period_date"], ascending=[True, False])
+)
 st.dataframe(f_table, use_container_width=True)
