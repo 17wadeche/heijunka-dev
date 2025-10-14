@@ -23,10 +23,56 @@ if hasattr(st, "autorefresh"):
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_data(data_path: str | None, data_url: str | None):
     if data_url:
-        if data_url.lower().endswith(".json"):
-            df = pd.read_json(data_url)
-        else:
-            df = pd.read_csv(data_url)
+        try:
+            lower = data_url.lower()
+            if lower.endswith((".xlsx", ".xlsm", ".xls")):
+                df = pd.read_excel(data_url, sheet_name="All Metrics")
+            elif lower.endswith(".json"):
+                df = pd.read_json(data_url)
+            else:
+                df = pd.read_csv(
+                    data_url,
+                    engine="python",      # enables sep=None sniffing
+                    sep=None,             # auto-detect delimiter (comma, tab, semicolon…)
+                    encoding="utf-8-sig", # handles BOM
+                    on_bad_lines="skip",  # don't die on ragged rows
+                    dtype=str,            # keep raw text; you coerce later in _postprocess
+                )
+        except pd.errors.ParserError:
+            try:
+                df = pd.read_csv(
+                    data_url,
+                    engine="python",
+                    sep=";",
+                    encoding="utf-8-sig",
+                    on_bad_lines="skip",
+                    dtype=str,
+                )
+            except Exception as e:
+                st.error(f"Couldn't parse HEIJUNKA_DATA_URL as CSV: {e}")
+                return pd.DataFrame()
+        except Exception:
+            import io, requests
+            try:
+                r = requests.get(data_url, timeout=20)
+                r.raise_for_status()
+                b = r.content
+                head = b[:2048].lstrip()
+                if head.startswith((b"{", b"[")):
+                    df = pd.read_json(io.BytesIO(b))
+                elif b[:2] == b"PK":  # XLSX/ZIP magic bytes
+                    df = pd.read_excel(io.BytesIO(b), sheet_name="All Metrics")
+                else:
+                    df = pd.read_csv(
+                        io.StringIO(b.decode("utf-8-sig", errors="replace")),
+                        engine="python",
+                        sep=None,
+                        on_bad_lines="skip",
+                        dtype=str,
+                    )
+            except Exception as e:
+                st.error(f"Failed to fetch/parse HEIJUNKA_DATA_URL: {e}")
+                return pd.DataFrame()
         return _postprocess(df)
     if not data_path:
         return pd.DataFrame()
@@ -36,7 +82,7 @@ def load_data(data_path: str | None, data_url: str | None):
     if p.suffix.lower() in (".xlsx", ".xlsm"):
         df = pd.read_excel(p, sheet_name="All Metrics")
     elif p.suffix.lower() == ".csv":
-        df = pd.read_csv(p)
+        df = pd.read_csv(p, engine="python", sep=None, encoding="utf-8-sig", on_bad_lines="skip", dtype=str)
     elif p.suffix.lower() == ".json":
         df = pd.read_json(p)
     else:
