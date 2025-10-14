@@ -448,6 +448,24 @@ def _ensure_git_identity(repo_dir: Path):
     code, out, _ = _git(["git", "config", "--get", "user.name"], repo_dir)
     if code != 0 or not out:
         _git(["git", "config", "user.name", "Heijunka Bot"], repo_dir)
+def git_pull_repo(repo_dir: Path, branch: str = "main"):
+    if not (repo_dir / ".git").exists():
+        print(f"[WARN] {repo_dir} is not a git repo; skipping pre-pull.")
+        return
+    _git(["git", "config", "--global", "--add", "safe.directory", str(repo_dir)], repo_dir)
+    _ensure_git_identity(repo_dir)
+    code, remotes, _ = _git(["git", "remote"], repo_dir)
+    if code != 0 or not remotes.strip():
+        print("[WARN] No git remote configured; skipping pre-pull.")
+        return
+    remote = "origin" if "origin" in remotes.split() else remotes.split()[0]
+    heads_code, heads, _ = _git(["git", "branch", "--list", branch], repo_dir)
+    if heads.strip():
+        _git(["git", "checkout", branch], repo_dir)
+    else:
+        _git(["git", "checkout", "-B", branch], repo_dir)
+    _git(["git", "fetch", remote], repo_dir)
+    _git(["git", "pull", "--rebase", "--autostash", remote, branch], repo_dir)
 def git_autocommit_and_push(repo_dir: Path, file_path: Path, branch: str = "main"):
     if not (repo_dir / ".git").exists():
         print(f"[WARN] {repo_dir} is not a git repo; skipping auto-commit.")
@@ -2226,7 +2244,11 @@ def save_outputs(df: pd.DataFrame):
     for c in numeric_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.replace({np.nan: ""})
-    out = out.drop_duplicates(keep="last")
+    if {"team","period_date"} <= set(out.columns):
+        out = out.sort_values(["team","period_date","source_file"], na_position="last")
+        out = out.drop_duplicates(subset=["team","period_date"], keep="last")
+    else:
+        out = out.drop_duplicates(keep="last")
     out.to_csv(
         OUT_CSV,
         index=False,
