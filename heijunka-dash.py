@@ -683,24 +683,24 @@ with mid:
                             )
                             .dropna(subset=["Actual"])
                             .assign(
+                                HasTarget=lambda d: d["Target"].notna(),
                                 Diff=lambda d: d["Actual"] - d["Target"],
-                                DiffRounded=lambda d: d["Diff"].round(1),
-                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
                             )
                         )
-                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["DiffRounded"] == 0.0))].copy()
+                        wk2["DiffRounded"] = np.where(wk2["HasTarget"], wk2["Diff"].round(1), np.nan)
+                        wk2["DiffLabel"]   = np.where(wk2["HasTarget"], wk2["DiffRounded"].map(lambda x: f"{x:+.1f}"), "—")
+                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["Target"].fillna(0) == 0))].copy()
                         order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
                         if not wk2.empty:
                             vmax = float(pd.to_numeric(wk2["Actual"], errors="coerce").max())
                             rng  = max(0.0, vmax)
-                            pad  = max(3.0, rng * 0.22)    # a bit more headroom to avoid clipping labels
-                            lo, hi = 0.0, vmax + pad
-                            y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
-                            label_pad = max(1.0, (hi - lo) * 0.04)
-                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"] >= 0, label_pad, -label_pad)
+                            pad  = max(3.0, rng * 0.22)
+                            y_scale = alt.Scale(domain=[0.0, vmax + pad], nice=False, clamp=False)
+                            label_pad = max(1.0, (vmax + pad) * 0.04)
+                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"].fillna(-1) >= 0, label_pad, -label_pad)
                         else:
                             y_scale = alt.Scale()
-                            wk2["LabelY"] = wk2["Actual"]  # safe default
+                            wk2["LabelY"] = wk2["Actual"]
                         bars = (
                             alt.Chart(wk2)
                             .mark_bar()
@@ -711,7 +711,7 @@ with mid:
                                     alt.Tooltip(f"{key_label}:N", title=by_choice),
                                     alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
                                     alt.Tooltip("Target:Q", title="Target", format=",.0f"),
-                                    alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
+                                    alt.Tooltip("DiffLabel:N", title="Over / Under"),  # <- use string label, shows "—" if no target
                                     alt.Tooltip("period_date:T", title="Week"),
                                 ],
                             )
@@ -723,7 +723,7 @@ with mid:
                             .encode(
                                 x=f"{key_label}:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DiffLabel:N",
+                                text="DiffLabel:N",  # <- no "nan"
                                 color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                             )
                         )
