@@ -993,13 +993,19 @@ def _passes_filters(row_dict: dict, include_contains: dict | None,
             if isinstance(v, str) and re.search(rx, v, flags=re.IGNORECASE):
                 return False
     return True
+def _index_to_col_letter(n: int) -> str:
+    s = []
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        s.append(chr(65 + r))
+    return ''.join(reversed(s))
 def sum_column_openpyxl_filtered(ws, target_col: str,
                                  include_contains: dict | None = None,
                                  exclude_regex: dict | None = None,
                                  row_start: int | None = None,
                                  row_end: int | None = None,
                                  skip_hidden: bool = False) -> float | None:
-    t_idx = col_letter_to_index(target_col)
+    t_idx = col_letter_to_index(target_col)            # 1-based
     need_cols = {t_idx}
     if include_contains:
         need_cols |= {col_letter_to_index(c) for c in include_contains.keys()}
@@ -1009,19 +1015,37 @@ def sum_column_openpyxl_filtered(ws, target_col: str,
     row_start = row_start or 1
     row_end = row_end or ws.max_row
     total, any_vals = 0.0, False
-    for r_idx, row_vals in enumerate(ws.iter_rows(min_row=row_start, max_row=row_end,
-                                                  min_col=min_c, max_col=max_c,
-                                                  values_only=True), start=row_start):
+    for r_idx, row_vals in enumerate(
+        ws.iter_rows(min_row=row_start, max_row=row_end,
+                     min_col=min_c, max_col=max_c, values_only=True),
+        start=row_start
+    ):
         if skip_hidden and hasattr(ws, "row_dimensions"):
             rd = ws.row_dimensions.get(r_idx) if hasattr(ws.row_dimensions, "get") else None
             if rd is not None and getattr(rd, "hidden", False):
                 continue
-        row_map = {}
-        for c_idx_off, val in enumerate(row_vals, start=min_c):
-            row_map[chr(ord('A') + c_idx_off - 1)] = val
-        if not _passes_filters(row_map, include_contains, exclude_regex):
-            continue
-        val = row_map.get(chr(ord('A') + t_idx - 1))
+        row_map_by_idx = {min_c + off: v for off, v in enumerate(row_vals)}
+        if include_contains:
+            ok = True
+            for col_letter, needle in include_contains.items():
+                c_idx = col_letter_to_index(col_letter)
+                v = row_map_by_idx.get(c_idx)
+                if not (isinstance(v, str) and needle.lower() in v.lower()):
+                    ok = False
+                    break
+            if not ok:
+                continue
+        if exclude_regex:
+            bad = False
+            for col_letter, rx in exclude_regex.items():
+                c_idx = col_letter_to_index(col_letter)
+                v = row_map_by_idx.get(c_idx)
+                if isinstance(v, str) and re.search(rx, v, flags=re.IGNORECASE):
+                    bad = True
+                    break
+            if bad:
+                continue
+        val = row_map_by_idx.get(t_idx)
         try:
             if val is None:
                 continue
@@ -1032,26 +1056,21 @@ def sum_column_openpyxl_filtered(ws, target_col: str,
         except Exception:
             continue
     return total if any_vals else None
-def _svt_hc_in_wip_openpyxl(ws,
-                            key_col_letter: str = "C",
-                            cond_col_letter: str = "G",
-                            row_start: int = 7,
-                            row_end: int = 200) -> int:
+def _svt_hc_in_wip_openpyxl(ws, key_col_letter: str = "C", cond_col_letter: str = "G",
+                            row_start: int = 7, row_end: int = 200) -> int:
     kc = col_letter_to_index(key_col_letter)
     cc = col_letter_to_index(cond_col_letter)
     unique_keys = set()
-    for r, row in enumerate(ws.iter_rows(min_row=row_start, max_row=row_end,
-                                         min_col=min(kc, cc), max_col=max(kc, cc),
-                                         values_only=True), start=row_start):
-        vals = {col_letter_to_index(chr(ord('A') + i)): v
-                for i, v in enumerate(range(min(kc, cc), max(kc, cc) + 1))}
-        key_val = row[kc - min(kc, cc)]
-        cond_val = row[cc - min(kc, cc)]
+    min_c, max_c = min(kc, cc), max(kc, cc)
+    for r, row in enumerate(
+        ws.iter_rows(min_row=row_start, max_row=row_end,
+                     min_col=min_c, max_col=max_c, values_only=True),
+        start=row_start
+    ):
+        key_val = row[kc - min_c]
+        cond_val = row[cc - min_c]
         try:
-            if cond_val is None:
-                continue
-            cond_num = float(str(cond_val).replace(",", "").strip())
-            if cond_num <= 0:
+            if cond_val is None or float(str(cond_val).replace(",", "").strip()) <= 0:
                 continue
         except Exception:
             continue
