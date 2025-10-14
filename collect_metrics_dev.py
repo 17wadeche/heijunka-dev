@@ -2267,17 +2267,22 @@ def save_outputs(df: pd.DataFrame):
     cols = [c for c in preferred_cols if c in df.columns]
     out = df.loc[:, cols].copy()
     if "period_date" in out.columns:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
-    numeric_cols = {"Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                    "Target UPLH", "Actual UPLH", "Actual HC Used", "UPLH WP1", "UPLH WP2"} & set(out.columns)
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    numeric_cols = {
+        "Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
+        "Target UPLH", "Actual UPLH", "Actual HC Used", "UPLH WP1", "UPLH WP2"
+    } & set(out.columns)
     for c in numeric_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
+    sort_cols = [c for c in ["team", "period_date", "source_file"] if c in out.columns]
+    if sort_cols:
+        out = out.sort_values(sort_cols, na_position="last")
+    dedupe_subset = [c for c in ["team", "period_date", "source_file"] if c in out.columns]
+    if dedupe_subset:
+        out = out.drop_duplicates(subset=dedupe_subset, keep="last")
+    if "period_date" in out.columns:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
     out = out.replace({np.nan: ""})
-    if {"team","period_date"} <= set(out.columns):
-        out = out.sort_values(["team","period_date","source_file"], na_position="last")
-        out = out.drop_duplicates(subset=["team","period_date"], keep="last")
-    else:
-        out = out.drop_duplicates(keep="last")
     out.to_csv(
         OUT_CSV,
         index=False,
