@@ -1923,16 +1923,30 @@ def _aortic_hours_by_col(file_path: Path,
     except Exception:
         return {}
 def collect_for_team(team_cfg: dict) -> list[dict]:
-    root = Path(team_cfg["root"])
-    pattern = team_cfg.get("pattern", "*.xlsx")
     team_name = team_cfg["name"]
+    pattern = team_cfg.get("pattern", "*.xlsx")
     cells_cfg = team_cfg.get("cells", {})
     sumcols_cfg = team_cfg.get("sum_columns", {})
-    if not root.exists():
-        print(f"[WARN] Root not found for {team_name}: {root}", file=sys.stderr)
+    files: list[Path] = []
+    if "root" in team_cfg:
+        root = Path(team_cfg["root"])
+        if not root.exists():
+            print(f"[WARN] Root not found for {team_name}: {root}", file=sys.stderr)
+            return []
+        files = [p for p in root.rglob(pattern) if p.is_file()]
+    elif "file_glob" in team_cfg:
+        files = [Path(p) for p in glob.glob(team_cfg["file_glob"]) if Path(p).is_file()]
+    elif "file" in team_cfg:
+        p = Path(team_cfg["file"])
+        if not p.exists():
+            print(f"[WARN] File not found for {team_name}: {p}", file=sys.stderr)
+            return []
+        files = [p]
+    else:
+        print(f"[WARN] No 'root', 'file_glob', or 'file' in TEAM_CONFIG for {team_name}", file=sys.stderr)
         return []
     rows = []
-    for p in root.rglob(pattern):
+    for p in files:
         if p.is_dir() or looks_like_temp(p.name) or _is_excluded_path(p):
             continue
         try:
@@ -1980,8 +1994,9 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
             if team_name in ("ECT", "PVH", "CRDN", "Aortic"):
                 try:
                     if team_name == "Aortic":
-                        values["HC in WIP"] = _aortic_hc_in_wip_from_file(p, "#12 Production Analysis", col_c="C",
-                                                                        row_start=7, row_end=199, skip_hidden=True)
+                        values["HC in WIP"] = _aortic_hc_in_wip_from_file(
+                            p, "#12 Production Analysis", col_c="C", row_start=7, row_end=199, skip_hidden=True
+                        )
                     else:
                         values["HC in WIP"] = _hc_in_wip_from_file(p, "#12 Production Analysis")
                 except Exception:
