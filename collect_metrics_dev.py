@@ -1275,14 +1275,24 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[mask].copy()
 def collect_cas_team(cfg: dict) -> list[dict]:
     from pandas import DataFrame
-    root = Path(cfg.get("root", "")).resolve()
-    pattern = cfg.get("pattern", "*.xls*")
     team_name = cfg.get("name", "CAS")
     wanted_sheet = cfg.get("sheet", "Sheet1")
-    if not root.exists():
-        print(f"[WARN] CAS root not found: {root}", file=sys.stderr)
+    pattern = cfg.get("pattern", "*.xls*")
+    files: list[Path] = []
+    if cfg.get("file"):
+        p = Path(cfg["file"])
+        if p.exists():
+            files = [p]
+    if not files and cfg.get("file_glob"):
+        files = [Path(p) for p in glob.glob(cfg["file_glob"]) if Path(p).is_file()]
+    if not files and cfg.get("root"):
+        root = Path(cfg["root"])
+        if root.exists():
+            files = [p for p in root.rglob(pattern) if p.is_file()]
+    if not files:
+        src_hint = cfg.get("file") or cfg.get("file_glob") or cfg.get("root") or "<none>"
+        print(f"[WARN] CAS source not found (checked file/file_glob/root). Source hint: {src_hint}")
         return []
-    files = [p for p in root.rglob(pattern) if p.is_file()]
     files = [p for p in files if not looks_like_temp(p.name) and not _is_excluded_path(p)]
     scanned, appended = 0, 0
     rows: list[dict] = []
@@ -1315,8 +1325,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         df = df.iloc[:, :7].copy()
         df.columns = list("ABCDEFG")
         df["date_raw"] = df["A"].apply(_coerce_to_date_for_filter)
-        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce")
-        df["date_raw"] = df["date_raw"].ffill()
+        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").ffill()
         df = df.dropna(subset=["date_raw"]).copy()
         if df.empty:
             continue
@@ -1333,23 +1342,20 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             wk_d = wk.normalize()
             if wk_d > this_sunday:
                 continue
-            person_day_pairs = (sub.loc[sub["person"].astype(str).str.strip().ne(""),
-                                        ["person", "date_raw"]]
-                                  .dropna().drop_duplicates())
+            person_day_pairs = (
+                sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
+                   .dropna().drop_duplicates()
+            )
             total_avail = 5.0 * len(person_day_pairs)
             completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
             target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
             actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
             hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
-            hc_people = (sub.loc[hc_mask, "person"]
-                           .astype(str).str.strip()
-                           .replace({"nan": ""})
-                           .tolist())
+            hc_people = (sub.loc[hc_mask, "person"].astype(str).str.strip().replace({"nan": ""}).tolist())
             hc_in_wip = len({p for p in hc_people if p})
-            per_actual = (sub.groupby("person")["completed_hours"].sum(min_count=1).dropna())
-            per_avail = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
-                           .drop_duplicates()
-                           .groupby("person").size() * 5.0)
+            per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
+            per_avail  = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
+                            .drop_duplicates().groupby("person").size() * 5.0)
             person_keys = set(per_actual.index.tolist()) | set(per_avail.index.tolist())
             person_hours = {
                 str(p).strip(): {
@@ -1373,10 +1379,8 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 for k, row in per_cell.iterrows() if str(k).strip()
             }
             cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
-            cs_hours = {
-                str(k).strip(): round(float(v), 2)
-                for k, v in cs_hours_series.dropna().items() if str(k).strip()
-            }
+            cs_hours = {str(k).strip(): round(float(v), 2)
+                        for k, v in cs_hours_series.dropna().items() if str(k).strip()}
             rows.append({
                 "team": team_name,
                 "source_file": f"{fp} :: {used_sheet}",
@@ -1394,8 +1398,9 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             appended += 1
     print(f"[CAS] scanned files: {scanned}, appended weekly rows: {appended}")
     if appended == 0:
-        print("[CAS] No rows appended. Common causes: (1) only excluded files in folder; "
-              "(2) sheet not named 'Sheet1' (now handled); (3) all weeks are future beyond this Sunday; "
+        print("[CAS] No rows appended. Common causes: "
+              "(1) only excluded files; (2) wrong sheet name; "
+              "(3) all weeks are future beyond this Sunday; "
               "(4) column A has no parseable dates to ffill.")
     return rows
 def collect_pss_team(cfg: dict) -> list[dict]:
