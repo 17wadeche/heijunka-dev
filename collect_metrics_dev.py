@@ -2188,6 +2188,16 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         people_avail = _people_available_openpyxl_generic(
                             ws_ind, name_col="A", avail_col="I", start_row=6, end_row=50, step=3
                         )
+                        _exclude = {
+                            "team member 1",
+                            "team member 2",
+                            "team member 3",
+                            "team member 4",
+                            "total available hours",
+                            "total pitches",
+                        }
+                        _norm = lambda s: str(s).strip().casefold()
+                        people_avail = [(n, a) for (n, a) in (people_avail or []) if _norm(n) not in _exclude]
                         names = [n for n, _ in people_avail] if people_avail else []
                         completed_hours = _svt_completed_hours_by_person_openpyxl(
                             ws_pa=ws_pa,
@@ -2205,10 +2215,7 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                                 avail_f = float(avail) if avail is not None else 0.0
                             except Exception:
                                 avail_f = 0.0
-                            per_person[str(name).strip()] = {
-                                "actual": round(a, 2),
-                                "available": round(avail_f, 2),
-                            }
+                            per_person[str(name).strip()] = {"actual": round(a, 2), "available": round(avail_f, 2)}
                         if per_person:
                             values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
                 except Exception:
