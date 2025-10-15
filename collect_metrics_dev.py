@@ -2455,10 +2455,25 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     latest = combined.loc[is_latest].copy()
     latest["_origin_rank"] = origin_rank[is_latest]
     latest = latest.groupby("_key", as_index=False, group_keys=False).apply(coalesce_group)
-    past = (combined.loc[~is_latest]
-            .assign(_origin_rank=origin_rank[~is_latest])
-            .sort_values(["team","period_date","_origin_rank","source_file"])
-            .drop_duplicates(subset=["_key"], keep="first"))
+    cutoff_recent = pd.Timestamp.today().normalize() - pd.Timedelta(days=60)
+    past_all = combined.loc[~is_latest].assign(_origin_rank=origin_rank[~is_latest])
+    svt_mask = past_all["team"].astype(str).str.strip().str.casefold().eq("svt")
+    svt_recent = past_all[svt_mask & (past_all["period_date"] >= cutoff_recent)]
+    svt_older  = past_all[svt_mask & (past_all["period_date"] <  cutoff_recent)]
+    non_svt    = past_all[~svt_mask]
+    svt_recent_pick = (svt_recent
+        .sort_values(["team","period_date","_origin_rank","source_file"],
+                    ascending=[True, True, False, True])
+        .drop_duplicates(subset=["_key"], keep="first"))
+    svt_older_pick = (svt_older
+        .sort_values(["team","period_date","_origin_rank","source_file"],
+                    ascending=[True, True, True,  True])
+        .drop_duplicates(subset=["_key"], keep="first"))
+    non_svt_pick = (non_svt
+        .sort_values(["team","period_date","_origin_rank","source_file"],
+                    ascending=[True, True, True,  True])
+        .drop_duplicates(subset=["_key"], keep="first"))
+    past = pd.concat([svt_recent_pick, svt_older_pick, non_svt_pick], ignore_index=True)
     combined = pd.concat([past, latest], ignore_index=True)
     combined = normalize_period_date(combined)
     combined = combined.drop(columns=[c for c in ["_key","_origin","_origin_rank"] if c in combined.columns])
