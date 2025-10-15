@@ -1278,6 +1278,8 @@ def collect_cas_team(cfg: dict) -> list[dict]:
     team_name = cfg.get("name", "CAS")
     wanted_sheet = cfg.get("sheet", "Sheet1")
     pattern = cfg.get("pattern", "*.xls*")
+
+    # 1) locate files (file > glob > root), same as before
     files: list[Path] = []
     if cfg.get("file"):
         p = Path(cfg["file"])
@@ -1293,17 +1295,22 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         src_hint = cfg.get("file") or cfg.get("file_glob") or cfg.get("root") or "<none>"
         print(f"[WARN] CAS source not found (checked file/file_glob/root). Source hint: {src_hint}")
         return []
+
     files = [p for p in files if not looks_like_temp(p.name) and not _is_excluded_path(p)]
+
     scanned, appended = 0, 0
     rows: list[dict] = []
+
     def _read_df_any_sheet(fp: Path):
         engine = ("pyxlsb" if fp.suffix.lower() == ".xlsb" else None)
+        # Try requested sheet
         try:
             df = read_excel_fast(fp, sheet_name=wanted_sheet, engine=engine)
             if df is not None and not df.empty:
                 return df, wanted_sheet
         except Exception:
             pass
+        # Fallback: first sheet
         try:
             df0 = read_excel_fast(fp, sheet_name=0, engine=engine)
             if df0 is not None and not df0.empty:
@@ -1311,65 +1318,134 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         except Exception:
             pass
         return None, None
+
     today = pd.Timestamp.today().normalize()
     this_monday = today - pd.to_timedelta(today.weekday(), unit="D")
     this_sunday = this_monday + pd.Timedelta(days=6)
+
     for fp in files:
         scanned += 1
         df, used_sheet = _read_df_any_sheet(fp)
         if df is None or df.empty:
             continue
-        ncols = df.shape[1]
-        if ncols < 7:
-            df = pd.concat([df, DataFrame([[None]*(7-ncols)]*df.shape[0])], axis=1)
-        df = df.iloc[:, :7].copy()
-        df.columns = list("ABCDEFG")
-        print("[CAS] sample A values:", df["A"].head(10).tolist())
-        date_a = df["A"].apply(_coerce_to_date_for_filter)
-        scan_cols = [c for c in ["A", "B", "C", "D"] if c in df.columns]
-        def _first_date_in_row(row):
+
+        # 2) Do NOT truncate to 7 columns; standardize up to first 30 columns as A..AD
+        max_scan = min(df.shape[1], 30)
+        df = df.iloc[:, :max_scan].copy()
+        col_letters = []
+        for i in range(1, max_scan + 1):
+            col_letters.append(_index_to_col_letter(i))
+        df.columns = col_letters
+
+        # 3) Build a per-row date by scanning MANY columns, not just A..D
+        # Try: direct coercion by column (A..AD), then "first date anywhere in row" parse, with ffill.
+        scan_cols = [c for c in df.columns]  # all in the slice
+        def _first_date_anywhere(row):
+            # prefer explicit year strings or Excel serials
             for c in scan_cols:
-                d = _coerce_to_date_for_filter(row[c])
+                d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
                 if d is not None:
                     return d
-            return None
-        date_scan = df.apply(_first_date_in_row, axis=1)
-        def _date_from_row_text(row):
+            # final pass: parse from concatenated text in row
             txt = " ".join([str(v) for v in row.tolist() if v is not None])
-            d = parse_date_from_text(txt)
-            return d
-        date_text = df.apply(_date_from_row_text, axis=1)
-        df["date_raw"] = pd.Series(date_a).where(pd.Series(date_a).notna(), pd.Series(date_scan))
-        df["date_raw"] = df["date_raw"].where(pd.Series(df["date_raw"]).notna(), pd.Series(date_text))
-        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").ffill()
-        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").ffill()
+            return parse_date_from_text(txt)
+
+        # Try fastest path: dates in first few columns
+        date_guess = None
+        for c in scan_cols:
+            ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
+            if ser.notna().sum() > 0:
+                date_guess = ser
+                break
+
+        if date_guess is None:
+            date_guess = df.apply(_first_date_anywhere, axis=1)
+            date_guess = pd.to_datetime(date_guess, errors="coerce")
+
+        # Fill downward so section headers/merged cells work
+        df["date_raw"] = date_guess.ffill()
+
+        # If still all NA, fallback to file mtime and apply to all rows
+        if df["date_raw"].isna().all():
+            d = infer_period_date(fp)
+            df["date_raw"] = pd.to_datetime(d, errors="coerce")
+
         df = df.dropna(subset=["date_raw"]).copy()
         if df.empty:
             continue
-        df["station"]         = df["B"].astype(str).str.strip()
-        df["person"]          = df["C"].astype(str).str.strip()
-        df["completed_hours"] = pd.to_numeric(df["D"], errors="coerce")
-        df["target_output"]   = pd.to_numeric(df["F"], errors="coerce")
-        df["actual_output"]   = pd.to_numeric(df["G"], errors="coerce")
+
+        # 4) Map "station/person/completed/target/actual" flexibly:
+        # default to old positions if present, else try best-guess by header-like heuristics.
+        def _pick(col_letter_fallbacks: list[str]) -> str | None:
+            for c in col_letter_fallbacks:
+                if c in df.columns:
+                    return c
+            return None
+
+        # Original assumed: B=station, C=person, D=completed_hours, F=target, G=actual
+        c_station = _pick(["B"])
+        c_person  = _pick(["C"])
+        c_chours  = _pick(["D"])
+        c_target  = _pick(["F"])
+        c_actual  = _pick(["G"])
+
+        # If missing, try to infer by column content (very light heuristics):
+        def _first_numeric_col(pref_order):
+            for c in pref_order:
+                if c in df.columns:
+                    s = pd.to_numeric(df[c], errors="coerce")
+                    if s.notna().sum() > 0:
+                        return c
+            # scan all
+            for c in df.columns:
+                s = pd.to_numeric(df[c], errors="coerce")
+                if s.notna().sum() > 0:
+                    return c
+            return None
+
+        if c_chours is None: c_chours = _first_numeric_col(["D","E","H","I"])
+        if c_target is None: c_target = _first_numeric_col(["F","H","I","J"])
+        if c_actual is None: c_actual = _first_numeric_col(["G","I","J","K"])
+        if c_person is None: c_person = _pick(["C","A","B"])
+        if c_station is None: c_station = _pick(["B","A","D"])
+
+        # Normalize typed cols (guard against missing)
+        get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col in df.columns else pd.Series(np.nan, index=df.index)
+        get_str = lambda col: df[col].astype(str).str.strip() if col in df.columns else pd.Series("", index=df.index)
+
+        df["station"]         = get_str(c_station)
+        df["person"]          = get_str(c_person)
+        df["completed_hours"] = get_num(c_chours)
+        df["target_output"]   = get_num(c_target)
+        df["actual_output"]   = get_num(c_actual)
+
         ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
         df["_week_start"] = (ts - pd.to_timedelta(ts.dt.weekday, unit="D")).dt.normalize()
+
         for wk, sub in df.groupby("_week_start"):
             if pd.isna(wk):
                 continue
             wk_d = wk.normalize()
             if wk_d > this_sunday:
                 continue
+
+            # availability: 5h per unique (person, day) observed
             person_day_pairs = (
                 sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
                    .dropna().drop_duplicates()
             )
             total_avail = 5.0 * len(person_day_pairs)
+
             completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
             target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
             actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
+
+            # HC in WIP: unique people with any target > 0 that week
             hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
             hc_people = (sub.loc[hc_mask, "person"].astype(str).str.strip().replace({"nan": ""}).tolist())
             hc_in_wip = len({p for p in hc_people if p})
+
+            # Person hours breakdown
             per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
             per_avail  = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
                             .drop_duplicates().groupby("person").size() * 5.0)
@@ -1381,6 +1457,8 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 }
                 for p in person_keys if str(p).strip()
             }
+
+            # Outputs by person/cell
             per_out = (sub.groupby("person")[["actual_output", "target_output"]]
                          .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_person = {
@@ -1395,9 +1473,12 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                                  "target": round(float(row["target_output"]), 2)}
                 for k, row in per_cell.iterrows() if str(k).strip()
             }
+
+            # Cell/Station hours
             cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
             cs_hours = {str(k).strip(): round(float(v), 2)
                         for k, v in cs_hours_series.dropna().items() if str(k).strip()}
+
             rows.append({
                 "team": team_name,
                 "source_file": f"{fp} :: {used_sheet}",
@@ -1413,12 +1494,11 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 "Cell/Station Hours": json.dumps(cs_hours, ensure_ascii=False),
             })
             appended += 1
+
     print(f"[CAS] scanned files: {scanned}, appended weekly rows: {appended}")
     if appended == 0:
-        print("[CAS] No rows appended. Common causes: "
-              "(1) only excluded files; (2) wrong sheet name; "
-              "(3) all weeks are future beyond this Sunday; "
-              "(4) column A has no parseable dates to ffill.")
+        print("[CAS] No rows appended. Checked >7 columns and whole-row date parsing. "
+              "If this persists, verify there is at least one date anywhere on each row or in a header.")
     return rows
 def collect_pss_team(cfg: dict) -> list[dict]:
     file_path = None
@@ -2648,7 +2728,7 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
         return out
     latest = combined.loc[is_latest].copy()
     latest["_origin_rank"] = origin_rank[is_latest]
-    latest = latest.groupby("_key", as_index=False, group_keys=False).apply(coalesce_group)
+    latest = latest.groupby("_key", as_index=False, group_keys=False).apply(coalesce_group, include_groups=False)
     cutoff_recent = pd.Timestamp.today().normalize() - pd.Timedelta(days=60)
     past_all = combined.loc[~is_latest].assign(_origin_rank=origin_rank[~is_latest])
     svt_mask = past_all["team"].astype(str).str.strip().str.casefold().eq("svt")
