@@ -2999,10 +2999,6 @@ def run_once(selected_teams: set[str] | None = None):
         print(counts.to_string())
     except Exception:
         pass
-    if not df.empty:
-        with pd.option_context("display.max_columns", None, "display.width", 180):
-            print("\nPreview:")
-            print(df.head(12).to_string(index=False))
 def watch_mode(selected_teams: set[str] | None = None):
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
