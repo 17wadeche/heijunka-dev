@@ -1301,7 +1301,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             df = read_excel_fast(fp, sheet_name=wanted_sheet, engine=engine)
             if df is not None:
                 df2 = df.dropna(how="all").dropna(axis=1, how="all")
-                if not df2.empty:
+                if not df2.empty and df2.notna().any().any():
                     return df, wanted_sheet
         except Exception:
             pass
@@ -1321,7 +1321,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 if df is None:
                     continue
                 df2 = df.dropna(how="all").dropna(axis=1, how="all")
-                if df2.size > 0 and df2.dropna().shape[0] >= 1:
+                if df2.size > 0 and df2.notna().any().any():
                     picked_name = sh if isinstance(sh, str) else "<sheet-idx-0>"
                     return df, picked_name
             except Exception:
@@ -1336,7 +1336,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         if df is None or df.empty:
             print(f"[CAS][debug] {fp} -> empty or unreadable (sheet={wanted_sheet} / used={used_sheet})")
             continue
-        max_scan = min(df.shape[1], 30)
+        max_scan = min(df.shape[1], 100)
         df = df.iloc[:, :max_scan].copy()
         def _is_dateish(v):
             try:
