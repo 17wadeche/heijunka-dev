@@ -1276,42 +1276,63 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
 def collect_cas_team(cfg: dict) -> list[dict]:
     from pandas import DataFrame
     root = Path(cfg.get("root", "")).resolve()
-    sheet = cfg.get("sheet", "Sheet1")
     pattern = cfg.get("pattern", "*.xls*")
     team_name = cfg.get("name", "CAS")
+    wanted_sheet = cfg.get("sheet", "Sheet1")
     if not root.exists():
         print(f"[WARN] CAS root not found: {root}", file=sys.stderr)
         return []
     files = [p for p in root.rglob(pattern) if p.is_file()]
+    files = [p for p in files if not looks_like_temp(p.name) and not _is_excluded_path(p)]
+    scanned, appended = 0, 0
     rows: list[dict] = []
-    for fp in files:
-        if looks_like_temp(fp.name) or _is_excluded_path(fp):
-            continue
+    def _read_df_any_sheet(fp: Path):
+        engine = ("pyxlsb" if fp.suffix.lower() == ".xlsb" else None)
         try:
-            df = read_excel_fast(fp, sheet_name=sheet, engine=("pyxlsb" if fp.suffix.lower()==".xlsb" else None))
+            df = read_excel_fast(fp, sheet_name=wanted_sheet, engine=engine)
+            if df is not None and not df.empty:
+                return df, wanted_sheet
         except Exception:
-            continue
+            pass
+        try:
+            df0 = read_excel_fast(fp, sheet_name=0, engine=engine)
+            if df0 is not None and not df0.empty:
+                return df0, "<first-sheet>"
+        except Exception:
+            pass
+        return None, None
+    today = pd.Timestamp.today().normalize()
+    this_monday = today - pd.to_timedelta(today.weekday(), unit="D")
+    this_sunday = this_monday + pd.Timedelta(days=6)
+    for fp in files:
+        scanned += 1
+        df, used_sheet = _read_df_any_sheet(fp)
         if df is None or df.empty:
             continue
         ncols = df.shape[1]
         if ncols < 7:
-            pad = DataFrame([[None]*(7-ncols)]*df.shape[0])
-            df = pd.concat([df, pad], axis=1)
+            df = pd.concat([df, DataFrame([[None]*(7-ncols)]*df.shape[0])], axis=1)
         df = df.iloc[:, :7].copy()
         df.columns = list("ABCDEFG")
         df["date_raw"] = df["A"].apply(_coerce_to_date_for_filter)
-        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").dt.date
+        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce")
         df["date_raw"] = df["date_raw"].ffill()
         df = df.dropna(subset=["date_raw"]).copy()
-        df["station"]        = df["B"].astype(str).str.strip()
-        df["person"]         = df["C"].astype(str).str.strip()
-        df["completed_hours"]= pd.to_numeric(df["D"], errors="coerce")
-        df["target_output"]  = pd.to_numeric(df["F"], errors="coerce")
-        df["actual_output"]  = pd.to_numeric(df["G"], errors="coerce")
-        ts = pd.to_datetime(df["date_raw"])
+        if df.empty:
+            continue
+        df["station"]         = df["B"].astype(str).str.strip()
+        df["person"]          = df["C"].astype(str).str.strip()
+        df["completed_hours"] = pd.to_numeric(df["D"], errors="coerce")
+        df["target_output"]   = pd.to_numeric(df["F"], errors="coerce")
+        df["actual_output"]   = pd.to_numeric(df["G"], errors="coerce")
+        ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
         df["_week_start"] = (ts - pd.to_timedelta(ts.dt.weekday, unit="D")).dt.normalize()
         for wk, sub in df.groupby("_week_start"):
-            period_date = wk.date()
+            if pd.isna(wk):
+                continue
+            wk_d = wk.normalize()
+            if wk_d > this_sunday:
+                continue
             person_day_pairs = (sub.loc[sub["person"].astype(str).str.strip().ne(""),
                                         ["person", "date_raw"]]
                                   .dropna().drop_duplicates())
@@ -1325,8 +1346,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                            .replace({"nan": ""})
                            .tolist())
             hc_in_wip = len({p for p in hc_people if p})
-            per_actual = (sub.groupby("person")["completed_hours"]
-                            .sum(min_count=1).dropna())
+            per_actual = (sub.groupby("person")["completed_hours"].sum(min_count=1).dropna())
             per_avail = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
                            .drop_duplicates()
                            .groupby("person").size() * 5.0)
@@ -1336,41 +1356,31 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                     "actual":    round(float(per_actual.get(p, 0.0) or 0.0), 2),
                     "available": round(float(per_avail.get(p, 0.0)  or 0.0), 2),
                 }
-                for p in person_keys
-                if str(p).strip()
+                for p in person_keys if str(p).strip()
             }
             per_out = (sub.groupby("person")[["actual_output", "target_output"]]
-                         .sum(min_count=1)
-                         .replace({np.nan: 0}))
+                         .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_person = {
-                str(p).strip(): {
-                    "output": round(float(row["actual_output"]), 2),
-                    "target": round(float(row["target_output"]), 2),
-                }
-                for p, row in per_out.iterrows()
-                if str(p).strip()
+                str(p).strip(): {"output": round(float(row["actual_output"]), 2),
+                                 "target": round(float(row["target_output"]), 2)}
+                for p, row in per_out.iterrows() if str(p).strip()
             }
             per_cell = (sub.groupby("station")[["actual_output", "target_output"]]
-                          .sum(min_count=1)
-                          .replace({np.nan: 0}))
+                          .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_cell = {
-                str(k).strip(): {
-                    "output": round(float(row["actual_output"]), 2),
-                    "target": round(float(row["target_output"]), 2),
-                }
-                for k, row in per_cell.iterrows()
-                if str(k).strip()
+                str(k).strip(): {"output": round(float(row["actual_output"]), 2),
+                                 "target": round(float(row["target_output"]), 2)}
+                for k, row in per_cell.iterrows() if str(k).strip()
             }
             cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
             cs_hours = {
                 str(k).strip(): round(float(v), 2)
-                for k, v in cs_hours_series.dropna().items()
-                if str(k).strip()
+                for k, v in cs_hours_series.dropna().items() if str(k).strip()
             }
             rows.append({
                 "team": team_name,
-                "source_file": str(fp),
-                "period_date": period_date,
+                "source_file": f"{fp} :: {used_sheet}",
+                "period_date": wk_d.date(),
                 "Total Available Hours": total_avail if total_avail else None,
                 "Completed Hours": completed_hours if not np.isnan(completed_hours) else None,
                 "Target Output": target_output if not np.isnan(target_output) else None,
@@ -1381,6 +1391,12 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
                 "Cell/Station Hours": json.dumps(cs_hours, ensure_ascii=False),
             })
+            appended += 1
+    print(f"[CAS] scanned files: {scanned}, appended weekly rows: {appended}")
+    if appended == 0:
+        print("[CAS] No rows appended. Common causes: (1) only excluded files in folder; "
+              "(2) sheet not named 'Sheet1' (now handled); (3) all weeks are future beyond this Sunday; "
+              "(4) column A has no parseable dates to ffill.")
     return rows
 def collect_pss_team(cfg: dict) -> list[dict]:
     file_path = None
@@ -2926,6 +2942,12 @@ def run_once(selected_teams: set[str] | None = None):
     df = add_open_complaint_timeliness(df)
     df = _dedupe_by_team_unique_key(df)
     save_outputs(df)
+    try:
+        counts = df.groupby("team", dropna=False)["period_date"].nunique().sort_values(ascending=False)
+        print("\n[summary] weeks per team (unique period_date):")
+        print(counts.to_string())
+    except Exception:
+        pass
     if not df.empty:
         with pd.option_context("display.max_columns", None, "display.width", 180):
             print("\nPreview:")
