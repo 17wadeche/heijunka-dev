@@ -378,10 +378,10 @@ TEAM_CONFIG = [
     {
         "name": "CAS",
         "cas_mode": True,
-        "root": r"C:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board",
+        "file": r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx",
         "pattern": "*.xls*",
         "sheet": "Sheet1",
-        "unique_key": ["team", "period_date"],  # weekly rows per file
+        "unique_key": ["team", "period_date"],
     },
 ]
 SKIP_PATTERNS = [r"~\$", r"\.tmp$"]
