@@ -1311,4 +1311,18 @@ f_table = (
     f.drop(columns=drop_these, errors="ignore")
     .sort_values(["team", "period_date"], ascending=[True, False])
 )
+percent_cols = [c for c in ["Open Complaint Timeliness", "Capacity Utilization"] if c in f_table.columns]
+f_table_display = f_table.copy()
+for c in percent_cols:
+    f_table_display[c] = pd.to_numeric(f_table_display[c], errors="coerce")
+col_cfg = {}
+if "Open Complaint Timeliness" in f_table_display.columns:
+    col_cfg["Open Complaint Timeliness"] = st.column_config.NumberColumn(
+        "Open Complaint Timeliness", format="%.0f%%"
+    )
+if "Capacity Utilization" in f_table_display.columns:
+    col_cfg["Capacity Utilization"] = st.column_config.NumberColumn(
+        "Capacity Utilization", format="%.0f%%"
+    )
+st.dataframe(f_table_display, use_container_width=True, column_config=col_cfg)
 st.dataframe(f_table, use_container_width=True)
