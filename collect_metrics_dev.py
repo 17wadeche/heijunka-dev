@@ -1324,7 +1324,23 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             df = pd.concat([df, DataFrame([[None]*(7-ncols)]*df.shape[0])], axis=1)
         df = df.iloc[:, :7].copy()
         df.columns = list("ABCDEFG")
-        df["date_raw"] = df["A"].apply(_coerce_to_date_for_filter)
+        date_a = df["A"].apply(_coerce_to_date_for_filter)
+        scan_cols = [c for c in ["A", "B", "C", "D"] if c in df.columns]
+        def _first_date_in_row(row):
+            for c in scan_cols:
+                d = _coerce_to_date_for_filter(row[c])
+                if d is not None:
+                    return d
+            return None
+        date_scan = df.apply(_first_date_in_row, axis=1)
+        def _date_from_row_text(row):
+            txt = " ".join([str(v) for v in row.tolist() if v is not None])
+            d = parse_date_from_text(txt)
+            return d
+        date_text = df.apply(_date_from_row_text, axis=1)
+        df["date_raw"] = pd.Series(date_a).where(pd.Series(date_a).notna(), pd.Series(date_scan))
+        df["date_raw"] = df["date_raw"].where(pd.Series(df["date_raw"]).notna(), pd.Series(date_text))
+        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").ffill()
         df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").ffill()
         df = df.dropna(subset=["date_raw"]).copy()
         if df.empty:
