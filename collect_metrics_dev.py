@@ -380,7 +380,6 @@ TEAM_CONFIG = [
         "cas_mode": True,
         "file": r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx",
         "pattern": "*.xls*",
-        "sheet": "Sheet1",
         "unique_key": ["team", "period_date"],
     },
 ]
@@ -1337,118 +1336,95 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         if df is None or df.empty:
             print(f"[CAS][debug] {fp} -> empty or unreadable (sheet={wanted_sheet} / used={used_sheet})")
             continue
-        max_scan = min(df.shape[1], 60)
-        df = df.iloc[:, :max_scan].copy()
-        col_letters = [_index_to_col_letter(i) for i in range(1, max_scan + 1)]
-        df.columns = col_letters
-        try:
-            print(f"[CAS][debug] file={fp.name} used_sheet={used_sheet} shape={df.shape}")
-            preview_cols = col_letters[:15]
-            print(df.loc[:9, preview_cols].to_string(index=True))
-        except Exception as e:
-            print(f"[CAS][debug] preview failed: {e}")
-        scan_cols = [c for c in df.columns]  # all in the slice
-        def _first_date_anywhere(row):
-            for c in scan_cols:
-                d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
-                if d is not None:
-                    return d
-            txt = " ".join([str(v) for v in row.tolist() if v is not None])
-            return parse_date_from_text(txt)
-        date_guess = None
-        for c in scan_cols:
-            ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
-            if ser.notna().sum() > 0:
-                date_guess = ser
-                print(f"[CAS][debug] first date-y col: {c} non-null={int(ser.notna().sum())}")
-                break
-        if date_guess is None:
-            date_guess = df.apply(_first_date_anywhere, axis=1)
-            date_guess = pd.to_datetime(date_guess, errors="coerce")
-            print(f"[CAS][debug] whole-row date parse non-null={int(date_guess.notna().sum())}")
-        df["date_raw"] = date_guess.ffill()
-        if df["date_raw"].isna().all():
-            d = infer_period_date(fp)
-            print(f"[CAS][debug] infer_period_date={d}")
-            df["date_raw"] = pd.to_datetime(d, errors="coerce")
-        non_null = df["date_raw"].notna().sum()
-        if non_null == 0:
-            print(f"[CAS][debug] date_raw still empty after fallback; skipping file.")
-            continue
-        else:
-            ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
-            wk = (ts - pd.to_timedelta(ts.dt.weekday, unit='D')).dt.normalize()
-            print(f"[CAS][debug] date_raw non-null={non_null} unique_weeks={wk.nunique()}")
-            try:
-                print("[CAS][debug] sample weeks:", sorted(pd.unique(wk.dropna()))[:5])
-            except Exception:
-                pass
-        if df is None or df.empty:
-            continue
         max_scan = min(df.shape[1], 30)
         df = df.iloc[:, :max_scan].copy()
-        col_letters = []
-        for i in range(1, max_scan + 1):
-            col_letters.append(_index_to_col_letter(i))
-        df.columns = col_letters
-        scan_cols = [c for c in df.columns]  # all in the slice
-        def _first_date_anywhere(row):
+        def _is_dateish(v):
+            try:
+                return pd.notna(pd.to_datetime(_coerce_to_date_for_filter2(v, require_explicit_year=False), errors="coerce"))
+            except Exception:
+                return False
+        a1 = df.iat[0, 0] if df.shape[0] > 0 and df.shape[1] > 0 else None
+        header_row = df.iloc[0].astype(str).str.strip().tolist() if df.shape[0] > 0 else []
+        header_candidates = {"Station Work", "Team Member", "Planned Scheduled Hours",
+                             "Target/ HR", "Target Output", "Actual Output"}
+        date_in_a1 = _is_dateish(a1)
+        headers_present = any(h in header_row for h in header_candidates)
+        if date_in_a1 and headers_present:
+            cols = []
+            for j, raw in enumerate(header_row):
+                name = str(raw).strip()
+                if j == 0:
+                    cols.append("date_header")
+                elif not name:
+                    cols.append(f"C{j+1}")
+                else:
+                    cols.append(name)
+            df.columns = cols
+            df = df.iloc[1:].copy()
+            df["date_raw"] = pd.to_datetime(_coerce_to_date_for_filter2(a1, require_explicit_year=False), errors="coerce")
+            def _pick_first(*names):
+                for n in names:
+                    if n in df.columns:
+                        return n
+                return None
+            c_station = _pick_first("Station Work", "Station", "Work", "B")
+            c_person  = _pick_first("Team Member", "Member", "Person", "C")
+            c_chours  = _pick_first("Planned Scheduled Hours", "Completed Hours", "Hours", "D")
+            c_target  = _pick_first("Target Output", "Target/ HR", "Target", "F")
+            c_actual  = _pick_first("Actual Output", "Actual", "G")
+            get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col and col in df.columns else pd.Series(np.nan, index=df.index)
+            get_str = lambda col: df[col].astype(str).str.strip() if col and col in df.columns else pd.Series("", index=df.index)
+            df["station"]         = get_str(c_station)
+            df["person"]          = get_str(c_person)
+            df["completed_hours"] = get_num(c_chours)
+            df["target_output"]   = get_num(c_target)
+            df["actual_output"]   = get_num(c_actual)
+        else:
+            col_letters = [_index_to_col_letter(i) for i in range(1, max_scan + 1)]
+            df.columns = col_letters
+            scan_cols = list(df.columns)
+            def _first_date_anywhere(row):
+                for c in scan_cols:
+                    d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
+                    if d is not None:
+                        return d
+                txt = " ".join([str(v) for v in row.tolist() if v is not None])
+                return parse_date_from_text(txt)
+            date_guess = None
             for c in scan_cols:
-                d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
-                if d is not None:
-                    return d
-            txt = " ".join([str(v) for v in row.tolist() if v is not None])
-            return parse_date_from_text(txt)
-        date_guess = None
-        for c in scan_cols:
-            ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
-            if ser.notna().sum() > 0:
-                date_guess = ser
-                break
-        if date_guess is None:
-            date_guess = df.apply(_first_date_anywhere, axis=1)
-            date_guess = pd.to_datetime(date_guess, errors="coerce")
-        df["date_raw"] = date_guess.ffill()
-        if df["date_raw"].isna().all():
-            d = infer_period_date(fp)
-            df["date_raw"] = pd.to_datetime(d, errors="coerce")
-        df = df.dropna(subset=["date_raw"]).copy()
-        if df.empty:
-            continue
-        def _pick(col_letter_fallbacks: list[str]) -> str | None:
-            for c in col_letter_fallbacks:
-                if c in df.columns:
-                    return c
-            return None
-        c_station = _pick(["B"])
-        c_person  = _pick(["C"])
-        c_chours  = _pick(["D"])
-        c_target  = _pick(["F"])
-        c_actual  = _pick(["G"])
-        def _first_numeric_col(pref_order):
-            for c in pref_order:
-                if c in df.columns:
-                    s = pd.to_numeric(df[c], errors="coerce")
-                    if s.notna().sum() > 0:
+                ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
+                if ser.notna().sum() > 0:
+                    date_guess = ser
+                    break
+            if date_guess is None:
+                date_guess = pd.to_datetime(df.apply(_first_date_anywhere, axis=1), errors="coerce")
+            df["date_raw"] = date_guess.ffill()
+            if df["date_raw"].isna().all():
+                d = infer_period_date(fp)
+                df["date_raw"] = pd.to_datetime(d, errors="coerce")
+            def _first_numeric_col(pref_order):
+                for c in pref_order:
+                    if c in df.columns and pd.to_numeric(df[c], errors="coerce").notna().sum() > 0:
                         return c
-            for c in df.columns:
-                s = pd.to_numeric(df[c], errors="coerce")
-                if s.notna().sum() > 0:
-                    return c
-            return None
-        if c_chours is None: c_chours = _first_numeric_col(["D","E","H","I"])
-        if c_target is None: c_target = _first_numeric_col(["F","H","I","J"])
-        if c_actual is None: c_actual = _first_numeric_col(["G","I","J","K"])
-        if c_person is None: c_person = _pick(["C","A","B"])
-        if c_station is None: c_station = _pick(["B","A","D"])
-        get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col in df.columns else pd.Series(np.nan, index=df.index)
-        get_str = lambda col: df[col].astype(str).str.strip() if col in df.columns else pd.Series("", index=df.index)
-        df["station"]         = get_str(c_station)
-        df["person"]          = get_str(c_person)
-        df["completed_hours"] = get_num(c_chours)
-        df["target_output"]   = get_num(c_target)
-        df["actual_output"]   = get_num(c_actual)
+                for c in df.columns:
+                    if pd.to_numeric(df[c], errors="coerce").notna().sum() > 0:
+                        return c
+                return None
+            c_station = "B"
+            c_person  = "C"
+            c_chours  = _first_numeric_col(["D","E","H","I"])
+            c_target  = _first_numeric_col(["F","H","I","J"])
+            c_actual  = _first_numeric_col(["G","I","J","K"])
+            get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col in df.columns else pd.Series(np.nan, index=df.index)
+            get_str = lambda col: df[col].astype(str).str.strip() if col in df.columns else pd.Series("", index=df.index)
+            df["station"]         = get_str(c_station)
+            df["person"]          = get_str(c_person)
+            df["completed_hours"] = get_num(c_chours)
+            df["target_output"]   = get_num(c_target)
+            df["actual_output"]   = get_num(c_actual)
         ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
+        df = df[ts.notna()].copy()
+        ts = ts[ts.notna()]
         df["_week_start"] = (ts - pd.to_timedelta(ts.dt.weekday, unit="D")).dt.normalize()
         for wk, sub in df.groupby("_week_start"):
             if pd.isna(wk):
