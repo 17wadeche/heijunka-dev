@@ -1324,6 +1324,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             df = pd.concat([df, DataFrame([[None]*(7-ncols)]*df.shape[0])], axis=1)
         df = df.iloc[:, :7].copy()
         df.columns = list("ABCDEFG")
+        print("[CAS] sample A values:", df["A"].head(10).tolist())
         date_a = df["A"].apply(_coerce_to_date_for_filter)
         scan_cols = [c for c in ["A", "B", "C", "D"] if c in df.columns]
         def _first_date_in_row(row):
