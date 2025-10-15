@@ -2179,6 +2179,40 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         values["HC in WIP"] = _svt_hc_in_wip_openpyxl(ws_hc)
                 except Exception:
                     values["HC in WIP"] = None
+            if team_name == "SVT":
+                try:
+                    wb_vis = load_workbook_fast(p, data_only=True, read_only=False)
+                    if "Individual" in wb_vis.sheetnames and "#12 Production Analysis" in wb_vis.sheetnames:
+                        ws_ind = wb_vis["Individual"]
+                        ws_pa  = wb_vis["#12 Production Analysis"]
+                        people_avail = _people_available_openpyxl_generic(
+                            ws_ind, name_col="A", avail_col="I", start_row=6, end_row=50, step=3
+                        )
+                        names = [n for n, _ in people_avail] if people_avail else []
+                        completed_hours = _svt_completed_hours_by_person_openpyxl(
+                            ws_pa=ws_pa,
+                            people=names,
+                            name_col="C",
+                            minutes_col="G",
+                            row_start=1,
+                            row_end=200,
+                            skip_hidden=True
+                        ) if names else {}
+                        per_person = {}
+                        for name, avail in (people_avail or []):
+                            a = float(completed_hours.get(name, 0.0) or 0.0)
+                            try:
+                                avail_f = float(avail) if avail is not None else 0.0
+                            except Exception:
+                                avail_f = 0.0
+                            per_person[str(name).strip()] = {
+                                "actual": round(a, 2),
+                                "available": round(avail_f, 2),
+                            }
+                        if per_person:
+                            values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
             if p.suffix.lower() == ".xlsb" and team_name in ("TCT Commercial", "TCT Clinical"):
                 try:
                     ind_sheet = "Individual(WIP-Non WIP)"
