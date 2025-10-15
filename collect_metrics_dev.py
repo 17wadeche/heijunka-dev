@@ -375,6 +375,14 @@ TEAM_CONFIG = [
         "file": r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx",
         "unique_key": ["team", "period_date"],
     },
+    {
+        "name": "CAS",
+        "cas_mode": True,
+        "root": r"C:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board",
+        "pattern": "*.xls*",
+        "sheet": "Sheet1",
+        "unique_key": ["team", "period_date"],  # weekly rows per file
+    },
 ]
 SKIP_PATTERNS = [r"~\$", r"\.tmp$"]
 DATE_REGEXES = [
@@ -1265,6 +1273,115 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     return df.loc[mask].copy()
+def collect_cas_team(cfg: dict) -> list[dict]:
+    from pandas import DataFrame
+    root = Path(cfg.get("root", "")).resolve()
+    sheet = cfg.get("sheet", "Sheet1")
+    pattern = cfg.get("pattern", "*.xls*")
+    team_name = cfg.get("name", "CAS")
+    if not root.exists():
+        print(f"[WARN] CAS root not found: {root}", file=sys.stderr)
+        return []
+    files = [p for p in root.rglob(pattern) if p.is_file()]
+    rows: list[dict] = []
+    for fp in files:
+        if looks_like_temp(fp.name) or _is_excluded_path(fp):
+            continue
+        try:
+            df = read_excel_fast(fp, sheet_name=sheet, engine=("pyxlsb" if fp.suffix.lower()==".xlsb" else None))
+        except Exception:
+            continue
+        if df is None or df.empty:
+            continue
+        ncols = df.shape[1]
+        if ncols < 7:
+            pad = DataFrame([[None]*(7-ncols)]*df.shape[0])
+            df = pd.concat([df, pad], axis=1)
+        df = df.iloc[:, :7].copy()
+        df.columns = list("ABCDEFG")
+        df["date_raw"] = df["A"].apply(_coerce_to_date_for_filter)
+        df["date_raw"] = pd.to_datetime(df["date_raw"], errors="coerce").dt.date
+        df["date_raw"] = df["date_raw"].ffill()
+        df = df.dropna(subset=["date_raw"]).copy()
+        df["station"]        = df["B"].astype(str).str.strip()
+        df["person"]         = df["C"].astype(str).str.strip()
+        df["completed_hours"]= pd.to_numeric(df["D"], errors="coerce")
+        df["target_output"]  = pd.to_numeric(df["F"], errors="coerce")
+        df["actual_output"]  = pd.to_numeric(df["G"], errors="coerce")
+        ts = pd.to_datetime(df["date_raw"])
+        df["_week_start"] = (ts - pd.to_timedelta(ts.dt.weekday, unit="D")).dt.normalize()
+        for wk, sub in df.groupby("_week_start"):
+            period_date = wk.date()
+            person_day_pairs = (sub.loc[sub["person"].astype(str).str.strip().ne(""),
+                                        ["person", "date_raw"]]
+                                  .dropna().drop_duplicates())
+            total_avail = 5.0 * len(person_day_pairs)
+            completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
+            target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
+            actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
+            hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
+            hc_people = (sub.loc[hc_mask, "person"]
+                           .astype(str).str.strip()
+                           .replace({"nan": ""})
+                           .tolist())
+            hc_in_wip = len({p for p in hc_people if p})
+            per_actual = (sub.groupby("person")["completed_hours"]
+                            .sum(min_count=1).dropna())
+            per_avail = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
+                           .drop_duplicates()
+                           .groupby("person").size() * 5.0)
+            person_keys = set(per_actual.index.tolist()) | set(per_avail.index.tolist())
+            person_hours = {
+                str(p).strip(): {
+                    "actual":    round(float(per_actual.get(p, 0.0) or 0.0), 2),
+                    "available": round(float(per_avail.get(p, 0.0)  or 0.0), 2),
+                }
+                for p in person_keys
+                if str(p).strip()
+            }
+            per_out = (sub.groupby("person")[["actual_output", "target_output"]]
+                         .sum(min_count=1)
+                         .replace({np.nan: 0}))
+            outputs_by_person = {
+                str(p).strip(): {
+                    "output": round(float(row["actual_output"]), 2),
+                    "target": round(float(row["target_output"]), 2),
+                }
+                for p, row in per_out.iterrows()
+                if str(p).strip()
+            }
+            per_cell = (sub.groupby("station")[["actual_output", "target_output"]]
+                          .sum(min_count=1)
+                          .replace({np.nan: 0}))
+            outputs_by_cell = {
+                str(k).strip(): {
+                    "output": round(float(row["actual_output"]), 2),
+                    "target": round(float(row["target_output"]), 2),
+                }
+                for k, row in per_cell.iterrows()
+                if str(k).strip()
+            }
+            cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
+            cs_hours = {
+                str(k).strip(): round(float(v), 2)
+                for k, v in cs_hours_series.dropna().items()
+                if str(k).strip()
+            }
+            rows.append({
+                "team": team_name,
+                "source_file": str(fp),
+                "period_date": period_date,
+                "Total Available Hours": total_avail if total_avail else None,
+                "Completed Hours": completed_hours if not np.isnan(completed_hours) else None,
+                "Target Output": target_output if not np.isnan(target_output) else None,
+                "Actual Output": actual_output if not np.isnan(actual_output) else None,
+                "HC in WIP": hc_in_wip,
+                "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+                "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+                "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+                "Cell/Station Hours": json.dumps(cs_hours, ensure_ascii=False),
+            })
+    return rows
 def collect_pss_team(cfg: dict) -> list[dict]:
     file_path = None
     if "file" in cfg:
@@ -2756,6 +2873,8 @@ def run_once(selected_teams: set[str] | None = None):
             all_rows.extend(collect_pss_team(cfg))
         elif cfg.get("ph_mode"):
             all_rows.extend(collect_ph_team(cfg))
+        elif cfg.get("cas_mode"):
+            all_rows.extend(collect_cas_team(cfg))
         else:
             all_rows.extend(collect_for_team(cfg))     
     df = build_master(all_rows)
