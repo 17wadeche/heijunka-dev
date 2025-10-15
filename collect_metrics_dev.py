@@ -1297,19 +1297,36 @@ def collect_cas_team(cfg: dict) -> list[dict]:
     scanned, appended = 0, 0
     rows: list[dict] = []
     def _read_df_any_sheet(fp: Path):
-        engine = ("pyxlsb" if fp.suffix.lower() == ".xlsb" else None)
+        engine = "pyxlsb" if fp.suffix.lower() == ".xlsb" else "openpyxl"
         try:
             df = read_excel_fast(fp, sheet_name=wanted_sheet, engine=engine)
-            if df is not None and not df.empty:
-                return df, wanted_sheet
+            if df is not None:
+                df2 = df.dropna(how="all").dropna(axis=1, how="all")
+                if not df2.empty:
+                    return df, wanted_sheet
         except Exception:
             pass
         try:
-            df0 = read_excel_fast(fp, sheet_name=0, engine=engine)
-            if df0 is not None and not df0.empty:
-                return df0, "<first-sheet>"
+            from openpyxl import load_workbook as _wb
+            if fp.suffix.lower() != ".xlsb":
+                wb = _wb(fp, read_only=True, data_only=True)
+                sheetnames = list(wb.sheetnames)
+            else:
+                sheetnames = [0]
         except Exception:
-            pass
+            sheetnames = [0]
+        picked_name = None
+        for sh in sheetnames:
+            try:
+                df = read_excel_fast(fp, sheet_name=sh, engine=engine)
+                if df is None:
+                    continue
+                df2 = df.dropna(how="all").dropna(axis=1, how="all")
+                if df2.size > 0 and df2.dropna().shape[0] >= 1:
+                    picked_name = sh if isinstance(sh, str) else "<sheet-idx-0>"
+                    return df, picked_name
+            except Exception:
+                continue
         return None, None
     today = pd.Timestamp.today().normalize()
     this_monday = today - pd.to_timedelta(today.weekday(), unit="D")
@@ -1317,57 +1334,55 @@ def collect_cas_team(cfg: dict) -> list[dict]:
     for fp in files:
         scanned += 1
         df, used_sheet = _read_df_any_sheet(fp)
-        for fp in files:
-            scanned += 1
-            df, used_sheet = _read_df_any_sheet(fp)
-            if df is None or df.empty:
-                print(f"[CAS][debug] {fp} -> empty or unreadable (sheet={wanted_sheet} / used={used_sheet})")
-                continue
-            max_scan = min(df.shape[1], 60)
-            df = df.iloc[:, :max_scan].copy()
-            col_letters = [_index_to_col_letter(i) for i in range(1, max_scan + 1)]
-            df.columns = col_letters
-            try:
-                print(f"[CAS][debug] file={fp.name} used_sheet={used_sheet} shape={df.shape}")
-                preview_cols = col_letters[:15]
-                print(df.loc[:9, preview_cols].to_string(index=True))
-            except Exception as e:
-                print(f"[CAS][debug] preview failed: {e}")
-            scan_cols = [c for c in df.columns]  # all in the slice
-            def _first_date_anywhere(row):
-                for c in scan_cols:
-                    d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
-                    if d is not None:
-                        return d
-                txt = " ".join([str(v) for v in row.tolist() if v is not None])
-                return parse_date_from_text(txt)
-            date_guess = None
+        if df is None or df.empty:
+            print(f"[CAS][debug] {fp} -> empty or unreadable (sheet={wanted_sheet} / used={used_sheet})")
+            continue
+        max_scan = min(df.shape[1], 60)
+        df = df.iloc[:, :max_scan].copy()
+        col_letters = [_index_to_col_letter(i) for i in range(1, max_scan + 1)]
+        df.columns = col_letters
+        try:
+            print(f"[CAS][debug] file={fp.name} used_sheet={used_sheet} shape={df.shape}")
+            preview_cols = col_letters[:15]
+            print(df.loc[:9, preview_cols].to_string(index=True))
+        except Exception as e:
+            print(f"[CAS][debug] preview failed: {e}")
+        scan_cols = [c for c in df.columns]  # all in the slice
+        def _first_date_anywhere(row):
             for c in scan_cols:
-                ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
-                if ser.notna().sum() > 0:
-                    date_guess = ser
-                    print(f"[CAS][debug] first date-y col: {c} non-null={int(ser.notna().sum())}")
-                    break
-            if date_guess is None:
-                date_guess = df.apply(_first_date_anywhere, axis=1)
-                date_guess = pd.to_datetime(date_guess, errors="coerce")
-                print(f"[CAS][debug] whole-row date parse non-null={int(date_guess.notna().sum())}")
-            df["date_raw"] = date_guess.ffill()
-            if df["date_raw"].isna().all():
-                d = infer_period_date(fp)
-                print(f"[CAS][debug] infer_period_date={d}")
-                df["date_raw"] = pd.to_datetime(d, errors="coerce")
-            non_null = df["date_raw"].notna().sum()
-            if non_null == 0:
-                print(f"[CAS][debug] date_raw still empty after fallback; skipping file.")
-            else:
-                ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
-                wk = (ts - pd.to_timedelta(ts.dt.weekday, unit='D')).dt.normalize()
-                print(f"[CAS][debug] date_raw non-null={non_null} unique_weeks={wk.nunique()}")
-                try:
-                    print("[CAS][debug] sample weeks:", sorted(pd.unique(wk.dropna()))[:5])
-                except Exception:
-                    pass
+                d = _coerce_to_date_for_filter2(row[c], require_explicit_year=False)
+                if d is not None:
+                    return d
+            txt = " ".join([str(v) for v in row.tolist() if v is not None])
+            return parse_date_from_text(txt)
+        date_guess = None
+        for c in scan_cols:
+            ser = pd.to_datetime(df[c].apply(_coerce_to_date_for_filter), errors="coerce")
+            if ser.notna().sum() > 0:
+                date_guess = ser
+                print(f"[CAS][debug] first date-y col: {c} non-null={int(ser.notna().sum())}")
+                break
+        if date_guess is None:
+            date_guess = df.apply(_first_date_anywhere, axis=1)
+            date_guess = pd.to_datetime(date_guess, errors="coerce")
+            print(f"[CAS][debug] whole-row date parse non-null={int(date_guess.notna().sum())}")
+        df["date_raw"] = date_guess.ffill()
+        if df["date_raw"].isna().all():
+            d = infer_period_date(fp)
+            print(f"[CAS][debug] infer_period_date={d}")
+            df["date_raw"] = pd.to_datetime(d, errors="coerce")
+        non_null = df["date_raw"].notna().sum()
+        if non_null == 0:
+            print(f"[CAS][debug] date_raw still empty after fallback; skipping file.")
+            continue
+        else:
+            ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
+            wk = (ts - pd.to_timedelta(ts.dt.weekday, unit='D')).dt.normalize()
+            print(f"[CAS][debug] date_raw non-null={non_null} unique_weeks={wk.nunique()}")
+            try:
+                print("[CAS][debug] sample weeks:", sorted(pd.unique(wk.dropna()))[:5])
+            except Exception:
+                pass
         if df is None or df.empty:
             continue
         max_scan = min(df.shape[1], 30)
