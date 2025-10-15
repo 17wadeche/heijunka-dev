@@ -2694,15 +2694,31 @@ def add_open_complaint_timeliness(df: pd.DataFrame) -> pd.DataFrame:
         exact.loc[mask_missing, "Open Complaint Timeliness"] = pd.to_numeric(filled_vals, errors="coerce")
     exact = exact.drop(columns=[c for c in ["_team_key"] if c in exact.columns])
     return exact
-def run_once():
-    all_rows = []
+def _available_team_names() -> list[str]:
+    seen = []
     for cfg in TEAM_CONFIG:
+        nm = cfg.get("name", "").strip()
+        if nm and nm not in seen:
+            seen.append(nm)
+    return seen
+def run_once(selected_teams: set[str] | None = None):
+    if selected_teams:
+        wanted = {t.strip().casefold() for t in selected_teams if str(t).strip()}
+        cfg_iter = [c for c in TEAM_CONFIG if c.get("name","").strip().casefold() in wanted]
+        if not cfg_iter:
+            print(f"[info] No TEAM_CONFIG entries matched {sorted(selected_teams)}")
+            return
+        print("[info] Running for teams:", ", ".join(sorted({c['name'] for c in cfg_iter})))
+    else:
+        cfg_iter = TEAM_CONFIG
+    all_rows = []
+    for cfg in cfg_iter:
         if cfg.get("pss_mode"):
             all_rows.extend(collect_pss_team(cfg))
         elif cfg.get("ph_mode"):
             all_rows.extend(collect_ph_team(cfg))
         else:
-            all_rows.extend(collect_for_team(cfg))
+            all_rows.extend(collect_for_team(cfg))     
     df = build_master(all_rows)
     df = _filter_ph_zero_hours(df) 
     df = _filter_future_periods(df)
@@ -2756,7 +2772,7 @@ def run_once():
         with pd.option_context("display.max_columns", None, "display.width", 180):
             print("\nPreview:")
             print(df.head(12).to_string(index=False))
-def watch_mode():
+def watch_mode(selected_teams: set[str] | None = None):
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
     class NewFileHandler(FileSystemEventHandler):
@@ -2768,12 +2784,21 @@ def watch_mode():
                 print(f"[watch] New file: {event.src_path}")
                 time.sleep(2)
                 run_once()
+    if selected_teams:
+        wanted = {t.strip().casefold() for t in selected_teams if str(t).strip()}
+        cfg_iter = [c for c in TEAM_CONFIG if c.get("name","").strip().casefold() in wanted]
+        if not cfg_iter:
+            print(f"[watch][info] No TEAM_CONFIG entries matched {sorted(selected_teams)}")
+            return
+        print("[watch] Watching only teams:", ", ".join(sorted({c['name'] for c in cfg_iter})))
+    else:
+        cfg_iter = TEAM_CONFIG
     roots = []
     for cfg in TEAM_CONFIG:
         r = cfg.get("root")
         if r:
             roots.append(r)
-    run_once()
+    run_once(selected_teams)
     obs = Observer()
     for r in roots:
         rp = Path(r)
@@ -2793,10 +2818,19 @@ def watch_mode():
 def main():
     parser = argparse.ArgumentParser(description="Aggregate metrics from synced SharePoint Excel files (.xlsx/.xlsm/.xlsb)")
     parser.add_argument("--watch", action="store_true", help="Watch folders and refresh on new files")
+    parser.add_argument("--team", action="append", default=None,
+                        help="Run only for this team name (repeatable). Examples: --team SVT --team Aortic")
+    parser.add_argument("--list-teams", action="store_true", help="List available team names and exit")
     args = parser.parse_args()
+    if args.list_teams:
+        print("Available teams:")
+        for nm in _available_team_names():
+            print(" -", nm)
+        return
+    selected = set(args.team) if args.team else None
     if args.watch:
-        watch_mode()
+        watch_mode(selected)
     else:
-        run_once()
+        run_once(selected)
 if __name__ == "__main__":
     main()
