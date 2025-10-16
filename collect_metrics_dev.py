@@ -1370,31 +1370,72 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     return df.loc[mask].copy()
+_TIMEISH_RE = re.compile(
+    r"""
+    (                           # any of:
+      \b\d{1,2}\s*[:]\s*\d{2}\s*(?:AM|PM)\b      # 9:30 AM
+     |\b\d{1,2}\s*(?:AM|PM)\b                    # 9 AM
+     |\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:AM|PM)?\b  # 9-10 or 9-10AM
+     |\b(?:AM|PM)\b
+    )
+    (?:\s*[A-Z]{2,4})?           # optional TZ like CST, EST
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+def _looks_like_timeish(s: str) -> bool:
+    return bool(_TIMEISH_RE.search(s or ""))
+def _should_exclude_name(name: str) -> bool:
+    n = (name or "").strip()
+    if not n:
+        return True
+    if n.lower() in {"nan"}:
+        return True
+    if "affera" in n.lower():
+        return True
+    if "ftq" in n.lower():
+        return True
+    if "0" in n:
+        return True
+    if _looks_like_timeish(n):
+        return True
+    return False
+def _split_people(name: str) -> list[str]:
+    if not name:
+        return []
+    parts = re.split(r"\s*(?:&|,|-)\s*", name)
+    cleaned = []
+    for p in parts:
+        px = p.strip().strip('"').strip("'")
+        if px and not _should_exclude_name(px):
+            cleaned.append(px)
+    return cleaned
 def _normalize_person_hours(ph: dict) -> dict:
     out: dict[str, dict] = {}
     for raw_name, vals in (ph or {}).items():
         name = (raw_name or "").strip()
-        if not name or name.lower() == "nan":
+        vals = vals or {}
+        actual = float(vals.get("actual", 0) or 0.0)
+        avail = vals.get("available", None)
+        if _should_exclude_name(name):
             continue
-        actual = float((vals or {}).get("actual", 0) or 0.0)
-        avail  = (vals or {}).get("available", None)
-        if "&" in name:
-            parts = [p.strip() for p in name.split("&")]
-            for part in parts:
-                if not part or part.lower() == "nan":
-                    continue
-                cur = out.get(part, {"actual": 0.0, "available": 0.0})
+        people = _split_people(name)
+        if len(people) >= 2:
+            for person in people:
+                cur = out.get(person, {"actual": 0.0, "available": 0.0})
                 cur["actual"] = round(cur["actual"] + actual, 2)
-                out[part] = cur
+                out[person] = cur
             continue
-        cur = out.get(name, {"actual": 0.0, "available": 0.0})
+        person = people[0] if people else name
+        if _should_exclude_name(person):
+            continue
+        cur = out.get(person, {"actual": 0.0, "available": 0.0})
         cur["actual"] = round(cur["actual"] + actual, 2)
         try:
             if avail is not None and float(avail) > 0:
                 cur["available"] = max(cur.get("available", 0.0), float(avail))
         except Exception:
             pass
-        out[name] = cur
+        out[person] = cur
     for k, v in out.items():
         v["actual"] = round(float(v.get("actual", 0.0)), 2)
         v["available"] = round(float(v.get("available", 0.0)), 2)
