@@ -1453,6 +1453,17 @@ def _split_people(name: str) -> list[str]:
         if not _should_exclude_name(px):
             cleaned.append(px)
     return cleaned
+def _normalize_cell_station_hours(ch: dict) -> dict:
+    out: dict[str, float] = {}
+    for raw_key, v in (ch or {}).items():
+        key = (raw_key or "").strip()
+        if not key or key.casefold() == "nan":
+            continue
+        try:
+            out[key] = round(float(v or 0.0), 2)
+        except Exception:
+            continue
+    return out
 def _normalize_outputs_by_person(op: dict) -> dict:
     out: dict[str, dict] = {}
     for raw_name, vals in (op or {}).items():
@@ -1701,11 +1712,12 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         }
         outputs_by_cell = _normalize_outputs_by_cell(outputs_by_cell_raw)
         cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
-        cs_hours = {
-            str(k).strip(): round(float(v), 2)
+        cs_hours_raw = {
+            str(k).strip(): v
             for k, v in cs_hours_series.dropna().items()
-            if str(k).strip()
+            if (not pd.isna(k)) and (str(k).strip())
         }
+        cs_hours = _normalize_cell_station_hours(cs_hours_raw)
         rows.append({
             "team": team_name,
             "source_file": f"{file_path} :: {sheet}",
@@ -1954,8 +1966,12 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             }
             outputs_by_cell = _normalize_outputs_by_cell(outputs_by_cell_raw)
             cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
-            cs_hours = {str(k).strip(): round(float(v), 2)
-                        for k, v in cs_hours_series.dropna().items() if str(k).strip()}
+            cs_hours_raw = {
+                str(k).strip(): v
+                for k, v in cs_hours_series.dropna().items()
+                if (not pd.isna(k)) and (str(k).strip())
+            }
+            cs_hours = _normalize_cell_station_hours(cs_hours_raw)
             rows.append({
                 "team": team_name,
                 "source_file": f"{fp} :: {used_sheet}",
