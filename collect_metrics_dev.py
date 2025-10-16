@@ -1372,7 +1372,6 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 if d is not None:
                     while d >= (cur_week_start + timedelta(days=7)):
                         cur_week_start = cur_week_start + timedelta(days=7)
-
                 week_starts.append(pd.Timestamp(cur_week_start))
             df["date_raw"] = pd.to_datetime(week_starts, errors="coerce")
             def _pick_first(*names):
