@@ -1492,7 +1492,7 @@ def _normalize_outputs_by_cell(op: dict) -> dict:
     out: dict[str, dict] = {}
     for raw_key, vals in (op or {}).items():
         key = (raw_key or "").strip()
-        if not key:
+        if not key or key.casefold() == "nan":
             continue
         vals = vals or {}
         ov = round(float(vals.get("output", 0) or 0.0), 2)
