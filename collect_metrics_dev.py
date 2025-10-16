@@ -1383,6 +1383,7 @@ _TIMEISH_RE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 PAREN_TRIM_RE = re.compile(r"\s*\((?:audit|reverse\s*shadowing|flex)\)\s*", re.IGNORECASE)
+AUDIT_WORD_RE = re.compile(r"\b(?:audit)\b", re.IGNORECASE)
 TRAIL_PRACTICE_RE = re.compile(r"\s+practice\b", re.IGNORECASE)
 SPLIT_RE = re.compile(r"\s*(?:&|,|-|/|\+|\band\b|reverse\s*shadowing\s*with)\s*", re.IGNORECASE)
 ALIAS_MAP = {
@@ -1396,7 +1397,10 @@ def _should_exclude_name(name: str) -> bool:
     n = (name or "").strip()
     if not n:
         return True
-    if n.lower() in {"nan"}:
+    lowered = n.casefold()
+    if lowered in {"nan", "audit", "team", "everyone"}:
+        return True
+    if "power hour" in lowered:
         return True
     if "affera" in n.lower():
         return True
@@ -1429,6 +1433,7 @@ def _clean_person_token(s: str) -> str:
     s = s.strip().strip('"').strip("'")
     s = re.sub(r"[?!]+", "", s)           # remove ? and !
     s = PAREN_TRIM_RE.sub(" ", s)         # drop (Audit)/(reverse shadowing)/(Flex)
+    s = AUDIT_WORD_RE.sub(" ", s) 
     s = TRAIL_PRACTICE_RE.sub("", s)      # drop trailing " Practice"
     s = re.sub(r"\s{2,}", " ", s)         # collapse spaces
     return s.strip()
@@ -1448,6 +1453,18 @@ def _split_people(name: str) -> list[str]:
         if not _should_exclude_name(px):
             cleaned.append(px)
     return cleaned
+def _normalize_outputs_by_person(op: dict) -> dict:
+    out = {}
+    for raw, vals in (op or {}).items():
+        name = _alias_canonicalize(_clean_person_token(raw))
+        if _should_exclude_name(name):
+            continue
+        vals = vals or {}
+        cur = out.get(name, {"output": 0.0, "target": 0.0})
+        cur["output"] = round(cur["output"] + float(vals.get("output", 0) or 0.0), 2)
+        cur["target"] = round(cur["target"] + float(vals.get("target", 0) or 0.0), 2)
+        out[name] = cur
+    return out
 def _normalize_person_hours(ph: dict) -> dict:
     out: dict[str, dict] = {}
     for raw_name, vals in (ph or {}).items():
@@ -1464,7 +1481,7 @@ def _normalize_person_hours(ph: dict) -> dict:
                 cur["actual"] = round(cur["actual"] + actual, 2)
                 out[person] = cur
             continue
-        person = people[0] if people else name
+        person = people[0] if people else _alias_canonicalize(_clean_person_token(name))
         if _should_exclude_name(person):
             continue
         cur = out.get(person, {"actual": 0.0, "available": 0.0})
@@ -1621,6 +1638,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
                              "target": round(float(r["target_output"]),2)}
             for p, r in per_out_person.iterrows() if str(p).strip()
         }
+        outputs_by_person = _normalize_outputs_by_person(outputs_by_person) 
         per_out_cell = sub.groupby("station")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
         outputs_by_cell = {
             str(k).strip(): {"output": round(float(r["actual_output"]),2),
@@ -1861,6 +1879,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                                  "target": round(float(row["target_output"]), 2)}
                 for p, row in per_out.iterrows() if str(p).strip()
             }
+            outputs_by_person = _normalize_outputs_by_person(outputs_by_person) 
             per_cell = (sub.groupby("station")[["actual_output", "target_output"]]
                           .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_cell = {
