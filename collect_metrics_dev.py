@@ -1361,7 +1361,20 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                     cols.append(name)
             df.columns = cols
             df = df.iloc[1:].copy()
-            df["date_raw"] = pd.to_datetime(_coerce_to_date_for_filter2(a1, require_explicit_year=False), errors="coerce")
+            base_date = _coerce_to_date_for_filter2(a1, require_explicit_year=False)
+            if base_date is not None:
+                cur_week_start = base_date - timedelta(days=base_date.weekday())
+            else:
+                cur_week_start = _dt.today().date() - timedelta(days=_dt.today().weekday())
+            week_starts = []
+            for cell in df["date_header"].astype(str).tolist():
+                d = _coerce_to_date_for_filter2(cell, require_explicit_year=False)
+                if d is not None:
+                    while d >= (cur_week_start + timedelta(days=7)):
+                        cur_week_start = cur_week_start + timedelta(days=7)
+
+                week_starts.append(pd.Timestamp(cur_week_start))
+            df["date_raw"] = pd.to_datetime(week_starts, errors="coerce")
             def _pick_first(*names):
                 for n in names:
                     if n in df.columns:
