@@ -721,7 +721,7 @@ with mid:
                             pad  = max(3.0, rng * 0.22)
                             y_scale = alt.Scale(domain=[0.0, vmax + pad], nice=False, clamp=False)
                             label_pad = max(1.0, (vmax + pad) * 0.04)
-                            wk2["LabelY"] = wk2["Actual"] + label_pad 
+                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"].fillna(-1) >= 0, label_pad, -label_pad)
                         else:
                             y_scale = alt.Scale()
                             wk2["LabelY"] = wk2["Actual"]
@@ -743,14 +743,12 @@ with mid:
                         )
                         labels = (
                             alt.Chart(wk2)
-                            .mark_text(dy=-4, fontWeight="bold", stroke="white", strokeWidth=3)
+                            .mark_text()
                             .encode(
                                 x=f"{key_label}:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DiffLabel:N",
-                                color=alt.condition("datum.DiffRounded >= 0",
-                                                    alt.value("#22c55e"),  # green for >= 0
-                                                    alt.value("#ef4444"))  # red for < 0
+                                text="DiffLabel:N",  # <- no "nan"
+                                color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                             )
                         )
                         st.altair_chart(bars + labels, use_container_width=True)
