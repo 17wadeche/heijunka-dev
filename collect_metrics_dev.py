@@ -1735,7 +1735,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             hc_in_wip = len({p for p in hc_people if p})
             per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
             per_avail  = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
-                            .drop_duplicates().groupby("person").size() * 5.0)
+                            .drop_duplicates().groupby("person").size() * 25.0)
             person_keys = set(per_actual.index.tolist()) | set(per_avail.index.tolist())
             person_hours = {
                 str(p).strip(): {
