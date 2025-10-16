@@ -1382,6 +1382,14 @@ _TIMEISH_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+PAREN_TRIM_RE = re.compile(r"\s*\((?:audit|reverse\s*shadowing|flex)\)\s*", re.IGNORECASE)
+TRAIL_PRACTICE_RE = re.compile(r"\s+practice\b", re.IGNORECASE)
+SPLIT_RE = re.compile(r"\s*(?:&|,|-|/|\+|\band\b|reverse\s*shadowing\s*with)\s*", re.IGNORECASE)
+ALIAS_MAP = {
+    "jerlie": "Jerlie", "jerile": "Jerlie",
+    "natalie": "Natalie", "natlalie": "Natalie",
+    "sean": "Sean", "sh": "Sean",
+}
 def _looks_like_timeish(s: str) -> bool:
     return bool(_TIMEISH_RE.search(s or ""))
 def _should_exclude_name(name: str) -> bool:
@@ -1394,6 +1402,22 @@ def _should_exclude_name(name: str) -> bool:
         return True
     if "ftq" in n.lower():
         return True
+    if "capa" in n.lower():
+        return True
+    if "training" in n.lower():
+        return True
+    if "practice" in n.lower():
+        return True
+    if "timing studies" in n.lower():
+        return True
+    if "training tasks" in n.lower():
+        return True
+    if "training station 2" in n.lower():
+        return True
+    if "prism 2" in n.lower():
+        return True
+    if "eu" in n.lower():
+        return True
     if "0" in n:
         return True
     if _looks_like_timeish(n):
@@ -1403,17 +1427,25 @@ def _clean_person_token(s: str) -> str:
     if s is None:
         return ""
     s = s.strip().strip('"').strip("'")
-    s = re.sub(r"[?!]+", "", s)     # <-- remove ? and !
-    s = re.sub(r"\s{2,}", " ", s)   # collapse double spaces
+    s = re.sub(r"[?!]+", "", s)           # remove ? and !
+    s = PAREN_TRIM_RE.sub(" ", s)         # drop (Audit)/(reverse shadowing)/(Flex)
+    s = TRAIL_PRACTICE_RE.sub("", s)      # drop trailing " Practice"
+    s = re.sub(r"\s{2,}", " ", s)         # collapse spaces
     return s.strip()
+def _alias_canonicalize(name: str) -> str:
+    k = (name or "").strip().casefold()
+    return ALIAS_MAP.get(k, (name or "").strip())
 def _split_people(name: str) -> list[str]:
     if not name:
         return []
-    parts = re.split(r"\s*(?:&|,|-)\s*", name)
+    parts = SPLIT_RE.split(name)          # now handles &, , -, /, +, "and", "Reverse Shadowing with"
     cleaned = []
     for p in parts:
         px = _clean_person_token(p)
-        if px and not _should_exclude_name(px):
+        if not px:
+            continue
+        px = _alias_canonicalize(px)      # merge Jerile→Jerlie, Natlalie→Natalie, SH→Sean
+        if not _should_exclude_name(px):
             cleaned.append(px)
     return cleaned
 def _normalize_person_hours(ph: dict) -> dict:
