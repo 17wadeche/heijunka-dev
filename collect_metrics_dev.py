@@ -1399,13 +1399,20 @@ def _should_exclude_name(name: str) -> bool:
     if _looks_like_timeish(n):
         return True
     return False
+def _clean_person_token(s: str) -> str:
+    if s is None:
+        return ""
+    s = s.strip().strip('"').strip("'")
+    s = re.sub(r"[?!]+", "", s)     # <-- remove ? and !
+    s = re.sub(r"\s{2,}", " ", s)   # collapse double spaces
+    return s.strip()
 def _split_people(name: str) -> list[str]:
     if not name:
         return []
     parts = re.split(r"\s*(?:&|,|-)\s*", name)
     cleaned = []
     for p in parts:
-        px = p.strip().strip('"').strip("'")
+        px = _clean_person_token(p)
         if px and not _should_exclude_name(px):
             cleaned.append(px)
     return cleaned
