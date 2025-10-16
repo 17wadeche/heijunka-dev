@@ -1454,16 +1454,33 @@ def _split_people(name: str) -> list[str]:
             cleaned.append(px)
     return cleaned
 def _normalize_outputs_by_person(op: dict) -> dict:
-    out = {}
-    for raw, vals in (op or {}).items():
-        name = _alias_canonicalize(_clean_person_token(raw))
-        if _should_exclude_name(name):
-            continue
+    out: dict[str, dict] = {}
+    for raw_name, vals in (op or {}).items():
         vals = vals or {}
-        cur = out.get(name, {"output": 0.0, "target": 0.0})
-        cur["output"] = round(cur["output"] + float(vals.get("output", 0) or 0.0), 2)
-        cur["target"] = round(cur["target"] + float(vals.get("target", 0) or 0.0), 2)
-        out[name] = cur
+        output_val = float(vals.get("output", 0) or 0.0)
+        target_val = float(vals.get("target", 0) or 0.0)
+        name_clean = _clean_person_token(raw_name)
+        if _should_exclude_name(name_clean):
+            continue
+        people = _split_people(name_clean)
+        if len(people) >= 2:
+            for person in people:
+                person = _alias_canonicalize(person)
+                cur = out.get(person, {"output": 0.0, "target": 0.0})
+                cur["output"] = round(cur["output"] + output_val, 2)
+                cur["target"] = round(cur["target"] + target_val, 2)
+                out[person] = cur
+            continue
+        person = _alias_canonicalize(people[0] if people else name_clean)
+        if _should_exclude_name(person):
+            continue
+        cur = out.get(person, {"output": 0.0, "target": 0.0})
+        cur["output"] = round(cur["output"] + output_val, 2)
+        cur["target"] = round(cur["target"] + target_val, 2)
+        out[person] = cur
+    for k, v in out.items():
+        v["output"] = round(float(v.get("output", 0.0)), 2)
+        v["target"] = round(float(v.get("target", 0.0)), 2)
     return out
 def _normalize_person_hours(ph: dict) -> dict:
     out: dict[str, dict] = {}
