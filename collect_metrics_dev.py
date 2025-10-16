@@ -1383,11 +1383,11 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                     if n in df.columns:
                         return n
                 return None
-            c_station = _pick_first("Station Work", "Station", "Work", "B")
-            c_person  = _pick_first("Team Member", "Member", "Person", "C")
-            c_chours  = _pick_first("Planned Scheduled Hours", "Completed Hours", "Hours", "D")
-            c_target  = _pick_first("Target Output", "Target/ HR", "Target", "F")
-            c_actual  = _pick_first("Actual Output", "Actual", "G")
+            c_station = _pick_first("Station Work", "Station", "Work", "Work Center", "B")
+            c_person  = _pick_first("Team Member", "Member", "Person", "Assigned To", "C")
+            c_chours  = _pick_first("Planned Scheduled Hours", "Completed Hours", "Total Hours", "Hours", "D")
+            c_target  = _pick_first("Target Output", "Target/ HR", "Target Per Hr", "Target", "F")
+            c_actual  = _pick_first("Actual Output", "Actual", "Output", "G")
             get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col and col in df.columns else pd.Series(np.nan, index=df.index)
             get_str = lambda col: df[col].astype(str).str.strip() if col and col in df.columns else pd.Series("", index=df.index)
             df["station"]         = get_str(c_station)
