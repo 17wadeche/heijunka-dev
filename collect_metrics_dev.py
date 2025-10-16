@@ -1471,7 +1471,7 @@ def _normalize_person_hours(ph: dict) -> dict:
         name = (raw_name or "").strip()
         vals = vals or {}
         actual = float(vals.get("actual", 0) or 0.0)
-        avail = vals.get("available", None)
+        avail  = vals.get("available", None)
         if _should_exclude_name(name):
             continue
         people = _split_people(name)
@@ -1479,9 +1479,16 @@ def _normalize_person_hours(ph: dict) -> dict:
             for person in people:
                 cur = out.get(person, {"actual": 0.0, "available": 0.0})
                 cur["actual"] = round(cur["actual"] + actual, 2)
+                try:
+                    if avail is not None and float(avail) > 0:
+                        cur["available"] = max(cur.get("available", 0.0), float(avail))
+                    else:
+                        cur["available"] = max(cur.get("available", 0.0), 25.0)
+                except Exception:
+                    cur["available"] = max(cur.get("available", 0.0), 25.0)
                 out[person] = cur
             continue
-        person = people[0] if people else _alias_canonicalize(_clean_person_token(name))
+        person = _alias_canonicalize(_clean_person_token(people[0] if people else name))
         if _should_exclude_name(person):
             continue
         cur = out.get(person, {"actual": 0.0, "available": 0.0})
@@ -1632,6 +1639,9 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             str(p).strip(): {"actual": round(float(v), 2), "available": 25.0}
             for p, v in per_actual.items() if str(p).strip()
         }
+        person_hours_norm = _normalize_person_hours(per_person)
+        completed_hours = sum((d or {}).get("actual", 0.0) for d in person_hours_norm.values())
+        total_avail     = sum((d or {}).get("available", 0.0) for d in person_hours_norm.values())
         per_out_person = sub.groupby("person")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
         outputs_by_person = {
             str(p).strip(): {"output": round(float(r["actual_output"]),2),
@@ -1649,8 +1659,8 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             "team": team_name,
             "source_file": f"{file_path} :: {sheet}",
             "period_date": wk_d,
-            "Total Available Hours": total_avail if total_avail else None,
-            "Completed Hours": completed_hours if not np.isnan(completed_hours) else None,
+            "Total Available Hours": round(float(total_avail), 2),
+            "Completed Hours": round(float(completed_hours), 2),
             "Target Output": target_output if not np.isnan(target_output) else None,
             "Actual Output": actual_output if not np.isnan(actual_output) else None,
             "HC in WIP": hc_in_wip,
@@ -1872,6 +1882,8 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 for p in person_keys if str(p).strip()
             }
             person_hours = _normalize_person_hours(person_hours)
+            completed_hours = sum((d or {}).get("actual", 0.0) for d in person_hours.values())
+            total_avail     = sum((d or {}).get("available", 0.0) for d in person_hours.values())
             per_out = (sub.groupby("person")[["actual_output", "target_output"]]
                          .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_person = {
@@ -1894,8 +1906,8 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 "team": team_name,
                 "source_file": f"{fp} :: {used_sheet}",
                 "period_date": wk_d.date(),
-                "Total Available Hours": total_avail if total_avail else None,
-                "Completed Hours": completed_hours if not np.isnan(completed_hours) else None,
+                "Total Available Hours": round(float(total_avail), 2),
+                "Completed Hours": round(float(completed_hours), 2),
                 "Target Output": target_output if not np.isnan(target_output) else None,
                 "Actual Output": actual_output if not np.isnan(actual_output) else None,
                 "HC in WIP": hc_in_wip,
