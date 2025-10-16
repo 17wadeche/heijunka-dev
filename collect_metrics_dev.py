@@ -379,9 +379,26 @@ TEAM_CONFIG = [
         "name": "CAS",
         "cas_mode": True,
         "file": r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx",
-        "pattern": "*.xls*",
-        "unique_key": ["team", "period_date"],
-    },
+        "manual_weeks": {
+            "sheet": "Past Weeks",          # the sheet to read
+            "header_row": 1,                # header row index (1-based)
+            "starts": [
+                {"row": 2, "date": "2022-08-01"},
+                {"row": 87, "date": "8/8/2022"},
+                {"row": 179, "date": "8/15/2022"},
+                {"row": 270, "date": "8/22/2022"},
+                {"row": 358, "date": "8/29/2022"},
+                {"row": 511, "date": "9/12/2022"},
+                {"row": 603, "date": "9/19/2022"},
+                {"row": 695, "date": "9/26/2022"},
+                {"row": 788, "date": "10/3/2022"},
+                {"row": 879, "date": "10/10/2022"},
+                {"row": 971, "date": "10/17/2022"},
+                {"row": 1068, "date": "10/24/2022"},
+                {"row": 1159, "date": "10/31/2022"},
+            ]
+        }
+    }
 ]
 SKIP_PATTERNS = [r"~\$", r"\.tmp$"]
 DATE_REGEXES = [
@@ -1272,7 +1289,172 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     return df.loc[mask].copy()
+def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
+    file_path = None
+    if cfg.get("file"):
+        file_path = Path(cfg["file"])
+    elif cfg.get("file_glob"):
+        cands = [Path(p) for p in glob.glob(cfg["file_glob"]) if Path(p).is_file()]
+        if cands:
+            cands.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            file_path = cands[0]
+    team_name = cfg.get("name", "CAS")
+    src_display = str(file_path) if file_path else (cfg.get("file") or cfg.get("file_glob") or "")
+    rows: list[dict] = []
+    if not file_path or not file_path.exists():
+        print(f"[CAS][manual] file not found: {src_display}")
+        return rows
+    mw = cfg.get("manual_weeks") or {}
+    sheet = mw.get("sheet")
+    header_row = int(mw.get("header_row", 1))  # 1-based; 0 = no headers
+    starts = mw.get("starts") or []
+    if not sheet or not starts:
+        print("[CAS][manual] 'manual_weeks' missing 'sheet' or 'starts'")
+        return rows
+    engine = "pyxlsb" if file_path.suffix.lower() == ".xlsb" else None
+    df = read_excel_fast(file_path, sheet_name=sheet, engine=engine)
+    if df is None or df.empty:
+        print(f"[CAS][manual] Empty or unreadable sheet: {sheet}")
+        return rows
+    if header_row and header_row > 0:
+        header_idx0 = header_row - 1
+        if header_idx0 < df.shape[0]:
+            new_cols = df.iloc[header_idx0].astype(str).str.strip().tolist()
+            df = df.iloc[header_idx0+1:].copy()
+            df.columns = [c if c else f"C{j+1}" for j, c in enumerate(new_cols)]
+        else:
+            df.columns = [f"C{j+1}" for j in range(df.shape[1])]
+    else:
+        df = df.copy()
+        df.columns = [f"C{j+1}" for j in range(df.shape[1])]
+    def _pick_like(names):
+        lowers = {c.lower(): c for c in df.columns}
+        for want in names:
+            for lc, orig in lowers.items():
+                if want in lc:
+                    return orig
+        return None
+    c_station = _pick_like(["station work","station","work center","work"])
+    c_person  = _pick_like(["team member","member","person","employee","assigned to"])
+    c_chours  = _pick_like(["planned scheduled hours","completed hours","total hours","hours"])
+    c_target  = _pick_like(["target output","target/ hr","target per hr","target"])
+    c_actual  = _pick_like(["actual output","actual","output"])
+    get_num = lambda col: pd.to_numeric(df[col], errors="coerce") if col and col in df.columns else pd.Series(np.nan, index=df.index)
+    get_str = lambda col: df[col].astype(str).str.strip() if col and col in df.columns else pd.Series("", index=df.index)
+    s_station_all = get_str(c_station)
+    s_person_all  = get_str(c_person)
+    n_chours_all  = get_num(c_chours)
+    n_target_all  = get_num(c_target)
+    n_actual_all  = get_num(c_actual)
+    base = df.index[0] if df.shape[0] else 0
+    segs = []
+    for i, spec in enumerate(starts):
+        r = int(spec.get("row", 0))
+        if r <= 0:
+            continue
+        start_idx = base + (r - (header_row if header_row > 0 else 1))
+        d = spec.get("date")
+        d_parsed = None
+        if d:
+            try:
+                d_parsed = pd.to_datetime(d, errors="coerce").date()
+            except Exception:
+                d_parsed = None
+        segs.append({"start": start_idx, "date": d_parsed})
+    if not segs:
+        print("[CAS][manual] No valid starting rows provided.")
+        return rows
+    segs.sort(key=lambda x: x["start"])
+    idx_all = df.index
+    for i in range(len(segs)):
+        segs[i]["end"] = (segs[i+1]["start"] - 1) if i+1 < len(segs) else idx_all[-1]
+    if any(s["date"] for s in segs):
+        for i in range(len(segs)):
+            if segs[i]["date"] is None:
+                j = i-1
+                while j >= 0 and segs[j]["date"] is None:
+                    j -= 1
+                if j >= 0 and segs[j]["date"] is not None:
+                    segs[i]["date"] = (pd.Timestamp(segs[j]["date"]) + pd.Timedelta(days=7)).date()
+        for i in range(len(segs)-2, -1, -1):
+            if segs[i]["date"] is None and segs[i+1]["date"] is not None:
+                segs[i]["date"] = (pd.Timestamp(segs[i+1]["date"]) - pd.Timedelta(days=7)).date()
+    else:
+        base_d = infer_period_date(file_path) or (_dt.today().date() - timedelta(days=_dt.today().weekday()))
+        for i in range(len(segs)):
+            segs[i]["date"] = (pd.Timestamp(base_d) + pd.Timedelta(days=7*i)).date()
+    for seg in segs:
+        start_i, end_i, wk_d = seg["start"], seg["end"], seg["date"]
+        sub_ix = idx_all[(idx_all >= start_i) & (idx_all <= end_i)]
+        if len(sub_ix) == 0:
+            continue
+        s_station = s_station_all.loc[sub_ix]
+        s_person  = s_person_all.loc[sub_ix]
+        n_chours  = n_chours_all.loc[sub_ix]
+        n_target  = n_target_all.loc[sub_ix]
+        n_actual  = n_actual_all.loc[sub_ix]
+        sub = pd.DataFrame({
+            "station": s_station,
+            "person":  s_person,
+            "completed_hours": n_chours,
+            "target_output":   n_target,
+            "actual_output":   n_actual,
+        })
+        sub = sub.dropna(how="all")
+        mask = (
+            sub["person"].astype(str).str.strip().ne("") |
+            sub["station"].astype(str).str.strip().ne("") |
+            pd.to_numeric(sub["completed_hours"], errors="coerce").notna() |
+            pd.to_numeric(sub["target_output"],   errors="coerce").notna() |
+            pd.to_numeric(sub["actual_output"],   errors="coerce").notna()
+        )
+        sub = sub[mask]
+        if sub.empty:
+            continue
+        people = sub["person"].astype(str).str.strip()
+        people = [p for p in people.unique().tolist() if p]
+        total_avail = 5.0 * len(people)
+        completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
+        target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
+        actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
+        hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
+        hc_people = set(sub.loc[hc_mask, "person"].astype(str).str.strip().replace({"nan": ""}))
+        hc_in_wip = len({p for p in hc_people if p})
+        per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
+        per_person = {
+            str(p).strip(): {"actual": round(float(v), 2), "available": 5.0}
+            for p, v in per_actual.items() if str(p).strip()
+        }
+        per_out_person = sub.groupby("person")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
+        outputs_by_person = {
+            str(p).strip(): {"output": round(float(r["actual_output"]),2),
+                             "target": round(float(r["target_output"]),2)}
+            for p, r in per_out_person.iterrows() if str(p).strip()
+        }
+        per_out_cell = sub.groupby("station")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
+        outputs_by_cell = {
+            str(k).strip(): {"output": round(float(r["actual_output"]),2),
+                             "target": round(float(r["target_output"]),2)}
+            for k, r in per_out_cell.iterrows() if str(k).strip()
+        }
+        rows.append({
+            "team": team_name,
+            "source_file": f"{file_path} :: {sheet}",
+            "period_date": wk_d,
+            "Total Available Hours": total_avail if total_avail else None,
+            "Completed Hours": completed_hours if not np.isnan(completed_hours) else None,
+            "Target Output": target_output if not np.isnan(target_output) else None,
+            "Actual Output": actual_output if not np.isnan(actual_output) else None,
+            "HC in WIP": hc_in_wip,
+            "Person Hours": json.dumps(per_person, ensure_ascii=False),
+            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+        })
+    print(f"[CAS][manual] Appended weekly rows: {len(rows)} from {file_path.name}")
+    return rows
 def collect_cas_team(cfg: dict) -> list[dict]:
+    if cfg.get("manual_weeks"):
+        return _collect_cas_manual_weeks(cfg)
     from pandas import DataFrame
     team_name = cfg.get("name", "CAS")
     wanted_sheet = cfg.get("sheet", "Sheet1")
