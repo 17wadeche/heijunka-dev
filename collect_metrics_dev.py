@@ -1370,6 +1370,35 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     return df.loc[mask].copy()
+def _normalize_person_hours(ph: dict) -> dict:
+    out: dict[str, dict] = {}
+    for raw_name, vals in (ph or {}).items():
+        name = (raw_name or "").strip()
+        if not name or name.lower() == "nan":
+            continue
+        actual = float((vals or {}).get("actual", 0) or 0.0)
+        avail  = (vals or {}).get("available", None)
+        if "&" in name:
+            parts = [p.strip() for p in name.split("&")]
+            for part in parts:
+                if not part or part.lower() == "nan":
+                    continue
+                cur = out.get(part, {"actual": 0.0, "available": 0.0})
+                cur["actual"] = round(cur["actual"] + actual, 2)
+                out[part] = cur
+            continue
+        cur = out.get(name, {"actual": 0.0, "available": 0.0})
+        cur["actual"] = round(cur["actual"] + actual, 2)
+        try:
+            if avail is not None and float(avail) > 0:
+                cur["available"] = max(cur.get("available", 0.0), float(avail))
+        except Exception:
+            pass
+        out[name] = cur
+    for k, v in out.items():
+        v["actual"] = round(float(v.get("actual", 0.0)), 2)
+        v["available"] = round(float(v.get("available", 0.0)), 2)
+    return out
 def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
     file_path = None
     if cfg.get("file"):
@@ -1527,7 +1556,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             "Target Output": target_output if not np.isnan(target_output) else None,
             "Actual Output": actual_output if not np.isnan(actual_output) else None,
             "HC in WIP": hc_in_wip,
-            "Person Hours": json.dumps(per_person, ensure_ascii=False),
+            "Person Hours": json.dumps(_normalize_person_hours(per_person), ensure_ascii=False),
             "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
             "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
         })
@@ -1744,6 +1773,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 }
                 for p in person_keys if str(p).strip()
             }
+            person_hours = _normalize_person_hours(person_hours)
             per_out = (sub.groupby("person")[["actual_output", "target_output"]]
                          .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_person = {
