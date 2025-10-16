@@ -1348,7 +1348,11 @@ def collect_cas_team(cfg: dict) -> list[dict]:
         header_candidates = {"Station Work", "Team Member", "Planned Scheduled Hours",
                              "Target/ HR", "Target Output", "Actual Output"}
         date_in_a1 = _is_dateish(a1)
-        headers_present = any(h in header_row for h in header_candidates)
+        header_row_lower = [str(x).strip().lower() for x in header_row]
+        headers_present = any(
+            any(h.lower() in cell for cell in header_row_lower)
+            for h in header_candidates
+        )
         if date_in_a1 and headers_present:
             cols = []
             for j, raw in enumerate(header_row):
@@ -1434,9 +1438,20 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             df["completed_hours"] = get_num(c_chours)
             df["target_output"]   = get_num(c_target)
             df["actual_output"]   = get_num(c_actual)
-        ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
+        ts = pd.to_datetime(df.get("date_raw"), errors="coerce").dt.normalize()
+        if ts.isna().all():
+            print(f"[CAS][debug] {fp.name} -> no parseable dates; "
+                f"used_sheet={used_sheet}; header_style={bool(date_in_a1)}; "
+                f"first_col_sample={df.iloc[:10, 0].astype(str).tolist() if df.shape[0] else []}")
+            inferred = infer_period_date(fp)
+            if inferred:
+                df["date_raw"] = pd.to_datetime(inferred)
+                ts = pd.to_datetime(df["date_raw"], errors="coerce").dt.normalize()
         df = df[ts.notna()].copy()
         ts = ts[ts.notna()]
+        if df.empty or ts.empty:
+            print(f"[CAS][debug] {fp.name} -> still empty after fallbacks; skipping file.")
+            continue
         df["_week_start"] = (ts - pd.to_timedelta(ts.dt.weekday, unit="D")).dt.normalize()
         for wk, sub in df.groupby("_week_start"):
             if pd.isna(wk):
