@@ -1494,7 +1494,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             continue
         people = sub["person"].astype(str).str.strip()
         people = [p for p in people.unique().tolist() if p]
-        total_avail = 5.0 * len(people)
+        total_avail = 25.0 * len(people)
         completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
         target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
         actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
@@ -1503,7 +1503,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         hc_in_wip = len({p for p in hc_people if p})
         per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
         per_person = {
-            str(p).strip(): {"actual": round(float(v), 2), "available": 5.0}
+            str(p).strip(): {"actual": round(float(v), 2), "available": 25.0}
             for p, v in per_actual.items() if str(p).strip()
         }
         per_out_person = sub.groupby("person")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
@@ -1726,7 +1726,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
                    .dropna().drop_duplicates()
             )
-            total_avail = 5.0 * len(person_day_pairs)
+            total_avail = 25.0 * len(person_day_pairs)
             completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
             target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
             actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
