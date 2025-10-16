@@ -269,6 +269,11 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=[
             "team","period_date","person","Actual Hours","Available Hours","Utilization"
         ])
+    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA",
+                 "null", "NULL", "none", "None"}
+    def _is_good_name(s: str) -> bool:
+        t = str(s).strip()
+        return t and t not in BAD_NAMES and t.lower() not in {b.lower() for b in BAD_NAMES}
     rows: list[dict] = []
     sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
     for _, r in sub.iterrows():
@@ -280,6 +285,8 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         except Exception:
             continue
         for person, vals in obj.items():
+            if not _is_good_name(person):
+                continue
             a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
@@ -290,7 +297,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person),
+                "person": str(person).strip(),
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
