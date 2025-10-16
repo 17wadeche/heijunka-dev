@@ -1539,6 +1539,12 @@ def _normalize_person_hours(ph: dict) -> dict:
         v["actual"] = round(float(v.get("actual", 0.0)), 2)
         v["available"] = round(float(v.get("available", 0.0)), 2)
     return out
+def _hc_in_wip_from_person_hours(ph: dict) -> int:
+    return sum(
+        1
+        for _name, vals in (ph or {}).items()
+        if float((vals or {}).get("actual", 0.0) or 0.0) > 0.0
+    )
 def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
     file_path = None
     if cfg.get("file"):
@@ -1667,9 +1673,6 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
         target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
         actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
-        hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
-        hc_people = set(sub.loc[hc_mask, "person"].astype(str).str.strip().replace({"nan": ""}))
-        hc_in_wip = len({p for p in hc_people if p})
         per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
         per_person = {
             str(p).strip(): {"actual": round(float(v), 2), "available": 25.0}
@@ -1678,6 +1681,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         person_hours_norm = _normalize_person_hours(per_person)
         completed_hours = sum((d or {}).get("actual", 0.0) for d in person_hours_norm.values())
         total_avail     = sum((d or {}).get("available", 0.0) for d in person_hours_norm.values())
+        hc_in_wip = _hc_in_wip_from_person_hours(person_hours_norm)
         per_out_person = sub.groupby("person")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
         outputs_by_person = {
             str(p).strip(): {"output": round(float(r["actual_output"]),2),
@@ -1908,9 +1912,6 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             completed_hours = float(pd.to_numeric(sub["completed_hours"], errors="coerce").dropna().sum())
             target_output   = float(pd.to_numeric(sub["target_output"],   errors="coerce").dropna().sum())
             actual_output   = float(pd.to_numeric(sub["actual_output"],   errors="coerce").dropna().sum())
-            hc_mask = pd.to_numeric(sub["target_output"], errors="coerce").fillna(0) > 0
-            hc_people = (sub.loc[hc_mask, "person"].astype(str).str.strip().replace({"nan": ""}).tolist())
-            hc_in_wip = len({p for p in hc_people if p})
             per_actual = sub.groupby("person")["completed_hours"].sum(min_count=1).dropna()
             per_avail  = (sub.loc[sub["person"].astype(str).str.strip().ne(""), ["person", "date_raw"]]
                             .drop_duplicates().groupby("person").size() * 25.0)
@@ -1925,6 +1926,7 @@ def collect_cas_team(cfg: dict) -> list[dict]:
             person_hours = _normalize_person_hours(person_hours)
             completed_hours = sum((d or {}).get("actual", 0.0) for d in person_hours.values())
             total_avail     = sum((d or {}).get("available", 0.0) for d in person_hours.values())
+            hc_in_wip = _hc_in_wip_from_person_hours(person_hours)
             per_out = (sub.groupby("person")[["actual_output", "target_output"]]
                          .sum(min_count=1).replace({np.nan: 0}))
             outputs_by_person = {
