@@ -1457,8 +1457,10 @@ def _normalize_outputs_by_person(op: dict) -> dict:
     out: dict[str, dict] = {}
     for raw_name, vals in (op or {}).items():
         vals = vals or {}
-        output_val = float(vals.get("output", 0) or 0.0)
-        target_val = float(vals.get("target", 0) or 0.0)
+        output_val = round(float(vals.get("output", 0) or 0.0), 2)
+        target_val = round(float(vals.get("target", 0) or 0.0), 2)
+        if output_val == 0.0 and target_val == 0.0:
+            continue
         name_clean = _clean_person_token(raw_name)
         if _should_exclude_name(name_clean):
             continue
@@ -1478,9 +1480,26 @@ def _normalize_outputs_by_person(op: dict) -> dict:
         cur["output"] = round(cur["output"] + output_val, 2)
         cur["target"] = round(cur["target"] + target_val, 2)
         out[person] = cur
+    out2: dict[str, dict] = {}
     for k, v in out.items():
-        v["output"] = round(float(v.get("output", 0.0)), 2)
-        v["target"] = round(float(v.get("target", 0.0)), 2)
+        ov = round(float(v.get("output", 0.0)), 2)
+        tv = round(float(v.get("target", 0.0)), 2)
+        if ov == 0.0 and tv == 0.0:
+            continue
+        out2[k] = {"output": ov, "target": tv}
+    return out2
+def _normalize_outputs_by_cell(op: dict) -> dict:
+    out: dict[str, dict] = {}
+    for raw_key, vals in (op or {}).items():
+        key = (raw_key or "").strip()
+        if not key:
+            continue
+        vals = vals or {}
+        ov = round(float(vals.get("output", 0) or 0.0), 2)
+        tv = round(float(vals.get("target", 0) or 0.0), 2)
+        if ov == 0.0 and tv == 0.0:
+            continue
+        out[key] = {"output": ov, "target": tv}
     return out
 def _normalize_person_hours(ph: dict) -> dict:
     out: dict[str, dict] = {}
@@ -1666,12 +1685,17 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             for p, r in per_out_person.iterrows() if str(p).strip()
         }
         outputs_by_person = _normalize_outputs_by_person(outputs_by_person) 
-        per_out_cell = sub.groupby("station")[["actual_output","target_output"]].sum(min_count=1).replace({np.nan: 0})
-        outputs_by_cell = {
-            str(k).strip(): {"output": round(float(r["actual_output"]),2),
-                             "target": round(float(r["target_output"]),2)}
+        per_out_cell = (
+            sub.groupby("station")[["actual_output","target_output"]]
+            .sum(min_count=1)
+            .replace({np.nan: 0})
+        )
+        outputs_by_cell_raw = {
+            str(k).strip(): {"output": round(float(r["actual_output"]), 2),
+                            "target": round(float(r["target_output"]), 2)}
             for k, r in per_out_cell.iterrows() if str(k).strip()
         }
+        outputs_by_cell = _normalize_outputs_by_cell(outputs_by_cell_raw)
         rows.append({
             "team": team_name,
             "source_file": f"{file_path} :: {sheet}",
@@ -1909,13 +1933,17 @@ def collect_cas_team(cfg: dict) -> list[dict]:
                 for p, row in per_out.iterrows() if str(p).strip()
             }
             outputs_by_person = _normalize_outputs_by_person(outputs_by_person) 
-            per_cell = (sub.groupby("station")[["actual_output", "target_output"]]
-                          .sum(min_count=1).replace({np.nan: 0}))
-            outputs_by_cell = {
+            per_cell = (
+                sub.groupby("station")[["actual_output", "target_output"]]
+                .sum(min_count=1)
+                .replace({np.nan: 0})
+            )
+            outputs_by_cell_raw = {
                 str(k).strip(): {"output": round(float(row["actual_output"]), 2),
-                                 "target": round(float(row["target_output"]), 2)}
+                                "target": round(float(row["target_output"]), 2)}
                 for k, row in per_cell.iterrows() if str(k).strip()
             }
+            outputs_by_cell = _normalize_outputs_by_cell(outputs_by_cell_raw)
             cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
             cs_hours = {str(k).strip(): round(float(v), 2)
                         for k, v in cs_hours_series.dropna().items() if str(k).strip()}
