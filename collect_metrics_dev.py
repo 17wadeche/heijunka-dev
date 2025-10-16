@@ -380,7 +380,7 @@ TEAM_CONFIG = [
         "cas_mode": True,
         "file": r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx",
         "manual_weeks": {
-            "sheet": "Past Weeks",          # the sheet to read
+            "sheet": "Sheet1",          # the sheet to read
             "header_row": 1,                # header row index (1-based)
             "starts": [
                 {"row": 2, "date": "2022-08-01"},
