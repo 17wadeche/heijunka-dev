@@ -89,6 +89,11 @@ def load_data(data_path: str | None, data_url: str | None):
         return pd.DataFrame()
     return _postprocess(df)
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
+    _NA_STRINGS = {
+        "": np.nan, "-": np.nan, "–": np.nan, "—": np.nan,
+        "nan": np.nan, "NaN": np.nan, "NAN": np.nan,
+        "n/a": np.nan, "N/A": np.nan, "na": np.nan, "NA": np.nan, "null": np.nan, "NULL": np.nan
+    }
     if df.empty:
         return df
     def _norm_name(x: str) -> str:
@@ -123,6 +128,14 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
                 "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used"]:
+        if col in df.columns:
+            s = (
+                df[col]
+                .astype(str)
+                .str.strip()
+                .replace(_NA_STRINGS)
+            )
+            df[col] = pd.to_numeric(s, errors="coerce")  
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     if {"Actual Output", "Target Output"}.issubset(df.columns):
@@ -215,24 +228,28 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
     sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
+    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
+    def _is_good_name(s: str) -> bool:
+        return s.strip() and s.strip() not in BAD_NAMES
     rows: list[dict] = []
     def _as_names(x) -> list[str]:
         if isinstance(x, list):
-            return [str(s).strip() for s in x if str(s).strip()]
+            return [str(s).strip() for s in x if _is_good_name(str(s))]
         if isinstance(x, str):
             s = x.strip()
             try:
                 obj = json.loads(s)
                 if isinstance(obj, list):
-                    return [str(v).strip() for v in obj if str(v).strip()]
+                    return [str(v).strip() for v in obj if _is_good_name(str(v))]
                 if isinstance(obj, dict):
-                    return [str(k).strip() for k, v in obj.items() if str(k).strip()]
+                    return [str(k).strip() for k, v in obj.items() if _is_good_name(str(k))]
             except Exception:
                 pass
-            parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if p.strip()]
+            import re
+            parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if _is_good_name(p)]
             return parts
         if isinstance(x, dict):
-            return [str(k).strip() for k in x.keys() if str(k).strip()]
+            return [str(k).strip() for k in x.keys() if _is_good_name(str(k))]
         return []
     import re
     for _, r in sub.iterrows():
