@@ -1700,6 +1700,12 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             for k, r in per_out_cell.iterrows() if str(k).strip()
         }
         outputs_by_cell = _normalize_outputs_by_cell(outputs_by_cell_raw)
+        cs_hours_series = sub.groupby("station")["completed_hours"].sum(min_count=1)
+        cs_hours = {
+            str(k).strip(): round(float(v), 2)
+            for k, v in cs_hours_series.dropna().items()
+            if str(k).strip()
+        }
         rows.append({
             "team": team_name,
             "source_file": f"{file_path} :: {sheet}",
@@ -1712,6 +1718,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             "Person Hours": json.dumps(_normalize_person_hours(per_person), ensure_ascii=False),
             "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
             "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+            "Cell/Station Hours": json.dumps(cs_hours, ensure_ascii=False),
         })
     print(f"[CAS][manual] Appended weekly rows: {len(rows)} from {file_path.name}")
     return rows
