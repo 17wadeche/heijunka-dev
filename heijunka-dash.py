@@ -601,8 +601,23 @@ if nonwip_mode:
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
     show_cols = ["team","period_date","people_count","total_non_wip_hours","% in WIP"]
+    tbl = (
+        team_hist[show_cols]
+        .rename(columns={
+            "team": "Team",
+            "period_date": "Date",
+            "people_count": "People Count",
+            "total_non_wip_hours": "Non-WIP Hours",
+            "% in WIP": "% in WIP",
+        })
+        .sort_values("Date", ascending=False)
+    )
     st.dataframe(
-        team_hist[show_cols].sort_values("period_date", ascending=False),
+        tbl.style.format({
+            "People Count": "{:,.0f}",
+            "Non-WIP Hours": "{:,.1f}",
+            "% in WIP": "{:.2f}%",
+        }),
         use_container_width=True
     )
     st.stop()
