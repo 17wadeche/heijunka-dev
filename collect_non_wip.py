@@ -3,6 +3,7 @@ import csv
 import json
 from pathlib import Path
 from datetime import datetime as _dt, date as _date, timedelta
+import re
 import pandas as pd
 from openpyxl import load_workbook
 from dateutil import parser as dateparser
@@ -11,14 +12,14 @@ REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
 WEEKLY_HOURS_DEFAULT = 40.0
 TEAM_CFG = {
-    "aortic":         {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
-    "crdn":           {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
-    "ect":            {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
-    "pvh":            {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
-    "svt":            {"sheets": ["Individual"],                                   "col": "A", "start": 1},
-    "tct commercial": {"sheets": ["Individual (WIP-Non WIP)", "Individual(WIP-Non WIP)"], "col": "A", "start": 1},
-    "tct clinical":   {"sheets": ["Individual (WIP-Non WIP)", "Individual(WIP-Non WIP)"], "col": "Z", "start": 1},
-    "ph":             {"all_sheets_row": 63},
+    "aortic":         {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "crdn":           {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "ect":            {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "pvh":            {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "svt":            {"sheet_patterns": ["individual"],                "col": "A", "start": 1},
+    "tct commercial": {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
+    "ph":             {"all_sheets_row": 53},
 }
 def _excel_serial_to_date(n):
     try:
@@ -79,13 +80,38 @@ def _col_letter_to_index(letter: str) -> int:
             continue
         acc = acc * 26 + (ord(ch) - ord("A") + 1)
     return max(1, acc)
-def _read_names_from_sheet_col_xlsx(path: Path, sheet_name: str, col_letter: str = "A",
+def _norm_sheet_name(s: str) -> str:
+    s = (s or "").lower()
+    s = s.replace("–", "-").replace("—", "-")        # normalize dashes
+    s = s.replace("(", " ").replace(")", " ")
+    s = s.replace("_", " ").replace("-", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    s = s.replace("wip non wip", "wip non wip")
+    return s
+def _resolve_sheet_name(wb, desired_patterns: list[str]) -> str | None:
+    if not desired_patterns:
+        return None
+    desired = {_norm_sheet_name(p) for p in desired_patterns}
+    norm_to_actual = {_norm_sheet_name(n): n for n in wb.sheetnames}
+    for want in desired:
+        if want in norm_to_actual:
+            return norm_to_actual[want]
+    for actual in wb.sheetnames:
+        ns = _norm_sheet_name(actual)
+        for want in desired:
+            if (want in ns) or ns.startswith(want) or ns.endswith(want):
+                return actual
+    return None
+def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_letter: str = "A",
                                     start_row: int = 1, max_rows: int = 400) -> list[str]:
     try:
         wb = load_workbook(path, data_only=True, read_only=True)
     except Exception:
+        print(f"[non-wip] Could not open workbook: {path}")
         return []
-    if sheet_name not in wb.sheetnames:
+    sheet_name = _resolve_sheet_name(wb, sheet_patterns)
+    if not sheet_name:
+        print(f"[non-wip] No sheet matched {sheet_patterns} in {path.name}")
         return []
     ws = wb[sheet_name]
     col_idx = _col_letter_to_index(col_letter)
@@ -96,38 +122,17 @@ def _read_names_from_sheet_col_xlsx(path: Path, sheet_name: str, col_letter: str
         nm = _clean_name(r[0])
         if nm:
             names.append(nm)
-    seen, uniq = set(), []
+    seen, out = set(), []
     for n in names:
         k = n.casefold()
         if k not in seen:
-            seen.add(k); uniq.append(n)
-    return uniq
-def _read_names_from_row_all_cols_xlsx(path: Path, sheet_name: str, row_number: int,
-                                       max_cols: int = 400) -> list[str]:
-    try:
-        wb = load_workbook(path, data_only=True, read_only=True)
-    except Exception:
-        return []
-    if sheet_name not in wb.sheetnames:
-        return []
-    ws = wb[sheet_name]
-    row_number = max(1, int(row_number))
-    names = []
-    for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
-        for val in r:
-            nm = _clean_name(val)
-            if nm:
-                names.append(nm)
-    seen, uniq = set(), []
-    for n in names:
-        k = n.casefold()
-        if k not in seen:
-            seen.add(k); uniq.append(n)
-    return uniq
+            seen.add(k); out.append(n)
+    return out
 def _read_names_from_all_sheets_row_xlsx(path: Path, row_number: int, max_cols: int = 400) -> list[str]:
     try:
         wb = load_workbook(path, data_only=True, read_only=True)
     except Exception:
+        print(f"[non-wip] Could not open workbook for PH: {path}")
         return []
     all_names = []
     for sh in wb.sheetnames:
@@ -137,12 +142,12 @@ def _read_names_from_all_sheets_row_xlsx(path: Path, row_number: int, max_cols: 
                 nm = _clean_name(val)
                 if nm:
                     all_names.append(nm)
-    seen, uniq = set(), []
+    seen, out = set(), []
     for n in all_names:
         k = n.casefold()
         if k not in seen:
-            seen.add(k); uniq.append(n)
-    return uniq
+            seen.add(k); out.append(n)
+    return out
 def _source_file_only(s: str) -> str:
     return s.split(" :: ", 1)[0].strip()
 def _parse_person_hours_cell(s: str | None) -> dict[str, float]:
@@ -173,20 +178,12 @@ def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str
     cfg = _get_team_cfg(team_name)
     if not cfg:
         return []
-    if "all_sheets_row" in cfg:
-        return _read_names_from_all_sheets_row_xlsx(
-            xlsx_path,
-            row_number=cfg["all_sheets_row"],
-            max_cols=400
-        )
-    sheets = cfg.get("sheets", [])
-    col   = cfg.get("col", "A")
-    start = cfg.get("start", 1)
-    for sh in sheets:
-        people = _read_names_from_sheet_col_xlsx(xlsx_path, sh, col_letter=col, start_row=start)
-        if people:
-            return people
-    return []
+    if "all_sheets_row" in cfg:  # PH
+        return _read_names_from_all_sheets_row_xlsx(xlsx_path, row_number=cfg["all_sheets_row"], max_cols=400)
+    patterns = cfg.get("sheet_patterns", [])
+    col      = cfg.get("col", "A")
+    start    = cfg.get("start", 1)
+    return _read_names_from_sheet_col_xlsx(xlsx_path, sheet_patterns=patterns, col_letter=col, start_row=start)
 def main():
     if not REPO_CSV.exists():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
@@ -211,15 +208,17 @@ def main():
     unique_refs = df[["team", "team_norm", "period_date", "source_file_only"]].drop_duplicates()
     out_rows = []
     for _, row in unique_refs.iterrows():
-        team        = row["team"]         # original casing for output
-        team_norm   = row["team_norm"]    # normalized for lookups
+        team        = row["team"]
+        team_norm   = row["team_norm"]
         period_date = row["period_date"]
         src         = row["source_file_only"]
         p = Path(src)
         if not p.exists() or p.suffix.lower() not in (".xlsx", ".xlsm"):
+            print(f"[non-wip] Skip missing/unsupported file: {src}")
             continue
         people = _read_people_from_file_for_team(p, team_norm)
         if not people:
+            print(f"[non-wip] No names found for team '{team}' from {p.name}")
             continue
         ph_by_name = ph_index.get((team_norm, period_date, src), {})  # may be empty
         per_person_non_wip = {}
