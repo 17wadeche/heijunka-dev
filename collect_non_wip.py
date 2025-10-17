@@ -19,7 +19,7 @@ TEAM_CFG = {
     "svt":            {"sheet_patterns": ["individual"],                "col": "A", "start": 1},
     "tct commercial": {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
     "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
-    "ph":             {"sheet_patterns": ["ph"], "row": 53},
+    "ph": {"all_sheets_row": 63}
 }
 try:
     from pyxlsb import open_workbook as open_xlsb
@@ -162,6 +162,50 @@ def _read_names_from_matching_sheets_row_xlsx(path: Path, sheet_patterns: list[s
         if k not in seen:
             seen.add(k); out.append(n)
     return out
+def _read_names_from_all_sheets_row_anybook(path: Path, row_number: int, max_cols: int = 400) -> list[str]:
+    ext = path.suffix.lower()
+    names = []
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(path, data_only=True, read_only=True)
+        except Exception:
+            print(f"[non-wip] Could not open workbook for PH: {path}")
+            return []
+        for sh in wb.sheetnames:
+            ws = wb[sh]
+            for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
+                for val in r:
+                    nm = _clean_name(val)
+                    if nm:
+                        names.append(nm)
+    elif ext == ".xlsb":
+        if open_xlsb is None:
+            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
+            return []
+        try:
+            with open_xlsb(path) as wb:
+                for sh in wb.sheets:
+                    ws = wb.get_sheet(sh)
+                    for ridx, row in enumerate(ws.rows(), start=1):
+                        if ridx < row_number:
+                            continue
+                        if ridx > row_number:
+                            break
+                        for cidx, cell in enumerate(row, start=1):
+                            if cidx > max_cols:
+                                break
+                            nm = _clean_name(cell.v)
+                            if nm:
+                                names.append(nm)
+        except Exception as e:
+            print(f"[non-wip] Failed reading PH .xlsb {path.name}: {e}")
+            return []
+    seen, out = set(), []
+    for n in names:
+        k = str(n).casefold()
+        if k not in seen:
+            seen.add(k); out.append(n)
+    return out
 def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_letter: str = "A",
                                     start_row: int = 1, max_rows: int = 400) -> list[str]:
     ext = path.suffix.lower()
@@ -270,10 +314,43 @@ def _lookup_actual_hours(ph_by_name: dict[str, float], person: str) -> float:
     return 0.0
 def _get_team_cfg(team_name: str):
     return TEAM_CFG.get(str(team_name).casefold())
+def _resolve_existing_path(src: str, extra_roots: list[Path] | None = None) -> Path | None:
+    p = Path(src)
+    if p.exists():
+        return p
+    roots: list[Path] = [
+        Path(src).anchor and Path(Path(src).anchor) or Path("C:\\"),
+        REPO_DIR,
+        Path.home(),  # C:\Users\you
+    ]
+    parts = Path(src).parts
+    if "Medtronic PLC" in parts:
+        med_idx = parts.index("Medtronic PLC")
+        maybe_root = Path(*parts[:med_idx+1])
+        roots.append(maybe_root)
+    if extra_roots:
+        roots.extend(extra_roots)
+    target = Path(src).name
+    for r in roots:
+        try:
+            if not r.exists():
+                continue
+            for found in r.rglob(target):
+                if found.is_file():
+                    return found
+        except Exception:
+            continue
+    return None
 def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str]:
     cfg = _get_team_cfg(team_name)
     if not cfg:
         return []
+    if "all_sheets_row" in cfg:
+        return _read_names_from_all_sheets_row_anybook(
+            xlsx_path,
+            row_number=int(cfg["all_sheets_row"]),
+            max_cols=400,
+        )
     if "row" in cfg and "sheet_patterns" in cfg:
         return _read_names_from_matching_sheets_row_xlsx(
             xlsx_path,
@@ -284,7 +361,12 @@ def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str
     patterns = cfg.get("sheet_patterns", [])
     col      = cfg.get("col", "A")
     start    = cfg.get("start", 1)
-    return _read_names_from_sheet_col_xlsx(xlsx_path, sheet_patterns=patterns, col_letter=col, start_row=start)
+    return _read_names_from_sheet_col_xlsx(
+        xlsx_path,
+        sheet_patterns=patterns,
+        col_letter=col,
+        start_row=start
+    )
 def main():
     if not REPO_CSV.exists():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
@@ -315,8 +397,13 @@ def main():
         src         = row["source_file_only"]
         p = Path(src)
         if not p.exists():
-            print(f"[non-wip] Skip missing file: {src}")
-            continue
+            alt = _resolve_existing_path(src)
+            if alt is not None:
+                p = alt
+                src = str(p)  # keep what we actually used
+            else:
+                print(f"[non-wip] Skip missing file: {src}")
+                continue
         ext = p.suffix.lower()
         if ext not in (".xlsx", ".xlsm", ".xlsb"):
             print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
