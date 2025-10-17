@@ -549,9 +549,9 @@ if nonwip_mode:
                     alt.value("#ef4444"),
                 ),
                 tooltip=[
-                    "person:N",
+                    "Person:N",
                     alt.Tooltip("Non-WIP Hours:Q", format=",.2f"),
-                    "period_date:T",
+                    "Period Date:T",
                 ],
             )
         )
