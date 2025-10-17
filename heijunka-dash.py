@@ -1147,7 +1147,7 @@ if len(teams_in_view) == 1:
         help="Tip: select exactly one series to enable a 3-month projection"  # NEW
     )
     if len(selected) != 1:
-        st.caption("💡 Select **one** series to enable the 3-month projection.")
+        st.caption("Select **one** series to enable the 3-month projection.")
     if selected:
         display_to_col = {
             "HC in WIP": "HC in WIP",
