@@ -431,8 +431,13 @@ if data_path:
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
-nonwip_mode = st.toggle("Show Non-WIP view", value=False,
-                        help="Switch to Non-WIP metrics")
+label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
+nonwip_mode = st.toggle(
+    label,
+    value=st.session_state.get("nonwip_mode", False),
+    key="nonwip_mode",
+    help="Switch between WIP and Non-WIP metrics"
+)
 if nonwip_mode:
     nw = load_non_wip()
     if nw.empty:
@@ -440,18 +445,24 @@ if nonwip_mode:
         st.stop()
     st.markdown("### Non-WIP Overview")
     teams_nw = sorted([t for t in nw["team"].dropna().unique()])
-    team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
-    weeks_nw = sorted(pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()), reverse=True)
+    c_team, c_week = st.columns(2)
+    with c_team:
+        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+    weeks_nw = sorted(
+        pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
+        reverse=True
+    )
     if not weeks_nw:
         st.info("No weeks available for this team.")
         st.stop()
-    week_nw = st.selectbox(
-        "Week",
-        options=weeks_nw,
-        index=0,
-        format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-        key="nw_week",
-    )
+    with c_week:
+        week_nw = st.selectbox(
+            "Week",
+            options=weeks_nw,
+            index=0,
+            format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+            key="nw_week",
+        )
     week_nw = pd.to_datetime(week_nw).normalize()
     sel = nw[(nw["team"] == team_nw) & (nw["period_date"] == week_nw)]
     if sel.empty:
@@ -460,10 +471,24 @@ if nonwip_mode:
     row = sel.iloc[0]
     pct_in_wip = float(row.get("% in WIP", np.nan))
     pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    def colored_percent_metric(container, label: str, value: float | None, threshold=80.0):
+        if pd.isna(value):
+            container.metric(label, "—")
+            return
+        color = "#ef4444" if float(value) < threshold else "#22c55e"
+        container.markdown(
+            f"""
+            <div style="padding:12px 16px;border-radius:10px;border:1px solid #eee;">
+            <div style="font-size:12px;color:#6b7280;">{label}</div>
+            <div style="font-size:28px;font-weight:700;color:{color};">{value:.2f}%</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     c1, c2, c3 = st.columns(3)
     c1.metric("People Count", f"{int(row['people_count']):,}" if pd.notna(row["people_count"]) else "—")
     c2.metric("Total Non-WIP Hours", f"{float(row['total_non_wip_hours']):,.1f}" if pd.notna(row["total_non_wip_hours"]) else "—")
-    c3.metric("% in WIP", f"{pct_in_wip:.2f}%" if pd.notna(pct_in_wip) else "—")
+    colored_percent_metric(c3, "% in WIP", pct_in_wip, threshold=80.0)
     st.markdown("---")
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
@@ -477,6 +502,7 @@ if nonwip_mode:
             .encode(
                 x=alt.X("person:N", title="Person", sort=order_people),
                 y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours (week)"),
+                color=alt.condition("datum['Non-WIP Hours'] <= 7.5", alt.value("#22c55e"), alt.value("#ef4444")),
                 tooltip=[
                     "person:N",
                     alt.Tooltip("Non-WIP Hours:Q", format=",.2f"),
