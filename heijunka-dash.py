@@ -526,29 +526,51 @@ if nonwip_mode:
     else:
         order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
         vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
-        pad = max(0.5, vmax * 0.12) if pd.notna(vmax) else 0.5
-        y_scale = alt.Scale(domain=[0, vmax + pad], nice=False, clamp=False)
+        headroom = max(1.0, vmax * 0.18) if pd.notna(vmax) else 1.0
+        y_scale = alt.Scale(domain=[0, vmax + headroom], nice=False, clamp=False)
         bars = (
             alt.Chart(wk_people)
-            .mark_bar()
+            .mark_bar(clip=False)  # don't clip at chart bounds
             .encode(
-                x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
-                y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours (week)", scale=y_scale),
-                color=alt.condition("datum['Non-WIP Hours'] <= 7.5", alt.value("#22c55e"), alt.value("#ef4444")),
+                x=alt.X(
+                    "person:N",
+                    title="Person",
+                    sort=order_people,
+                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                ),
+                y=alt.Y(
+                    "Non-WIP Hours:Q",
+                    title="Non-WIP Hours (week)",
+                    scale=y_scale,   # <- shared scale with the 7.5 rule
+                ),
+                color=alt.condition(
+                    "datum['Non-WIP Hours'] <= 7.5",
+                    alt.value("#22c55e"),
+                    alt.value("#ef4444"),
+                ),
                 tooltip=[
                     "person:N",
                     alt.Tooltip("Non-WIP Hours:Q", format=",.2f"),
                     "period_date:T",
                 ],
             )
+        )
+        ref = (
+            alt.Chart(pd.DataFrame({"y": [7.5]}))
+            .mark_rule(strokeDash=[4, 3], color="#6b7280")
+            .encode(y=alt.Y("y:Q", scale=y_scale))
+        )
+        chart = (
+            (bars + ref)
             .properties(
-                height=280,
+                height=300,
                 title=f"{team_nw} • Per-person Non-WIP Hours",
-                padding={"left": 8, "right": 8, "top": 20, "bottom": 60},  # more bottom space for angled labels
+                padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             )
             .configure_axis(labelOverlap=True)
+            .configure_view(stroke=None)  # tiny aesthetic: remove border
         )
-        st.altair_chart(bars, use_container_width=True)
+        st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
