@@ -1372,4 +1372,13 @@ f_table = (
     f.drop(columns=drop_these, errors="ignore")
     .sort_values(["team", "period_date"], ascending=[True, False])
 )
+fmt_map = {}
+if "Open Complaint Timeliness" in f_table.columns:
+    fmt_map["Open Complaint Timeliness"] = "{:.0%}"   # 0.9 -> 90%
+if "Capacity Utilization" in f_table.columns:
+    fmt_map["Capacity Utilization"] = "{:.2%}"        # 0.4571 -> 45.71%
+if fmt_map:
+    st.dataframe(f_table.style.format(fmt_map), use_container_width=True)
+else:
+    st.dataframe(f_table, use_container_width=True)
 st.dataframe(f_table, use_container_width=True)
