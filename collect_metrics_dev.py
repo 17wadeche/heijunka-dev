@@ -2901,6 +2901,21 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         values["Completed Hours"] = ch
                 except Exception:
                     pass
+                try:
+                    ph_raw = json.loads(values.get("Person Hours") or "{}")
+                except Exception:
+                    ph_raw = {}
+                try:
+                    ph_norm = _normalize_person_hours(ph_raw)  # uses your helper above
+                except Exception:
+                    ph_norm = ph_raw
+                completed_total = 0.0
+                for v in (ph_norm or {}).values():
+                    try:
+                        completed_total += float((v or {}).get("actual") or 0.0)
+                    except Exception:
+                        pass
+                values["Completed Hours"] = round(completed_total, 2)
             if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
                 try:
                     by_person, by_cell = _outputs_person_and_cell_for_team(p, team_name)
