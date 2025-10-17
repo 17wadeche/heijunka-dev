@@ -38,6 +38,12 @@ def _coerce_to_date(v):
         return None
 _BAD_EXACT = {
     "team member",
+    "tuesday",
+    "4",
+    "5",
+    "6",
+    "7",
+    "open"
     "2025-10-06 00:00:00",
     "team member 1",
     "team member 2",
