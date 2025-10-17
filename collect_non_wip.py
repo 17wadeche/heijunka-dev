@@ -47,7 +47,9 @@ _BAD_EXACT = {
     "5",
     "6",
     "7",
+    "CLINICAL WEEKS PRODUCTION OUTPUT",
     "open"
+    "0",
     "2025-10-06 00:00:00",
     "team member 1",
     "team member 2",
