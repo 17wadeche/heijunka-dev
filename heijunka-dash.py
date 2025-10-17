@@ -1381,4 +1381,3 @@ if fmt_map:
     st.dataframe(f_table.style.format(fmt_map), use_container_width=True)
 else:
     st.dataframe(f_table, use_container_width=True)
-st.dataframe(f_table, use_container_width=True)
