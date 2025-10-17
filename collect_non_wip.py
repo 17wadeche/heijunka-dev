@@ -10,7 +10,15 @@ REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
 WEEKLY_HOURS_DEFAULT = 40.0
-AORTIC_SHEET = "Individual (WIP-Non WIP)"
+TEAM_SHEET_COL = {
+    "Aortic": ("Individual (WIP-Non WIP)", "A"),
+    "CRDN": ("Individual (WIP-Non WIP)", "A"),
+    "ECT": ("Individual (WIP-Non WIP)", "A"),
+    "PVH": ("Individual (WIP-Non WIP)", "A"),
+    "SVT": ("Individual", "A"),
+    "TCT Commercial": ("Individual(WIP-Non WIP)", "A"),
+    "TCT clinical": ("Individual(WIP-Non WIP)", "Z"),
+}
 def _excel_serial_to_date(n):
     try:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
@@ -34,9 +42,9 @@ _BAD_EXACT = {
     "workflow",
 }
 _BAD_PREFIX = (
-    "release date",  # e.g., "Release Date: 04 Aug 2024"
-    "revision",      # e.g., "REVISION: 001"
-    "week starting", # e.g., "Week Starting: 08/05/2024"
+    "release date",
+    "revision",
+    "week starting",
 )
 def _looks_like_bad_header(raw: str) -> bool:
     if raw is None:
@@ -59,7 +67,17 @@ def _clean_name(s: str) -> str:
         return ""
     s = str(s).strip().strip('"').strip("'")
     return "" if _looks_like_bad_header(s) else s
-def _read_names_from_individual_sheet_xlsx(path: Path, sheet_name=AORTIC_SHEET) -> list[str]:
+def _col_letter_to_index(letter: str) -> int:
+    letter = str(letter).strip().upper()
+    if not letter:
+        return 1
+    acc = 0
+    for ch in letter:
+        if not ("A" <= ch <= "Z"):
+            continue
+        acc = acc * 26 + (ord(ch) - ord("A") + 1)
+    return max(1, acc)
+def _read_names_from_sheet_col_xlsx(path: Path, sheet_name: str, col_letter: str = "A") -> list[str]:
     try:
         wb = load_workbook(path, data_only=True, read_only=True)
     except Exception:
@@ -67,8 +85,9 @@ def _read_names_from_individual_sheet_xlsx(path: Path, sheet_name=AORTIC_SHEET) 
     if sheet_name not in wb.sheetnames:
         return []
     ws = wb[sheet_name]
+    col_idx = _col_letter_to_index(col_letter)
     names = []
-    for r in ws.iter_rows(min_row=1, max_row=200, min_col=1, max_col=1, values_only=True):
+    for r in ws.iter_rows(min_row=1, max_row=200, min_col=col_idx, max_col=col_idx, values_only=True):
         nm = _clean_name(r[0])
         if nm:
             names.append(nm)
@@ -106,9 +125,9 @@ def main():
     if not REPO_CSV.exists():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
     df = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
-    df = df[(df.get("team","") == "Aortic") & (df.get("source_file","") != "")]
+    df = df[df.get("team", "").isin(TEAM_SHEET_COL.keys()) & (df.get("source_file", "") != "")]
     if df.empty:
-        print("[non-wip] No Aortic rows found in metrics_aggregate_dev.csv")
+        print("[non-wip] No rows found in metrics_aggregate_dev.csv for mapped teams")
         return
     df["period_date"] = df["period_date"].apply(_coerce_to_date)
     df = df.dropna(subset=["period_date"])
@@ -116,13 +135,13 @@ def main():
     df["source_file_only"] = df["source_file"].apply(_source_file_only)
     ph_index: dict[tuple, dict[str, float]] = {}
     for _, r in df.iterrows():
-        key = (r["period_date"], r["source_file_only"])
+        key = (r["team"], r["period_date"], r["source_file_only"])
         ph = _parse_person_hours_cell(r.get("Person Hours"))
         if key not in ph_index:
             ph_index[key] = ph
         else:
             ph_index[key].update(ph)
-    unique_refs = df[["team","period_date","source_file_only"]].drop_duplicates()
+    unique_refs = df[["team", "period_date", "source_file_only"]].drop_duplicates()
     out_rows = []
     for _, row in unique_refs.iterrows():
         team = row["team"]
@@ -131,10 +150,11 @@ def main():
         p = Path(src)
         if not p.exists() or p.suffix.lower() not in (".xlsx", ".xlsm"):
             continue
-        people = _read_names_from_individual_sheet_xlsx(p)
+        sheet_name, col_letter = TEAM_SHEET_COL.get(team, ("Individual (WIP-Non WIP)", "A"))
+        people = _read_names_from_sheet_col_xlsx(p, sheet_name=sheet_name, col_letter=col_letter)
         if not people:
             continue
-        ph_by_name = ph_index.get((period_date, src), {})  # may be empty
+        ph_by_name = ph_index.get((team, period_date, src), {})  # may be empty
         per_person_non_wip = {}
         total_non_wip = 0.0
         total_wip_capped = 0.0
@@ -147,7 +167,7 @@ def main():
         people_count = len(people)
         weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
         pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
-        pct_in_wip = round(pct_in_wip, 2)  # percent value, e.g., 73.5
+        pct_in_wip = round(pct_in_wip, 2)
         out_rows.append({
             "team": team,
             "period_date": period_date.isoformat(),
@@ -158,7 +178,7 @@ def main():
             "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
         })
     if not out_rows:
-        print("[non-wip] No weekly rows produced for Aortic.")
+        print("[non-wip] No weekly rows produced for mapped teams.")
         return
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     cols = [
