@@ -8,7 +8,6 @@ import pandas as pd
 from openpyxl import load_workbook
 from dateutil import parser as dateparser
 REPO_DIR = Path(r"C:\heijunka-dev")
-PH_FIXED_PATH = Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
 WEEKLY_HOURS_DEFAULT = 40.0
@@ -20,7 +19,7 @@ TEAM_CFG = {
     "svt":            {"sheet_patterns": ["individual"],                "col": "A", "start": 1},
     "tct commercial": {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
     "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
-    "ph": {"all_sheets_row": 63}
+    "ph":             {"sheet_patterns": ["ph"], "row": 53},
 }
 try:
     from pyxlsb import open_workbook as open_xlsb
@@ -48,11 +47,9 @@ _BAD_EXACT = {
     "5",
     "6",
     "7",
-    "clinical weeks production output",
-    "commercial weeks production output",
-    "open",
+    "CLINICAL WEEKS PRODUCTION OUTPUT",
+    "open"
     "0",
-    "0.0",
     "2025-10-06 00:00:00",
     "team member 1",
     "team member 2",
@@ -165,50 +162,6 @@ def _read_names_from_matching_sheets_row_xlsx(path: Path, sheet_patterns: list[s
         if k not in seen:
             seen.add(k); out.append(n)
     return out
-def _read_names_from_all_sheets_row_anybook(path: Path, row_number: int, max_cols: int = 400) -> list[str]:
-    ext = path.suffix.lower()
-    names = []
-    if ext in (".xlsx", ".xlsm"):
-        try:
-            wb = load_workbook(path, data_only=True, read_only=True)
-        except Exception:
-            print(f"[non-wip] Could not open workbook for PH: {path}")
-            return []
-        for sh in wb.sheetnames:
-            ws = wb[sh]
-            for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
-                for val in r:
-                    nm = _clean_name(val)
-                    if nm:
-                        names.append(nm)
-    elif ext == ".xlsb":
-        if open_xlsb is None:
-            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
-            return []
-        try:
-            with open_xlsb(path) as wb:
-                for sh in wb.sheets:
-                    ws = wb.get_sheet(sh)
-                    for ridx, row in enumerate(ws.rows(), start=1):
-                        if ridx < row_number:
-                            continue
-                        if ridx > row_number:
-                            break
-                        for cidx, cell in enumerate(row, start=1):
-                            if cidx > max_cols:
-                                break
-                            nm = _clean_name(cell.v)
-                            if nm:
-                                names.append(nm)
-        except Exception as e:
-            print(f"[non-wip] Failed reading PH .xlsb {path.name}: {e}")
-            return []
-    seen, out = set(), []
-    for n in names:
-        k = str(n).casefold()
-        if k not in seen:
-            seen.add(k); out.append(n)
-    return out
 def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_letter: str = "A",
                                     start_row: int = 1, max_rows: int = 400) -> list[str]:
     ext = path.suffix.lower()
@@ -317,43 +270,10 @@ def _lookup_actual_hours(ph_by_name: dict[str, float], person: str) -> float:
     return 0.0
 def _get_team_cfg(team_name: str):
     return TEAM_CFG.get(str(team_name).casefold())
-def _resolve_existing_path(src: str, extra_roots: list[Path] | None = None) -> Path | None:
-    p = Path(src)
-    if p.exists():
-        return p
-    roots: list[Path] = [
-        Path(src).anchor and Path(Path(src).anchor) or Path("C:\\"),
-        REPO_DIR,
-        Path.home(),  # C:\Users\you
-    ]
-    parts = Path(src).parts
-    if "Medtronic PLC" in parts:
-        med_idx = parts.index("Medtronic PLC")
-        maybe_root = Path(*parts[:med_idx+1])
-        roots.append(maybe_root)
-    if extra_roots:
-        roots.extend(extra_roots)
-    target = Path(src).name
-    for r in roots:
-        try:
-            if not r.exists():
-                continue
-            for found in r.rglob(target):
-                if found.is_file():
-                    return found
-        except Exception:
-            continue
-    return None
 def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str]:
     cfg = _get_team_cfg(team_name)
     if not cfg:
         return []
-    if "all_sheets_row" in cfg:
-        return _read_names_from_all_sheets_row_anybook(
-            xlsx_path,
-            row_number=int(cfg["all_sheets_row"]),
-            max_cols=400,
-        )
     if "row" in cfg and "sheet_patterns" in cfg:
         return _read_names_from_matching_sheets_row_xlsx(
             xlsx_path,
@@ -364,12 +284,7 @@ def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str
     patterns = cfg.get("sheet_patterns", [])
     col      = cfg.get("col", "A")
     start    = cfg.get("start", 1)
-    return _read_names_from_sheet_col_xlsx(
-        xlsx_path,
-        sheet_patterns=patterns,
-        col_letter=col,
-        start_row=start
-    )
+    return _read_names_from_sheet_col_xlsx(xlsx_path, sheet_patterns=patterns, col_letter=col, start_row=start)
 def main():
     if not REPO_CSV.exists():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
@@ -393,59 +308,15 @@ def main():
             ph_index[key].update(ph)
     unique_refs = df[["team", "team_norm", "period_date", "source_file_only"]].drop_duplicates()
     out_rows = []
-    ph_weeks = (
-        df.loc[df["team_norm"] == "ph", "period_date"]
-        .dropna()
-        .drop_duplicates()
-        .tolist()
-    )
-    if ph_weeks:
-        if not PH_FIXED_PATH.exists():
-            print(f"[non-wip] PH fixed file missing: {PH_FIXED_PATH}")
-        else:
-            for wk in ph_weeks:
-                people = _read_names_from_all_sheets_row_anybook(PH_FIXED_PATH, row_number=TEAM_CFG["ph"]["all_sheets_row"], max_cols=400)
-                if not people:
-                    print(f"[non-wip] No names found for PH from {PH_FIXED_PATH.name}")
-                    continue
-                ph_by_name = ph_index.get(("ph", wk, str(PH_FIXED_PATH)), {})  # will usually be {}
-                per_person_non_wip = {}
-                total_non_wip = 0.0
-                total_wip_capped = 0.0
-                for person in people:
-                    wip_actual = _lookup_actual_hours(ph_by_name, person)
-                    non_wip = max(0.0, WEEKLY_HOURS_DEFAULT - float(wip_actual))
-                    per_person_non_wip[person] = round(non_wip, 2)
-                    total_non_wip += non_wip
-                    total_wip_capped += min(float(wip_actual), WEEKLY_HOURS_DEFAULT)
-                people_count = len(people)
-                weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
-                pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
-                pct_in_wip = round(pct_in_wip, 2)
-                out_rows.append({
-                    "team": "PH",
-                    "period_date": wk.isoformat(),
-                    "source_file": str(PH_FIXED_PATH),  # always the fixed path
-                    "people_count": people_count,
-                    "total_non_wip_hours": round(total_non_wip, 2),
-                    "% in WIP": pct_in_wip,
-                    "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
-                })
-    other_refs = (
-        df.loc[df["team_norm"] != "ph", ["team", "team_norm", "period_date", "source_file_only"]]
-        .drop_duplicates()
-        .itertuples(index=False, name=None)
-    )
-    for team, team_norm, period_date, src in other_refs:
+    for _, row in unique_refs.iterrows():
+        team        = row["team"]
+        team_norm   = row["team_norm"]
+        period_date = row["period_date"]
+        src         = row["source_file_only"]
         p = Path(src)
         if not p.exists():
-            alt = _resolve_existing_path(src)
-            if alt is not None:
-                p = alt
-                src = str(p)
-            else:
-                print(f"[non-wip] Skip missing file: {src}")
-                continue
+            print(f"[non-wip] Skip missing file: {src}")
+            continue
         ext = p.suffix.lower()
         if ext not in (".xlsx", ".xlsm", ".xlsb"):
             print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
@@ -457,7 +328,7 @@ def main():
         if not people:
             print(f"[non-wip] No names found for team '{team}' from {p.name}")
             continue
-        ph_by_name = ph_index.get((team_norm, period_date, str(p)), {})
+        ph_by_name = ph_index.get((team_norm, period_date, src), {})  # may be empty
         per_person_non_wip = {}
         total_non_wip = 0.0
         total_wip_capped = 0.0
