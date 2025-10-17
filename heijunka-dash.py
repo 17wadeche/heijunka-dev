@@ -6,6 +6,51 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_non_wip(nw_path: str | None = None) -> pd.DataFrame:
+    p = Path(nw_path or NON_WIP_DEFAULT_PATH)
+    if not p.exists():
+        return pd.DataFrame(columns=[
+            "team","period_date","source_file","people_count",
+            "total_non_wip_hours","% in WIP","non_wip_by_person"
+        ])
+    df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+    if "period_date" in df.columns:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    for c in ["people_count", "total_non_wip_hours", "% in WIP"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    return df
+def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
+    cols = ["team","period_date","person","Non-WIP Hours"]
+    if nw.empty or "non_wip_by_person" not in nw.columns:
+        return pd.DataFrame(columns=cols)
+    rows = []
+    sub = nw[["team","period_date","non_wip_by_person"]].dropna(subset=["non_wip_by_person"])
+    for _, r in sub.iterrows():
+        payload = r["non_wip_by_person"]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for person, hrs in obj.items():
+            try:
+                v = float(hrs)
+            except Exception:
+                v = np.nan
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": str(person).strip(),
+                "Non-WIP Hours": v
+            })
+    out = pd.DataFrame(rows, columns=cols)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
 DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
@@ -375,6 +420,97 @@ if data_path:
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+nonwip_mode = st.toggle("Show Non-WIP view", value=False,
+                        help="Switch to Non-WIP metrics from non_wip_activities.csv")
+if nonwip_mode:
+    nw = load_non_wip()
+    if nw.empty:
+        st.info("No Non-WIP data found yet. Make sure non_wip_activities.csv exists.")
+        st.stop()
+    st.markdown("### Non-WIP Overview")
+    teams_nw = sorted([t for t in nw["team"].dropna().unique()])
+    team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+    weeks_nw = sorted(pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()), reverse=True)
+    if not weeks_nw:
+        st.info("No weeks available for this team.")
+        st.stop()
+    week_nw = st.selectbox(
+        "Week",
+        options=weeks_nw,
+        index=0,
+        format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+        key="nw_week",
+    )
+    week_nw = pd.to_datetime(week_nw).normalize()
+    sel = nw[(nw["team"] == team_nw) & (nw["period_date"] == week_nw)]
+    if sel.empty:
+        st.info("No Non-WIP row for that team/week.")
+        st.stop()
+    row = sel.iloc[0]
+    pct_in_wip = float(row.get("% in WIP", np.nan))
+    pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("People Count", f"{int(row['people_count']):,}" if pd.notna(row["people_count"]) else "—")
+    c2.metric("Total Non-WIP Hours", f"{float(row['total_non_wip_hours']):,.1f}" if pd.notna(row["total_non_wip_hours"]) else "—")
+    c3.metric("% in WIP", f"{pct_in_wip:.2f}%" if pd.notna(pct_in_wip) else "—")
+    c4.metric("% Non-WIP", f"{pct_non_wip:.2f}%" if pd.notna(pct_non_wip) else "—")
+    st.markdown("---")
+    long_nw = explode_non_wip_by_person(nw)
+    wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
+    if wk_people.empty:
+        st.info("No per-person Non-WIP breakdown for this selection.")
+    else:
+        order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
+        bars = (
+            alt.Chart(wk_people)
+            .mark_bar()
+            .encode(
+                x=alt.X("person:N", title="Person", sort=order_people),
+                y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours (week)"),
+                tooltip=[
+                    "person:N",
+                    alt.Tooltip("Non-WIP Hours:Q", format=",.2f"),
+                    "period_date:T",
+                ],
+            )
+            .properties(height=260, title=f"{team_nw} • Per-person Non-WIP Hours")
+        )
+        st.altair_chart(bars, use_container_width=True)
+    st.markdown("#### Team Trends")
+    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
+    if not team_hist.empty:
+        t1, t2 = st.columns(2)
+        with t1:
+            ch1 = (
+                alt.Chart(team_hist)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
+                    tooltip=["period_date:T", alt.Tooltip("total_non_wip_hours:Q", format=",.1f")]
+                )
+                .properties(height=240, title="Total Non-WIP Hours")
+            )
+            st.altair_chart(ch1, use_container_width=True)
+        with t2:
+            ch2 = (
+                alt.Chart(team_hist)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("% in WIP:Q", title="% in WIP"),
+                    tooltip=["period_date:T", alt.Tooltip("% in WIP:Q", format=",.2f")]
+                )
+                .properties(height=240, title="% in WIP")
+            )
+            st.altair_chart(ch2, use_container_width=True)
+    st.markdown("#### Weekly Non-WIP Rows")
+    show_cols = ["team","period_date","people_count","total_non_wip_hours","% in WIP"]
+    st.dataframe(
+        team_hist[show_cols].sort_values("period_date", ascending=False),
+        use_container_width=True
+    )
+    st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
 - **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**).
