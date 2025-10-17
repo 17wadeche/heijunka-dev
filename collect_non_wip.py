@@ -8,6 +8,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from dateutil import parser as dateparser
 REPO_DIR = Path(r"C:\heijunka-dev")
+PH_FIXED_PATH = Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
 WEEKLY_HOURS_DEFAULT = 40.0
@@ -392,17 +393,56 @@ def main():
             ph_index[key].update(ph)
     unique_refs = df[["team", "team_norm", "period_date", "source_file_only"]].drop_duplicates()
     out_rows = []
-    for _, row in unique_refs.iterrows():
-        team        = row["team"]
-        team_norm   = row["team_norm"]
-        period_date = row["period_date"]
-        src         = row["source_file_only"]
+    ph_weeks = (
+        df.loc[df["team_norm"] == "ph", "period_date"]
+        .dropna()
+        .drop_duplicates()
+        .tolist()
+    )
+    if ph_weeks:
+        if not PH_FIXED_PATH.exists():
+            print(f"[non-wip] PH fixed file missing: {PH_FIXED_PATH}")
+        else:
+            for wk in ph_weeks:
+                people = _read_names_from_all_sheets_row_anybook(PH_FIXED_PATH, row_number=TEAM_CFG["ph"]["all_sheets_row"], max_cols=400)
+                if not people:
+                    print(f"[non-wip] No names found for PH from {PH_FIXED_PATH.name}")
+                    continue
+                ph_by_name = ph_index.get(("ph", wk, str(PH_FIXED_PATH)), {})  # will usually be {}
+                per_person_non_wip = {}
+                total_non_wip = 0.0
+                total_wip_capped = 0.0
+                for person in people:
+                    wip_actual = _lookup_actual_hours(ph_by_name, person)
+                    non_wip = max(0.0, WEEKLY_HOURS_DEFAULT - float(wip_actual))
+                    per_person_non_wip[person] = round(non_wip, 2)
+                    total_non_wip += non_wip
+                    total_wip_capped += min(float(wip_actual), WEEKLY_HOURS_DEFAULT)
+                people_count = len(people)
+                weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
+                pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
+                pct_in_wip = round(pct_in_wip, 2)
+                out_rows.append({
+                    "team": "PH",
+                    "period_date": wk.isoformat(),
+                    "source_file": str(PH_FIXED_PATH),  # always the fixed path
+                    "people_count": people_count,
+                    "total_non_wip_hours": round(total_non_wip, 2),
+                    "% in WIP": pct_in_wip,
+                    "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
+                })
+    other_refs = (
+        df.loc[df["team_norm"] != "ph", ["team", "team_norm", "period_date", "source_file_only"]]
+        .drop_duplicates()
+        .itertuples(index=False, name=None)
+    )
+    for team, team_norm, period_date, src in other_refs:
         p = Path(src)
         if not p.exists():
             alt = _resolve_existing_path(src)
             if alt is not None:
                 p = alt
-                src = str(p)  # keep what we actually used
+                src = str(p)
             else:
                 print(f"[non-wip] Skip missing file: {src}")
                 continue
@@ -417,7 +457,7 @@ def main():
         if not people:
             print(f"[non-wip] No names found for team '{team}' from {p.name}")
             continue
-        ph_by_name = ph_index.get((team_norm, period_date, src), {})  # may be empty
+        ph_by_name = ph_index.get((team_norm, period_date, str(p)), {})
         per_person_non_wip = {}
         total_non_wip = 0.0
         total_wip_capped = 0.0
