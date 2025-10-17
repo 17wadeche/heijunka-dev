@@ -21,6 +21,10 @@ TEAM_CFG = {
     "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
     "ph":             {"sheet_patterns": ["ph"], "row": 53},
 }
+try:
+    from pyxlsb import open_workbook as open_xlsb
+except Exception:
+    open_xlsb = None
 def _excel_serial_to_date(n):
     try:
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
@@ -110,22 +114,46 @@ def _resolve_sheet_name(wb, desired_patterns: list[str]) -> str | None:
     return None
 def _read_names_from_matching_sheets_row_xlsx(path: Path, sheet_patterns: list[str],
                                               row_number: int, max_cols: int = 400) -> list[str]:
-    try:
-        wb = load_workbook(path, data_only=True, read_only=True)
-    except Exception:
-        print(f"[non-wip] Could not open workbook for PH: {path}")
-        return []
-    want = {_norm_sheet_name(p) for p in (sheet_patterns or [])}
+    ext = path.suffix.lower()
     names = []
-    for sh in wb.sheetnames:
-        nsh = _norm_sheet_name(sh)
-        if any(w in nsh for w in want):
-            ws = wb[sh]
-            for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
-                for val in r:
-                    nm = _clean_name(val)
-                    if nm:
-                        names.append(nm)
+    want = {_norm_sheet_name(p) for p in (sheet_patterns or [])}
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(path, data_only=True, read_only=True)
+        except Exception:
+            print(f"[non-wip] Could not open workbook for PH: {path}")
+            return []
+        for sh in wb.sheetnames:
+            nsh = _norm_sheet_name(sh)
+            if any(w in nsh for w in want):
+                ws = wb[sh]
+                for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
+                    for val in r:
+                        nm = _clean_name(val)
+                        if nm: names.append(nm)
+    elif ext == ".xlsb":
+        if open_xlsb is None:
+            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
+            return []
+        try:
+            with open_xlsb(path) as wb:
+                for sh in wb.sheets:
+                    nsh = _norm_sheet_name(sh)
+                    if any(w in nsh for w in want):
+                        ws = wb.get_sheet(sh)
+                        for ridx, row in enumerate(ws.rows(), start=1):
+                            if ridx < row_number: 
+                                continue
+                            if ridx > row_number: 
+                                break
+                            for cidx, cell in enumerate(row, start=1):
+                                if cidx > max_cols: 
+                                    break
+                                nm = _clean_name(cell.v)
+                                if nm: names.append(nm)
+        except Exception as e:
+            print(f"[non-wip] Failed reading PH .xlsb {path.name}: {e}")
+            return []
     seen, out = set(), []
     for n in names:
         k = n.casefold()
@@ -134,24 +162,60 @@ def _read_names_from_matching_sheets_row_xlsx(path: Path, sheet_patterns: list[s
     return out
 def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_letter: str = "A",
                                     start_row: int = 1, max_rows: int = 400) -> list[str]:
-    try:
-        wb = load_workbook(path, data_only=True, read_only=True)
-    except Exception:
-        print(f"[non-wip] Could not open workbook: {path}")
-        return []
-    sheet_name = _resolve_sheet_name(wb, sheet_patterns)
-    if not sheet_name:
-        print(f"[non-wip] No sheet matched {sheet_patterns} in {path.name}")
-        return []
-    ws = wb[sheet_name]
+    ext = path.suffix.lower()
     col_idx = _col_letter_to_index(col_letter)
     start_row = max(1, int(start_row))
     end_row = max(start_row, start_row + max_rows - 1)
     names = []
-    for r in ws.iter_rows(min_row=start_row, max_row=end_row, min_col=col_idx, max_col=col_idx, values_only=True):
-        nm = _clean_name(r[0])
-        if nm:
-            names.append(nm)
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(path, data_only=True, read_only=True)
+        except Exception:
+            print(f"[non-wip] Could not open workbook: {path}")
+            return []
+        sheet_name = _resolve_sheet_name(wb, sheet_patterns)
+        if not sheet_name:
+            print(f"[non-wip] No sheet matched {sheet_patterns} in {path.name}")
+            return []
+        ws = wb[sheet_name]
+        for r in ws.iter_rows(min_row=start_row, max_row=end_row, min_col=col_idx, max_col=col_idx, values_only=True):
+            nm = _clean_name(r[0])
+            if nm: names.append(nm)
+    elif ext == ".xlsb":
+        if open_xlsb is None:
+            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
+            return []
+        try:
+            with open_xlsb(path) as wb:
+                sheet_name = None
+                norm_to_actual = {_norm_sheet_name(n): n for n in wb.sheets}
+                desired = {_norm_sheet_name(p) for p in (sheet_patterns or [])}
+                for want in desired:
+                    if want in norm_to_actual:
+                        sheet_name = norm_to_actual[want]; break
+                if sheet_name is None:
+                    for actual in wb.sheets:
+                        ns = _norm_sheet_name(actual)
+                        if any((want in ns) or ns.startswith(want) or ns.endswith(want) for want in desired):
+                            sheet_name = actual; break
+                if sheet_name is None:
+                    print(f"[non-wip] No sheet matched {sheet_patterns} in {path.name}")
+                    return []
+                sh = wb.get_sheet(sheet_name)
+                for ridx, row in enumerate(sh.rows(), start=1):
+                    if ridx < start_row: 
+                        continue
+                    if ridx > end_row: 
+                        break
+                    val = None
+                    for cidx, cell in enumerate(row, start=1):
+                        if cidx == col_idx:
+                            val = cell.v; break
+                    nm = _clean_name(val)
+                    if nm: names.append(nm)
+        except Exception as e:
+            print(f"[non-wip] Failed reading .xlsb {path.name}: {e}")
+            return []
     seen, out = set(), []
     for n in names:
         k = n.casefold()
@@ -248,8 +312,15 @@ def main():
         period_date = row["period_date"]
         src         = row["source_file_only"]
         p = Path(src)
-        if not p.exists() or p.suffix.lower() not in (".xlsx", ".xlsm"):
-            print(f"[non-wip] Skip missing/unsupported file: {src}")
+        if not p.exists():
+            print(f"[non-wip] Skip missing file: {src}")
+            continue
+        ext = p.suffix.lower()
+        if ext not in (".xlsx", ".xlsm", ".xlsb"):
+            print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
+            continue
+        if ext == ".xlsb" and open_xlsb is None:
+            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
             continue
         people = _read_people_from_file_for_team(p, team_norm)
         if not people:
