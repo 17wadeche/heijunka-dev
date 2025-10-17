@@ -2676,6 +2676,9 @@ def _aortic_hours_by_col(file_path: Path,
                     continue
             v = row_vals[0]
             s = str(v).strip() if v is not None else ""
+            norm = re.sub(r"[-_]+", " ", s).casefold()
+            if "problem solving" in norm:
+                continue
             bad = {"", "#REF!", "nan"}
             if col_letter.upper() == "C":
                 bad |= {"0", "-", "–", "—"}
@@ -2698,13 +2701,16 @@ def _aortic_hours_by_col(file_path: Path,
             out: dict[str, float] = {}
             for s in series:
                 s = s.strip()
+                norm = re.sub(r"[-_]+", " ", s).casefold()
+                if "problem solving" in norm:
+                    continue
                 bad = {"", "#REF!", "nan"}
                 if col_letter.upper() == "C":
                     bad |= {"0", "-", "–", "—"}
                 if col_letter.upper() == "D":
                     bad |= {"-", "–", "—"}
                 if s not in bad:
-                    out[s] = round(out.get(s, 0.0) + 2.0, 2)  
+                    out[s] = round(out.get(s, 0.0) + 2.0, 2)
             return out
         else:
             return {}
