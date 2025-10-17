@@ -1,6 +1,7 @@
 # collect_non_wip.py
 import csv
 import json
+import re
 from pathlib import Path
 from datetime import datetime as _dt, date as _date, timedelta
 import pandas as pd
@@ -16,8 +17,8 @@ TEAM_CFG = {
     "ect":            {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
     "pvh":            {"sheets": ["Individual (WIP-Non WIP)"],                     "col": "A", "start": 1},
     "svt":            {"sheets": ["Individual"],                                   "col": "A", "start": 1},
-    "tct commercial": {"sheets": ["Individual (WIP-Non WIP)", "Individual(WIP-Non WIP)"], "col": "A", "start": 1},
-    "tct clinical":   {"sheets": ["Individual (WIP-Non WIP)", "Individual(WIP-Non WIP)"], "col": "Z", "start": 1},
+    "tct commercial": {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
+    "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
     "ph":             {"all_sheets_row": 53},
 }
 def _excel_serial_to_date(n):
@@ -79,13 +80,36 @@ def _col_letter_to_index(letter: str) -> int:
             continue
         acc = acc * 26 + (ord(ch) - ord("A") + 1)
     return max(1, acc)
-def _read_names_from_sheet_col_xlsx(path: Path, sheet_name: str, col_letter: str = "A",
+def _norm_sheet_name(s: str) -> str:
+    s = (s or "").lower()
+    s = s.replace("–", "-").replace("—", "-")  # unify dashes
+    s = re.sub(r"[\s_()\-]+", " ", s)         # collapse separators to single space
+    s = re.sub(r"\s+", " ", s).strip()
+    s = s.replace("wip - non wip", "wip non wip").replace("wip- non wip", "wip non wip").replace("wip-non wip", "wip non wip")
+    s = s.replace("wip -non wip", "wip non wip").replace("wip -  non wip", "wip non wip")
+    return s
+def _resolve_sheet_name(wb, desired_patterns: list[str]) -> str | None:
+    if not desired_patterns:
+        return None
+    desired = {_norm_sheet_name(p) for p in desired_patterns}
+    by_norm = { _norm_sheet_name(sh): sh for sh in wb.sheetnames }
+    for dn in desired:
+        if dn in by_norm:
+            return by_norm[dn]
+    for sh in wb.sheetnames:
+        nsh = _norm_sheet_name(sh)
+        for dn in desired:
+            if (dn in nsh) or (nsh in dn) or nsh.startswith(dn):
+                return sh
+    return None
+def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_letter: str = "A",
                                     start_row: int = 1, max_rows: int = 400) -> list[str]:
     try:
         wb = load_workbook(path, data_only=True, read_only=True)
     except Exception:
         return []
-    if sheet_name not in wb.sheetnames:
+    sheet_name = _resolve_sheet_name(wb, sheet_patterns)
+    if not sheet_name:
         return []
     ws = wb[sheet_name]
     col_idx = _col_letter_to_index(col_letter)
@@ -96,34 +120,14 @@ def _read_names_from_sheet_col_xlsx(path: Path, sheet_name: str, col_letter: str
         nm = _clean_name(r[0])
         if nm:
             names.append(nm)
+    # de-dupe case-insensitively
     seen, uniq = set(), []
     for n in names:
         k = n.casefold()
         if k not in seen:
             seen.add(k); uniq.append(n)
     return uniq
-def _read_names_from_row_all_cols_xlsx(path: Path, sheet_name: str, row_number: int,
-                                       max_cols: int = 400) -> list[str]:
-    try:
-        wb = load_workbook(path, data_only=True, read_only=True)
-    except Exception:
-        return []
-    if sheet_name not in wb.sheetnames:
-        return []
-    ws = wb[sheet_name]
-    row_number = max(1, int(row_number))
-    names = []
-    for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
-        for val in r:
-            nm = _clean_name(val)
-            if nm:
-                names.append(nm)
-    seen, uniq = set(), []
-    for n in names:
-        k = n.casefold()
-        if k not in seen:
-            seen.add(k); uniq.append(n)
-    return uniq
+
 def _read_names_from_all_sheets_row_xlsx(path: Path, row_number: int, max_cols: int = 400) -> list[str]:
     try:
         wb = load_workbook(path, data_only=True, read_only=True)
@@ -211,8 +215,8 @@ def main():
     unique_refs = df[["team", "team_norm", "period_date", "source_file_only"]].drop_duplicates()
     out_rows = []
     for _, row in unique_refs.iterrows():
-        team        = row["team"]         # original casing for output
-        team_norm   = row["team_norm"]    # normalized for lookups
+        team        = row["team"]
+        team_norm   = row["team_norm"]
         period_date = row["period_date"]
         src         = row["source_file_only"]
         p = Path(src)
@@ -249,13 +253,8 @@ def main():
         return
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     cols = [
-        "team",
-        "period_date",
-        "source_file",
-        "people_count",
-        "total_non_wip_hours",
-        "% in WIP",
-        "non_wip_by_person",
+        "team", "period_date", "source_file", "people_count",
+        "total_non_wip_hours", "% in WIP", "non_wip_by_person",
     ]
     with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
