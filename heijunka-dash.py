@@ -1211,7 +1211,7 @@ if len(teams_in_view) == 1:
         if single_sel:
             metric = selected[0]
             col = display_to_col[metric]
-            st.caption("🔮 Click **Show 3-month forecast** to project the selected series.")  # NEW
+            st.caption("Click **Show 3-month forecast** to project the selected series.")  # NEW
             if st.button("Show 3-month forecast"):
                 df = single[["period_date", col]].dropna().sort_values("period_date").copy()
                 if len(df) >= 3:
