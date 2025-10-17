@@ -375,6 +375,15 @@ if data_path:
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+with st.expander("📘 Glossary", expanded=False):
+    st.markdown("""
+- **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**).
+- **Actual UPLH** — Actual Output ÷ Actual Hours (i.e., **Completed Hours**).
+- **HC in WIP** — Number of **unique people** who logged any time in WIP during the week.
+- **Actual HC used** — Total actual hours worked ÷ **32.5**  
+  <small>(assumes **6.5 hours in WIP per person per day × 5 days**)</small>
+- **Multi-Axis View tip** — If you select **only one** series, you can project the next **3 months**.
+""", unsafe_allow_html=True)
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.csv exists and has the 'All Metrics' sheet.")
     st.stop()
@@ -481,8 +490,20 @@ kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
 kpi_vs_target(kpi_cols[2], "Actual Output", tot_actual, tot_target, "{:,.0f}")
 kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
 kpi_cols2 = st.columns(4)
-kpi(kpi_cols2[1], "Target UPLH", (tot_target/tot_tahl if tot_tahl else np.nan), "{:.2f}")
-kpi_vs_target(kpi_cols2[2], "Actual UPLH", actual_uplh, target_uplh, "{:.2f}")
+kpi(kpi_cols2[1],
+    "Target UPLH",
+    (tot_target/tot_tahl if tot_tahl else np.nan),
+    "{:.2f}",
+    help="Target Output ÷ Target Hours (Total Available Hours)"  # NEW
+)
+kpi_vs_target(
+    kpi_cols2[2],
+    "Actual UPLH",
+    actual_uplh,
+    target_uplh,
+    "{:.2f}",
+    help="Actual Output ÷ Actual Hours (Completed Hours)"  # NEW
+)
 kpi(kpi_cols2[3],
     "Capacity Utilization",
     (tot_chl/tot_tahl if tot_tahl else np.nan),
@@ -490,7 +511,13 @@ kpi(kpi_cols2[3],
     help="Completed vs Available hours"
 )
 kpi_cols3 = st.columns(4)
-kpi(kpi_cols3[1], "HC in WIP", tot_hc_wip, "{:,.0f}")
+kpi(
+    kpi_cols3[1],
+    "HC in WIP",
+    tot_hc_wip,
+    "{:,.0f}",
+    help="Unique people with any time in WIP for the week"  # NEW
+)
 kpi(kpi_cols3[2],
     "Actual HC used",
     tot_hc_used,
@@ -1112,7 +1139,15 @@ if len(teams_in_view) == 1:
                 available.append(opt)
         elif opt in single.columns:
             available.append(opt)
-    selected = st.multiselect("Series", available, default=available, key="single_team_series")
+    selected = st.multiselect(
+        "Series",
+        available,
+        default=available,
+        key="single_team_series",
+        help="Tip: select exactly one series to enable a 3-month projection"  # NEW
+    )
+    if len(selected) != 1:
+        st.caption("💡 Select **one** series to enable the 3-month projection.")
     if selected:
         display_to_col = {
             "HC in WIP": "HC in WIP",
@@ -1176,6 +1211,7 @@ if len(teams_in_view) == 1:
         if single_sel:
             metric = selected[0]
             col = display_to_col[metric]
+            st.caption("🔮 Click **Show 3-month forecast** to project the selected series.")  # NEW
             if st.button("Show 3-month forecast"):
                 df = single[["period_date", col]].dropna().sort_values("period_date").copy()
                 if len(df) >= 3:
