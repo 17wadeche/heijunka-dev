@@ -7,15 +7,26 @@ import streamlit as st
 import altair as alt
 import json
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
+NON_WIP_DATA_URL = st.secrets.get("NON_WIP_DATA_URL", os.environ.get("NON_WIP_DATA_URL"))
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def load_non_wip(nw_path: str | None = None) -> pd.DataFrame:
-    p = Path(nw_path or NON_WIP_DEFAULT_PATH)
-    if not p.exists():
-        return pd.DataFrame(columns=[
-            "team","period_date","source_file","people_count",
-            "total_non_wip_hours","% in WIP","non_wip_by_person"
-        ])
-    df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
+    if nw_url:
+        try:
+            df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        except Exception:
+            import io, requests
+            r = requests.get(nw_url, timeout=20)
+            r.raise_for_status()
+            df = pd.read_csv(io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
+                             dtype=str, keep_default_na=False)
+    else:
+        p = Path(nw_path or NON_WIP_DEFAULT_PATH)
+        if not p.exists():
+            return pd.DataFrame(columns=[
+                "team","period_date","source_file","people_count",
+                "total_non_wip_hours","% in WIP","non_wip_by_person"
+            ])
+        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     for c in ["people_count", "total_non_wip_hours", "% in WIP"]:
