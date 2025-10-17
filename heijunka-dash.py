@@ -375,7 +375,7 @@ if data_path:
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
-with st.expander("📘 Glossary", expanded=False):
+with st.expander("Glossary", expanded=False):
     st.markdown("""
 - **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**).
 - **Actual UPLH** — Actual Output ÷ Actual Hours (i.e., **Completed Hours**).
