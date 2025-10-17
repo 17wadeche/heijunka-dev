@@ -36,6 +36,11 @@ def _coerce_to_date(v):
         return None
 _BAD_EXACT = {
     "team member",
+    "2025-10-06 00:00:00",
+    "team member 1",
+    "team member 2",
+    "team member 3",
+    "team member 4",
     "total available hours",
     "total pitches",
     "weeks production output",
