@@ -421,7 +421,7 @@ if data_path:
 df = load_data(data_path, DATA_URL)
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 nonwip_mode = st.toggle("Show Non-WIP view", value=False,
-                        help="Switch to Non-WIP metrics from non_wip_activities.csv")
+                        help="Switch to Non-WIP metrics")
 if nonwip_mode:
     nw = load_non_wip()
     if nw.empty:
