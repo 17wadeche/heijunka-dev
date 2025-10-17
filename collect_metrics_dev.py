@@ -2893,29 +2893,29 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 except Exception:
                     pass
                 try:
-                    ch = _aortic_completed_hours_from_file(
-                        p, sheet="#12 Production Analysis", col_c="C", col_d="D",
-                        row_start=7, row_end=199, skip_hidden=True
-                    )
-                    if ch is not None:
-                        values["Completed Hours"] = ch
-                except Exception:
-                    pass
-                try:
                     ph_raw = json.loads(values.get("Person Hours") or "{}")
                 except Exception:
                     ph_raw = {}
                 try:
-                    ph_norm = _normalize_person_hours(ph_raw)  # uses your helper above
+                    ph_norm = _normalize_person_hours(ph_raw)
                 except Exception:
-                    ph_norm = ph_raw
+                    ph_norm = ph_raw or {}
                 completed_total = 0.0
-                for v in (ph_norm or {}).values():
+                hc_in_wip = 0
+                for rec in (ph_norm or {}).values():
                     try:
-                        completed_total += float((v or {}).get("actual") or 0.0)
+                        a = float((rec or {}).get("actual") or 0.0)
+                        completed_total += a
+                        if a > 0.0:
+                            hc_in_wip += 1
                     except Exception:
                         pass
                 values["Completed Hours"] = round(completed_total, 2)
+                values["HC in WIP"] = int(hc_in_wip)
+                try:
+                    values["Person Hours"] = json.dumps(ph_norm, ensure_ascii=False)
+                except Exception:
+                    pass
             if team_name in ("SVT", "TCT Clinical", "TCT Commercial"):
                 try:
                     by_person, by_cell = _outputs_person_and_cell_for_team(p, team_name)
