@@ -460,7 +460,7 @@ if nonwip_mode:
     row = sel.iloc[0]
     pct_in_wip = float(row.get("% in WIP", np.nan))
     pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     c1.metric("People Count", f"{int(row['people_count']):,}" if pd.notna(row["people_count"]) else "—")
     c2.metric("Total Non-WIP Hours", f"{float(row['total_non_wip_hours']):,.1f}" if pd.notna(row["total_non_wip_hours"]) else "—")
     c3.metric("% in WIP", f"{pct_in_wip:.2f}%" if pd.notna(pct_in_wip) else "—")
