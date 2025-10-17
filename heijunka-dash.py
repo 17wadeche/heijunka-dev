@@ -582,7 +582,10 @@ if nonwip_mode:
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
                     y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
-                    tooltip=["period_date:T", alt.Tooltip("total_non_wip_hours:Q", format=",.1f")]
+                    tooltip=[
+                        alt.Tooltip("period_date:T", title="Date"),
+                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
+                    ],
                 )
                 .properties(height=240, title="Total Non-WIP Hours")
             )
@@ -594,7 +597,10 @@ if nonwip_mode:
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
                     y=alt.Y("% in WIP:Q", title="% in WIP"),
-                    tooltip=["period_date:T", alt.Tooltip("% in WIP:Q", format=",.2f")]
+                    tooltip=[
+                        alt.Tooltip("period_date:T", title="Date"),
+                        alt.Tooltip("% in WIP:Q", title="% in WIP", format=",.2f"),
+                    ],
                 )
                 .properties(height=240, title="% in WIP")
             )
