@@ -1384,5 +1384,6 @@ for col in ["Target UPLH", "Actual UPLH", "Actual HC used", "Efficiency vs Targe
     if col in f_table.columns:
         fmt_map[col] = "{:,.2f}"
 if "HC in WIP" in f_table.columns:
+    
     fmt_map["HC in WIP"] = "{:,.0f}"
 st.dataframe(f_table.style.format(fmt_map), use_container_width=True)
