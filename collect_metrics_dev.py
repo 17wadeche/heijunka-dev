@@ -1412,6 +1412,8 @@ def _should_exclude_name(name: str) -> bool:
         return True
     if "practice" in n.lower():
         return True
+    if "problem solving" in n.lower():
+        return True
     if "timing studies" in n.lower():
         return True
     if "training tasks" in n.lower():
