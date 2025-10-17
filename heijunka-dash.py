@@ -464,7 +464,6 @@ if nonwip_mode:
     c1.metric("People Count", f"{int(row['people_count']):,}" if pd.notna(row["people_count"]) else "—")
     c2.metric("Total Non-WIP Hours", f"{float(row['total_non_wip_hours']):,.1f}" if pd.notna(row["total_non_wip_hours"]) else "—")
     c3.metric("% in WIP", f"{pct_in_wip:.2f}%" if pd.notna(pct_in_wip) else "—")
-    c4.metric("% Non-WIP", f"{pct_non_wip:.2f}%" if pd.notna(pct_non_wip) else "—")
     st.markdown("---")
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
