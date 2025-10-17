@@ -2662,30 +2662,41 @@ def _aortic_hours_by_col(file_path: Path,
                          row_start: int = 7,
                          row_end: int = 199,
                          skip_hidden: bool = True) -> dict[str, float]:
+    def _bad_tokens_for(col: str) -> set[str]:
+        bad = {"", "#REF!", "nan"}
+        if col.upper() == "C":
+            bad |= {"0", "-", "–", "—"}
+        if col.upper() == "D":
+            bad |= {"-", "–", "—"}
+        return bad
     def _accumulate_openpyxl(ws) -> dict[str, float]:
         c_idx = col_letter_to_index(col_letter)
+        d_idx = col_letter_to_index("D")
+        need_both = (col_letter.upper() == "C")  # require D when counting from C
+        min_c, max_c = (min(c_idx, d_idx), max(c_idx, d_idx)) if need_both else (c_idx, c_idx)
         out: dict[str, float] = {}
         for r_idx, row_vals in enumerate(
             ws.iter_rows(min_row=row_start, max_row=row_end,
-                         min_col=c_idx, max_col=c_idx, values_only=True),
+                         min_col=min_c, max_col=max_c, values_only=True),
             start=row_start
         ):
             if skip_hidden and hasattr(ws, "row_dimensions"):
                 rd = ws.row_dimensions.get(r_idx) if hasattr(ws.row_dimensions, "get") else None
                 if rd is not None and getattr(rd, "hidden", False):
                     continue
-            v = row_vals[0]
-            s = str(v).strip() if v is not None else ""
+            tgt_val = row_vals[(c_idx - min_c) if col_letter.upper()=="C" else (d_idx - min_c)]
+            s = str(tgt_val).strip() if tgt_val is not None else ""
             norm = re.sub(r"[-_]+", " ", s).casefold()
             if "problem solving" in norm:
                 continue
-            bad = {"", "#REF!", "nan"}
-            if col_letter.upper() == "C":
-                bad |= {"0", "-", "–", "—"}
-            if col_letter.upper() == "D":
-                bad |= {"-", "–", "—"}
-            if s not in bad:
-                out[s] = round(out.get(s, 0.0) + 2.0, 2)
+            if need_both:
+                d_val = row_vals[d_idx - min_c]
+                d_str = str(d_val).strip() if d_val is not None else ""
+                if d_str in _bad_tokens_for("D"):
+                    continue
+            if s in _bad_tokens_for(col_letter):
+                continue
+            out[s] = round(out.get(s, 0.0) + 2.0, 2)
         return out
     ext = file_path.suffix.lower()
     try:
@@ -2696,21 +2707,27 @@ def _aortic_hours_by_col(file_path: Path,
             return _accumulate_openpyxl(wb[sheet])
         elif ext == ".xlsb":
             df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
-            c = col_letter_to_index(col_letter) - 1
-            series = df.iloc[row_start-1:row_end, c].astype(str)
+            c_i = col_letter_to_index(col_letter) - 1
+            d_i = col_letter_to_index("D") - 1
+            need_both = (col_letter.upper() == "C")
+            sub = df.iloc[row_start-1:row_end, :]
             out: dict[str, float] = {}
-            for s in series:
-                s = s.strip()
+            for _, row in sub.iterrows():
+                val = row.iat[c_i] if c_i < len(row) else None
+                s = str(val).strip() if val is not None else ""
                 norm = re.sub(r"[-_]+", " ", s).casefold()
                 if "problem solving" in norm:
                     continue
-                bad = {"", "#REF!", "nan"}
-                if col_letter.upper() == "C":
-                    bad |= {"0", "-", "–", "—"}
-                if col_letter.upper() == "D":
-                    bad |= {"-", "–", "—"}
-                if s not in bad:
-                    out[s] = round(out.get(s, 0.0) + 2.0, 2)
+                if need_both:
+                    d_val = row.iat[d_i] if d_i < len(row) else None
+                    d_str = str(d_val).strip() if d_val is not None else ""
+                    if d_str in _bad_tokens_for("D"):
+                        continue
+
+                if s in _bad_tokens_for(col_letter):
+                    continue
+
+                out[s] = round(out.get(s, 0.0) + 2.0, 2)
             return out
         else:
             return {}
