@@ -430,6 +430,32 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
+def kpi_card(container, label: str, value, fmt: str | None = None, color: str | None = None, help: str | None = None):
+    if pd.isna(value):
+        val_html = "—"
+    else:
+        try:
+            val_html = (fmt or "{}").format(value)
+        except Exception:
+            val_html = str(value)
+    help_icon = f"""<span title="{help}" style="cursor:help;margin-left:6px;color:#9ca3af;">ⓘ</span>""" if help else ""
+    value_color = color or "#111827"
+    container.markdown(
+        f"""
+        <div style="padding:12px 16px;border-radius:10px;border:1px solid #eee;">
+          <div style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:4px;">
+            <span>{label}</span>{help_icon}
+          </div>
+          <div style="font-size:28px;font-weight:700;color:{value_color};">{val_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
+    if v is None or pd.isna(v):
+        return "#111827"
+    good = (v >= threshold) if not invert else (v <= threshold)
+    return "#22c55e" if good else "#ef4444"
 st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
@@ -486,9 +512,12 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3 = st.columns(3)
-    c1.metric("People Count", f"{int(row['people_count']):,}" if pd.notna(row["people_count"]) else "—")
-    c2.metric("Total Non-WIP Hours", f"{float(row['total_non_wip_hours']):,.1f}" if pd.notna(row["total_non_wip_hours"]) else "—")
-    colored_percent_metric(c3, "% in WIP", pct_in_wip, threshold=80.0)
+    people_val = int(row["people_count"]) if pd.notna(row["people_count"]) else np.nan
+    kpi_card(c1, "People Count", people_val, fmt="{:,}")
+    hours_val = float(row["total_non_wip_hours"]) if pd.notna(row["total_non_wip_hours"]) else np.nan
+    kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
+    wip_val = float(pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    kpi_card(c3, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
     st.markdown("---")
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
@@ -496,12 +525,15 @@ if nonwip_mode:
         st.info("No per-person Non-WIP breakdown for this selection.")
     else:
         order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
+        vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
+        pad = max(0.5, vmax * 0.12) if pd.notna(vmax) else 0.5
+        y_scale = alt.Scale(domain=[0, vmax + pad], nice=False, clamp=False)
         bars = (
             alt.Chart(wk_people)
             .mark_bar()
             .encode(
-                x=alt.X("person:N", title="Person", sort=order_people),
-                y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours (week)"),
+                x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours (week)", scale=y_scale),
                 color=alt.condition("datum['Non-WIP Hours'] <= 7.5", alt.value("#22c55e"), alt.value("#ef4444")),
                 tooltip=[
                     "person:N",
@@ -509,7 +541,12 @@ if nonwip_mode:
                     "period_date:T",
                 ],
             )
-            .properties(height=260, title=f"{team_nw} • Per-person Non-WIP Hours")
+            .properties(
+                height=280,
+                title=f"{team_nw} • Per-person Non-WIP Hours",
+                padding={"left": 8, "right": 8, "top": 20, "bottom": 60},  # more bottom space for angled labels
+            )
+            .configure_axis(labelOverlap=True)
         )
         st.altair_chart(bars, use_container_width=True)
     st.markdown("#### Team Trends")
