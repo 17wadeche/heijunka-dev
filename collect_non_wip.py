@@ -165,6 +165,8 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
         wb = load_workbook(xlsx_path, data_only=True, read_only=True)
     except Exception:
         return out
+    from collections import defaultdict
+    agg = defaultdict(lambda: {"hours": 0.0, "days": 0})
     for sh in wb.sheetnames:
         ws = wb[sh]
         try:
@@ -194,13 +196,19 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
                 nm = _clean_name(_strip_name_annotations(person))
                 if not nm:
                     continue
-                out.append({
-                    "day": "Week",
-                    "name": nm,
-                    "activity": "OOO" if cat.upper() == "OOO" else cat,
-                    "hours": 4.0 if person_is_half else base_hrs,
-                })
-                return out
+                hrs = 4.0 if person_is_half else base_hrs
+                key = (nm, "OOO" if cat.upper() == "OOO" else cat)
+                agg[key]["hours"] += float(hrs)
+                agg[key]["days"]  += 1   # count occurrences (interpreted as day-count)
+    for (nm, activity), vals in agg.items():
+        out.append({
+            "day": "Week",
+            "name": nm,
+            "activity": activity,
+            "hours": round(vals["hours"], 2),
+            "days": int(vals["days"]),   # NEW: number of days this occurred within the week
+        })
+    return out
 TEAM_OOO_CFG = {
     "aortic":          {"sheet": "#12 Production Analysis",           "flag_col": "K"},
     "svt":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},

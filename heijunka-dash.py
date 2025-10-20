@@ -211,27 +211,33 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     for c in ["activity", "day", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
+    if "days" not in df.columns:
+        df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
+    df["days"]  = pd.to_numeric(df["days"], errors="coerce")
+    grp = (df
+           .groupby(["activity", "name"], as_index=False)
+           .agg(hours=("hours", "sum"), days=("days", "sum")))
+    def _day_label(n):
+        try:
+            n = int(n)
+            return f"Week ({n} days)" if n and n > 1 else "Week"
+        except Exception:
+            return "Week"
+    grp["Day"] = grp["days"].apply(_day_label)
     out = (
-        df[["activity", "day", "name", "hours"]]
-        .rename(columns={
+        grp.rename(columns={
             "activity": "Activity",
-            "day": "Day",
             "name": "Name",
-            "hours": "Time"
-        })
-        .dropna(subset=["Activity", "Name"])
+            "hours": "Time",
+        })[["Activity", "Day", "Name", "Time"]]
         .assign(
             Activity=lambda d: d["Activity"].astype(str).str.strip(),
-            Day=lambda d: d["Day"].astype(str).str.strip(),
             Name=lambda d: d["Name"].astype(str).str.strip(),
         )
     )
-    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Week"]
-    out["__ord"] = out["Day"].apply(lambda d: day_order.index(d) if d in day_order else 999)
-    out = out.sort_values(["__ord", "Activity", "Name"]).drop(columns="__ord")
     out["Time"] = out["Time"].fillna(0).map(lambda x: f"{float(x):.0f}h")
-    return out
+    return out.sort_values(["Activity", "Name"])
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
