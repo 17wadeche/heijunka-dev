@@ -1391,6 +1391,7 @@ ALIAS_MAP = {
     "jerlie": "Jerlie", "jerile": "Jerlie",
     "natalie": "Natalie", "natlalie": "Natalie",
     "sean": "Sean", "sh": "Sean",
+    "orla": "Orla",
 }
 def _looks_like_timeish(s: str) -> bool:
     return bool(_TIMEISH_RE.search(s or ""))
