@@ -7,7 +7,6 @@ import re
 import pandas as pd
 from openpyxl import load_workbook
 from dateutil import parser as dateparser
-from openpyxl import load_workbook
 _DAY_RANGES = {
     "Monday":    (7, 40),
     "Tuesday":   (42, 77),
@@ -485,15 +484,6 @@ def main():
         else:
             row_obj["non_wip_activities"] = "[]"
         out_rows.append(row_obj)
-        out_rows.append({
-            "team": team,
-            "period_date": period_date.isoformat(),
-            "source_file": src,
-            "people_count": people_count,
-            "total_non_wip_hours": round(total_non_wip, 2),
-            "% in WIP": pct_in_wip,
-            "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
-        })
     if not out_rows:
         print("[non-wip] No weekly rows produced for mapped teams.")
         return
