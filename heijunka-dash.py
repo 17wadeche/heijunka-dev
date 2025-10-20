@@ -543,7 +543,7 @@ if nonwip_mode:
     wip_val = float(pct_in_wip) if pd.notna(pct_in_wip) else np.nan
     kpi_card(c4, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
     st.markdown("---")
-    st.markdown("#### Out of Office (OOO) This Week")
+    st.markdown("#### Non-WIP Activities")
     if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
         st.info("No OOO entries recorded for this selection.")
     else:

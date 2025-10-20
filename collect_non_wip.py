@@ -14,6 +14,195 @@ _DAY_RANGES = {
     "Thursday":  (120, 161),
     "Friday":    (163, 200),
 }
+NWW_CATEGORIES = {"ooo", "workshop", "audit", "yellow belt", "nextgen"}
+import regex as _re
+_HALF_DAY_RE = _re.compile(
+    r"""(?ix)
+    (?:\bAM\b|\bPM\b|half\s*day|1/2(?:\s*day)?|~\s*12|
+       @\s*(?:noon|12(?:\s*:?\s*30)?|PM|1)|
+       out\s+at\s+(?:12:00\s*pm|1:00\s*pm)|
+       afternoon|
+       -\s*out\s+in\s*(?:am|pm)
+    )
+    """
+)
+def _is_half_day(text: str) -> bool:
+    return bool(_HALF_DAY_RE.search(str(text or "")))
+def _split_people(cell_c: str) -> list[str]:
+    parts = _re.split(r"[,&]+", str(cell_c or ""))
+    return [p.strip() for p in parts if p and p.strip()]
+def _hours_for_activity(note_text: str) -> float:
+    return 4.0 if _is_half_day(note_text) else 8.0
+# CAS weekly "start row" → date mapping you provided
+_CAS_WEEK_ROWS = [
+    {"row":  7786, "date": "1/1/2024"},
+    {"row":  7918, "date": "1/8/2024"},
+    {"row":  8054, "date": "1/15/2024"},
+    {"row":  8190, "date": "1/22/2024"},
+    {"row":  8331, "date": "1/29/2024"},
+    {"row":  8473, "date": "2/5/2024"},
+    {"row":  8616, "date": "2/12/2024"},
+    {"row":  8760, "date": "2/19/2024"},
+    {"row":  8901, "date": "2/26/2024"},
+    {"row":  9046, "date": "3/4/2024"},
+    {"row":  9190, "date": "3/11/2024"},
+    {"row":  9334, "date": "3/18/2024"},
+    {"row":  9480, "date": "3/25/2024"},
+    {"row":  9626, "date": "4/1/2024"},
+    {"row":  9776, "date": "4/8/2024"},
+    {"row":  9927, "date": "4/15/2024"},
+    {"row": 10079, "date": "4/22/2024"},
+    {"row": 10234, "date": "4/29/2024"},
+    {"row": 10388, "date": "5/6/2024"},
+    {"row": 10542, "date": "5/13/2024"},
+    {"row": 10696, "date": "5/20/2024"},
+    {"row": 10850, "date": "5/27/2024"},
+    {"row": 11005, "date": "6/3/2024"},
+    {"row": 11159, "date": "6/10/2024"},
+    {"row": 11313, "date": "6/17/2024"},
+    {"row": 11470, "date": "6/24/2024"},
+    {"row": 11626, "date": "7/1/2024"},
+    {"row": 11792, "date": "7/8/2024"},
+    {"row": 11960, "date": "7/15/2024"},
+    {"row": 12126, "date": "7/22/2024"},
+    {"row": 12291, "date": "7/29/2024"},
+    {"row": 12461, "date": "8/5/2024"},
+    {"row": 12631, "date": "8/12/2024"},
+    {"row": 12801, "date": "8/19/2024"},
+    {"row": 12971, "date": "8/26/2024"},
+    {"row": 13141, "date": "9/2/2024"},
+    {"row": 13312, "date": "9/9/2024"},
+    {"row": 13486, "date": "9/16/2024"},
+    {"row": 13660, "date": "9/23/2024"},
+    {"row": 13829, "date": "9/30/2024"},
+    {"row": 14000, "date": "10/7/2024"},
+    {"row": 14171, "date": "10/14/2024"},
+    {"row": 14342, "date": "10/21/2024"},
+    {"row": 14512, "date": "10/28/2024"},
+    {"row": 14692, "date": "11/4/2024"},
+    {"row": 14872, "date": "11/11/2024"},
+    {"row": 15052, "date": "11/18/2024"},
+    {"row": 15236, "date": "11/25/2024"},
+    {"row": 15422, "date": "12/2/2024"},
+    {"row": 15610, "date": "12/9/2024"},
+    {"row": 15799, "date": "12/16/2024"},
+    {"row": 15989, "date": "12/23/2024"},
+    {"row": 16043, "date": "12/30/2024"},
+    {"row": 16083, "date": "1/6/2025"},
+    {"row": 16271, "date": "1/13/2025"},
+    {"row": 16458, "date": "1/20/2025"},
+    {"row": 16644, "date": "1/27/2025"},
+    {"row": 16836, "date": "2/3/2025"},
+    {"row": 17029, "date": "2/10/2025"},
+    {"row": 17224, "date": "2/17/2025"},
+    {"row": 17426, "date": "2/24/2025"},
+    {"row": 17628, "date": "3/3/2025"},
+    {"row": 17836, "date": "3/10/2025"},
+    {"row": 18042, "date": "3/17/2025"},
+    {"row": 18249, "date": "3/24/2025"},
+    {"row": 18455, "date": "3/30/2025"},
+    {"row": 18661, "date": "4/7/2025"},
+    {"row": 18868, "date": "4/14/2025"},
+    {"row": 19075, "date": "4/21/2025"},
+    {"row": 19285, "date": "4/28/2025"},
+    {"row": 19495, "date": "5/5/2025"},
+    {"row": 19706, "date": "5/12/2025"},
+    {"row": 19918, "date": "5/19/2025"},
+    {"row": 20129, "date": "5/26/2025"},
+    {"row": 20341, "date": "6/2/2025"},
+    {"row": 20553, "date": "6/9/2025"},
+    {"row": 20763, "date": "6/16/2025"},
+    {"row": 20972, "date": "6/23/2025"},
+    {"row": 21182, "date": "6/30/2025"},
+    {"row": 21394, "date": "7/7/2025"},
+    {"row": 21606, "date": "7/14/2025"},
+    {"row": 21818, "date": "7/21/2025"},
+    {"row": 22028, "date": "7/28/2025"},
+    {"row": 22238, "date": "8/4/2025"},
+    {"row": 22449, "date": "8/11/2025"},
+    {"row": 22661, "date": "8/18/2025"},
+    {"row": 22879, "date": "8/25/2025"},
+    {"row": 23094, "date": "9/1/2025"},
+    {"row": 23311, "date": "9/8/2025"},
+    {"row": 23517, "date": "9/15/2025"},
+    {"row": 23725, "date": "9/22/2025"},
+    {"row": 23937, "date": "9/29/2025"},
+    {"row": 24149, "date": "10/6/2025"},
+    {"row": 24364, "date": "10/13/2025"},
+    {"row": 24581, "date": "10/20/2025"},
+]
+def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
+    if period_date is None:
+        return None
+    want = period_date.strftime("%-m/%-d/%Y") if hasattr(period_date, "strftime") else str(period_date)
+    rows = [(int(e["row"]), str(e["date"])) for e in _CAS_WEEK_ROWS]
+    rows_sorted = sorted(rows, key=lambda x: x[0])
+    target_idx = None
+    for i, (r, dstr) in enumerate(rows_sorted):
+        try:
+            if _coerce_to_date(dstr) == period_date:
+                target_idx = i
+                break
+        except Exception:
+            continue
+    if target_idx is None:
+        return None
+    start = rows_sorted[target_idx][0]
+    end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)  # safety
+    return (start, end)
+def _first_sheet_with_rows(wb, rmax: int):
+    for sh in wb.sheetnames:
+        ws = wb[sh]
+        try:
+            if getattr(ws, "max_row", 0) >= rmax:
+                return sh
+        except Exception:
+            pass
+    return wb.sheetnames[0] if wb.sheetnames else None
+def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
+    out: list[dict] = []
+    ext = xlsx_path.suffix.lower()
+    window = _cas_row_window_for_date(period_date)
+    if not window:
+        return out
+    rmin, rmax = window
+    if ext not in (".xlsx", ".xlsm"):
+        return out  # (xlsb not supported here for CAS)
+    try:
+        wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+    except Exception:
+        return out
+    sh = _first_sheet_with_rows(wb, rmax)
+    if not sh:
+        return out
+    ws = wb[sh]
+    for row in ws.iter_rows(min_row=rmin, max_row=rmax, min_col=2, max_col=3, values_only=True):
+        col_b, col_c = row  # B, C
+        text_b = str(col_b or "").strip()
+        if not text_b:
+            continue
+        cat = None
+        lower = text_b.casefold()
+        for c in NWW_CATEGORIES:
+            if c in lower:
+                cat = c.upper() if c == "ooo" else c.title()
+                break
+        if not cat:
+            continue
+        people = _split_people(col_c or "")
+        if not people:
+            continue
+        hrs = _hours_for_activity(text_b)
+        for person in people:
+            if not _clean_name(person):
+                continue
+            out.append({
+                "day": "Week",           # CAS entries aren't per-day; show under a "Week" bucket
+                "name": person.strip(),
+                "activity": "OOO" if cat.upper() == "OOO" else cat,
+                "hours": hrs
+            })
+    return out
 TEAM_OOO_CFG = {
     "aortic":          {"sheet": "#12 Production Analysis",           "flag_col": "K"},
     "svt":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},
@@ -174,7 +363,7 @@ def extract_ooo_per_day(xlsx_path: Path, sheet_title: str, flag_col_letter: str)
                     key = name.casefold()
                     if key not in seen:
                         seen.add(key)
-                        out.append({"day": day, "name": name, "activity": "OOO"})
+                        out.append({"day": day, "name": name, "activity": "OOO", "hours": 8.0})
         return out
     elif ext == ".xlsb" and open_xlsb is not None:
         try:
@@ -196,7 +385,7 @@ def extract_ooo_per_day(xlsx_path: Path, sheet_title: str, flag_col_letter: str)
                             key = name.casefold()
                             if key not in seen:
                                 seen.add(key)
-                                out.append({"day": day, "name": name, "activity": "OOO"})
+                                out.append({"day": day, "name": name, "activity": "OOO", "hours": 8.0})
             return out
         except Exception:
             return []
@@ -473,38 +662,54 @@ def main():
             "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
         }
         ooo_cfg = TEAM_OOO_CFG.get(team_norm)
-        if ooo_cfg:
-            p = Path(src)
-            if p.exists():
-                try:
-                    details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
-                except Exception:
-                    details = []
-            else:
+        details: list[dict] = []
+        p = Path(src)
+        if ooo_cfg and p.exists():
+            try:
+                details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
+            except Exception:
                 details = []
-        else:
-            details = []
+        if team_norm == "cas" and p.exists():
+            try:
+                cas_extra = extract_cas_activities(p, period_date)
+                if cas_extra:
+                    details.extend(cas_extra)
+            except Exception:
+                pass
         row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
-        from collections import Counter
-        ooo_days_norm = Counter(
-            _norm_person(d.get("name", ""))
-            for d in details
-            if str(d.get("activity", "")).strip().upper() == "OOO" and _norm_person(d.get("name", ""))
-        )
+        from collections import defaultdict
+        ooo_hours_by_person: dict[str, float] = defaultdict(float)
+        ooo_full_days_seen = set()
+        for d in details:
+            act = str(d.get("activity", "")).strip().upper()
+            if act != "OOO":
+                continue
+            nm_norm = _norm_person(d.get("name", ""))
+            if not nm_norm:
+                continue
+            hrs = float(d.get("hours", 8.0) or 8.0)
+            ooo_hours_by_person[nm_norm] += hrs
+            dy = str(d.get("day", "")).strip()
+            if dy in _DAY_RANGES and abs(hrs - 8.0) < 1e-6:
+                ooo_full_days_seen.add((nm_norm, dy))
         canon_by_norm = {}
         for original_key in per_person_non_wip.keys():
             nk = _norm_person(original_key)
             if nk and nk not in canon_by_norm:
                 canon_by_norm[nk] = original_key
-        for original_key in list(per_person_non_wip.keys()):
-            nk = _norm_person(original_key)
-            days = float(ooo_days_norm.get(nk, 0.0))
-            deduct = days * 8.0
-            adj = float(per_person_non_wip.get(original_key, 0.0)) - deduct
-            per_person_non_wip[original_key] = round(max(0.0, adj), 2)
+        for nk, hrs in ooo_hours_by_person.items():
+            orig = canon_by_norm.get(nk)
+            if not orig:
+                continue
+            adj = float(per_person_non_wip.get(orig, 0.0)) - float(hrs)
+            per_person_non_wip[orig] = round(max(0.0, adj), 2)
         total_non_wip = sum(float(v) for v in per_person_non_wip.values())
-        full_week_ooo_norm = {nk for nk, days in ooo_days_norm.items() if days >= 5}
-        effective_people = [p for p in people if _norm_person(p) not in full_week_ooo_norm]
+        full_week_ooo_norm = set()
+        for nk in {k for k, _ in ooo_full_days_seen}:
+            days = {dy for kk, dy in ooo_full_days_seen if kk == nk}
+            if {"Monday","Tuesday","Wednesday","Thursday","Friday"}.issubset(days):
+                full_week_ooo_norm.add(nk)
+        effective_people = [pname for pname in people if _norm_person(pname) not in full_week_ooo_norm]
         people_count = len(effective_people)
         weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
         total_wip_capped = 0.0
@@ -513,7 +718,7 @@ def main():
             total_wip_capped += min(float(wip_actual), WEEKLY_HOURS_DEFAULT)
         pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
         pct_in_wip = round(pct_in_wip, 2)
-        ooo_hours_total = round(sum(ooo_days_norm.values()) * 8.0, 2)
+        ooo_hours_total = round(sum(ooo_hours_by_person.values()), 2)
         row_obj["people_count"] = people_count
         row_obj["total_non_wip_hours"] = round(total_non_wip, 2)
         row_obj["% in WIP"] = pct_in_wip
