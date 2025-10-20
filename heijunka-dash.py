@@ -199,6 +199,28 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
+def build_ooo_table_from_row(row) -> pd.DataFrame:
+    payload = row.get("non_wip_activities", "[]")
+    try:
+        obj = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        obj = []
+    if not isinstance(obj, list) or not obj:
+        return pd.DataFrame(columns=["Day", "Names"])
+    df = pd.DataFrame(obj)
+    if df.empty or "day" not in df.columns or "name" not in df.columns:
+        return pd.DataFrame(columns=["Day", "Names"])
+    agg = (
+        df[["day", "name"]]
+        .dropna(subset=["day", "name"])
+        .groupby("day", as_index=False)["name"]
+        .agg(lambda s: ", ".join(sorted(pd.unique([str(x).strip() for x in s if str(x).strip()]))))
+        .rename(columns={"day": "Day", "name": "Names"})
+    )
+    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    agg["__ord"] = agg["Day"].apply(lambda d: day_order.index(d) if d in day_order else 999)
+    agg = agg.sort_values(["__ord", "Day"]).drop(columns="__ord")
+    return agg
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
@@ -519,6 +541,18 @@ if nonwip_mode:
     wip_val = float(pct_in_wip) if pd.notna(pct_in_wip) else np.nan
     kpi_card(c3, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
     st.markdown("---")
+    st.markdown("#### Out of Office (OOO) This Week")
+    if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
+        st.info("No OOO entries recorded for this selection.")
+    else:
+        ooo_tbl = build_ooo_table_from_row(sel.iloc[0])
+        if ooo_tbl.empty:
+            st.info("No OOO entries recorded for this selection.")
+        else:
+            st.dataframe(
+                ooo_tbl.style.set_properties(**{"white-space": "normal"}),
+                use_container_width=True
+            )
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
     if wk_people.empty:
