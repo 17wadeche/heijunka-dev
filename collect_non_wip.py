@@ -33,6 +33,12 @@ def _split_people(cell_c: str) -> list[str]:
     return [p.strip() for p in parts if p and p.strip()]
 def _hours_for_activity(note_text: str) -> float:
     return 4.0 if _is_half_day(note_text) else 8.0
+def _strip_name_annotations(s: str) -> str:
+    txt = str(s or "")
+    txt = _re.sub(r"\s*@\s*\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b.*$", "", txt, flags=_re.I)
+    txt = _re.sub(r"\s*-\s*out.*$", "", txt, flags=_re.I)
+    txt = _re.sub(r"\s*\([^)]*\)\s*$", "", txt)
+    return txt.strip()
 _CAS_WEEK_ROWS = [
     {"row":  7786, "date": "1/1/2024"},
     {"row":  7918, "date": "1/8/2024"},
@@ -182,18 +188,19 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             people = _split_people(col_c or "")
             if not people:
                 continue
-            hrs = _hours_for_activity(text_b)
+            base_hrs = _hours_for_activity(text_b)
             for person in people:
-                nm = _clean_name(person)
+                person_is_half = _is_half_day(person)
+                nm = _clean_name(_strip_name_annotations(person))
                 if not nm:
                     continue
                 out.append({
-                    "day": "?",
+                    "day": "Week",
                     "name": nm,
                     "activity": "OOO" if cat.upper() == "OOO" else cat,
-                    "hours": hrs,
+                    "hours": 4.0 if person_is_half else base_hrs,
                 })
-    return out
+                return out
 TEAM_OOO_CFG = {
     "aortic":          {"sheet": "#12 Production Analysis",           "flag_col": "K"},
     "svt":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},
