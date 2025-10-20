@@ -568,81 +568,9 @@ if nonwip_mode:
                 padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             )
             .configure_axis(labelOverlap=True)
-            .configure_view(stroke=None)
+            .configure_view(stroke=None)  # tiny aesthetic: remove border
         )
         st.altair_chart(chart, use_container_width=True)
-    st.markdown("#### Share of Non-WIP Hours by Person (week)")
-    share = (
-        wk_people[["person", "Non-WIP Hours"]]
-        .dropna(subset=["Non-WIP Hours"])
-        .assign(hours=lambda d: pd.to_numeric(d["Non-WIP Hours"], errors="coerce"))
-        .dropna(subset=["hours"])
-    )
-    tot = float(share["hours"].sum()) if not share.empty else 0.0
-    if not share.empty and tot > 0:
-        share = (
-            share
-            .groupby("person", as_index=False)["hours"].sum()
-            .assign(
-                percent=lambda d: d["hours"] / tot,
-                PercentLabel=lambda d: (d["percent"] * 100).round(1).astype(str) + "%"
-            )
-            .sort_values("percent", ascending=False)
-        )
-        TOO_MANY = 18
-        if len(share) > TOO_MANY:
-            bars = (
-                alt.Chart(share)
-                .mark_bar()
-                .encode(
-                    x=alt.X("percent:Q", title="Share of Non-WIP Hours", axis=alt.Axis(format="~%")),
-                    y=alt.Y("person:N", sort="-x", title="Person"),
-                    tooltip=[
-                        alt.Tooltip("person:N", title="Person"),
-                        alt.Tooltip("hours:Q",  title="Hours", format=",.2f"),
-                        alt.Tooltip("percent:Q", title="Share", format=".1%")
-                    ],
-                    color=alt.value("#4f46e5"),
-                )
-                .properties(height=max(260, 14 * len(share)))
-            )
-            labels = (
-                alt.Chart(share)
-                .mark_text(align="left", dx=4)
-                .encode(
-                    x="percent:Q",
-                    y=alt.Y("person:N", sort="-x"),
-                    text="PercentLabel:N"
-                )
-            )
-            st.altair_chart(bars + labels, use_container_width=True)
-        else:
-            donut = (
-                alt.Chart(share)
-                .mark_arc(innerRadius=70)
-                .encode(
-                    theta=alt.Theta("percent:Q", stack=True),
-                    color=alt.Color("person:N", title="Person"),
-                    tooltip=[
-                        alt.Tooltip("person:N", title="Person"),
-                        alt.Tooltip("hours:Q",  title="Hours", format=",.2f"),
-                        alt.Tooltip("percent:Q", title="Share", format=".1%")
-                    ],
-                )
-                .properties(height=320, title=f"{team_nw} • {pd.to_datetime(week_nw).date().isoformat()}")
-            )
-            labels = (
-                alt.Chart(share)
-                .mark_text(radius=110)
-                .encode(
-                    theta=alt.Theta("percent:Q", stack=True),
-                    text=alt.Text("PercentLabel:N"),
-                    color=alt.value("#111827")
-                )
-            )
-            st.altair_chart(donut + labels, use_container_width=True)
-    else:
-        st.info("No data to compute person share for this selection.")
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
