@@ -29,7 +29,7 @@ def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_U
         df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    for c in ["people_count", "total_non_wip_hours", "% in WIP"]:
+    for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
     return df
@@ -533,13 +533,15 @@ if nonwip_mode:
             """,
             unsafe_allow_html=True,
         )
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     people_val = int(row["people_count"]) if pd.notna(row["people_count"]) else np.nan
     kpi_card(c1, "People Count", people_val, fmt="{:,}")
     hours_val = float(row["total_non_wip_hours"]) if pd.notna(row["total_non_wip_hours"]) else np.nan
     kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
+    ooo_val = float(row.get("OOO Hours", np.nan)) if "OOO Hours" in sel.columns else np.nan
+    kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}", help="8 hours per person per OOO day")
     wip_val = float(pct_in_wip) if pd.notna(pct_in_wip) else np.nan
-    kpi_card(c3, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
+    kpi_card(c4, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
     st.markdown("---")
     st.markdown("#### Out of Office (OOO) This Week")
     if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):

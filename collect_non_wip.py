@@ -480,9 +480,32 @@ def main():
                     details = []
             else:
                 details = []
-            row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
         else:
-            row_obj["non_wip_activities"] = "[]"
+            details = []
+        row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
+        from collections import Counter
+        ooo_days = Counter([d.get("name", "").strip() for d in details if str(d.get("activity","")).upper() == "OOO"])
+        ooo_hours_by_person = {name: days * 8.0 for name, days in ooo_days.items()}
+        full_week_ooo = {name for name, days in ooo_days.items() if days >= 5}
+        for person in list(per_person_non_wip.keys()):
+            adj = float(per_person_non_wip.get(person, 0.0)) - float(ooo_hours_by_person.get(person, 0.0))
+            per_person_non_wip[person] = round(max(0.0, adj), 2)
+        total_non_wip = sum(float(v) for v in per_person_non_wip.values())
+        effective_people = [p for p in people if p not in full_week_ooo]
+        people_count = len(effective_people)
+        weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
+        total_wip_capped = 0.0
+        for person in effective_people:
+            wip_actual = _lookup_actual_hours(ph_by_name, person)
+            total_wip_capped += min(float(wip_actual), WEEKLY_HOURS_DEFAULT)
+        pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
+        pct_in_wip = round(pct_in_wip, 2)
+        ooo_hours_total = round(sum(ooo_hours_by_person.values()), 2)
+        row_obj["people_count"] = people_count
+        row_obj["total_non_wip_hours"] = round(total_non_wip, 2)
+        row_obj["% in WIP"] = pct_in_wip
+        row_obj["non_wip_by_person"] = json.dumps(per_person_non_wip, ensure_ascii=False)
+        row_obj["OOO Hours"] = ooo_hours_total
         out_rows.append(row_obj)
     if not out_rows:
         print("[non-wip] No weekly rows produced for mapped teams.")
@@ -497,6 +520,7 @@ def main():
         "% in WIP",
         "non_wip_by_person",
         "non_wip_activities",
+        "OOO Hours",
     ]
     with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
