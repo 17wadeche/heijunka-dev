@@ -163,45 +163,47 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
     out: list[dict] = []
     ext = xlsx_path.suffix.lower()
     window = _cas_row_window_for_date(period_date)
-    if not window:
+    if not window or ext not in (".xlsx", ".xlsm"):
         return out
     rmin, rmax = window
-    if ext not in (".xlsx", ".xlsm"):
-        return out  # (xlsb not supported here for CAS)
     try:
         wb = load_workbook(xlsx_path, data_only=True, read_only=True)
     except Exception:
         return out
-    sh = _first_sheet_with_rows(wb, rmax)
-    if not sh:
-        return out
-    ws = wb[sh]
-    for row in ws.iter_rows(min_row=rmin, max_row=rmax, min_col=2, max_col=3, values_only=True):
-        col_b, col_c = row  # B, C
-        text_b = str(col_b or "").strip()
-        if not text_b:
-            continue
-        cat = None
-        lower = text_b.casefold()
-        for c in NWW_CATEGORIES:
-            if c in lower:
-                cat = c.upper() if c == "ooo" else c.title()
-                break
-        if not cat:
-            continue
-        people = _split_people(col_c or "")
-        if not people:
-            continue
-        hrs = _hours_for_activity(text_b)
-        for person in people:
-            if not _clean_name(person):
+    for sh in wb.sheetnames:
+        ws = wb[sh]
+        try:
+            if getattr(ws, "max_row", 0) < rmax:
                 continue
-            out.append({
-                "day": "Week",           # CAS entries aren't per-day; show under a "Week" bucket
-                "name": person.strip(),
-                "activity": "OOO" if cat.upper() == "OOO" else cat,
-                "hours": hrs
-            })
+        except Exception:
+            continue
+        for row in ws.iter_rows(min_row=rmin, max_row=rmax, min_col=2, max_col=3, values_only=True):
+            col_b, col_c = row  # B (activity text), C (names)
+            text_b = str(col_b or "").strip()
+            if not text_b:
+                continue
+            cat = None
+            lower = text_b.casefold()
+            for c in NWW_CATEGORIES:
+                if c in lower:
+                    cat = c.upper() if c == "ooo" else c.title()
+                    break
+            if not cat:
+                continue
+            people = _split_people(col_c or "")
+            if not people:
+                continue
+            hrs = _hours_for_activity(text_b)
+            for person in people:
+                nm = _clean_name(person)
+                if not nm:
+                    continue
+                out.append({
+                    "day": "Week",
+                    "name": nm,
+                    "activity": "OOO" if cat.upper() == "OOO" else cat,
+                    "hours": hrs,
+                })
     return out
 TEAM_OOO_CFG = {
     "aortic":          {"sheet": "#12 Production Analysis",           "flag_col": "K"},
@@ -602,15 +604,27 @@ def main():
         team        = row["team"]
         team_norm   = row["team_norm"]
         period_date = row["period_date"]
-        src         = row["source_file_only"]
+        src = row["source_file_only"]  # used for PH lookup (matches the CSV index)
+        src_file = src
         if team_norm == "cas":
-            src = r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx"
+            src_file = r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx"
         ph_by_name = ph_index.get((team_norm, period_date, src), {})
         cfg = _get_team_cfg(team_norm)
+        if team_norm == "cas" and p.exists():
+            try:
+                cas_extra = extract_cas_activities(p, period_date)
+                if cas_extra:
+                    details.extend(cas_extra)
+            except Exception:
+                pass
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
         people: list[str] = []
         if use_person_hours:
             people = [n for n in ph_by_name.keys() if _clean_name(n)]
+            if team_norm == "cas" and not people and details:
+                people = sorted({d["name"] for d in details if _clean_name(d.get("name"))})
+            if not people:
+                pass
             if not people:
                 p = Path(src)
                 if not p.exists():
@@ -638,9 +652,12 @@ def main():
                 continue
             people = _read_people_from_file_for_team(p, team_norm)
         if not people:
-            source_hint = "Person Hours" if use_person_hours else "workbook"
-            print(f"[non-wip] No names found for team '{team}' on {period_date} from {source_hint}")
-            continue
+            if details:
+                people = sorted({d["name"] for d in details if _clean_name(d.get("name"))})
+            else:
+                source_hint = "Person Hours" if use_person_hours else "workbook"
+                print(f"[non-wip] No names found for team '{team}' on {period_date} from {source_hint}")
+                continue
         per_person_non_wip = {}
         total_non_wip = 0.0
         total_wip_capped = 0.0
