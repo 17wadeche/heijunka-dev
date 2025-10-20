@@ -2735,59 +2735,6 @@ def _aortic_hours_by_col(file_path: Path,
             return {}
     except Exception:
         return {}
-def _aortic_non_wip_ooo(file_path: Path,
-                        sheet: str = "#12 Production Analysis") -> dict:
-    day_ranges = [
-        ("Monday",    7,  40),
-        ("Tuesday",   42, 77),
-        ("Wednesday", 79, 118),
-        ("Thursday",  120,161),
-        ("Friday",    163,200),
-    ]
-    try:
-        df = _read_sheet_as_df(file_path, sheet)
-        if df is None or df.empty:
-            return {"entries": [], "by_day": {}, "counts_by_day": {}}
-        max_needed = max(2, 10)
-        if df.shape[1] <= max_needed:
-            return {"entries": [], "by_day": {}, "counts_by_day": {}}
-        colC = df.iloc[:, 2]   # Column C
-        colK = df.iloc[:, 10]  # Column K
-        out_entries = []
-        by_day = {}
-        counts = {}
-        for day, r1, r2 in day_ranges:
-            start_i = r1 - 1
-            end_i   = r2 - 1
-            if start_i >= len(df):  # window off the sheet
-                by_day[day] = []
-                counts[day] = 0
-                continue
-            end_i = min(end_i, len(df) - 1)
-            subK = colK.iloc[start_i:end_i+1]
-            subC = colC.iloc[start_i:end_i+1]
-            mask_ooo = subK.astype(str).str.contains(r"\bOOO\b", case=False, na=False)
-            names = (
-                subC[mask_ooo]
-                .astype(str)
-                .str.strip()
-                .replace({"#REF!": "", "0": ""})
-            )
-            uniq_names = []
-            seen = set()
-            for nm in names:
-                key = nm.casefold()
-                if nm and key not in seen:
-                    seen.add(key)
-                    uniq_names.append(nm)
-
-            by_day[day] = uniq_names
-            counts[day] = len(uniq_names)
-            for nm in uniq_names:
-                out_entries.append({"day": day, "name": nm})
-        return {"entries": out_entries, "by_day": by_day, "counts_by_day": counts}
-    except Exception:
-        return {"entries": [], "by_day": {}, "counts_by_day": {}}
 def collect_for_team(team_cfg: dict) -> list[dict]:
     team_name = team_cfg["name"]
     pattern = team_cfg.get("pattern", "*.xlsx")
@@ -2920,14 +2867,6 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 except Exception:
                     pass
             if team_name == "Aortic":
-                try:
-                    ooo = _aortic_non_wip_ooo(p, sheet="#12 Production Analysis")
-                    if ooo and (ooo.get("entries") or ooo.get("by_day")):
-                        values["Non-WIP OOO (entries)"] = json.dumps(ooo.get("entries", []), ensure_ascii=False)
-                        values["Non-WIP OOO (by day)"]  = json.dumps(ooo.get("by_day", {}), ensure_ascii=False)
-                        values["Non-WIP OOO (counts)"]  = json.dumps(ooo.get("counts_by_day", {}), ensure_ascii=False)
-                except Exception:
-                    pass
                 try:
                     per_actual = _aortic_hours_by_col(p, sheet="#12 Production Analysis", col_letter="C")
                     if per_actual:
