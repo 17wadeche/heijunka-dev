@@ -134,7 +134,6 @@ _CAS_WEEK_ROWS = [
 def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     if period_date is None:
         return None
-    want = period_date.strftime("%-m/%-d/%Y") if hasattr(period_date, "strftime") else str(period_date)
     rows = [(int(e["row"]), str(e["date"])) for e in _CAS_WEEK_ROWS]
     rows_sorted = sorted(rows, key=lambda x: x[0])
     target_idx = None
@@ -148,7 +147,7 @@ def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     if target_idx is None:
         return None
     start = rows_sorted[target_idx][0]
-    end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)  # safety
+    end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)
     return (start, end)
 def _first_sheet_with_rows(wb, rmax: int):
     for sh in wb.sheetnames:
@@ -610,13 +609,15 @@ def main():
             src_file = r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx"
         ph_by_name = ph_index.get((team_norm, period_date, src), {})
         cfg = _get_team_cfg(team_norm)
+        details: list[dict] = []
+        p = Path(src_file)
         if team_norm == "cas" and p.exists():
             try:
                 cas_extra = extract_cas_activities(p, period_date)
                 if cas_extra:
                     details.extend(cas_extra)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[non-wip] CAS extract error for {period_date}: {e}")
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
         people: list[str] = []
         if use_person_hours:
@@ -626,11 +627,11 @@ def main():
             if not people:
                 pass
             if not people:
-                p = Path(src)
-                if not p.exists():
-                    print(f"[non-wip] No Person Hours names and file missing for team '{team}': {src}")
+                p_srcfile = Path(src_file)
+                if not p_srcfile.exists():
+                    print(f"[non-wip] No Person Hours names and file missing for team '{team}': {src_file}")
                     continue
-                ext = p.suffix.lower()
+                ext = p_srcfile.suffix.lower()
                 if ext not in (".xlsx", ".xlsm", ".xlsb"):
                     print(f"[non-wip] No Person Hours names and unsupported file type ({ext}) for team '{team}': {src}")
                     continue
@@ -639,11 +640,11 @@ def main():
                     continue
                 people = _read_people_from_file_for_team(p, team_norm)
         else:
-            p = Path(src)
-            if not p.exists():
-                print(f"[non-wip] Skip missing file: {src}")
+            p_srcfile = Path(src_file)
+            if not p_srcfile.exists():
+                print(f"[non-wip] Skip missing file: {src_file}")
                 continue
-            ext = p.suffix.lower()
+            ext = p_srcfile.suffix.lower()
             if ext not in (".xlsx", ".xlsm", ".xlsb"):
                 print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
                 continue
@@ -681,20 +682,13 @@ def main():
             "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
         }
         ooo_cfg = TEAM_OOO_CFG.get(team_norm)
-        details: list[dict] = []
-        p = Path(src)
         if ooo_cfg and p.exists():
             try:
-                details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
-            except Exception:
-                details = []
-        if team_norm == "cas" and p.exists():
-            try:
-                cas_extra = extract_cas_activities(p, period_date)
-                if cas_extra:
-                    details.extend(cas_extra)
-            except Exception:
-                pass
+                ooo_details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
+                if ooo_details:
+                    details.extend(ooo_details)
+            except Exception as e:
+                print(f"[non-wip] OOO extract error for {team_norm} {period_date}: {e}")
         row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
         from collections import defaultdict
         ooo_hours_by_person: dict[str, float] = defaultdict(float)
