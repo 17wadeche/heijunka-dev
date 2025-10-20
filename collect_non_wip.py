@@ -7,6 +7,23 @@ import re
 import pandas as pd
 from openpyxl import load_workbook
 from dateutil import parser as dateparser
+from openpyxl import load_workbook
+_DAY_RANGES = {
+    "Monday":    (7, 40),
+    "Tuesday":   (42, 77),
+    "Wednesday": (79, 118),
+    "Thursday":  (120, 161),
+    "Friday":    (163, 200),
+}
+TEAM_OOO_CFG = {
+    "aortic":          {"sheet": "#12 Production Analysis",           "flag_col": "K"},
+    "svt":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},
+    "crdn":            {"sheet": "#12 Production Analysis",           "flag_col": "K"},
+    "ect":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},
+    "pvh":             {"sheet": "#12 Production Analysis",           "flag_col": "K"},
+    "tct clinical":    {"sheet": "Clinical #12 Prod Analysis",        "flag_col": "L"},
+    "tct commercial":  {"sheet": "Commercial #12 Prod Analysis",      "flag_col": "L"},
+}
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
@@ -103,6 +120,86 @@ def _norm_sheet_name(s: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     s = s.replace("wip non wip", "wip non wip")
     return s
+def _norm_title(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = s.replace("–", "-").replace("—", "-")
+    return " ".join(s.split())
+def _resolve_sheet_exact_or_fuzzy_openpyxl(wb, desired_title: str) -> str | None:
+    want = _norm_title(desired_title)
+    m = {_norm_title(n): n for n in wb.sheetnames}
+    if want in m:
+        return m[want]
+    for actual in wb.sheetnames:
+        ns = _norm_title(actual)
+        if (want in ns) or ns.startswith(want) or ns.endswith(want):
+            return actual
+    return None
+def _resolve_sheet_exact_or_fuzzy_xlsb(wb, desired_title: str) -> str | None:
+    want = _norm_title(desired_title)
+    names = list(getattr(wb, "sheets", []) or [])
+    m = {_norm_title(n): n for n in names}
+    if want in m:
+        return m[want]
+    for actual in names:
+        ns = _norm_title(actual)
+        if (want in ns) or ns.startswith(want) or ns.endswith(want):
+            return actual
+    return None
+def extract_ooo_per_day(xlsx_path: Path, sheet_title: str, flag_col_letter: str) -> list[dict]:
+    NAME_COL_IDX = _col_letter_to_index("C")
+    FLAG_COL_IDX = _col_letter_to_index(flag_col_letter)
+    ext = xlsx_path.suffix.lower()
+    out = []
+    if ext in (".xlsx", ".xlsm"):
+        try:
+            wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+        except Exception:
+            return []
+        sh_name = _resolve_sheet_exact_or_fuzzy_openpyxl(wb, sheet_title)
+        if not sh_name:
+            return []
+        ws = wb[sh_name]
+        for day, (rmin, rmax) in _DAY_RANGES.items():
+            seen = set()
+            for row in ws.iter_rows(
+                min_row=rmin, max_row=rmax,
+                min_col=min(NAME_COL_IDX, FLAG_COL_IDX),
+                max_col=max(NAME_COL_IDX, FLAG_COL_IDX),
+                values_only=True
+            ):
+                name = str(row[NAME_COL_IDX - min(NAME_COL_IDX, FLAG_COL_IDX)] or "").strip()
+                flag = str(row[FLAG_COL_IDX - min(NAME_COL_IDX, FLAG_COL_IDX)] or "").strip().lower()
+                if name and flag == "ooo":
+                    key = name.casefold()
+                    if key not in seen:
+                        seen.add(key)
+                        out.append({"day": day, "name": name, "activity": "OOO"})
+        return out
+    elif ext == ".xlsb" and open_xlsb is not None:
+        try:
+            with open_xlsb(xlsx_path) as wb:
+                sh_name = _resolve_sheet_exact_or_fuzzy_xlsb(wb, sheet_title)
+                if not sh_name:
+                    return []
+                ws = wb.get_sheet(sh_name)
+                rows_by_index = {}
+                for ridx, row in enumerate(ws.rows(), start=1):
+                    rows_by_index[ridx] = [c.v for c in row]
+                for day, (rmin, rmax) in _DAY_RANGES.items():
+                    seen = set()
+                    for ridx in range(rmin, rmax + 1):
+                        r = rows_by_index.get(ridx) or []
+                        name = str((r[NAME_COL_IDX - 1] if len(r) >= NAME_COL_IDX else "") or "").strip()
+                        flag = str((r[FLAG_COL_IDX - 1] if len(r) >= FLAG_COL_IDX else "") or "").strip().lower()
+                        if name and flag == "ooo":
+                            key = name.casefold()
+                            if key not in seen:
+                                seen.add(key)
+                                out.append({"day": day, "name": name, "activity": "OOO"})
+            return out
+        except Exception:
+            return []
+    return []
 def _resolve_sheet_name(wb, desired_patterns: list[str]) -> str | None:
     if not desired_patterns:
         return None
@@ -365,6 +462,29 @@ def main():
         weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
         pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
         pct_in_wip = round(pct_in_wip, 2)
+        row_obj = {
+            "team": team,
+            "period_date": period_date.isoformat(),
+            "source_file": src,
+            "people_count": people_count,
+            "total_non_wip_hours": round(total_non_wip, 2),
+            "% in WIP": pct_in_wip,
+            "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
+        }
+        ooo_cfg = TEAM_OOO_CFG.get(team_norm)
+        if ooo_cfg:
+            p = Path(src)
+            if p.exists():
+                try:
+                    details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
+                except Exception:
+                    details = []
+            else:
+                details = []
+            row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
+        else:
+            row_obj["non_wip_activities"] = "[]"
+        out_rows.append(row_obj)
         out_rows.append({
             "team": team,
             "period_date": period_date.isoformat(),
@@ -386,6 +506,7 @@ def main():
         "total_non_wip_hours",
         "% in WIP",
         "non_wip_by_person",
+        "non_wip_activities",
     ]
     with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
