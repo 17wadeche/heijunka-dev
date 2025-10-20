@@ -47,6 +47,8 @@ def _excel_serial_to_date(n):
         return (_dt(1899, 12, 30) + timedelta(days=float(n))).date()
     except Exception:
         return None
+def _norm_person(s: str) -> str:
+    return re.sub(r"\s+", " ", str(s or "").strip()).casefold()
 def _coerce_to_date(v):
     if isinstance(v, _dt): return v.date()
     if isinstance(v, _date): return v
@@ -484,14 +486,25 @@ def main():
             details = []
         row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
         from collections import Counter
-        ooo_days = Counter([d.get("name", "").strip() for d in details if str(d.get("activity","")).upper() == "OOO"])
-        ooo_hours_by_person = {name: days * 8.0 for name, days in ooo_days.items()}
-        full_week_ooo = {name for name, days in ooo_days.items() if days >= 5}
-        for person in list(per_person_non_wip.keys()):
-            adj = float(per_person_non_wip.get(person, 0.0)) - float(ooo_hours_by_person.get(person, 0.0))
-            per_person_non_wip[person] = round(max(0.0, adj), 2)
+        ooo_days_norm = Counter(
+            _norm_person(d.get("name", ""))
+            for d in details
+            if str(d.get("activity", "")).strip().upper() == "OOO" and _norm_person(d.get("name", ""))
+        )
+        canon_by_norm = {}
+        for original_key in per_person_non_wip.keys():
+            nk = _norm_person(original_key)
+            if nk and nk not in canon_by_norm:
+                canon_by_norm[nk] = original_key
+        for original_key in list(per_person_non_wip.keys()):
+            nk = _norm_person(original_key)
+            days = float(ooo_days_norm.get(nk, 0.0))
+            deduct = days * 8.0
+            adj = float(per_person_non_wip.get(original_key, 0.0)) - deduct
+            per_person_non_wip[original_key] = round(max(0.0, adj), 2)
         total_non_wip = sum(float(v) for v in per_person_non_wip.values())
-        effective_people = [p for p in people if p not in full_week_ooo]
+        full_week_ooo_norm = {nk for nk, days in ooo_days_norm.items() if days >= 5}
+        effective_people = [p for p in people if _norm_person(p) not in full_week_ooo_norm]
         people_count = len(effective_people)
         weekly_total_available = WEEKLY_HOURS_DEFAULT * people_count if people_count > 0 else 0.0
         total_wip_capped = 0.0
@@ -500,7 +513,7 @@ def main():
             total_wip_capped += min(float(wip_actual), WEEKLY_HOURS_DEFAULT)
         pct_in_wip = (total_wip_capped / weekly_total_available * 100.0) if weekly_total_available > 0 else 0.0
         pct_in_wip = round(pct_in_wip, 2)
-        ooo_hours_total = round(sum(ooo_hours_by_person.values()), 2)
+        ooo_hours_total = round(sum(ooo_days_norm.values()) * 8.0, 2)
         row_obj["people_count"] = people_count
         row_obj["total_non_wip_hours"] = round(total_non_wip, 2)
         row_obj["% in WIP"] = pct_in_wip
