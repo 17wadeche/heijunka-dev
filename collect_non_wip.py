@@ -188,7 +188,7 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
                 if not nm:
                     continue
                 out.append({
-                    "day": "Week",
+                    "day": "?",
                     "name": nm,
                     "activity": "OOO" if cat.upper() == "OOO" else cat,
                     "hours": hrs,
