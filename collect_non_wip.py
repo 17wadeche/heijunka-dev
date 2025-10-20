@@ -19,7 +19,8 @@ TEAM_CFG = {
     "svt":            {"sheet_patterns": ["individual"],                "col": "A", "start": 1},
     "tct commercial": {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},
     "tct clinical":   {"sheet_patterns": ["individual (wip non wip)"], "col": "Z", "start": 1},
-    "ph":             {"sheet_patterns": ["ph"], "row": 53},
+    "ph":             {"people_from": "person_hours"},
+    "cas":            {"people_from": "person_hours"},
 }
 try:
     from pyxlsb import open_workbook as open_xlsb
@@ -292,9 +293,9 @@ def main():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
     df = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
     df["team_norm"] = df.get("team", "").astype(str).str.casefold()
-    df = df[df["team_norm"].isin(TEAM_CFG.keys()) & (df.get("source_file", "") != "")]
+    df = df[(df.get("source_file", "") != "")]
     if df.empty:
-        print("[non-wip] No rows found in metrics_aggregate_dev.csv for mapped teams")
+        print("[non-wip] No rows found in metrics_aggregate_dev.csv with a source file")
         return
     df["period_date"] = df["period_date"].apply(_coerce_to_date)
     df = df.dropna(subset=["period_date"])
@@ -315,22 +316,42 @@ def main():
         team_norm   = row["team_norm"]
         period_date = row["period_date"]
         src         = row["source_file_only"]
-        p = Path(src)
-        if not p.exists():
-            print(f"[non-wip] Skip missing file: {src}")
-            continue
-        ext = p.suffix.lower()
-        if ext not in (".xlsx", ".xlsm", ".xlsb"):
-            print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
-            continue
-        if ext == ".xlsb" and open_xlsb is None:
-            print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
-            continue
-        people = _read_people_from_file_for_team(p, team_norm)
+        ph_by_name = ph_index.get((team_norm, period_date, src), {})
+        cfg = _get_team_cfg(team_norm)
+        use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
+        people: list[str] = []
+        if use_person_hours:
+            people = [n for n in ph_by_name.keys() if _clean_name(n)]
+            if not people:
+                p = Path(src)
+                if not p.exists():
+                    print(f"[non-wip] No Person Hours names and file missing for team '{team}': {src}")
+                    continue
+                ext = p.suffix.lower()
+                if ext not in (".xlsx", ".xlsm", ".xlsb"):
+                    print(f"[non-wip] No Person Hours names and unsupported file type ({ext}) for team '{team}': {src}")
+                    continue
+                if ext == ".xlsb" and open_xlsb is None:
+                    print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
+                    continue
+                people = _read_people_from_file_for_team(p, team_norm)
+        else:
+            p = Path(src)
+            if not p.exists():
+                print(f"[non-wip] Skip missing file: {src}")
+                continue
+            ext = p.suffix.lower()
+            if ext not in (".xlsx", ".xlsm", ".xlsb"):
+                print(f"[non-wip] Skip unsupported file type ({ext}): {src}")
+                continue
+            if ext == ".xlsb" and open_xlsb is None:
+                print("[non-wip] '.xlsb' requires 'pyxlsb'. Try: pip install pyxlsb")
+                continue
+            people = _read_people_from_file_for_team(p, team_norm)
         if not people:
-            print(f"[non-wip] No names found for team '{team}' from {p.name}")
+            source_hint = "Person Hours" if use_person_hours else "workbook"
+            print(f"[non-wip] No names found for team '{team}' on {period_date} from {source_hint}")
             continue
-        ph_by_name = ph_index.get((team_norm, period_date, src), {})  # may be empty
         per_person_non_wip = {}
         total_non_wip = 0.0
         total_wip_capped = 0.0
