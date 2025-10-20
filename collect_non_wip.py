@@ -603,6 +603,8 @@ def main():
         team_norm   = row["team_norm"]
         period_date = row["period_date"]
         src         = row["source_file_only"]
+        if team_norm == "cas":
+            src = r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx"
         ph_by_name = ph_index.get((team_norm, period_date, src), {})
         cfg = _get_team_cfg(team_norm)
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")

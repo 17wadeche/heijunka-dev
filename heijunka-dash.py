@@ -206,21 +206,32 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     except Exception:
         obj = []
     if not isinstance(obj, list) or not obj:
-        return pd.DataFrame(columns=["Day", "Names"])
+        return pd.DataFrame(columns=["Activity", "Day", "Name", "Time"])
     df = pd.DataFrame(obj)
-    if df.empty or "day" not in df.columns or "name" not in df.columns:
-        return pd.DataFrame(columns=["Day", "Names"])
-    agg = (
-        df[["day", "name"]]
-        .dropna(subset=["day", "name"])
-        .groupby("day", as_index=False)["name"]
-        .agg(lambda s: ", ".join(sorted(pd.unique([str(x).strip() for x in s if str(x).strip()]))))
-        .rename(columns={"day": "Day", "name": "Names"})
+    for c in ["activity", "day", "name", "hours"]:
+        if c not in df.columns:
+            df[c] = None
+    df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
+    out = (
+        df[["activity", "day", "name", "hours"]]
+        .rename(columns={
+            "activity": "Activity",
+            "day": "Day",
+            "name": "Name",
+            "hours": "Time"
+        })
+        .dropna(subset=["Activity", "Name"])
+        .assign(
+            Activity=lambda d: d["Activity"].astype(str).str.strip(),
+            Day=lambda d: d["Day"].astype(str).str.strip(),
+            Name=lambda d: d["Name"].astype(str).str.strip(),
+        )
     )
-    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    agg["__ord"] = agg["Day"].apply(lambda d: day_order.index(d) if d in day_order else 999)
-    agg = agg.sort_values(["__ord", "Day"]).drop(columns="__ord")
-    return agg
+    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Week"]
+    out["__ord"] = out["Day"].apply(lambda d: day_order.index(d) if d in day_order else 999)
+    out = out.sort_values(["__ord", "Activity", "Name"]).drop(columns="__ord")
+    out["Time"] = out["Time"].fillna(0).map(lambda x: f"{float(x):.0f}h")
+    return out
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
@@ -545,16 +556,13 @@ if nonwip_mode:
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
     if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
-        st.info("No OOO entries recorded for this selection.")
+        st.info("No Non-WIP activities recorded for this selection.")
     else:
-        ooo_tbl = build_ooo_table_from_row(sel.iloc[0])
-        if ooo_tbl.empty:
-            st.info("No OOO entries recorded for this selection.")
+        act_tbl = build_ooo_table_from_row(sel.iloc[0])
+        if act_tbl.empty:
+            st.info("No Non-WIP activities recorded for this selection.")
         else:
-            st.dataframe(
-                ooo_tbl.style.set_properties(**{"white-space": "normal"}),
-                use_container_width=True
-            )
+            st.dataframe(act_tbl, use_container_width=True)
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
     if wk_people.empty:
