@@ -33,7 +33,6 @@ def _split_people(cell_c: str) -> list[str]:
     return [p.strip() for p in parts if p and p.strip()]
 def _hours_for_activity(note_text: str) -> float:
     return 4.0 if _is_half_day(note_text) else 8.0
-# CAS weekly "start row" → date mapping you provided
 _CAS_WEEK_ROWS = [
     {"row":  7786, "date": "1/1/2024"},
     {"row":  7918, "date": "1/8/2024"},
@@ -149,15 +148,6 @@ def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     start = rows_sorted[target_idx][0]
     end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)
     return (start, end)
-def _first_sheet_with_rows(wb, rmax: int):
-    for sh in wb.sheetnames:
-        ws = wb[sh]
-        try:
-            if getattr(ws, "max_row", 0) >= rmax:
-                return sh
-        except Exception:
-            pass
-    return wb.sheetnames[0] if wb.sheetnames else None
 def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
     out: list[dict] = []
     ext = xlsx_path.suffix.lower()
@@ -511,26 +501,6 @@ def _read_names_from_sheet_col_xlsx(path: Path, sheet_patterns: list[str], col_l
             return []
     seen, out = set(), []
     for n in names:
-        k = n.casefold()
-        if k not in seen:
-            seen.add(k); out.append(n)
-    return out
-def _read_names_from_all_sheets_row_xlsx(path: Path, row_number: int, max_cols: int = 400) -> list[str]:
-    try:
-        wb = load_workbook(path, data_only=True, read_only=True)
-    except Exception:
-        print(f"[non-wip] Could not open workbook for PH: {path}")
-        return []
-    all_names = []
-    for sh in wb.sheetnames:
-        ws = wb[sh]
-        for r in ws.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=max_cols, values_only=True):
-            for val in r:
-                nm = _clean_name(val)
-                if nm:
-                    all_names.append(nm)
-    seen, out = set(), []
-    for n in all_names:
         k = n.casefold()
         if k not in seen:
             seen.add(k); out.append(n)
