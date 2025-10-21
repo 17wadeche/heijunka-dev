@@ -26,6 +26,17 @@ _HALF_DAY_RE = _re.compile(
     )
     """
 )
+_MINUTES_RE = re.compile(r"(-?\d+(?:\.\d+)?)")
+def _to_minutes(v) -> float | None:
+    if v is None:
+        return None
+    s = str(v).strip().lower().replace(",", "")
+    try:
+        return float(s)
+    except Exception:
+        pass
+    m = _MINUTES_RE.search(s)
+    return float(m.group(1)) if m else None
 _OOO_TOKEN_RE = _re.compile(r"""(?ix)\bO\s*O\s*O\b""")
 def _has_inline_ooo(s: str) -> bool:
     return bool(_OOO_TOKEN_RE.search(str(s or "")))
@@ -179,27 +190,30 @@ def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
     if not sh_name:
         return out
     ws = wb[sh_name]
-    NAME_COL = 3
-    FLAG_COL = 4
-    MINS_COL = 7
-    ACT_COL  = 11
+    NAME_COL = 3  # C
+    FLAG_COL = 4  # D
+    MINS_COL = 7  # G
+    ACT_COL  = 11 # K
     from collections import defaultdict
     agg: dict[tuple[str, str], float] = defaultdict(float)
     max_row = getattr(ws, "max_row", 0)
     for row in ws.iter_rows(min_row=1, max_row=max_row,
                             min_col=1, max_col=max(NAME_COL, FLAG_COL, MINS_COL, ACT_COL),
                             values_only=True):
-        flag = str(row[FLAG_COL-1] or "").strip().casefold() if len(row) >= FLAG_COL else ""
+        flag = (str(row[FLAG_COL-1] or "").strip().casefold()
+                if len(row) >= FLAG_COL else "")
         if flag != "non-wip":
             continue
         name = _clean_name(row[NAME_COL-1] if len(row) >= NAME_COL else "")
         if not name:
             continue
-        mins_val = row[MINS_COL-1] if len(row) >= MINS_COL else None
-        mins = _to_float(mins_val)
+        mins = _to_minutes(row[MINS_COL-1] if len(row) >= MINS_COL else None)
         if mins is None or mins <= 0:
             continue
-        hours = float(mins) / 60.0
+        hours_raw = float(mins) / 60.0
+        hours = round(hours_raw, 2)
+        if hours == 0.0 and hours_raw > 0.0:
+            hours = 0.01
         act_raw = str(row[ACT_COL-1] or "").strip() if len(row) >= ACT_COL else ""
         act = re.sub(r"^\s*\d+\.\s*", "", act_raw).strip()
         if not act:
