@@ -970,6 +970,7 @@ def main():
             orig = canon_by_norm.get(nk)
             if not orig:
                 continue
+            
             adj = float(per_person_non_wip.get(orig, 0.0)) - float(hrs)
             per_person_non_wip[orig] = round(max(0.0, adj), 2)
         total_non_wip = sum(float(v) for v in per_person_non_wip.values())
