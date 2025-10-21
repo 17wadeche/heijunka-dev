@@ -600,7 +600,7 @@ if nonwip_mode:
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
-            st.dataframe(act_tbl.reset_index(drop=True), use_container_width=True)
+            st.dataframe(act_tbl, use_container_width=True, hide_index=True)
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
     if wk_people.empty:
@@ -1719,4 +1719,7 @@ for col in ["Target UPLH", "Actual UPLH", "Actual HC used", "Efficiency vs Targe
         fmt_map[col] = "{:,.2f}"
 if "HC in WIP" in f_table.columns:
     fmt_map["HC in WIP"] = "{:,.0f}"
-st.dataframe(f_table.style.format(fmt_map), use_container_width=True)
+st.dataframe(
+    f_table.style.format(fmt_map).hide(axis="index"),  # <— hide the index
+    use_container_width=True
+)
