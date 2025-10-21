@@ -71,7 +71,7 @@ def _strip_name_annotations(s: str) -> str:
     txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\b(?:AM|PM)\b\.?", "", txt, flags=_re.I)
     txt = _re.sub(r"\b(?:half\s*day|partial\s*day|1\s*/\s*2(?:\s*day)?)\b", "", txt, flags=_re.I)
-    txt = _re.sub(r"\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)   # 1:30
+    txt = _re.sub(r"\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)
     txt = _re.sub(r"\bout\s*at\s*(?:12:00|1:00|2:00)\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)
     txt = _re.sub(r"@\s*noon\b", "", txt, flags=_re.I)
     txt = _re.sub(r"\bout\s*early\s*afternoon\b", "", txt, flags=_re.I)
@@ -229,25 +229,25 @@ def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
     if not sh_name:
         return out
     ws = wb[sh_name]
-    NAME_COL = 3  # C
-    FLAG_COL = 4  # D
-    MINS_COL = 7  # G
-    ACT_COL  = 11 # K
+    NAME_COL = 3  
+    FLAG_COL = 4  
+    MINS_COL = 7  
+    ACT_COL  = 11 
     group_re = re.compile(
         r"""(?ix)
         ^\s*
-        (?P<act>.*?)                      # activity text (lazy, before minutes)
+        (?P<act>.*?)                    
         \s*
-        (?P<mins>\d+)\s*(?:min|mins|minutes)\b  # minutes per person
-        (?:\s*[x×]\s*(?P<count>\d+))?     # optional multiplier (ignored for per-person minutes)
+        (?P<mins>\d+)\s*(?:min|mins|minutes)\b 
+        (?:\s*[x×]\s*(?P<count>\d+))?   
         .*?
-        \(\s*(?P<people>[^)]*?)\s*\)      # people inside parentheses
+        \(\s*(?P<people>[^)]*?)\s*\)   
         \s*$
         """
     )
     def _clean_act_label(s: str) -> str:
         s = str(s or "").strip()
-        s = re.sub(r"\s*[:\-–—]\s*$", "", s)   # drop trailing punctuation
+        s = re.sub(r"\s*[:\-–—]\s*$", "", s)  
         return s if s else "Non-WIP"
     max_row = getattr(ws, "max_row", 0)
     from collections import defaultdict
@@ -347,8 +347,8 @@ def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) 
     if not sh_name:
         return out
     ws = wb[sh_name]
-    NAME_COL = 1   # A
-    PAIRS = [(10, 11), (12, 13)]  # (J,K) and (L,M)
+    NAME_COL = 1  
+    PAIRS = [(10, 11), (12, 13)]
     from collections import defaultdict
     agg = defaultdict(float)
     max_row = getattr(ws, "max_row", 0)
@@ -403,7 +403,7 @@ def extract_ect_nonwip(xlsx_path: Path) -> list[dict]:
         act2 = (str(row[11]).strip() if len(row) >= 12 and row[11] is not None else "")
         hrs2 = _to_float(row[12] if len(row) >= 13 else None)
         def _clean_act(s: str) -> str:
-            s = re.sub(r"^\s*\d+\.\s*", "", s)  # leading enumerations
+            s = re.sub(r"^\s*\d+\.\s*", "", s)  
             return s.strip()
         for act, hrs in ((act1, hrs1), (act2, hrs2)):
             if not act:
@@ -446,7 +446,7 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
                 "paid holiday", "us holiday", "ir holiday",
                 "us team", "us ooo", "fourth of july holiday", "marie-wfh"
             }
-            col_b, col_c = row  # B (activity text), C (names)
+            col_b, col_c = row  
             text_b = str(col_b or "").strip()
             if not text_b:
                 continue
@@ -498,7 +498,7 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             "name": nm,
             "activity": activity,
             "hours": round(vals["hours"], 2),
-            "days": int(vals["days"]),   # NEW: number of days this occurred within the week
+            "days": int(vals["days"]), 
         })
     return out
 TEAM_OOO_CFG = {
@@ -602,7 +602,7 @@ def _col_letter_to_index(letter: str) -> int:
     return max(1, acc)
 def _norm_sheet_name(s: str) -> str:
     s = (s or "").lower()
-    s = s.replace("–", "-").replace("—", "-")        # normalize dashes
+    s = s.replace("–", "-").replace("—", "-")      
     s = s.replace("(", " ").replace(")", " ")
     s = s.replace("_", " ").replace("-", " ")
     s = re.sub(r"\s+", " ", s).strip()
@@ -891,7 +891,7 @@ def main():
         team        = row["team"]
         team_norm   = row["team_norm"]
         period_date = row["period_date"]
-        src = row["source_file_only"]  # used for PH lookup (matches the CSV index)
+        src = row["source_file_only"] 
         src_file = src
         if team_norm == "cas":
             src_file = r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx"
