@@ -59,9 +59,13 @@ def _hours_for_activity(note_text: str) -> float:
     return 4.0 if _is_half_day(note_text) else 8.0
 def _strip_name_annotations(s: str) -> str:
     txt = str(s or "")
+    txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
+    txt = _re.sub(r"\b(?:AM|PM)\b\.?", "", txt, flags=_re.I)
+    txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*@\s*\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*-\s*out.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*\([^)]*\)\s*$", "", txt)
+    txt = _re.sub(r"\s{2,}", " ", txt)
     return txt.strip()
 _CAS_WEEK_ROWS = [
     {"row":  7786, "date": "1/1/2024"},
@@ -412,8 +416,10 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             text_b = str(col_b or "").strip()
             if not text_b:
                 continue
-            cat = None
             lower = text_b.casefold()
+            if "paid holiday" in lower or "us holiday" in lower:
+                continue
+            cat = None
             for c in NWW_CATEGORIES:
                 if c in lower:
                     cat = c.upper() if c == "ooo" else c.title()
