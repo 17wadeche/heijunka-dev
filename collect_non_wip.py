@@ -36,6 +36,14 @@ def _is_half_day(text: str) -> bool:
 def _split_people(cell_c: str) -> list[str]:
     parts = _re.split(r"[,&]+", str(cell_c or ""))
     return [p.strip() for p in parts if p and p.strip()]
+def _to_float(v) -> float | None:
+    try:
+        s = str(v).strip()
+        if s == "" or s.lower() in {"nan", "none", "-"}:
+            return None
+        return float(s)
+    except Exception:
+        return None
 def _hours_for_activity(note_text: str) -> float:
     return 4.0 if _is_half_day(note_text) else 8.0
 def _strip_name_annotations(s: str) -> str:
@@ -159,6 +167,50 @@ def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     start = rows_sorted[target_idx][0]
     end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)
     return (start, end)
+def extract_ect_nonwip(xlsx_path: Path) -> list[dict]:
+    out: list[dict] = []
+    if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
+        return out
+    try:
+        wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+    except Exception:
+        return out
+    sh_name = _resolve_sheet_exact_or_fuzzy_openpyxl(wb, "Available WIP Hours")
+    if not sh_name:
+        return out
+    ws = wb[sh_name]
+    MIN_COL, MAX_COL = 1, 13
+    current_person = None
+    for row in ws.iter_rows(min_row=1, max_row=getattr(ws, "max_row", 0),
+                            min_col=MIN_COL, max_col=MAX_COL, values_only=True):
+        raw_name = _clean_name(row[0]) if len(row) >= 1 else ""
+        if raw_name:
+            current_person = raw_name
+        if not current_person:
+            continue
+        act1 = (str(row[9]).strip() if len(row) >= 10 and row[9] is not None else "")
+        hrs1 = _to_float(row[10] if len(row) >= 11 else None)
+        act2 = (str(row[11]).strip() if len(row) >= 12 and row[11] is not None else "")
+        hrs2 = _to_float(row[12] if len(row) >= 13 else None)
+        def _clean_act(s: str) -> str:
+            s = re.sub(r"^\s*\d+\.\s*", "", s)  # leading enumerations
+            return s.strip()
+        for act, hrs in ((act1, hrs1), (act2, hrs2)):
+            if not act:
+                continue
+            act = _clean_act(act)
+            if not act:
+                continue
+            if hrs is None or hrs <= 0:
+                continue
+            activity = "OOO" if "ooo" in act.casefold() else act
+            out.append({
+                "day": "Week",
+                "name": current_person,
+                "activity": activity,
+                "hours": float(hrs),
+            })
+    return out
 def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
     out: list[dict] = []
     ext = xlsx_path.suffix.lower()
@@ -613,6 +665,13 @@ def main():
                     details.extend(cas_extra)
             except Exception as e:
                 print(f"[non-wip] CAS extract error for {period_date}: {e}")
+        if team_norm == "ect" and p.exists():
+            try:
+                ect_extra = extract_ect_nonwip(p)
+                if ect_extra:
+                    details.extend(ect_extra)
+            except Exception as e:
+                print(f"[non-wip] ECT extract error for {period_date}: {e}")
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
         people: list[str] = []
         if use_person_hours:
