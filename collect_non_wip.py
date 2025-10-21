@@ -199,9 +199,25 @@ def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
     FLAG_COL = 4  # D
     MINS_COL = 7  # G
     ACT_COL  = 11 # K
+    group_re = re.compile(
+        r"""(?ix)
+        ^\s*
+        (?P<act>.*?)                      # activity text (lazy, before minutes)
+        \s*
+        (?P<mins>\d+)\s*(?:min|mins|minutes)\b  # minutes per person
+        (?:\s*[x×]\s*(?P<count>\d+))?     # optional multiplier (ignored for per-person minutes)
+        .*?
+        \(\s*(?P<people>[^)]*?)\s*\)      # people inside parentheses
+        \s*$
+        """
+    )
+    def _clean_act_label(s: str) -> str:
+        s = str(s or "").strip()
+        s = re.sub(r"\s*[:\-–—]\s*$", "", s)   # drop trailing punctuation
+        return s if s else "Non-WIP"
+    max_row = getattr(ws, "max_row", 0)
     from collections import defaultdict
     agg: dict[tuple[str, str], float] = defaultdict(float)
-    max_row = getattr(ws, "max_row", 0)
     for row in ws.iter_rows(min_row=1, max_row=max_row,
                             min_col=1, max_col=max(NAME_COL, FLAG_COL, MINS_COL, ACT_COL),
                             values_only=True):
@@ -209,22 +225,29 @@ def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
                 if len(row) >= FLAG_COL else "")
         if flag != "non-wip":
             continue
-        name = _clean_name(row[NAME_COL-1] if len(row) >= NAME_COL else "")
-        if not name:
+        name_c = _clean_name(row[NAME_COL-1] if len(row) >= NAME_COL else "")
+        mins_v = _to_minutes(row[MINS_COL-1] if len(row) >= MINS_COL else None)
+        act_raw = str(row[ACT_COL-1] or "") if len(row) >= ACT_COL else ""
+        act_norm = act_raw.strip()
+        m = group_re.match(act_norm) if act_norm else None
+        if m:
+            act_label = _clean_act_label(m.group("act"))
+            per_min = float(m.group("mins") or 0)
+            per_hours = round(per_min / 60.0, 2)
+            people_str = m.group("people") or ""
+            for person in [p.strip() for p in people_str.split(",") if _clean_name(p)]:
+                agg[(person, act_label)] += per_hours
             continue
-        mins = _to_minutes(row[MINS_COL-1] if len(row) >= MINS_COL else None)
-        if mins is None or mins <= 0:
+        activity = "OOO" if "ooo" in act_norm.casefold() else _clean_act_label(act_norm)
+        if name_c and mins_v is not None and mins_v > 0:
+            hours = round(float(mins_v) / 60.0, 2)
+            agg[(name_c, activity)] += hours
             continue
-        hours_raw = float(mins) / 60.0
-        hours = round(hours_raw, 2)
-        if hours == 0.0 and hours_raw > 0.0:
-            hours = 0.01
-        act_raw = str(row[ACT_COL-1] or "").strip() if len(row) >= ACT_COL else ""
-        act = re.sub(r"^\s*\d+\.\s*", "", act_raw).strip()
-        if not act:
+        if mins_v is not None and mins_v > 0 and activity:
+            agg[("Unassigned", activity)] += round(float(mins_v) / 60.0, 2)
             continue
-        activity = "OOO" if "ooo" in act.casefold() else act
-        agg[(name, activity)] += hours
+        if not act_norm and not name_c:
+            agg[("Unassigned", "Non-WIP")] += 0.0
     for (name, activity), hrs in agg.items():
         out.append({
             "day": "Week",
@@ -914,7 +937,7 @@ def main():
             "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
         }
         ooo_cfg = TEAM_OOO_CFG.get(team_norm)
-        if ooo_cfg and team_norm != "ect" and p.exists():
+        if ooo_cfg and team_norm not in {"ect", "pvh"} and p.exists():
             try:
                 ooo_details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
                 if ooo_details:
