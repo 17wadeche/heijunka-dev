@@ -178,6 +178,11 @@ def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     start = rows_sorted[target_idx][0]
     end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)
     return (start, end)
+def _ph_day_columns_for_date(period_date: _date) -> list[str]:
+    if not isinstance(period_date, _date):
+        return ['Y','Z','AA','AB','AC']
+    threshold = _date(period_date.year, 9, 1)
+    return ['Z','AA','AB','AC','AD'] if period_date >= threshold else ['Y','Z','AA','AB','AC']
 def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
     out: list[dict] = []
     if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
@@ -236,7 +241,37 @@ def _to_float(v) -> float | None:
         return float(s)
     except Exception:
         return None
-
+def extract_ph_ooo(xlsx_path: Path, period_date: _date) -> list[dict]:
+    out: list[dict] = []
+    if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
+        return out
+    try:
+        wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+    except Exception:
+        return out
+    day_names = ["Monday","Tuesday","Wednesday","Thursday","Friday"]
+    day_cols  = _ph_day_columns_for_date(period_date)
+    col_idxs  = [_col_letter_to_index(c) for c in day_cols]
+    START_ROW = 66
+    for sh in wb.sheetnames:
+        ws = wb[sh]
+        found_any = False
+        for day, col_idx in zip(day_names, col_idxs):
+            for row in ws.iter_rows(min_row=START_ROW, max_row=getattr(ws, "max_row", 0),
+                                    min_col=col_idx, max_col=col_idx, values_only=True):
+                name = _clean_name(row[0])
+                if not name:
+                    break  # stop at first blank for this day
+                found_any = True
+                out.append({
+                    "day": day,
+                    "name": name,
+                    "activity": "OOO",
+                    "hours": 8.0,
+                })
+        if found_any:
+            break  # we found the PH grid on this sheet; no need to scan others
+    return out
 def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) -> list[dict]:
     out: list[dict] = []
     if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
@@ -784,6 +819,13 @@ def main():
                     details.extend(cas_extra)
             except Exception as e:
                 print(f"[non-wip] CAS extract error for {period_date}: {e}")
+        if team_norm == "ph" and p.exists():
+            try:
+                ph_ooo = extract_ph_ooo(p, period_date)
+                if ph_ooo:
+                    details.extend(ph_ooo)
+            except Exception as e:
+                print(f"[non-wip] PH OOO extract error for {period_date}: {e}")
         if team_norm == "ect" and p.exists():
             try:
                 ect_details = extract_ect_nonwip(p)
