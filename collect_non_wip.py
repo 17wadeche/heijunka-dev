@@ -469,10 +469,6 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
         except Exception:
             continue
         for row in ws.iter_rows(min_row=rmin, max_row=rmax, min_col=2, max_col=3, values_only=True):
-            BLOCK_IN_CAS = {
-                "paid holiday", "us holiday", "ir holiday",
-                "us team", "us ooo", "fourth of july holiday", "marie-wfh"
-            }
             col_b, col_c = row  
             text_b = str(col_b or "").strip()
             if not text_b:
@@ -480,8 +476,6 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             if _is_blocked_activity_text(text_b):
                 continue
             lower = text_b.casefold()
-            if any(b in lower for b in BLOCK_IN_CAS):
-                continue
             cat = None
             for c in NWW_CATEGORIES:
                 if c in lower:
@@ -993,8 +987,6 @@ def main():
         if not people:
             if details:
                 people = sorted({d["name"] for d in details if _clean_name(d.get("name"))})
-            elif details:
-                details = [d for d in details if not _globally_block_detail(d)]
             else:
                 source_hint = "Person Hours" if use_person_hours else "workbook"
                 print(f"[non-wip] No names found for team '{team}' on {period_date} from {source_hint}")
@@ -1029,6 +1021,8 @@ def main():
                     details.extend(ooo_details)
             except Exception as e:
                 print(f"[non-wip] OOO extract error for {team_norm} {period_date}: {e}")
+        if details:
+            details = [d for d in details if not _globally_block_detail(d)]
         row_obj["non_wip_activities"] = json.dumps(details, ensure_ascii=False)
         from collections import defaultdict
         ooo_hours_by_person: dict[str, float] = defaultdict(float)
