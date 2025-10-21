@@ -653,6 +653,34 @@ if nonwip_mode:
         vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
         headroom = max(1.0, vmax * 0.18) if pd.notna(vmax) else 1.0
         y_scale = alt.Scale(domain=[0, vmax + headroom], nice=False, clamp=False)
+        totals = (
+            wk_people[["person", "period_date", "Non-WIP Hours"]]
+            .rename(columns={"Non-WIP Hours": "Total"})
+            .assign(Status=lambda d: np.where(d["Total"] <= 7.5, "Good (≤7.5)", "Over (>7.5)"))
+        )
+        status_tick = (
+            alt.Chart(totals)
+            .mark_point(shape="tick", size=120, filled=True)
+            .encode(
+                x=alt.X("person:N", sort=order_people, title="Person",
+                        axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                y=alt.Y("Total:Q", scale=y_scale),
+                color=alt.Color(
+                    "Status:N",
+                    title="Total vs 7.5",
+                    scale=alt.Scale(
+                        domain=["Good (≤7.5)", "Over (>7.5)"],
+                        range=["#22c55e", "#ef4444"],  # green / red
+                    ),
+                ),
+                tooltip=[
+                    alt.Tooltip("person:N", title="Person"),
+                    alt.Tooltip("Total:Q", title="Total Non-WIP", format=",.2f"),
+                    alt.Tooltip("Status:N", title="Status"),
+                    alt.Tooltip("period_date:T", title="Date"),
+                ],
+            )
+        )
         bars = (
             alt.Chart(stack)
             .mark_bar(clip=False)
@@ -678,7 +706,7 @@ if nonwip_mode:
             .encode(y=alt.Y("y:Q", scale=y_scale))
         )
         chart = (
-            (bars + ref)
+            (bars + ref + status_tick)
             .properties(
                 height=300,
                 title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
