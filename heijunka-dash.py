@@ -264,9 +264,10 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            .assign(
                Activity=lambda d: d["Activity"].astype(str).str.strip(),
                Name=lambda d: d["Name"].astype(str).str.strip(),
-               Time=lambda d: d["Time"].fillna(0).map(lambda x: f"{float(x):.0f}h"),
+               Time=lambda d: d["Time"].fillna(0).map(_fmt_hours_minutes),   # <-- here
            )
            .sort_values(["Activity", "Name"])
+           .reset_index(drop=True)                                           # <-- and here
     )
     return out
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
@@ -599,7 +600,7 @@ if nonwip_mode:
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
-            st.dataframe(act_tbl, use_container_width=True)
+            st.dataframe(act_tbl.reset_index(drop=True), use_container_width=True)
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
     if wk_people.empty:
