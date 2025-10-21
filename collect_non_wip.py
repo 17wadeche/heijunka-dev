@@ -772,18 +772,9 @@ def main():
                 print(f"[non-wip] CAS extract error for {period_date}: {e}")
         if team_norm == "ect" and p.exists():
             try:
-                ect_ooo = extract_ooo_per_day(p, TEAM_OOO_CFG["ect"]["sheet"], TEAM_OOO_CFG["ect"]["flag_col"])
-                if ect_ooo:
-                    details.extend(ect_ooo)
-            except Exception as e:
-                print(f"[non-wip] ECT OOO extract error for {period_date}: {e}")
-        if team_norm == "ect" and p.exists():
-            try:
-                ooo_name_norms = { _norm_person(d.get("name","")) for d in details
-                                if str(d.get("activity","")).strip().upper() == "OOO" }
-                ect_extra = extract_ect_available_wip_nonwip(p, ooo_name_norms)
-                if ect_extra:
-                    details.extend(ect_extra)
+                ect_details = extract_ect_nonwip(p)
+                if ect_details:
+                    details.extend(ect_details)
             except Exception as e:
                 print(f"[non-wip] ECT Available WIP extract error for {period_date}: {e}")
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
@@ -850,7 +841,7 @@ def main():
             "non_wip_by_person": json.dumps(per_person_non_wip, ensure_ascii=False),
         }
         ooo_cfg = TEAM_OOO_CFG.get(team_norm)
-        if ooo_cfg and p.exists():
+        if ooo_cfg and team_norm != "ect" and p.exists():
             try:
                 ooo_details = extract_ooo_per_day(p, ooo_cfg["sheet"], ooo_cfg["flag_col"])
                 if ooo_details:
