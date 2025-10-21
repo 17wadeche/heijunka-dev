@@ -210,6 +210,32 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
+def accounted_nonwip_by_person_from_row(row) -> dict[str, float]:
+    payload = row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    if not isinstance(activities, list) or not activities:
+        return {}
+    import re
+    out: dict[str, float] = {}
+    for d in activities:
+        name = str(d.get("name", "")).strip()
+        if not name:
+            continue
+        act_raw = str(d.get("activity", ""))
+        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())
+        if act_key == "OOO":
+            continue  # OOO does not count toward “Accounted”
+        try:
+            hrs = float(d.get("hours", 0) or 0)
+        except Exception:
+            hrs = 0.0
+        if hrs <= 0:
+            continue
+        out[name] = out.get(name, 0.0) + hrs
+    return {k: round(v, 2) for k, v in out.items()}
 def build_ooo_table_from_row(row) -> pd.DataFrame:
     payload = row.get("non_wip_activities", "[]")
     try:
@@ -606,33 +632,42 @@ if nonwip_mode:
     if wk_people.empty:
         st.info("No per-person Non-WIP breakdown for this selection.")
     else:
+        acct_map = accounted_nonwip_by_person_from_row(row)
+        wk_people = wk_people.assign(
+            Accounted=lambda d: d.apply(
+                lambda r: min(float(r["Non-WIP Hours"]), float(acct_map.get(str(r["person"]).strip(), 0.0))),
+                axis=1
+            )
+        )
+        wk_people["Unaccounted"] = (wk_people["Non-WIP Hours"] - wk_people["Accounted"]).clip(lower=0)
+        stack = (
+            wk_people.melt(
+                id_vars=["person", "period_date"],
+                value_vars=["Accounted", "Unaccounted"],
+                var_name="Category",
+                value_name="Hours"
+            )
+            .dropna(subset=["Hours"])
+        )
         order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
         vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
         headroom = max(1.0, vmax * 0.18) if pd.notna(vmax) else 1.0
         y_scale = alt.Scale(domain=[0, vmax + headroom], nice=False, clamp=False)
         bars = (
-            alt.Chart(wk_people)
-            .mark_bar(clip=False)  # don't clip at chart bounds
+            alt.Chart(stack)
+            .mark_bar(clip=False)
             .encode(
-                x=alt.X(
-                    "person:N",
-                    title="Person",
-                    sort=order_people,
-                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
-                ),
-                y=alt.Y(
-                    "Non-WIP Hours:Q",
-                    title="Non-WIP Hours (week)",
-                    scale=y_scale,   # <- shared scale with the 7.5 rule
-                ),
-                color=alt.condition(
-                    "datum['Non-WIP Hours'] <= 7.5",
-                    alt.value("#22c55e"),
-                    alt.value("#ef4444"),
+                x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                y=alt.Y("Hours:Q", title="Non-WIP Hours (week)", stack="zero", scale=y_scale),
+                color=alt.Color(
+                    "Category:N",
+                    title="Legend",
+                    scale=alt.Scale(domain=["Accounted", "Unaccounted"], range=["#22c55e", "#9ca3af"])
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Non-WIP Hours:Q", title="Non-WIP Hours", format=",.2f"),
+                    alt.Tooltip("Category:N"),
+                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Date"),
                 ],
             )
@@ -646,11 +681,11 @@ if nonwip_mode:
             (bars + ref)
             .properties(
                 height=300,
-                title=f"{team_nw} • Per-person Non-WIP Hours",
+                title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
                 padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             )
             .configure_axis(labelOverlap=True)
-            .configure_view(stroke=None)  # tiny aesthetic: remove border
+            .configure_view(stroke=None)
         )
         st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
