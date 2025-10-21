@@ -658,27 +658,20 @@ if nonwip_mode:
             .rename(columns={"Non-WIP Hours": "Total"})
             .assign(Status=lambda d: np.where(d["Total"] <= 7.5, "Good (≤7.5)", "Over (>7.5)"))
         )
-        status_tick = (
+        outline = (
             alt.Chart(totals)
-            .mark_point(shape="tick", size=120, filled=True)
+            .mark_bar(fillOpacity=0, strokeWidth=2)
             .encode(
-                x=alt.X("person:N", sort=order_people, title="Person",
-                        axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                x=alt.X("person:N", sort=order_people),
                 y=alt.Y("Total:Q", scale=y_scale),
-                color=alt.Color(
+                stroke=alt.Color(
                     "Status:N",
                     title="Total vs 7.5",
                     scale=alt.Scale(
                         domain=["Good (≤7.5)", "Over (>7.5)"],
-                        range=["#22c55e", "#ef4444"],  # green / red
+                        range=["#22c55e", "#ef4444"],
                     ),
                 ),
-                tooltip=[
-                    alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Total:Q", title="Total Non-WIP", format=",.2f"),
-                    alt.Tooltip("Status:N", title="Status"),
-                    alt.Tooltip("period_date:T", title="Date"),
-                ],
             )
         )
         bars = (
@@ -706,7 +699,7 @@ if nonwip_mode:
             .encode(y=alt.Y("y:Q", scale=y_scale))
         )
         chart = (
-            (bars + ref + status_tick)
+            (bars + ref + outline)
             .properties(
                 height=300,
                 title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
