@@ -249,28 +249,34 @@ def extract_ph_ooo(xlsx_path: Path, period_date: _date) -> list[dict]:
         wb = load_workbook(xlsx_path, data_only=True, read_only=True)
     except Exception:
         return out
+    sh_name = _resolve_ph_sheet_by_date(wb, period_date)
+    if not sh_name:
+        return out
+    ws = wb[sh_name]
     day_names = ["Monday","Tuesday","Wednesday","Thursday","Friday"]
     day_cols  = _ph_day_columns_for_date(period_date)
     col_idxs  = [_col_letter_to_index(c) for c in day_cols]
     START_ROW = 66
-    for sh in wb.sheetnames:
-        ws = wb[sh]
-        found_any = False
-        for day, col_idx in zip(day_names, col_idxs):
-            for row in ws.iter_rows(min_row=START_ROW, max_row=getattr(ws, "max_row", 0),
-                                    min_col=col_idx, max_col=col_idx, values_only=True):
-                name = _clean_name(row[0])
-                if not name:
-                    break  # stop at first blank for this day
-                found_any = True
+    splitter = re.compile(r"[,\n/&]+")
+    for day, col_idx in zip(day_names, col_idxs):
+        for row in ws.iter_rows(min_row=START_ROW,
+                                max_row=getattr(ws, "max_row", 0),
+                                min_col=col_idx, max_col=col_idx,
+                                values_only=True):
+            cell_val = row[0]
+            name_raw = _clean_name(cell_val)
+            if not name_raw:
+                break
+            for piece in splitter.split(str(name_raw)):
+                nm = _clean_name(piece)
+                if not nm:
+                    continue
                 out.append({
                     "day": day,
-                    "name": name,
+                    "name": nm,
                     "activity": "OOO",
                     "hours": 8.0,
                 })
-        if found_any:
-            break  # we found the PH grid on this sheet; no need to scan others
     return out
 def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) -> list[dict]:
     out: list[dict] = []
@@ -549,6 +555,17 @@ def _resolve_sheet_exact_or_fuzzy_xlsb(wb, desired_title: str) -> str | None:
         ns = _norm_title(actual)
         if (want in ns) or ns.startswith(want) or ns.endswith(want):
             return actual
+    return None
+def _resolve_ph_sheet_by_date(wb, period_date: _date):
+    if not isinstance(period_date, _date):
+        return None
+    for sh in wb.sheetnames:
+        try:
+            d = dateparser.parse(sh, dayfirst=False, yearfirst=False)
+            if d and d.date() == period_date:
+                return sh
+        except Exception:
+            pass
     return None
 def extract_ooo_per_day(xlsx_path: Path, sheet_title: str, flag_col_letter: str) -> list[dict]:
     NAME_COL_IDX = _col_letter_to_index("C")
