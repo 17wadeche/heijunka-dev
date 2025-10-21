@@ -421,7 +421,7 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             if not text_b:
                 continue
             lower = text_b.casefold()
-            if "paid holiday" in lower or "us holiday" in lower:
+            if "paid holiday" in lower or "us holiday" in lower or "ir holiday" in lower or "us team" in lower:
                 continue
             cat = None
             for c in NWW_CATEGORIES:
