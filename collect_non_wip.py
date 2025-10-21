@@ -61,12 +61,16 @@ def _strip_name_annotations(s: str) -> str:
     txt = str(s or "")
     txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\b(?:AM|PM)\b\.?", "", txt, flags=_re.I)
-    txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*@\s*\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b.*$", "", txt, flags=_re.I)
+    txt = _re.sub(r"\b(?:half\s*day|1\s*/\s*2(?:\s*day)?)\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*-\s*out.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*\([^)]*\)\s*$", "", txt)
     txt = _re.sub(r"\s{2,}", " ", txt)
     return txt.strip()
+_ONE_THIRTY_RE = _re.compile(r"""(?ix)\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?""")
+def _has_one_thirty(text: str) -> bool:
+    return bool(_ONE_THIRTY_RE.search(str(text or "")))
 _CAS_WEEK_ROWS = [
     {"row":  7786, "date": "1/1/2024"},
     {"row":  7918, "date": "1/8/2024"},
@@ -429,18 +433,26 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             people = _split_people(col_c or "")
             if not people:
                 continue
-            base_hrs = _hours_for_activity(text_b)
+            if _has_one_thirty(text_b):
+                base_hrs = 3.0
+            else:
+                base_hrs = _hours_for_activity(text_b)
             for person in people:
                 inline_ooo = _has_inline_ooo(person)
                 person_is_half = _is_half_day(person)
+                person_has_130 = _has_one_thirty(person)
                 nm = _clean_name(_strip_name_annotations(_strip_inline_ooo(person)))
                 if not nm:
                     continue
                 eff_cat = "OOO" if inline_ooo else ( "OOO" if (cat and cat.upper() == "OOO") else cat )
                 if not eff_cat:
                     continue
-                base_hrs = _hours_for_activity(text_b)  # 4 if half-day in B, else 8
-                hrs = 4.0 if person_is_half else base_hrs
+                if person_has_130:
+                    hrs = 3.0
+                elif person_is_half:
+                    hrs = 4.0
+                else:
+                    hrs = base_hrs
                 key = (nm, "OOO" if eff_cat.upper() == "OOO" else eff_cat)
                 agg[key]["hours"] += float(hrs)
                 agg[key]["days"]  += 1
