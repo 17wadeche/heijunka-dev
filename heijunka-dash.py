@@ -238,7 +238,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
             n_int = None
         if n_int is not None:
             if n_int > 1:
-                return f"Week ({n_int} days)"
+                return f"{n_int} days"
             if n_int == 1:
                 return dv[0] if len(dv) == 1 else "Week"
         if len(dv) > 1:
