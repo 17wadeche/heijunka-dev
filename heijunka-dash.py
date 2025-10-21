@@ -1708,9 +1708,9 @@ f_table = (
 )
 fmt_map: dict[str, str] = {}
 if "Open Complaint Timeliness" in f_table.columns:
-    fmt_map["Open Complaint Timeliness"] = "{:.0%}"    # .9 -> 90%
+    fmt_map["Open Complaint Timeliness"] = "{:.0%}"
 if "Capacity Utilization" in f_table.columns:
-    fmt_map["Capacity Utilization"] = "{:.2%}"         # .4571 -> 45.71%
+    fmt_map["Capacity Utilization"] = "{:.2%}"
 for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output"]:
     if col in f_table.columns:
         fmt_map[col] = "{:,.1f}"
@@ -1720,6 +1720,6 @@ for col in ["Target UPLH", "Actual UPLH", "Actual HC used", "Efficiency vs Targe
 if "HC in WIP" in f_table.columns:
     fmt_map["HC in WIP"] = "{:,.0f}"
 st.dataframe(
-    f_table.style.format(fmt_map).hide(axis="index"),  # <— hide the index
+    f_table.style.format(fmt_map).hide(axis="index"),
     use_container_width=True
 )
