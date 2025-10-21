@@ -242,7 +242,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
             if n_int == 1:
                 return dv[0] if len(dv) == 1 else "Week"
         if len(dv) > 1:
-            return f"Week ({len(dv)} days)"
+            return f"{len(dv)} days"
         if len(dv) == 1:
             return dv[0]
         return "Week"
