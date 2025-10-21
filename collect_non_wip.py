@@ -377,6 +377,19 @@ def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) 
             "hours": round(hours, 2),
         })
     return out
+_SEP = r"[\s\-_–—\u00A0]*"
+BLOCK_IN_CAS_PATTERNS = [
+    _re.compile(rf"\bpaid{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bus{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bir{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bus{_SEP}team\b", _re.I),
+    _re.compile(rf"\bus{_SEP}ooo\b", _re.I),
+    _re.compile(rf"\bfourth{_SEP}of{_SEP}july{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bmarie{_SEP}wfh\b", _re.I),
+]
+def _is_blocked_activity_text(s: str) -> bool:
+    t = str(s or "")
+    return any(p.search(t) for p in BLOCK_IN_CAS_PATTERNS)
 def extract_ect_nonwip(xlsx_path: Path) -> list[dict]:
     out: list[dict] = []
     if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
@@ -449,6 +462,8 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
             col_b, col_c = row  
             text_b = str(col_b or "").strip()
             if not text_b:
+                continue
+            if _is_blocked_activity_text(text_b):
                 continue
             lower = text_b.casefold()
             if any(b in lower for b in BLOCK_IN_CAS):
