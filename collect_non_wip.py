@@ -26,6 +26,11 @@ _HALF_DAY_RE = _re.compile(
     )
     """
 )
+_OOO_TOKEN_RE = _re.compile(r"""(?ix)\bO\s*O\s*O\b""")
+def _has_inline_ooo(s: str) -> bool:
+    return bool(_OOO_TOKEN_RE.search(str(s or "")))
+def _strip_inline_ooo(s: str) -> str:
+    return _OOO_TOKEN_RE.sub("", str(s or "")).strip()
 def _is_half_day(text: str) -> bool:
     return bool(_HALF_DAY_RE.search(str(text or "")))
 def _split_people(cell_c: str) -> list[str]:
@@ -192,14 +197,19 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
                 continue
             base_hrs = _hours_for_activity(text_b)
             for person in people:
+                inline_ooo = _has_inline_ooo(person)
                 person_is_half = _is_half_day(person)
-                nm = _clean_name(_strip_name_annotations(person))
+                nm = _clean_name(_strip_name_annotations(_strip_inline_ooo(person)))
                 if not nm:
                     continue
+                eff_cat = "OOO" if inline_ooo else ( "OOO" if (cat and cat.upper() == "OOO") else cat )
+                if not eff_cat:
+                    continue
+                base_hrs = _hours_for_activity(text_b)  # 4 if half-day in B, else 8
                 hrs = 4.0 if person_is_half else base_hrs
-                key = (nm, "OOO" if cat.upper() == "OOO" else cat)
+                key = (nm, "OOO" if eff_cat.upper() == "OOO" else eff_cat)
                 agg[key]["hours"] += float(hrs)
-                agg[key]["days"]  += 1   # count occurrences (interpreted as day-count)
+                agg[key]["days"]  += 1
     for (nm, activity), vals in agg.items():
         out.append({
             "day": "Week",
