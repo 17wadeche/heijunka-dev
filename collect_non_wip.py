@@ -335,6 +335,20 @@ def extract_ph_ooo(xlsx_path: Path, period_date: _date) -> list[dict]:
                     "hours": 8.0,
                 })
     return out
+_SEP = r"[\s\-_–—\u00A0]*"
+GLOBAL_BLOCK_PATTERNS = [
+    _re.compile(rf"\bpaid{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bus{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bir{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bus{_SEP}team\b", _re.I),
+    _re.compile(rf"\bus{_SEP}ooo\b", _re.I),
+    _re.compile(rf"\bfourth{_SEP}of{_SEP}july{_SEP}holiday\b", _re.I),
+    _re.compile(rf"\bmarie{_SEP}wfh\b", _re.I),
+]
+def _globally_block_detail(d: dict) -> bool:
+    act = str(d.get("activity", "") or "")
+    nm  = str(d.get("name", "") or "")
+    return any(p.search(act) or p.search(nm) for p in GLOBAL_BLOCK_PATTERNS)
 def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) -> list[dict]:
     out: list[dict] = []
     if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
@@ -979,6 +993,8 @@ def main():
         if not people:
             if details:
                 people = sorted({d["name"] for d in details if _clean_name(d.get("name"))})
+            elif details:
+                details = [d for d in details if not _globally_block_detail(d)]
             else:
                 source_hint = "Person Hours" if use_person_hours else "workbook"
                 print(f"[non-wip] No names found for team '{team}' on {period_date} from {source_hint}")
