@@ -18,14 +18,23 @@ NWW_CATEGORIES = {"ooo", "workshop", "audit", "yellow belt", "nextgen"}
 import regex as _re
 _HALF_DAY_RE = _re.compile(
     r"""(?ix)
-    (?:\bAM\b|\bPM\b|half\s*day|1/2(?:\s*day)?|~\s*12|
+    (?:\bAM\b|\bPM\b|
+       half\s*day|partial\s*day|1/2(?:\s*day)?|
        @\s*(?:noon|12(?:\s*:?\s*30)?|PM|1)|
-       out\s+at\s+(?:12:00\s*pm|1:00\s*pm)|
+       out\s+at\s*(?:12:00|1:00)(?:\s*(?:am|pm))?|
+       out\s+early\s*afternoon|
        afternoon|
-       -\s*out\s+in\s*(?:am|pm)
+       ~\s*12|
+       out\s+in\s*(?:am|pm)
     )
     """
 )
+_THREE_HOUR_RE = _re.compile(r"""(?ix)
+    (?:\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?|\bout\s*at\s*2\s*:\s*00\b(?:\s*(?:am|pm))?)
+""")
+
+def _has_three_hour(text: str) -> bool:
+    return bool(_THREE_HOUR_RE.search(str(text or "")))
 _MINUTES_RE = re.compile(r"(-?\d+(?:\.\d+)?)")
 def _to_minutes(v) -> float | None:
     if v is None:
@@ -61,6 +70,14 @@ def _strip_name_annotations(s: str) -> str:
     txt = str(s or "")
     txt = _re.sub(r"\s*@\s*(?:am|pm)\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\b(?:AM|PM)\b\.?", "", txt, flags=_re.I)
+    txt = _re.sub(r"\b(?:half\s*day|partial\s*day|1\s*/\s*2(?:\s*day)?)\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)   # 1:30
+    txt = _re.sub(r"\bout\s*at\s*(?:12:00|1:00|2:00)\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)
+    txt = _re.sub(r"@\s*noon\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"\bout\s*early\s*afternoon\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"\bafternoon\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"~\s*12\b", "", txt, flags=_re.I)
+    txt = _re.sub(r"\bout\s+in(?:\s+(?:am|pm))?\b", "", txt, flags=_re.I)
     txt = _re.sub(r"\s*@\s*\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b.*$", "", txt, flags=_re.I)
     txt = _re.sub(r"\b(?:half\s*day|1\s*/\s*2(?:\s*day)?)\b", "", txt, flags=_re.I)
     txt = _re.sub(r"\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?", "", txt, flags=_re.I)
@@ -69,6 +86,15 @@ def _strip_name_annotations(s: str) -> str:
     txt = _re.sub(r"\s{2,}", " ", txt)
     return txt.strip()
 _ONE_THIRTY_RE = _re.compile(r"""(?ix)\b1\s*[:：]\s*30\b(?:\s*(?:am|pm))?""")
+def _override_activity_from_name(name: str, current_activity: str) -> tuple[str, str]:
+    s = str(name or "").strip()
+    if _re.search(r"\s*-\s*YB\s*$", s, flags=_re.I):
+        s = _re.sub(r"\s*-\s*YB\s*$", "", s, flags=_re.I).strip()
+        return s, "Yellow Belt"
+    if _re.search(r"\s*-\s*Next\s*Gen\s*automation\s*workshop\s*in\s*$", s, flags=_re.I):
+        s = _re.sub(r"\s*-\s*Next\s*Gen\s*automation\s*workshop\s*in\s*$", "", s, flags=_re.I).strip()
+        return s, "NextGen"
+    return s, current_activity
 def _has_one_thirty(text: str) -> bool:
     return bool(_ONE_THIRTY_RE.search(str(text or "")))
 _CAS_WEEK_ROWS = [
@@ -416,12 +442,16 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
         except Exception:
             continue
         for row in ws.iter_rows(min_row=rmin, max_row=rmax, min_col=2, max_col=3, values_only=True):
+            BLOCK_IN_CAS = {
+                "paid holiday", "us holiday", "ir holiday",
+                "us team", "us ooo", "fourth of july holiday", "marie-wfh"
+            }
             col_b, col_c = row  # B (activity text), C (names)
             text_b = str(col_b or "").strip()
             if not text_b:
                 continue
             lower = text_b.casefold()
-            if "paid holiday" in lower or "us holiday" in lower or "ir holiday" in lower or "us team" in lower or "us ooo" in lower or "fourth of july holiday" in lower or "marie-wfh" in lower:
+            if any(b in lower for b in BLOCK_IN_CAS):
                 continue
             cat = None
             for c in NWW_CATEGORIES:
@@ -435,19 +465,25 @@ def extract_cas_activities(xlsx_path: Path, period_date: _date) -> list[dict]:
                 continue
             if _has_one_thirty(text_b):
                 base_hrs = 3.0
+            elif _has_three_hour(text_b):
+                base_hrs = 3.0
             else:
                 base_hrs = _hours_for_activity(text_b)
             for person in people:
                 inline_ooo = _has_inline_ooo(person)
                 person_is_half = _is_half_day(person)
                 person_has_130 = _has_one_thirty(person)
+                person_has_3h = _has_three_hour(person)
                 nm = _clean_name(_strip_name_annotations(_strip_inline_ooo(person)))
                 if not nm:
                     continue
-                eff_cat = "OOO" if inline_ooo else ( "OOO" if (cat and cat.upper() == "OOO") else cat )
+                eff_cat = "OOO" if inline_ooo else ("OOO" if (cat and cat.upper() == "OOO") else cat)
                 if not eff_cat:
                     continue
+                nm, eff_cat = _override_activity_from_name(nm, eff_cat)
                 if person_has_130:
+                    hrs = 3.0
+                elif person_has_3h:
                     hrs = 3.0
                 elif person_is_half:
                     hrs = 4.0
