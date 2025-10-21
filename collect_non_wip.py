@@ -167,6 +167,104 @@ def _cas_row_window_for_date(period_date: _date) -> tuple[int, int] | None:
     start = rows_sorted[target_idx][0]
     end   = (rows_sorted[target_idx + 1][0] - 1) if target_idx + 1 < len(rows_sorted) else (start + 400)
     return (start, end)
+def extract_pvh_nonwip(xlsx_path: Path) -> list[dict]:
+    out: list[dict] = []
+    if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
+        return out
+    try:
+        wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+    except Exception:
+        return out
+    sh_name = _resolve_sheet_exact_or_fuzzy_openpyxl(wb, "#12 Production Analysis")
+    if not sh_name:
+        return out
+    ws = wb[sh_name]
+    NAME_COL = 3
+    FLAG_COL = 4
+    MINS_COL = 7
+    ACT_COL  = 11
+    from collections import defaultdict
+    agg: dict[tuple[str, str], float] = defaultdict(float)
+    max_row = getattr(ws, "max_row", 0)
+    for row in ws.iter_rows(min_row=1, max_row=max_row,
+                            min_col=1, max_col=max(NAME_COL, FLAG_COL, MINS_COL, ACT_COL),
+                            values_only=True):
+        flag = str(row[FLAG_COL-1] or "").strip().casefold() if len(row) >= FLAG_COL else ""
+        if flag != "non-wip":
+            continue
+        name = _clean_name(row[NAME_COL-1] if len(row) >= NAME_COL else "")
+        if not name:
+            continue
+        mins_val = row[MINS_COL-1] if len(row) >= MINS_COL else None
+        mins = _to_float(mins_val)
+        if mins is None or mins <= 0:
+            continue
+        hours = float(mins) / 60.0
+        act_raw = str(row[ACT_COL-1] or "").strip() if len(row) >= ACT_COL else ""
+        act = re.sub(r"^\s*\d+\.\s*", "", act_raw).strip()
+        if not act:
+            continue
+        activity = "OOO" if "ooo" in act.casefold() else act
+        agg[(name, activity)] += hours
+    for (name, activity), hrs in agg.items():
+        out.append({
+            "day": "Week",
+            "name": name,
+            "activity": activity,
+            "hours": round(float(hrs), 2),
+        })
+    return out
+def _to_float(v) -> float | None:
+    try:
+        s = str(v).strip()
+        if s == "" or s.lower() in {"nan", "none", "-", "—", "–"}:
+            return None
+        return float(s)
+    except Exception:
+        return None
+
+def extract_ect_available_wip_nonwip(xlsx_path: Path, ooo_name_norms: set[str]) -> list[dict]:
+    out: list[dict] = []
+    if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
+        return out
+    try:
+        wb = load_workbook(xlsx_path, data_only=True, read_only=True)
+    except Exception:
+        return out
+    sh_name = _resolve_sheet_exact_or_fuzzy_openpyxl(wb, "Available WIP Hours")
+    if not sh_name:
+        return out
+    ws = wb[sh_name]
+    NAME_COL = 1   # A
+    PAIRS = [(10, 11), (12, 13)]  # (J,K) and (L,M)
+    from collections import defaultdict
+    agg = defaultdict(float)
+    max_row = getattr(ws, "max_row", 0)
+    for row in ws.iter_rows(min_row=1, max_row=max_row,
+                            min_col=1, max_col=13, values_only=True):
+        name = _clean_name(row[NAME_COL-1] if len(row) >= NAME_COL else "")
+        if not name:
+            continue
+        name_norm = _norm_person(name)
+        for act_col, hrs_col in PAIRS:
+            act_raw = (row[act_col-1] if len(row) >= act_col else None)
+            hrs_raw = (row[hrs_col-1] if len(row) >= hrs_col else None)
+            act = re.sub(r"^\s*\d+\.\s*", "", str(act_raw or "")).strip()
+            hrs = _to_float(hrs_raw)
+            if not act or hrs is None or hrs <= 0:
+                continue
+            if "ooo" in act.casefold() and name_norm in ooo_name_norms:
+                continue
+            activity = "OOO" if "ooo" in act.casefold() else act
+            agg[(name, activity)] += float(hrs)
+    for (name, activity), hours in agg.items():
+        out.append({
+            "day": "Week",
+            "name": name,
+            "activity": activity,
+            "hours": round(hours, 2),
+        })
+    return out
 def extract_ect_nonwip(xlsx_path: Path) -> list[dict]:
     out: list[dict] = []
     if xlsx_path.suffix.lower() not in (".xlsx", ".xlsm"):
@@ -658,6 +756,13 @@ def main():
         cfg = _get_team_cfg(team_norm)
         details: list[dict] = []
         p = Path(src_file)
+        if team_norm == "pvh" and p.exists():
+            try:
+                pvh_extra = extract_pvh_nonwip(p)
+                if pvh_extra:
+                    details.extend(pvh_extra)
+            except Exception as e:
+                print(f"[non-wip] PVH extract error for {period_date}: {e}")
         if team_norm == "cas" and p.exists():
             try:
                 cas_extra = extract_cas_activities(p, period_date)
@@ -667,11 +772,20 @@ def main():
                 print(f"[non-wip] CAS extract error for {period_date}: {e}")
         if team_norm == "ect" and p.exists():
             try:
-                ect_extra = extract_ect_nonwip(p)
+                ect_ooo = extract_ooo_per_day(p, TEAM_OOO_CFG["ect"]["sheet"], TEAM_OOO_CFG["ect"]["flag_col"])
+                if ect_ooo:
+                    details.extend(ect_ooo)
+            except Exception as e:
+                print(f"[non-wip] ECT OOO extract error for {period_date}: {e}")
+        if team_norm == "ect" and p.exists():
+            try:
+                ooo_name_norms = { _norm_person(d.get("name","")) for d in details
+                                if str(d.get("activity","")).strip().upper() == "OOO" }
+                ect_extra = extract_ect_available_wip_nonwip(p, ooo_name_norms)
                 if ect_extra:
                     details.extend(ect_extra)
             except Exception as e:
-                print(f"[non-wip] ECT extract error for {period_date}: {e}")
+                print(f"[non-wip] ECT Available WIP extract error for {period_date}: {e}")
         use_person_hours = bool(cfg and cfg.get("people_from") == "person_hours")
         people: list[str] = []
         if use_person_hours:
