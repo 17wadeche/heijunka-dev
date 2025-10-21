@@ -949,8 +949,9 @@ def main():
         ooo_hours_by_person: dict[str, float] = defaultdict(float)
         ooo_full_days_seen = set()
         for d in details:
-            act = str(d.get("activity", "")).strip().upper()
-            if act != "OOO":
+            act_raw = str(d.get("activity", ""))
+            act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())
+            if act_key != "OOO":
                 continue
             nm_norm = _norm_person(d.get("name", ""))
             if not nm_norm:
