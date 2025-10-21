@@ -8,6 +8,17 @@ import altair as alt
 import json
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 NON_WIP_DATA_URL = st.secrets.get("NON_WIP_DATA_URL", os.environ.get("NON_WIP_DATA_URL"))
+def _fmt_hours_minutes(x) -> str:
+    try:
+        total_mins = int(round(float(x) * 60))
+    except Exception:
+        return "0m"
+    h, m = divmod(total_mins, 60)
+    if h and m:
+        return f"{h}h {m:02d}m"
+    if h and not m:
+        return f"{h}h"
+    return f"{m}m"
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
     if nw_url:
