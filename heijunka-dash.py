@@ -215,29 +215,49 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
     df["days"]  = pd.to_numeric(df["days"], errors="coerce")
-    grp = (df
-           .groupby(["activity", "name"], as_index=False)
-           .agg(hours=("hours", "sum"), days=("days", "sum")))
-    def _day_label(n):
-        try:
-            n = int(n)
-            return f"Week ({n} days)" if n and n > 1 else "Week"
-        except Exception:
-            return "Week"
-    grp["Day"] = grp["days"].apply(_day_label)
-    out = (
-        grp.rename(columns={
-            "activity": "Activity",
-            "name": "Name",
-            "hours": "Time",
-        })[["Activity", "Day", "Name", "Time"]]
-        .assign(
-            Activity=lambda d: d["Activity"].astype(str).str.strip(),
-            Name=lambda d: d["Name"].astype(str).str.strip(),
-        )
+    df["day_norm"] = (
+        df["day"]
+        .astype(str)
+        .str.strip()
+        .replace({"": np.nan, "None": np.nan, "nan": np.nan})
     )
-    out["Time"] = out["Time"].fillna(0).map(lambda x: f"{float(x):.0f}h")
-    return out.sort_values(["Activity", "Name"])
+    grp = (
+        df.groupby(["activity", "name"], as_index=False)
+          .agg(
+              hours=("hours", "sum"),
+              days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
+              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()])))
+          )
+    )
+    def _label_row(r):
+        n = r["days_known"]
+        dv = r["day_values"] or []
+        try:
+            n_int = int(n) if pd.notna(n) else None
+        except Exception:
+            n_int = None
+        if n_int is not None:
+            if n_int > 1:
+                return f"Week ({n_int} days)"
+            if n_int == 1:
+                return dv[0] if len(dv) == 1 else "Week"
+        if len(dv) > 1:
+            return f"Week ({len(dv)} days)"
+        if len(dv) == 1:
+            return dv[0]
+        return "Week"
+    grp["Day"] = grp.apply(_label_row, axis=1)
+    out = (
+        grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "Time"})
+           [["Activity", "Day", "Name", "Time"]]
+           .assign(
+               Activity=lambda d: d["Activity"].astype(str).str.strip(),
+               Name=lambda d: d["Name"].astype(str).str.strip(),
+               Time=lambda d: d["Time"].fillna(0).map(lambda x: f"{float(x):.0f}h"),
+           )
+           .sort_values(["Activity", "Name"])
+    )
+    return out
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
