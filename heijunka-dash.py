@@ -959,6 +959,7 @@ kpi(
     "Closures",
     tot_closures,
     "{:,.0f}",
+    help="Events Closed",
 )
 kpi(
     row3[1],
