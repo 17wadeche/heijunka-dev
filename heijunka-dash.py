@@ -194,7 +194,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             v = v / 100.0
         df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used"]:
+                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures"]:
         if col in df.columns:
             s = (
                 df[col]
@@ -848,27 +848,9 @@ if f.empty:
 ppl_hours = explode_person_hours(f)
 latest = (f.sort_values(["team", "period_date"])
             .groupby("team", as_index=False)
-            .tail(1))
-kpi_cols = st.columns(4)
-def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
-    if pd.isna(value):
-        col.metric(label, "—", help=help)
-    else:
-        try:
-            col.metric(label, fmt.format(value), help=help)
-        except Exception:
-            col.metric(label, str(value), help=help)
-def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | None = None):
-    if pd.isna(actual) or pd.isna(target) or not target:
-        col.metric(label, "—", help=help)
-        return
-    try:
-        value_str = fmt_val.format(actual)
-    except Exception:
-        value_str = str(actual)
-    diff = (float(actual) - float(target)) / float(target)
-    delta_str = f"{diff:+.0%} vs target"
-    col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
+            .tail(1)
+            .copy()
+)
 tot_target = latest["Target Output"].sum(skipna=True)
 tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
@@ -889,47 +871,102 @@ def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float
     return v / 100.0, "{:.0%}"
 timeliness_avg_raw = latest["Open Complaint Timeliness"].dropna().mean() if "Open Complaint Timeliness" in latest.columns else np.nan
 timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
+nw_all = load_non_wip()
+if not nw_all.empty:
+    if "total_non_wip_hours" in nw_all.columns:
+        nw_all = nw_all[["team", "period_date", "total_non_wip_hours"]].copy()
+        nw_all["total_non_wip_hours"] = pd.to_numeric(nw_all["total_non_wip_hours"], errors="coerce")
+    else:
+        nw_all = nw_all.assign(total_non_wip_hours=np.nan)[["team", "period_date", "total_non_wip_hours"]]
+else:
+    nw_all = pd.DataFrame(columns=["team", "period_date", "total_non_wip_hours"])
+latest_nw = latest.merge(nw_all, on=["team", "period_date"], how="left")
+tot_nonwip = latest_nw["total_non_wip_hours"].sum(skipna=True) if "total_non_wip_hours" in latest_nw.columns else 0.0
+tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.columns else np.nan
+prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
+productivity = (float(tot_closures) / prod_den) if (pd.notna(tot_closures) and prod_den) else np.nan
+kpi_cols = st.columns(4)
+def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
+    if pd.isna(value):
+        col.metric(label, "—", help=help)
+    else:
+        try:
+            col.metric(label, fmt.format(value), help=help)
+        except Exception:
+            col.metric(label, str(value), help=help)
+def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | None = None):
+    if pd.isna(actual) or pd.isna(target) or not target:
+        col.metric(label, "—", help=help)
+        return
+    try:
+        value_str = fmt_val.format(actual)
+    except Exception:
+        value_str = str(actual)
+    diff = (float(actual) - float(target)) / float(target)
+    delta_str = f"{diff:+.0%} vs target"
+    col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
-kpi(kpi_cols[1], "Target Output", tot_target, "{:,.0f}")
-kpi_vs_target(kpi_cols[2], "Actual Output", tot_actual, tot_target, "{:,.0f}")
-kpi(kpi_cols[3], "Actual vs Target", (tot_actual/tot_target if tot_target else np.nan), "{:.2f}x")
-kpi_cols2 = st.columns(4)
-kpi(kpi_cols2[1],
+row1 = st.columns(4)
+kpi(row1[0], "Target Output", tot_target, "{:,.0f}")
+kpi_vs_target(row1[1], "Actual Output", tot_actual, tot_target, "{:,.0f}")
+kpi(row1[2],
     "Target UPLH",
-    (tot_target/tot_tahl if tot_tahl else np.nan),
+    (tot_target / tot_tahl if tot_tahl else np.nan),
     "{:.2f}",
-    help="Target Output ÷ Target Hours (Total Available Hours)"  # NEW
+    help="Target Output ÷ Target Hours (Total Available Hours)",
 )
 kpi_vs_target(
-    kpi_cols2[2],
+    row1[3],
     "Actual UPLH",
     actual_uplh,
     target_uplh,
     "{:.2f}",
-    help="Actual Output ÷ Actual Hours (Completed Hours)"  # NEW
+    help="Actual Output ÷ Actual Hours (Completed Hours)",
 )
-kpi(kpi_cols2[3],
-    "Capacity Utilization",
-    (tot_chl/tot_tahl if tot_tahl else np.nan),
-    "{:.0%}",
-    help="Completed vs Available hours"
-)
-kpi_cols3 = st.columns(4)
+row2 = st.columns(4)
 kpi(
-    kpi_cols3[1],
+    row2[0],
     "HC in WIP",
     tot_hc_wip,
     "{:,.0f}",
-    help="Unique people with any time in WIP for the week"  # NEW
+    help="Unique people with any time in WIP for the week",
 )
-kpi(kpi_cols3[2],
+kpi(
+    row2[1],
     "Actual HC used",
     tot_hc_used,
     "{:,.2f}",
-    help="Based on 6.5 hours per person in WIP per day"
+    help="Based on 6.5 hours per person in WIP per day",
 )
-kpi_vs_target(kpi_cols3[3], "Open Complaint Timeliness", timeliness_avg, 0.87, "{:.0%}")
+kpi(
+    row2[2],
+    "Capacity Utilization",
+    (tot_chl / tot_tahl if tot_tahl else np.nan),
+    "{:.0%}",
+    help="Completed vs Available hours",
+)
+kpi_vs_target(
+    row2[3],
+    "Open Complaint Timeliness",
+    timeliness_avg,
+    0.87,
+    "{:.0%}",
+)
+row3 = st.columns(2)
+kpi(
+    row3[0],
+    "Closures",
+    tot_closures,
+    "{:,.0f}",
+)
+kpi(
+    row3[1],
+    "Productivity",
+    productivity,
+    "{:,.3f}",
+    help="Closures ÷ (Completed Hours + total Non-WIP Hours)",
+)
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
@@ -1605,13 +1642,31 @@ if len(teams_in_view) == 1:
         .sort_values("period_date")
         .copy()
     )
+    nw_all = load_non_wip()
+    if not nw_all.empty:
+        cols_needed = ["team", "period_date", "total_non_wip_hours"]
+        for c in cols_needed:
+            if c not in nw_all.columns:
+                nw_all[c] = np.nan
+        nw_all["total_non_wip_hours"] = pd.to_numeric(nw_all["total_non_wip_hours"], errors="coerce")
+        single = single.merge(nw_all[cols_needed], on=["team", "period_date"], how="left")
+    else:
+        single["total_non_wip_hours"] = np.nan
+    if "Closures" in single.columns:
+        denom = (single["Completed Hours"].fillna(0).astype(float) + single["total_non_wip_hours"].fillna(0).astype(float))
+        num   = single["Closures"].astype(float)
+        single["Productivity"] = np.where(denom > 0, num / denom, np.nan)
+    else:
+        single["Productivity"] = np.nan
     metric_options = [
         "HC in WIP",
         "Open Complaint Timeliness",
         "Actual UPLH",
         "Actual Output",
         "Actual Hours",
-        "Actual HC used"
+        "Actual HC used",
+        "Closures",
+        "Productivity",
     ]
     available = []
     for opt in metric_options:
