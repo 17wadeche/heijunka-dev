@@ -1359,7 +1359,7 @@ with right:
                             alt.Chart(
                                 wk.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad))
                             )
-                            .mark_text(dy=-4)
+                            .mark_text(dy=-10)
                             .encode(
                                 x="person:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
@@ -1422,7 +1422,7 @@ with right:
                             alt.Chart(
                                 wk.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad))
                             )
-                            .mark_text(dy=-4)
+                            .mark_text(dy=-10)
                             .encode(
                                 x="cell_station:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
