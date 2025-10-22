@@ -1695,6 +1695,8 @@ if len(teams_in_view) == 1:
             "Actual Output": "Actual Output",
             "Actual Hours": "Completed Hours",
             "Actual HC used": "Actual HC used",
+            "Closures": "Closures",
+            "Productivity": "Productivity",
         }
         base = alt.Chart(single).encode(x=alt.X("period_date:T", title="Week"))
         def tooltip_for(metric: str):
@@ -1705,6 +1707,10 @@ if len(teams_in_view) == 1:
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             if metric == "Actual UPLH":
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
+            if metric == "Productivity":                          
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".3f")]
+            if metric == "Closures":                         
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
         color_enc = alt.Color("metric:N", title="Series")
         single_sel = (len(selected) == 1)
