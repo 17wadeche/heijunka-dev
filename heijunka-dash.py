@@ -965,7 +965,7 @@ kpi(
     "Productivity",
     productivity,
     "{:,.3f}",
-    help="Closures ÷ (Completed Hours + total Non-WIP Hours)",
+    help="Closures ÷ All Available Hours",
 )
 st.markdown("---")
 left, mid, right = st.columns(3)
