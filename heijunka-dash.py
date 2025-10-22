@@ -1321,35 +1321,66 @@ with right:
                     if wk.empty:
                         st.info("No UPLH-by-person records for that week.")
                     else:
-                        wk_long = (
-                            wk.melt(
-                                id_vars=["period_date", "person", "Actual Output", "Target Output", "Actual Hours"],
-                                value_vars=["Actual UPLH", "Target UPLH"],
-                                var_name="Metric",
-                                value_name="UPLH"
-                            ).dropna(subset=["UPLH"])
+                        wk["HasTarget"] = wk["Target UPLH"].notna()
+                        wk["Delta"] = wk["Actual UPLH"] - wk["Target UPLH"]
+                        wk["DeltaRounded"] = wk["Delta"].round(2)
+                        wk["DeltaLabel"] = np.where(
+                            wk["HasTarget"], wk["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—"
                         )
-                        order_people = wk_long.groupby("person", as_index=False)["UPLH"].mean().sort_values("UPLH", ascending=False)["person"].tolist()
-                        lower = (
-                            alt.Chart(wk_long)
+                        wk["Status"] = np.where(
+                            ~wk["HasTarget"], "No Target",
+                            np.where(wk["Delta"] >= 0, "≥ Target", "< Target")
+                        )
+                        order_people = (
+                            wk.sort_values("Actual UPLH", ascending=False)["person"].tolist()
+                        )
+                        vmax = float(pd.to_numeric(wk["Actual UPLH"], errors="coerce").max())
+                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
+                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
+                        color_enc = alt.Color(
+                            "Status:N",
+                            title="vs Target",
+                            scale=alt.Scale(
+                                domain=["≥ Target", "< Target", "No Target"],
+                                range=["#22c55e", "#ef4444", "#9ca3af"]
+                            )
+                        )
+                        bars = (
+                            alt.Chart(wk)
                             .mark_bar()
                             .encode(
                                 x=alt.X("person:N", title="Person", sort=order_people),
-                                xOffset="Metric:N",
-                                y=alt.Y("UPLH:Q", title="UPLH"),
-                                color=alt.Color("Metric:N", title="Series"),
+                                y=alt.Y("Actual UPLH:Q", title="UPLH", scale=y_scale),
+                                color=color_enc,
                                 tooltip=[
                                     "period_date:T",
                                     "person:N",
                                     alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
                                     alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
                                     alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
-                                    alt.Tooltip("Metric:N"),
-                                    alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"{team_for_drill} • UPLH by Person (Actual vs Target)")
+                            .properties(height=230, title=f"{team_for_drill} • UPLH by Person (Actual, ± vs Target)")
                         )
+                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
+                        labels = (
+                            alt.Chart(wk.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad)))
+                            .mark_text(dy=-4)
+                            .encode(
+                                x="person:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DeltaLabel:N",
+                                color=alt.condition(
+                                    "datum.Status === '≥ Target'",
+                                    alt.value("#22c55e"),
+                                    alt.condition("datum.Status === '< Target'", alt.value("#ef4444"), alt.value("#9ca3af"))
+                                ),
+                            )
+                        )
+                        lower = bars + labels
             else:
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
                 if uplh_cell.empty:
@@ -1359,35 +1390,66 @@ with right:
                     if wk.empty:
                         st.info("No UPLH-by-cell/station records for that week.")
                     else:
-                        wk_long = (
-                            wk.melt(
-                                id_vars=["period_date", "cell_station", "Actual Output", "Target Output", "Actual Hours"],
-                                value_vars=["Actual UPLH", "Target UPLH"],
-                                var_name="Metric",
-                                value_name="UPLH"
-                            ).dropna(subset=["UPLH"])
+                        wk["HasTarget"] = wk["Target UPLH"].notna()
+                        wk["Delta"] = wk["Actual UPLH"] - wk["Target UPLH"]
+                        wk["DeltaRounded"] = wk["Delta"].round(2)
+                        wk["DeltaLabel"] = np.where(
+                            wk["HasTarget"], wk["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—"
                         )
-                        order_cells = wk_long.groupby("cell_station", as_index=False)["UPLH"].mean().sort_values("UPLH", ascending=False)["cell_station"].tolist()
-                        lower = (
-                            alt.Chart(wk_long)
+                        wk["Status"] = np.where(
+                            ~wk["HasTarget"], "No Target",
+                            np.where(wk["Delta"] >= 0, "≥ Target", "< Target")
+                        )
+                        order_cells = (
+                            wk.sort_values("Actual UPLH", ascending=False)["cell_station"].tolist()
+                        )
+                        vmax = float(pd.to_numeric(wk["Actual UPLH"], errors="coerce").max())
+                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
+                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
+                        color_enc = alt.Color(
+                            "Status:N",
+                            title="vs Target",
+                            scale=alt.Scale(
+                                domain=["≥ Target", "< Target", "No Target"],
+                                range=["#22c55e", "#ef4444", "#9ca3af"]
+                            )
+                        )
+                        bars = (
+                            alt.Chart(wk)
                             .mark_bar()
                             .encode(
                                 x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
-                                xOffset="Metric:N",
-                                y=alt.Y("UPLH:Q", title="UPLH"),
-                                color=alt.Color("Metric:N", title="Series"),
+                                y=alt.Y("Actual UPLH:Q", title="UPLH", scale=y_scale),
+                                color=color_enc,
                                 tooltip=[
                                     "period_date:T",
                                     alt.Tooltip("cell_station:N", title="Cell/Station"),
                                     alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
                                     alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
                                     alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
-                                    alt.Tooltip("Metric:N"),
-                                    alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
+                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"{team_for_drill} • UPLH by Cell/Station (Actual vs Target)")
+                            .properties(height=230, title=f"{team_for_drill} • UPLH by Cell/Station (Actual, ± vs Target)")
                         )
+                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
+                        labels = (
+                            alt.Chart(wk.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad)))
+                            .mark_text(dy=-4)
+                            .encode(
+                                x="cell_station:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DeltaLabel:N",
+                                color=alt.condition(
+                                    "datum.Status === '≥ Target'",
+                                    alt.value("#22c55e"),
+                                    alt.condition("datum.Status === '< Target'", alt.value("#ef4444"), alt.value("#9ca3af"))
+                                ),
+                            )
+                        )
+                        lower = bars + labels
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
         else:
