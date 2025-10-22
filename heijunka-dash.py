@@ -502,25 +502,39 @@ def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
 def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
     if outp.empty:
-        return pd.DataFrame(columns=["team", "period_date", "person", "Actual", "Actual Hours", "UPLH"])
+        return pd.DataFrame(columns=[
+            "team", "period_date", "person",
+            "Actual Output", "Target Output", "Actual Hours",
+            "Actual UPLH", "Target UPLH"
+        ])
     hrs = explode_person_hours(frame[frame["team"] == team])[["period_date", "person", "Actual Hours"]]
-    m = (outp
-         .merge(hrs, on=["period_date", "person"], how="left")
-         .rename(columns={"Actual": "Actual Output"}))
-    m["UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m = (
+        outp.merge(hrs, on=["period_date", "person"], how="left")
+            .rename(columns={"Actual": "Actual Output", "Target": "Target Output"})
+    )
+    m["Actual UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["Target UPLH"] = (m["Target Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
     m["team"] = team
-    return m[["team", "period_date", "person", "Actual Output", "Actual Hours", "UPLH"]].dropna(subset=["UPLH"])
+    cols = ["team", "period_date", "person", "Actual Output", "Target Output", "Actual Hours", "Actual UPLH", "Target UPLH"]
+    return m[cols].dropna(subset=["Actual Hours"])  # keep rows with hours; UPLH itself can be NaN if target missing
 def build_uplh_by_cell_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outc = explode_outputs_json(frame[frame["team"] == team], "Outputs by Cell/Station", "cell_station")
     if outc.empty:
-        return pd.DataFrame(columns=["team", "period_date", "cell_station", "Actual", "Actual Hours", "UPLH"])
+        return pd.DataFrame(columns=[
+            "team", "period_date", "cell_station",
+            "Actual Output", "Target Output", "Actual Hours",
+            "Actual UPLH", "Target UPLH"
+        ])
     hc = explode_cell_station_hours(frame[frame["team"] == team])[["period_date", "cell_station", "Actual Hours"]]
-    m = (outc
-         .merge(hc, on=["period_date", "cell_station"], how="left")
-         .rename(columns={"Actual": "Actual Output"}))
-    m["UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m = (
+        outc.merge(hc, on=["period_date", "cell_station"], how="left")
+            .rename(columns={"Actual": "Actual Output", "Target": "Target Output"})
+    )
+    m["Actual UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["Target UPLH"] = (m["Target Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
     m["team"] = team
-    return m[["team", "period_date", "cell_station", "Actual Output", "Actual Hours", "UPLH"]].dropna(subset=["UPLH"])
+    cols = ["team", "period_date", "cell_station", "Actual Output", "Target Output", "Actual Hours", "Actual UPLH", "Target UPLH"]
+    return m[cols].dropna(subset=["Actual Hours"])
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
@@ -1307,21 +1321,34 @@ with right:
                     if wk.empty:
                         st.info("No UPLH-by-person records for that week.")
                     else:
+                        wk_long = (
+                            wk.melt(
+                                id_vars=["period_date", "person", "Actual Output", "Target Output", "Actual Hours"],
+                                value_vars=["Actual UPLH", "Target UPLH"],
+                                var_name="Metric",
+                                value_name="UPLH"
+                            ).dropna(subset=["UPLH"])
+                        )
+                        order_people = wk_long.groupby("person", as_index=False)["UPLH"].mean().sort_values("UPLH", ascending=False)["person"].tolist()
                         lower = (
-                            alt.Chart(wk)
+                            alt.Chart(wk_long)
                             .mark_bar()
                             .encode(
-                                x=alt.X("person:N", title="Person", sort="-y"),
+                                x=alt.X("person:N", title="Person", sort=order_people),
+                                xOffset="Metric:N",
                                 y=alt.Y("UPLH:Q", title="UPLH"),
+                                color=alt.Color("Metric:N", title="Series"),
                                 tooltip=[
                                     "period_date:T",
                                     "person:N",
                                     alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                                    alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                                    alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
+                                    alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
+                                    alt.Tooltip("Metric:N"),
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230)
+                            .properties(height=230, title=f"{team_for_drill} • UPLH by Person (Actual vs Target)")
                         )
             else:
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
@@ -1332,21 +1359,34 @@ with right:
                     if wk.empty:
                         st.info("No UPLH-by-cell/station records for that week.")
                     else:
+                        wk_long = (
+                            wk.melt(
+                                id_vars=["period_date", "cell_station", "Actual Output", "Target Output", "Actual Hours"],
+                                value_vars=["Actual UPLH", "Target UPLH"],
+                                var_name="Metric",
+                                value_name="UPLH"
+                            ).dropna(subset=["UPLH"])
+                        )
+                        order_cells = wk_long.groupby("cell_station", as_index=False)["UPLH"].mean().sort_values("UPLH", ascending=False)["cell_station"].tolist()
                         lower = (
-                            alt.Chart(wk)
+                            alt.Chart(wk_long)
                             .mark_bar()
                             .encode(
-                                x=alt.X("cell_station:N", title="Cell/Station", sort="-y"),
+                                x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
+                                xOffset="Metric:N",
                                 y=alt.Y("UPLH:Q", title="UPLH"),
+                                color=alt.Color("Metric:N", title="Series"),
                                 tooltip=[
                                     "period_date:T",
                                     alt.Tooltip("cell_station:N", title="Cell/Station"),
                                     alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                                    alt.Tooltip("Actual Hours:Q", title="Actual Hours", format=",.1f"),
+                                    alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
+                                    alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
+                                    alt.Tooltip("Metric:N"),
                                     alt.Tooltip("UPLH:Q", title="UPLH", format=",.2f"),
                                 ],
                             )
-                            .properties(height=230)
+                            .properties(height=230, title=f"{team_for_drill} • UPLH by Cell/Station (Actual vs Target)")
                         )
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
