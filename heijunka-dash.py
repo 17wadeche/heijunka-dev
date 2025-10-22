@@ -787,6 +787,8 @@ with st.expander("Glossary", expanded=False):
 - **HC in WIP** — Number of **unique people** who logged any time in WIP during the week.
 - **Actual HC used** — Total actual hours worked ÷ **32.5**  
   <small>(assumes **6.5 hours in WIP per person per day × 5 days**)</small>
+- **Closures** — Number of PEs closed during the week.
+- **Productivity** — Closures ÷ (Completed WIP Hours + Non-WIP Hours)
 - **Multi-Axis View tip** — If you select **only one** series, you can project the next **3 months**.
 """, unsafe_allow_html=True)
 if df.empty:
