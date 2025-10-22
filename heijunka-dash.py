@@ -1373,10 +1373,13 @@ with right:
                                 x="person:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
                                 text="DeltaLabel:N",
-                                color=alt.condition(
-                                    "datum.Status === '≥ Target'",
-                                    alt.value("#22c55e"),
-                                    alt.condition("datum.Status === '< Target'", alt.value("#ef4444"), alt.value("#9ca3af"))
+                                color=alt.Color(
+                                    "Status:N",
+                                    legend=None,
+                                    scale=alt.Scale(
+                                        domain=["≥ Target", "< Target", "No Target"],
+                                        range=["#22c55e", "#ef4444", "#9ca3af"],
+                                    ),
                                 ),
                             )
                         )
