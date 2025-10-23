@@ -1437,13 +1437,13 @@ def _filter_pss_date_window(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[mask].copy()
 _TIMEISH_RE = re.compile(
     r"""
-    (                           # any of:
-      \b\d{1,2}\s*[:]\s*\d{2}\s*(?:AM|PM)\b      # 9:30 AM
-     |\b\d{1,2}\s*(?:AM|PM)\b                    # 9 AM
-     |\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:AM|PM)?\b  # 9-10 or 9-10AM
+    (                       
+      \b\d{1,2}\s*[:]\s*\d{2}\s*(?:AM|PM)\b      
+     |\b\d{1,2}\s*(?:AM|PM)\b                   
+     |\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:AM|PM)?\b  
      |\b(?:AM|PM)\b
     )
-    (?:\s*[A-Z]{2,4})?           # optional TZ like CST, EST
+    (?:\s*[A-Z]{2,4})?      
     """,
     re.IGNORECASE | re.VERBOSE,
 )
@@ -1501,11 +1501,11 @@ def _clean_person_token(s: str) -> str:
     if s is None:
         return ""
     s = s.strip().strip('"').strip("'")
-    s = re.sub(r"[?!]+", "", s)           # remove ? and !
-    s = PAREN_TRIM_RE.sub(" ", s)         # drop (Audit)/(reverse shadowing)/(Flex)
+    s = re.sub(r"[?!]+", "", s)          
+    s = PAREN_TRIM_RE.sub(" ", s)         
     s = AUDIT_WORD_RE.sub(" ", s) 
-    s = TRAIL_PRACTICE_RE.sub("", s)      # drop trailing " Practice"
-    s = re.sub(r"\s{2,}", " ", s)         # collapse spaces
+    s = TRAIL_PRACTICE_RE.sub("", s)    
+    s = re.sub(r"\s{2,}", " ", s)        
     return s.strip()
 def _alias_canonicalize(name: str) -> str:
     k = (name or "").strip().casefold()
@@ -1513,13 +1513,13 @@ def _alias_canonicalize(name: str) -> str:
 def _split_people(name: str) -> list[str]:
     if not name:
         return []
-    parts = SPLIT_RE.split(name)          # now handles &, , -, /, +, "and", "Reverse Shadowing with"
+    parts = SPLIT_RE.split(name)       
     cleaned = []
     for p in parts:
         px = _clean_person_token(p)
         if not px:
             continue
-        px = _alias_canonicalize(px)      # merge Jerile→Jerlie, Natlalie→Natalie, SH→Sean
+        px = _alias_canonicalize(px)  
         if not _should_exclude_name(px):
             cleaned.append(px)
     return cleaned
@@ -1643,7 +1643,7 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         return rows
     mw = cfg.get("manual_weeks") or {}
     sheet = mw.get("sheet")
-    header_row = int(mw.get("header_row", 1))  # 1-based; 0 = no headers
+    header_row = int(mw.get("header_row", 1)) 
     starts = mw.get("starts") or []
     if not sheet or not starts:
         print("[CAS][manual] 'manual_weeks' missing 'sheet' or 'starts'")
@@ -2651,11 +2651,11 @@ def _person_cell_hours_outputs_for_team(file_path: Path, team_name: str) -> tupl
     team = (team_name or "").strip().casefold()
     if team in ("svt","ect","pvh","crdn","aortic"):
         sheet = "#12 Production Analysis"
-        person_idx = 2   # C
-        cell_idx   = 3   # D
-        mins_idx   = 6   # G (minutes)
-        tgt_idx    = 5 if team != "aortic" else 4  # F (most) / E (Aortic)
-        out_idx    = 8   # I (actual)
+        person_idx = 2  
+        cell_idx   = 3 
+        mins_idx   = 6
+        tgt_idx    = 5 if team != "aortic" else 4 
+        out_idx    = 8 
     elif team == "tct clinical":
         sheet = "Clinical #12 Prod Analysis"
         person_idx = 2; cell_idx = 3; mins_idx = 7; tgt_idx = 6; out_idx = 9
@@ -2836,7 +2836,7 @@ def _hours_by_cs_by_person_for_team(file_path: Path, team_name: str) -> dict:
             if not person or _should_exclude_name(person):
                 continue
             station = row["station"]
-            hours = float(row["mins"]) / 60.0      # <-- minutes → hours
+            hours = float(row["mins"]) / 60.0
             out.setdefault(station, {})
             out[station][person] = round(out[station].get(person, 0.0) + hours, 2)
         return out
