@@ -2014,8 +2014,6 @@ if "Closures" in f_table.columns:
     fmt_map["Closures"] = "{:,.0f}"
 if "Productivity" in f_table.columns:
     fmt_map["Productivity"] = "{:.4f}"
-if "Date" in f_table_display.columns:
-    f_table_display["Date"] = pd.to_datetime(f_table_display["Date"], errors="coerce").dt.date
 f_table_display = f_table.rename(columns={"team": "Team", "period_date": "Date"})
 st.dataframe(
     f_table.style.format(fmt_map).hide(axis="index"),
