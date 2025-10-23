@@ -3362,6 +3362,21 @@ def save_outputs(df: pd.DataFrame):
         git_autocommit_and_push_many(REPO_DIR, [REPO_CSV, REPO_XLSX], branch=GIT_BRANCH)
     except Exception as e:
         print(f"[WARN] Git push (many) failed: {e}")
+    def _samefile(a: Path, b: Path) -> bool:
+        try:
+            return a.resolve().samefile(b.resolve())
+        except Exception:
+            return str(a.resolve()).lower() == str(b.resolve()).lower()
+    if not _samefile(OUT_CSV, REPO_CSV):
+        shutil.copyfile(OUT_CSV, REPO_CSV)
+        print(f"Copied CSV  -> {REPO_CSV}")
+    else:
+        print("[info] OUT_CSV and REPO_CSV are the same file; skipping copy.")
+    if not _samefile(OUT_XLSX, REPO_XLSX):
+        shutil.copyfile(OUT_XLSX, REPO_XLSX)
+        print(f"Copied XLSX -> {REPO_XLSX}")
+    else:
+        print("[info] OUT_XLSX and REPO_XLSX are the same file; skipping copy.")
 def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     new_df = normalize_period_date(new_df)
     old_frames = []
