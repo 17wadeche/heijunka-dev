@@ -2430,17 +2430,22 @@ def safe_numeric(x):
     except Exception:
         return None
 def _nest_hours_person_by_station(pairs: pd.DataFrame) -> dict:
-    if pairs.empty: 
+    if pairs.empty:
         return {}
     pairs = pairs.copy()
     pairs["station"] = pairs["station"].astype(str).str.strip()
     pairs["person"]  = pairs["person"].astype(str).str.strip()
     pairs["hours"]   = pd.to_numeric(pairs["hours"], errors="coerce")
-    pairs = pairs.dropna(subset=["station","person","hours"])
+    _bad = {"", "-", "–", "—", "nan"}
+    pairs = pairs[
+        pairs["hours"].notna() &
+        ~pairs["station"].str.casefold().isin(_bad) &
+        ~pairs["person"].str.casefold().isin(_bad)
+    ]
     agg = pairs.groupby(["station","person"])["hours"].sum(min_count=1)
     out = {}
     for (st, pe), v in agg.items():
-        if pd.isna(v) or not st or not pe: 
+        if pd.isna(v):
             continue
         out.setdefault(st, {})[pe] = round(float(v), 2)
     return out
@@ -2673,13 +2678,22 @@ def _person_cell_hours_outputs_for_team(file_path: Path, team_name: str) -> tupl
     sub["mins"]    = pd.to_numeric(sub["mins"], errors="coerce")
     sub["target"]  = pd.to_numeric(sub["target"], errors="coerce")
     sub["actual"]  = pd.to_numeric(sub["actual"], errors="coerce")
-    sub = sub[(sub[["person","station"]].ne("").all(axis=1)) &
-              (sub[["mins","target","actual"]].notna().any(axis=1))]
-    pairs_hours = sub.loc[sub["mins"].notna(), ["station","person","mins"]].rename(columns={"mins":"hours"})
-    hours_pc = _nest_hours_person_by_station(pairs_hours)
-    pairs_outs = sub.loc[:, ["station","person","actual","target"]].rename(
-        columns={"actual":"actual_output","target":"target_output"}
+    _bad = {"", "-", "–", "—", "nan"}
+    sub = sub[
+        ~sub["person"].str.casefold().isin(_bad) &
+        ~sub["station"].str.casefold().isin(_bad)
+    ]
+    sub["person"] = sub["person"].apply(_clean_person_token)
+    sub = sub[~sub["person"].apply(_should_exclude_name)]
+    sub = sub[(sub[["mins","target","actual"]].notna().any(axis=1))]
+    pairs_hours = (
+        sub.loc[sub["mins"].notna(), ["station","person","mins"]]
+           .rename(columns={"mins":"hours"})
+           .assign(hours=lambda d: d["hours"] / 60.0)  # minutes → hours ✅
     )
+    hours_pc = _nest_hours_person_by_station(pairs_hours)
+    pairs_outs = sub.loc[:, ["station","person","actual","target"]] \
+                    .rename(columns={"actual":"actual_output","target":"target_output"})
     outs_pc = _nest_outputs_person_by_station(pairs_outs)
     return hours_pc, outs_pc
 def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
