@@ -512,12 +512,13 @@ def _filter_future_periods(df: pd.DataFrame) -> pd.DataFrame:
     src = (
         df.get("source_file", "")
           .astype(str)
-          .str.lower()
+          .str.casefold()
           .str.replace("/", "\\", regex=False)
     )
+    pvh_archive_2025_token = "\\cqxm - iv resource site - cos supportive materials\\archive_production analysis\\2025"
     is_pvh_archive_2025 = (
-        df.get("team", "").astype(str).str.upper().eq("PVH")
-        & src.str.contains(r"\archive_production analysis\2025", regex=False)
+        df.get("team", "").astype(str).str.casefold().eq("pvh")
+        & src.str.contains(pvh_archive_2025_token, regex=False)
     )
     keep = d.isna() | (d <= today) | is_pvh_archive_2025
     return df.loc[keep].copy()
@@ -3590,9 +3591,11 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
         try:
             old_csv = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
             for col in old_csv.columns:
-                if col.lower() in {"total available hours","completed hours","target output","actual output",
-                                   "target uplh","actual uplh","actual hc used","hc in wip",
-                                   "open complaint timeliness"}:
+                if col.lower() in {
+                    "total available hours", "completed hours", "target output", "actual output",
+                    "target uplh", "actual uplh", "actual hc used", "hc in wip",
+                    "open complaint timeliness"
+                }:
                     old_csv[col] = pd.to_numeric(old_csv[col], errors="coerce")
             old_frames.append(old_csv)
         except Exception:
@@ -3601,9 +3604,11 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
         try:
             old_local = pd.read_csv(OUT_CSV, dtype=str, keep_default_na=False)
             for col in old_local.columns:
-                if col.lower() in {"total available hours","completed hours","target output","actual output",
-                                   "target uplh","actual uplh","actual hc used","hc in wip",
-                                   "open complaint timeliness"}:
+                if col.lower() in {
+                    "total available hours", "completed hours", "target output", "actual output",
+                    "target uplh", "actual uplh", "actual hc used", "hc in wip",
+                    "open complaint timeliness"
+                }:
                     old_local[col] = pd.to_numeric(old_local[col], errors="coerce")
             old_frames.append(old_local)
         except Exception:
@@ -3613,29 +3618,33 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     else:
         return new_df
     old = normalize_period_date(old)
-    team_keys = {}
+    team_keys: dict[str, list[str]] = {}
     for cfg in TEAM_CONFIG:
         key = cfg.get("unique_key", ["team", "period_date", "source_file"])
         team_keys[cfg["name"]] = key
-    def make_key(df):
-        keys = []
-        for _, r in df.iterrows():
-            kcols = team_keys.get(r.get("team"), ["team", "period_date", "source_file"])
-            parts = []
-            for c in kcols:
-                if c == "period_date":
-                    ts = pd.to_datetime(r.get(c), errors="coerce")
-                    parts.append(ts.date().isoformat() if pd.notna(ts) else None)
-                else:
-                    parts.append(r.get(c))
-            keys.append(tuple(parts))
-        return pd.Series(keys, index=df.index)
-    old = old.copy();      old["_origin"] = "old";      old["_key"] = make_key(old)
-    new_df = new_df.copy(); new_df["_origin"] = "new";  new_df["_key"] = make_key(new_df)
+    def make_key_row(r) -> tuple:
+        kcols = team_keys.get(r.get("team"), ["team", "period_date", "source_file"])
+        parts = []
+        for c in kcols:
+            if c == "period_date":
+                ts = pd.to_datetime(r.get(c), errors="coerce")
+                parts.append(ts.normalize().date().isoformat() if pd.notna(ts) else None)
+            else:
+                parts.append(r.get(c))
+        return tuple(parts)
+    old = old.copy()
+    old["_origin"] = "old"
+    old["_key"] = old.apply(make_key_row, axis=1)
+    new_df = new_df.copy()
+    new_df["_origin"] = "new"
+    new_df["_key"] = new_df.apply(make_key_row, axis=1)
     combined = pd.concat([old, new_df], ignore_index=True)
     combined = normalize_period_date(combined)
     if "source_file" in combined.columns:
-        norm = combined["source_file"].astype(str).str.lower().str.replace("/", "\\")
+        norm = (combined["source_file"]
+                .astype(str)
+                .str.lower()
+                .str.replace("/", "\\", regex=False))
         is_old = combined["_origin"] == "old"
         keep = pd.Series(True, index=combined.index)
         if EXCLUDED_SOURCE_FILES:
@@ -3643,61 +3652,29 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
         if EXCLUDED_DIRS:
             keep &= is_old | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
         combined = combined.loc[keep].copy()
-    latest_by_team = combined.groupby("team", dropna=False)["period_date"].transform("max")
-    is_latest = (combined["period_date"] == latest_by_team) & combined["period_date"].notna()
-    origin_rank = combined["_origin"].map({"old": 0, "new": 1}).fillna(1)
-    combined["_team_key"] = combined["team"].astype(str).str.strip().str.casefold()
-    def coalesce_group(g: pd.DataFrame) -> pd.Series:
-        g = g.sort_values(["_origin_rank", "source_file"], ascending=[False, True])
-        out = g.iloc[0].copy()
-        for _, r in g.iloc[1:].iterrows():
-            for col in g.columns:
-                if col in {"_key", "_origin", "_origin_rank"}:
-                    continue
-                v = out.get(col)
-                if (pd.isna(v) or v == "") and not (pd.isna(r.get(col)) or r.get(col) == ""):
-                    out[col] = r.get(col)
-        return out
-    latest = combined.loc[is_latest].copy()
-    latest["_origin_rank"] = origin_rank[is_latest]
-    latest = latest.groupby("_key", as_index=False, group_keys=False).apply(coalesce_group, include_groups=False)
-    cutoff_recent = pd.Timestamp.today().normalize() - pd.Timedelta(days=60)
-    past_all = combined.loc[~is_latest].assign(_origin_rank=origin_rank[~is_latest])
-    svt_mask = past_all["team"].astype(str).str.strip().str.casefold().eq("svt")
-    svt_recent = past_all[svt_mask & (past_all["period_date"] >= cutoff_recent)]
-    svt_older  = past_all[svt_mask & (past_all["period_date"] <  cutoff_recent)]
-    non_svt    = past_all[~svt_mask]
-    svt_recent_pick = (svt_recent
-        .sort_values(["team","period_date","_origin_rank","source_file"],
-                    ascending=[True, True, False, True])
-        .drop_duplicates(subset=["_key"], keep="first"))
-    svt_older_pick = (svt_older
-        .sort_values(["team","period_date","_origin_rank","source_file"],
-                    ascending=[True, True, True,  True])
-        .drop_duplicates(subset=["_key"], keep="first"))
-    non_svt_pick = (non_svt
-        .sort_values(["team","period_date","_origin_rank","source_file"],
-                    ascending=[True, True, True,  True])
-        .drop_duplicates(subset=["_key"], keep="first"))
-    past = pd.concat([svt_recent_pick, svt_older_pick, non_svt_pick], ignore_index=True)
-    combined = pd.concat([past, latest], ignore_index=True)
-    combined = normalize_period_date(combined)
-    combined = combined.drop(columns=[c for c in ["_key","_origin","_origin_rank"] if c in combined.columns])
+    combined["_origin_rank"] = combined["_origin"].map({"old": 0, "new": 1}).fillna(1)
+    combined = combined.sort_values(
+        ["team", "period_date", "_origin_rank", "source_file"],
+        ascending=[True, True, True, True]
+    ).drop_duplicates(subset=["_key"], keep="last")
+    combined = _filter_future_periods(combined)
+    combined = _filter_ph_zero_hours(combined)
+    combined = _filter_pss_date_window(combined)
+    combined = _filter_ect_min_year(combined)
+    combined = combined.drop(columns=[c for c in ["_key", "_origin", "_origin_rank"] if c in combined.columns])
     base_cols = ["team", "period_date", "source_file"]
     metric_cols = [c for c in combined.columns if c not in base_cols + ["error"]]
     cols = base_cols + metric_cols + (["error"] if "error" in combined.columns else [])
     combined = combined.reindex(columns=cols)
     if "period_date" in combined.columns:
         combined = combined.sort_values(["team", "period_date", "source_file"], ascending=[True, True, True])
-    combined = _filter_future_periods(combined)
-    combined = _filter_ph_zero_hours(combined)
-    combined = _filter_pss_date_window(combined)
-    combined = _filter_ect_min_year(combined)
     dbg = combined.copy()
     pvh = dbg[dbg["team"].astype(str).str.upper().eq("PVH")]
-    print("[debug] PVH rows:", len(pvh), 
+    print(
+        "[debug] PVH rows:", len(pvh),
         "with period_date NA:", pvh["period_date"].isna().sum(),
-        "unique periods:", pvh["period_date"].dropna().dt.date.nunique())
+        "unique periods:", pvh["period_date"].dropna().dt.date.nunique()
+    )
     return combined
 def _dedupe_by_team_unique_key(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
