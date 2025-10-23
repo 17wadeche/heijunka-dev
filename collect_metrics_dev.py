@@ -3923,7 +3923,7 @@ def run_once(selected_teams: set[str] | None = None):
     df["Actual UPLH"] = df["Actual UPLH"].round(2)
     if "UPLH WP1" in df.columns: df["UPLH WP1"] = pd.to_numeric(df["UPLH WP1"], errors="coerce").round(2)
     if "UPLH WP2" in df.columns: df["UPLH WP2"] = pd.to_numeric(df["UPLH WP2"], errors="coerce").round(2)
-    df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 32.5
+    df["Actual HC Used"] = pd.to_numeric(df.get("Completed Hours"), errors="coerce") / 30
     df["Actual HC Used"] = df["Actual HC Used"].round(2)
     df = merge_with_existing(df)
     try:
