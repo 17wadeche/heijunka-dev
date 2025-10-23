@@ -1564,16 +1564,49 @@ with mid:
                                         alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                     ],
                                 )
-                                lines = base_ts.mark_line()
-                                pts = base_ts.mark_point(size=70).encode(
-                                    fill=alt.Color(
-                                        "LabelGroup:N",
-                                        legend=None,
-                                        scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"])
+                                lines = (
+                                    alt.Chart(ot)
+                                    .encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Actual:Q", title="Actual Output"),
+                                        color=alt.Color("person:N", title="Person"),
+                                        tooltip=[
+                                            "period_date:T",
+                                            "person:N",
+                                            alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                        ],
                                     )
+                                    .mark_line()
+                                )
+                                pts = (
+                                    alt.Chart(ot)
+                                    .encode(
+                                        x=alt.X("period_date:T"),
+                                        y=alt.Y("Actual:Q"),
+                                        fill=alt.Color(
+                                            "LabelGroup:N",
+                                            title="Goal met?",
+                                            scale=alt.Scale(
+                                                domain=["pos", "neg", "none"],
+                                                range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
+                                            ),
+                                        ),
+                                        stroke=alt.Color("person:N", legend=None),
+                                        tooltip=[
+                                            "period_date:T",
+                                            "person:N",
+                                            alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                        ],
+                                    )
+                                    .mark_point(filled=True, size=85, strokeWidth=1.2)
                                 )
                                 st.altair_chart(
-                                    (lines + pts).properties(height=280, title=f"{picked_station} • Per-person outputs over time"),
+                                    (lines + pts)
+                                        .properties(height=280, title=f"{picked_station} • Per-person outputs over time"),
                                     use_container_width=True
                                 )
 with right:
