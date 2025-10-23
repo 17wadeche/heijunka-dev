@@ -770,6 +770,8 @@ if nonwip_mode:
         })
         .sort_values("Date", ascending=False)
     )
+    if "Date" in tbl.columns:
+        tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
     st.dataframe(
         tbl.style.format({
             "People Count": "{:,.0f}",
