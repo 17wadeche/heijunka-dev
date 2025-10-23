@@ -1464,6 +1464,8 @@ def _should_exclude_name(name: str) -> bool:
     if not n:
         return True
     lowered = n.casefold()
+    if lowered == "team member" or lowered.startswith("team member "):
+        return True
     if lowered in {"nan", "audit", "team", "everyone"}:
         return True
     if "power hour" in lowered:
@@ -2470,17 +2472,29 @@ def _nest_outputs_person_by_station(pairs: pd.DataFrame) -> dict:
         if not out[st]:
             del out[st]
     return out
-def _uplh_by_person_by_station(hours_by: dict, outs_by: dict) -> dict:
-    out = {}
-    for st, people in (hours_by or {}).items():
-        for pe, hrs in (people or {}).items():
+def _uplh_by_person_by_station(hours_map: dict, outputs_map: dict) -> dict:
+    out: dict[str, dict[str, dict]] = {}
+    for station, people_hours in (hours_map or {}).items():
+        for person, hours in (people_hours or {}).items():
             try:
-                ao = ((outs_by or {}).get(st, {}) or {}).get(pe, {}).get("output")
-                uplh = (float(ao) / float(hrs)) if (ao is not None and float(hrs) > 0) else None
+                h = float(hours)
+                if h <= 0:
+                    continue
             except Exception:
-                uplh = None
-            if uplh is not None:
-                out.setdefault(st, {})[pe] = round(float(uplh), 2)
+                continue
+            op_station = (outputs_map or {}).get(station, {})
+            op_vals = op_station.get(person, {}) if isinstance(op_station, dict) else {}
+            ao = float(op_vals.get("output", 0) or 0.0)
+            to = float(op_vals.get("target", 0) or 0.0)
+            actual_uplh = (ao / h) if h else None
+            target_uplh = (to / h) if h else None
+            if actual_uplh is None and target_uplh is None:
+                continue
+            out.setdefault(station, {})
+            out[station][person] = {
+                "actual": round(actual_uplh, 2) if actual_uplh is not None else None,
+                "target": round(target_uplh, 2) if target_uplh is not None else None,
+            }
     return out
 def normalize_period_date(df: pd.DataFrame) -> pd.DataFrame:
     if "period_date" in df.columns:
@@ -2718,67 +2732,98 @@ def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
     if sub.empty: return {}
     agg = sub.groupby("cell_station", dropna=False)["mins"].sum()
     return {k: round(float(v) / 60.0, 2) for k, v in agg.items() if pd.notna(v) and float(v) > 0}
-def _hours_by_cs_by_person_for_team(file_path: Path, team_name: str) -> dict[str, dict[str, float]]:
+def _hours_by_cs_by_person_for_team(file_path: Path, team_name: str) -> dict:
     team = (team_name or "").strip().casefold()
-    def _bad_token(s: str) -> bool:
+    ext = file_path.suffix.lower()
+    def _norm_station(s: str) -> str | None:
         if s is None:
-            return True
-        t = str(s).strip()
-        if not t:
-            return True
-        low = t.casefold()
-        return low in {"-", "–", "—", "nan"}
-    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
-        sheet = "#12 Production Analysis"
-        name_idx    = 2  # C
-        station_idx = 3  # D
-        minutes_idx = 6  # G (only used for non-Aortic)
-    elif team == "tct clinical":
-        sheet = "Clinical #12 Prod Analysis"
-        name_idx    = 2  # C
-        station_idx = 3  # D
-        minutes_idx = 7  # H
-    elif team == "tct commercial":
-        sheet = "Commercial #12 Prod Analysis"
-        name_idx    = 2  # C
-        station_idx = 3  # D
-        minutes_idx = 7  # H
-    else:
-        return {}
-    df = _read_sheet_as_df(file_path, sheet)
-    if df is None or df.empty:
-        return {}
-    ncols = df.shape[1]
-    if any(i >= ncols for i in (name_idx, station_idx)) or (team != "aortic" and minutes_idx >= ncols):
-        return {}
-    sub_cols = [name_idx, station_idx] + ([] if team == "aortic" else [minutes_idx])
-    sub = df.iloc[:, sub_cols].copy()
-    sub.columns = (["name", "station"] if team == "aortic" else ["name", "station", "mins"])
-    sub["name"] = sub["name"].astype(str).str.strip()
-    sub["station"] = sub["station"].astype(str).str.strip()
-    mask_valid = (~sub["name"].apply(_bad_token)) & (~sub["station"].apply(_bad_token))
-    sub = sub[mask_valid]
-    if sub.empty:
-        return {}
-    result: dict[str, dict[str, float]] = {}
+            return None
+        k = str(s).strip()
+        if not k:
+            return None
+        if k in {"-", "–", "—"}:
+            return None
+        if k.casefold() == "nan":
+            return None
+        return k
+    out: dict[str, dict[str, float]] = {}
     if team == "aortic":
-        for _, row in sub.iterrows():
-            person = row["name"]
-            cell   = row["station"]
-            per_map = result.setdefault(person, {})
-            per_map[cell] = round(per_map.get(cell, 0.0) + 2.0, 2)
-    else:
-        sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
-        sub = sub.dropna(subset=["mins"])
-        sub = sub[sub["mins"] > 0]
-        if sub.empty:
+        sheet = "#12 Production Analysis"
+        try:
+            if ext in (".xlsx", ".xlsm"):
+                wb = load_workbook_fast(file_path, data_only=True, read_only=True)
+                if sheet not in wb.sheetnames:
+                    return {}
+                ws = wb[sheet]
+                c_idx = col_letter_to_index("C")
+                d_idx = col_letter_to_index("D")
+                for r in ws.iter_rows(min_row=7, max_row=199,
+                                      min_col=min(c_idx, d_idx),
+                                      max_col=max(c_idx, d_idx),
+                                      values_only=True):
+                    person_raw = r[c_idx - min(c_idx, d_idx)]
+                    station_raw = r[d_idx - min(c_idx, d_idx)]
+                    person = _clean_person_token(str(person_raw) if person_raw is not None else "")
+                    station = _norm_station(station_raw)
+                    if not person or _should_exclude_name(person) or not station:
+                        continue
+                    out.setdefault(station, {})
+                    out[station][person] = round(out[station].get(person, 0.0) + 2.0, 2)
+                return out
+            elif ext == ".xlsb":
+                df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
+                C = col_letter_to_index("C") - 1
+                D = col_letter_to_index("D") - 1
+                sub = df.iloc[6:199, [C, D]].copy()
+                sub.columns = ["person", "station"]
+                for _, row in sub.iterrows():
+                    person = _clean_person_token(str(row["person"]) if pd.notna(row["person"]) else "")
+                    station = _norm_station(row["station"])
+                    if not person or _should_exclude_name(person) or not station:
+                        continue
+                    out.setdefault(station, {})
+                    out[station][person] = round(out[station].get(person, 0.0) + 2.0, 2)
+                return out
+        except Exception:
             return {}
-        grp = sub.groupby(["name", "station"], dropna=False)["mins"].sum()
-        for (person, cell), total_mins in grp.items():
-            hours = float(total_mins) / 60.0   # divide by 60
-            per_map = result.setdefault(str(person), {})
-            per_map[str(cell)] = round(per_map.get(str(cell), 0.0) + hours, 2)
-    return result
+    try:
+        if team in {"svt", "ect", "pvh", "crdn"}:
+            sheet = "#12 Production Analysis"
+            person_col = "C"; station_col = "D"; minutes_col = "G"
+        elif team == "tct clinical":
+            sheet = "Clinical #12 Prod Analysis"
+            person_col = "C"; station_col = "D"; minutes_col = "H"
+        elif team == "tct commercial":
+            sheet = "Commercial #12 Prod Analysis"
+            person_col = "C"; station_col = "D"; minutes_col = "H"
+        else:
+            return {}
+        if ext == ".xlsb":
+            df = read_excel_fast(file_path, sheet_name=sheet, engine="pyxlsb")
+        else:
+            df = read_excel_fast(file_path, sheet_name=sheet, engine=None)
+        p_i = col_letter_to_index(person_col) - 1
+        s_i = col_letter_to_index(station_col) - 1
+        m_i = col_letter_to_index(minutes_col) - 1
+        nrows = df.shape[0]
+        sub = df.iloc[0:200, [p_i, s_i, m_i]].copy()
+        sub.columns = ["person", "station", "mins"]
+        sub["person"] = sub["person"].astype(str).str.strip()
+        sub["station"] = sub["station"].apply(_norm_station)
+        sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
+        sub = sub.dropna(subset=["station", "mins"])
+        sub = sub[sub["mins"] > 0]
+        for _, row in sub.iterrows():
+            person = _clean_person_token(row["person"])
+            if not person or _should_exclude_name(person):
+                continue
+            station = row["station"]
+            hours = float(row["mins"]) / 60.0      # <-- minutes → hours
+            out.setdefault(station, {})
+            out[station][person] = round(out[station].get(person, 0.0) + hours, 2)
+        return out
+    except Exception:
+        return {}
 def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dict:
     ext = file_path.suffix.lower()
     if ext in (".xlsx", ".xlsm"):
