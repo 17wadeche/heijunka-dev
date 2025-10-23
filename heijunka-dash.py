@@ -776,7 +776,8 @@ if nonwip_mode:
             "Non-WIP Hours": "{:,.1f}",
             "% in WIP": "{:.2f}%",
         }),
-        use_container_width=True
+        use_container_width=True,
+        hide_index=True,
     )
     st.stop()
 with st.expander("Glossary", expanded=False):
