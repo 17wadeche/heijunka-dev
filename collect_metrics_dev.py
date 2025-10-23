@@ -2686,10 +2686,12 @@ def _person_cell_hours_outputs_for_team(file_path: Path, team_name: str) -> tupl
     sub["person"] = sub["person"].apply(_clean_person_token)
     sub = sub[~sub["person"].apply(_should_exclude_name)]
     sub = sub[(sub[["mins","target","actual"]].notna().any(axis=1))]
+    if team_name.strip().casefold() == "pvh":
+        sub = sub[sub["station"].str.casefold() != "non-wip"]
     pairs_hours = (
         sub.loc[sub["mins"].notna(), ["station","person","mins"]]
            .rename(columns={"mins":"hours"})
-           .assign(hours=lambda d: d["hours"] / 60.0)  # minutes → hours ✅
+           .assign(hours=lambda d: d["hours"] / 60.0)
     )
     hours_pc = _nest_hours_person_by_station(pairs_hours)
     pairs_outs = sub.loc[:, ["station","person","actual","target"]] \
@@ -2824,6 +2826,8 @@ def _hours_by_cs_by_person_for_team(file_path: Path, team_name: str) -> dict:
         sub.columns = ["person", "station", "mins"]
         sub["person"] = sub["person"].astype(str).str.strip()
         sub["station"] = sub["station"].apply(_norm_station)
+        if team == "pvh":
+            sub = sub[sub["station"].astype(str).str.casefold() != "non-wip"]
         sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
         sub = sub.dropna(subset=["station", "mins"])
         sub = sub[sub["mins"] > 0]
@@ -3132,18 +3136,6 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 except Exception:
                     pass
                 try:
-                    hours_pc, outs_pc = _person_cell_hours_outputs_for_team(p, team_name)
-                    if hours_pc:
-                        values["Hours by Cell/Station - by person"] = json.dumps(hours_pc, ensure_ascii=False)
-                    if outs_pc:
-                        values["Output by Cell/Station - by person"] = json.dumps(outs_pc, ensure_ascii=False)
-                    if hours_pc or outs_pc:
-                        uplh_pc = _uplh_by_person_by_station(hours_pc or {}, outs_pc or {})
-                        if uplh_pc:
-                            values["UPLH by Cell/Station - by person"] = json.dumps(uplh_pc, ensure_ascii=False)
-                except Exception:
-                    pass
-                try:
                     wb_tmp = load_workbook(p, data_only=True, read_only=True)
                     per_person = {}
                     if "Individual (WIP-Non WIP)" in wb_tmp.sheetnames:
@@ -3235,7 +3227,7 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     pass
             try:
                 cs_by_person = _hours_by_cs_by_person_for_team(p, team_name)
-                if cs_by_person:
+                if cs_by_person and not values.get("Hours by Cell/Station - by person"):
                     values["Hours by Cell/Station - by person"] = json.dumps(cs_by_person, ensure_ascii=False)
             except Exception:
                 pass
@@ -3323,6 +3315,18 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                                 "available": round(float(avail or 0.0), 2),
                             }
                         values["Person Hours"] = json.dumps(per_person, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
+                    hours_pc, outs_pc = _person_cell_hours_outputs_for_team(p, team_name)
+                    if hours_pc:
+                        values["Hours by Cell/Station - by person"] = json.dumps(hours_pc, ensure_ascii=False)
+                    if outs_pc:
+                        values["Output by Cell/Station - by person"] = json.dumps(outs_pc, ensure_ascii=False)
+                    if hours_pc or outs_pc:
+                        uplh_pc = _uplh_by_person_by_station(hours_pc or {}, outs_pc or {})
+                        if uplh_pc:
+                            values["UPLH by Cell/Station - by person"] = json.dumps(uplh_pc, ensure_ascii=False)
                 except Exception:
                     pass
             rows.append({
