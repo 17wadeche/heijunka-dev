@@ -1516,7 +1516,7 @@ with right:
                                     alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
                                 ],
                             )
-                            .properties(height=230, title=f"{team_for_drill} • UPLH by Cell/Station (Actual, ± vs Target)")
+                            .properties(height=230)
                         )
                         label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
                         labels = (
