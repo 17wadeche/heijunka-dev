@@ -2221,31 +2221,6 @@ if len(teams_in_view) == 1:
             i += 1
         combo = alt.layer(*layers).resolve_scale(y="independent").properties(height=320)
         st.altair_chart(combo, use_container_width=True)
-st.subheader("Efficiency vs Target (Actual / Target)")
-eff = f.assign(Efficiency=lambda d: (d["Actual Output"] / d["Target Output"]))
-eff = eff.replace([np.inf, -np.inf], np.nan).dropna(subset=["Efficiency"])
-color_scale = alt.Scale(
-    domain=[0, 1],
-    range=["#d62728", "#2ca02c"]
-)
-eff_bar = (
-    alt.Chart(eff)
-    .mark_bar()
-    .encode(
-        x=alt.X("period_date:T", title="Week"),
-        y=alt.Y("Efficiency:Q", title="x of Target"),
-        color=alt.condition("datum.Efficiency >= 1", alt.value("#2ca02c"), alt.value("#d62728")),
-        tooltip=[
-            "team:N",
-            "period_date:T",
-            alt.Tooltip("Actual Output:Q", format=",.0f"),
-            alt.Tooltip("Target Output:Q", format=",.0f"),
-            alt.Tooltip("Efficiency:Q", format=".2f")
-        ]
-    )
-)
-ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).encode(y="y:Q")
-st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
 st.markdown("---")
 st.subheader("Detailed Rows")
 _nw = load_non_wip()
