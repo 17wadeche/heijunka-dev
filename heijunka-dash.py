@@ -2015,7 +2015,10 @@ if "Closures" in f_table.columns:
 if "Productivity" in f_table.columns:
     fmt_map["Productivity"] = "{:.4f}"
 f_table_display = f_table.rename(columns={"team": "Team", "period_date": "Date"})
+if "Date" in f_table_display.columns:
+    f_table_display["Date"] = pd.to_datetime(f_table_display["Date"], errors="coerce").dt.date
 st.dataframe(
-    f_table.style.format(fmt_map).hide(axis="index"),
-    use_container_width=True
+    f_table_display.style.format(fmt_map),  # keep your number formatting
+    use_container_width=True,
+    hide_index=True                          # hides the left index column
 )
