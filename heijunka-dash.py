@@ -1733,7 +1733,30 @@ with right:
             st.altair_chart(top, use_container_width=True)
             if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
                 st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
-        stations_in_week = wk["cell_station"].dropna().unique().tolist()
+        stations_in_week = []
+        try:
+            if isinstance(wk, pd.DataFrame) and ("cell_station" in wk.columns):
+                stations_in_week = (
+                    wk["cell_station"].dropna().astype(str).str.strip().unique().tolist()
+                )
+            else:
+                stn_out = explode_outputs_json(
+                    f[f["team"] == team_for_drill], "Outputs by Cell/Station", "cell_station"
+                )
+                if not stn_out.empty:
+                    stations_in_week = (
+                        stn_out.loc[stn_out["period_date"] == picked_week, "cell_station"]
+                            .dropna().astype(str).str.strip().unique().tolist()
+                    )
+                if not stations_in_week:
+                    stn_hours = explode_cell_station_hours(f[f["team"] == team_for_drill])
+                    if not stn_hours.empty:
+                        stations_in_week = (
+                            stn_hours.loc[stn_hours["period_date"] == picked_week, "cell_station"]
+                                    .dropna().astype(str).str.strip().unique().tolist()
+                        )
+        except Exception:
+            stations_in_week = []
         if stations_in_week:
             picked_station_uplh = st.selectbox(
                 "Drill further: Station UPLH over time (per-person lines)",
