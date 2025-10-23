@@ -1320,7 +1320,7 @@ with right:
         alt.Chart(uplh_long)
         .encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="UPLH", scale=y_scale),
+            y=alt.Y("Value:Q", title="Actual UPLH", scale=y_scale),
             color=alt.Color("Metric:N", title="Series"),
             tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")],
         )
