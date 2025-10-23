@@ -3256,6 +3256,20 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                     values["Hours by Cell/Station - by person"] = json.dumps(cs_by_person, ensure_ascii=False)
             except Exception:
                 pass
+            try:
+                if not values.get("UPLH by Cell/Station - by person"):
+                    hours_map = cs_by_person or json.loads(values.get("Hours by Cell/Station - by person", "{}"))
+                    try:
+                        outputs_map = outs_pc2
+                    except NameError:
+                        outputs_map = None
+                    if not outputs_map and values.get("Output by Cell/Station - by person"):
+                        outputs_map = json.loads(values["Output by Cell/Station - by person"])
+                    uplh_pc = _uplh_by_person_by_station(hours_map or {}, outputs_map or {})
+                    if uplh_pc:
+                        values["UPLH by Cell/Station - by person"] = json.dumps(uplh_pc, ensure_ascii=False)
+            except Exception:
+                pass
             sheet_for_hc = None
             if team_name == "TCT Commercial":
                 sheet_for_hc = "Commercial #12 Prod Analysis"
