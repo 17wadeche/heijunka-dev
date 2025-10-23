@@ -1159,7 +1159,7 @@ with left:
                                             alt.Tooltip("period_date:T", title="Week"),
                                         ],
                                     )
-                                    .properties(height=260, title=f"{team_name} • Hours by Cell/Station (Actual vs Available)")
+                                    .properties(height=260)
                                 )
                                 labels = (
                                     alt.Chart(wk2)
@@ -1168,7 +1168,6 @@ with left:
                                         x="cell_station:N",
                                         y="Actual:Q",
                                         text=alt.Text("DiffLabel:N"),
-                                        color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                                     )
                                 )
                                 st.altair_chart(bars + labels, use_container_width=True)
