@@ -1931,9 +1931,9 @@ if {"Closures", "Completed Hours"}.issubset(f_for_table.columns):
 else:
     f_for_table["Productivity"] = np.nan
 hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP", "Cell/Station Hours", "Outputs by Cell/Station", "Outputs by Person"}
-drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
+drop_these = [c for c in f_for_table.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = (
-    f.drop(columns=drop_these, errors="ignore")
+    f_for_table.drop(columns=drop_these, errors="ignore")
     .sort_values(["team", "period_date"], ascending=[True, False])
 )
 fmt_map: dict[str, str] = {}
