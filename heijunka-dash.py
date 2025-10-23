@@ -1167,7 +1167,6 @@ with left:
                                     .encode(
                                         x="cell_station:N",
                                         y="Actual:Q",
-                                        text=alt.Text("DiffLabel:N"),
                                     )
                                 )
                                 st.altair_chart(bars + labels, use_container_width=True)
