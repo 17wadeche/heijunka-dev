@@ -1271,6 +1271,7 @@ with left:
                                     )
                                 )
                                 st.altair_chart(bars + labels, use_container_width=True)
+                    pass
                 else:
                     cells_hours = explode_cell_station_hours(f)
                     team_cells = cells_hours.loc[cells_hours["team"] == team_name].copy()
