@@ -583,6 +583,23 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def build_station_person_hours_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
+    hrs = explode_cell_person_hours(frame, team)
+    if hrs.empty:
+        return pd.DataFrame(columns=["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"])
+    sub = hrs[(hrs["cell_station"] == station)].copy()
+    if sub.empty:
+        return pd.DataFrame(columns=["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"])
+    sub["Actual Hours"] = pd.to_numeric(sub["Actual Hours"], errors="coerce")
+    sub["Available Hours"] = pd.to_numeric(sub["Available Hours"], errors="coerce")
+    sub["Delta"] = sub["Actual Hours"] - sub["Available Hours"]
+    sub["LabelGroup"] = np.where(
+        sub["Available Hours"].notna(),
+        np.where(sub["Delta"] >= 0, "pos", "neg"),
+        "none"
+    )
+    keep = ["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"]
+    return sub[keep].sort_values(["period_date","person"])
 def build_station_person_outputs_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
     cp = explode_outputs_by_cell_person(frame, team)
     if cp.empty:
@@ -909,13 +926,14 @@ if nonwip_mode:
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
-- **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**).
-- **Actual UPLH** — Actual Output ÷ Actual Hours (i.e., **Completed Hours**).
-- **Capacity Utilization** — Completed Hours ÷ Available Hours (Amount of the Capacity that has been used).
-- **HC in WIP** — Number of **unique people** who logged any time in WIP during the week.
+- **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**)
+- **Actual UPLH** — Actual Output ÷ Actual Hours (i.e., **Completed Hours**)
+- **Capacity Utilization** — Completed Hours ÷ Available Hours (Amount of the Capacity that has been used)
+- **HC in WIP** — Number of **unique people** who logged any time in WIP during the week
 - **Actual HC used** — Total actual hours worked ÷ **32.5**  
   <small>(assumes **6.5 hours in WIP per person per day × 5 days**)</small>
-- **Closures** — Number of **PEs** closed during the week.
+- **Closures** — Number of **PEs** closed during the week
+- **Efficiency** — Closures ÷ Completed WIP Hours.
 - **Productivity** — Closures ÷ (Completed WIP Hours + Non-WIP Hours)
 - **Multi-Axis View tip** — If you select **only one** series, you can project the next **3 months**.
 """, unsafe_allow_html=True)
@@ -1015,6 +1033,7 @@ tot_nonwip = latest_nw["total_non_wip_hours"].sum(skipna=True) if "total_non_wip
 tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.columns else np.nan
 prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
 productivity = (float(tot_closures) / prod_den) if (pd.notna(tot_closures) and prod_den) else np.nan
+efficiency = (float(tot_closures) / float(tot_chl)) if (pd.notna(tot_closures) and tot_chl) else np.nan
 kpi_cols = st.columns(4)
 def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
     if pd.isna(value):
@@ -1083,7 +1102,7 @@ kpi_vs_target(
     0.87,
     "{:.0%}",
 )
-row3 = st.columns(2)
+row3 = st.columns(3)
 kpi(
     row3[0],
     "Closures",
@@ -1093,6 +1112,13 @@ kpi(
 )
 kpi(
     row3[1],
+    "Efficiency",
+    efficiency,
+    "{:.3f}",
+    help="Closures ÷ Completed WIP Hours",
+)
+kpi(
+    row3[2],
     "Productivity",
     productivity,
     "{:,.3f}",
@@ -1298,6 +1324,70 @@ with left:
                                     )
                                 )
                                 st.altair_chart(bars + labels, use_container_width=True)
+    stations_in_week = wk2["cell_station"].dropna().astype(str).unique().tolist()
+    if stations_in_week:
+        picked_station_hours = st.selectbox(
+            "Drill further: Deeper Trend (per-person hours over time)",
+            options=stations_in_week,
+            index=0,
+            key="hours_station_over_time_select",
+        )
+        ht = build_station_person_hours_over_time(f, team_name, picked_station_hours)
+        if ht.empty:
+            st.caption("No nested per-person station-hours found. Showing station totals over time.")
+            stn_hours_tot = (
+                explode_cell_station_hours(f[f["team"] == team_name])
+                .query("cell_station == @picked_station_hours")
+                .dropna(subset=["period_date"])
+                .rename(columns={"Actual Hours":"Actual","Available Hours":"Target"})
+            )
+            if not stn_hours_tot.empty:
+                base_ts = alt.Chart(stn_hours_tot).encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("Actual:Q", title="Actual Hours"),
+                    tooltip=[
+                        "period_date:T",
+                        alt.Tooltip("Actual:Q", title="Actual", format=",.1f"),
+                        alt.Tooltip("Target:Q", title="Available", format=",.1f"),
+                    ],
+                )
+                line_a = base_ts.mark_line(point=True)
+                line_t = alt.Chart(stn_hours_tot).mark_line(point=True, strokeDash=[4,3], color="#6b7280").encode(
+                    x="period_date:T",
+                    y=alt.Y("Target:Q", title="Available")
+                )
+                st.altair_chart(
+                    (line_a + line_t).properties(height=280, title=f"{picked_station_hours} • Hours over time (station total)"),
+                    use_container_width=True
+                )
+        else:
+            ht = ht.assign(
+                DiffLabel=lambda d: np.where(d["Available Hours"].notna(), d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—")
+            )
+            base_ts = alt.Chart(ht).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Actual Hours:Q", title="Actual Hours"),
+                color=alt.Color("person:N", title="Person"),
+                tooltip=[
+                    "period_date:T",
+                    "person:N",
+                    alt.Tooltip("Actual Hours:Q", title="Actual", format=",.1f"),
+                    alt.Tooltip("Available Hours:Q", title="Available", format=",.1f"),
+                    alt.Tooltip("DiffLabel:N", title="Δ vs Available"),
+                ],
+            )
+            lines = base_ts.mark_line()
+            pts = base_ts.mark_point(size=70).encode(
+                fill=alt.Color(
+                    "LabelGroup:N",
+                    legend=None,
+                    scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"])
+                )
+            )
+            st.altair_chart(
+                (lines + pts).properties(height=280, title=f"{picked_station_hours} • Per-person hours over time"),
+                use_container_width=True
+            )
 with mid:
     st.subheader("Output Trend")
     out_long = (
@@ -1999,6 +2089,11 @@ if len(teams_in_view) == 1:
         single["Productivity"] = np.where(denom > 0, num / denom, np.nan)
     else:
         single["Productivity"] = np.nan
+    if {"Closures", "Completed Hours"}.issubset(single.columns):
+        denom = single["Completed Hours"].astype(float)
+        single["Efficiency"] = np.where(denom > 0, single["Closures"].astype(float) / denom, np.nan)
+    else:
+        single["Efficiency"] = np.nan
     metric_options = [
         "HC in WIP",
         "Open Complaint Timeliness",
@@ -2007,6 +2102,7 @@ if len(teams_in_view) == 1:
         "Actual Hours",
         "Actual HC used",
         "Closures",
+        "Efficiency",
         "Productivity",
     ]
     available = []
@@ -2034,6 +2130,7 @@ if len(teams_in_view) == 1:
             "Actual Hours": "Completed Hours",
             "Actual HC used": "Actual HC used",
             "Closures": "Closures",
+            "Efficiency": "Efficiency",
             "Productivity": "Productivity",
         }
         base = alt.Chart(single).encode(x=alt.X("period_date:T", title="Week"))
@@ -2046,6 +2143,8 @@ if len(teams_in_view) == 1:
             if metric == "Actual UPLH":
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             if metric == "Productivity":                          
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".3f")]
+            if metric in ("Efficiency", "Productivity"):
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".3f")]
             if metric == "Closures":                         
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
@@ -2235,14 +2334,17 @@ else:
     f_for_table = f.copy()
     f_for_table["total_non_wip_hours"] = np.nan
 if {"Closures", "Completed Hours"}.issubset(f_for_table.columns):
-    denom = (
+    denom_prod = (
         f_for_table["Completed Hours"].fillna(0).astype(float)
         + f_for_table["total_non_wip_hours"].fillna(0).astype(float)
     )
-    num = pd.to_numeric(f_for_table["Closures"], errors="coerce")
-    f_for_table["Productivity"] = np.where(denom > 0, num / denom, np.nan)
+    num_close = pd.to_numeric(f_for_table["Closures"], errors="coerce")
+    f_for_table["Productivity"] = np.where(denom_prod > 0, num_close / denom_prod, np.nan)
+    denom_eff = f_for_table["Completed Hours"].astype(float)
+    f_for_table["Efficiency"] = np.where(denom_eff > 0, num_close / denom_eff, np.nan)
 else:
     f_for_table["Productivity"] = np.nan
+    f_for_table["Efficiency"] = np.nan
 hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP", "Cell/Station Hours", "Outputs by Cell/Station", "Outputs by Person", "total_non_wip_hours", "Hours by Cell/Station - by person", "Output by Cell/Station - by person", "UPLH by Cell/Station - by person"}
 drop_these = [c for c in f_for_table.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = (
