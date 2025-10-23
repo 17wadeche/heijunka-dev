@@ -2718,6 +2718,67 @@ def _cell_station_hours_for_team(file_path: Path, team_name: str) -> dict:
     if sub.empty: return {}
     agg = sub.groupby("cell_station", dropna=False)["mins"].sum()
     return {k: round(float(v) / 60.0, 2) for k, v in agg.items() if pd.notna(v) and float(v) > 0}
+def _hours_by_cs_by_person_for_team(file_path: Path, team_name: str) -> dict[str, dict[str, float]]:
+    team = (team_name or "").strip().casefold()
+    def _bad_token(s: str) -> bool:
+        if s is None:
+            return True
+        t = str(s).strip()
+        if not t:
+            return True
+        low = t.casefold()
+        return low in {"-", "–", "—", "nan"}
+    if team in ("svt", "ect", "pvh", "crdn", "aortic"):
+        sheet = "#12 Production Analysis"
+        name_idx    = 2  # C
+        station_idx = 3  # D
+        minutes_idx = 6  # G (only used for non-Aortic)
+    elif team == "tct clinical":
+        sheet = "Clinical #12 Prod Analysis"
+        name_idx    = 2  # C
+        station_idx = 3  # D
+        minutes_idx = 7  # H
+    elif team == "tct commercial":
+        sheet = "Commercial #12 Prod Analysis"
+        name_idx    = 2  # C
+        station_idx = 3  # D
+        minutes_idx = 7  # H
+    else:
+        return {}
+    df = _read_sheet_as_df(file_path, sheet)
+    if df is None or df.empty:
+        return {}
+    ncols = df.shape[1]
+    if any(i >= ncols for i in (name_idx, station_idx)) or (team != "aortic" and minutes_idx >= ncols):
+        return {}
+    sub_cols = [name_idx, station_idx] + ([] if team == "aortic" else [minutes_idx])
+    sub = df.iloc[:, sub_cols].copy()
+    sub.columns = (["name", "station"] if team == "aortic" else ["name", "station", "mins"])
+    sub["name"] = sub["name"].astype(str).str.strip()
+    sub["station"] = sub["station"].astype(str).str.strip()
+    mask_valid = (~sub["name"].apply(_bad_token)) & (~sub["station"].apply(_bad_token))
+    sub = sub[mask_valid]
+    if sub.empty:
+        return {}
+    result: dict[str, dict[str, float]] = {}
+    if team == "aortic":
+        for _, row in sub.iterrows():
+            person = row["name"]
+            cell   = row["station"]
+            per_map = result.setdefault(person, {})
+            per_map[cell] = round(per_map.get(cell, 0.0) + 2.0, 2)
+    else:
+        sub["mins"] = pd.to_numeric(sub["mins"], errors="coerce")
+        sub = sub.dropna(subset=["mins"])
+        sub = sub[sub["mins"] > 0]
+        if sub.empty:
+            return {}
+        grp = sub.groupby(["name", "station"], dropna=False)["mins"].sum()
+        for (person, cell), total_mins in grp.items():
+            hours = float(total_mins) / 60.0   # divide by 60
+            per_map = result.setdefault(str(person), {})
+            per_map[str(cell)] = round(per_map.get(str(cell), 0.0) + hours, 2)
+    return result
 def read_metrics_from_file(file_path: Path, cells_cfg: dict, sumcols_cfg: dict) -> dict:
     ext = file_path.suffix.lower()
     if ext in (".xlsx", ".xlsm"):
@@ -3113,6 +3174,12 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         values["Cell/Station Hours"] = json.dumps(cs_hours, ensure_ascii=False)
                 except Exception:
                     pass
+            try:
+                cs_by_person = _hours_by_cs_by_person_for_team(p, team_name)
+                if cs_by_person:
+                    values["Hours by Cell/Station - by person"] = json.dumps(cs_by_person, ensure_ascii=False)
+            except Exception:
+                pass
             sheet_for_hc = None
             if team_name == "TCT Commercial":
                 sheet_for_hc = "Commercial #12 Prod Analysis"
