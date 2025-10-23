@@ -1045,7 +1045,7 @@ with left:
                 st.info("No weeks available for drilldown.")
             else:
                 picked_week = st.selectbox(
-                    f"Pick a week for {team_name} drilldown:",
+                    f"Week:",
                     options=team_weeks,
                     index=0,
                     format_func=lambda d: pd.to_datetime(d).date().isoformat(),
@@ -1590,7 +1590,7 @@ with mid2:
                     reverse=True
                 )
                 picked_week = st.selectbox(
-                    f"Pick a week for {team_name} per-person avg daily hours:",
+                    f"Week:",
                     options=all_weeks,
                     index=0,
                     format_func=lambda d: pd.to_datetime(d).date().isoformat(),
