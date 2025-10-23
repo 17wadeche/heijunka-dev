@@ -509,7 +509,10 @@ def _filter_future_periods(df: pd.DataFrame) -> pd.DataFrame:
         return df
     today = pd.Timestamp.today().normalize()
     d = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    keep = d.isna() | (d <= today)
+    src = df.get("source_file", "").astype(str).str.lower()
+    is_pvh_archive_2025 = (df.get("team", "").astype(str).str.upper().eq("PVH") &
+                           src.str.contains(r"\archive_production analysis\2025".replace("\\","\\\\")))
+    keep = d.isna() | (d <= today) | is_pvh_archive_2025
     return df.loc[keep].copy()
 def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "Total Available Hours" not in df.columns:
@@ -3052,6 +3055,20 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
         return []
     rows = []
     for p in files:
+        if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+            print(f"[PVH-2025][scan] considering: {p}")
+        if p.is_dir():
+            if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+                print(f"[PVH-2025][skip] is_dir: {p}")
+            continue
+        if looks_like_temp(p.name):
+            if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+                print(f"[PVH-2025][skip] temp/lock: {p}")
+            continue
+        if _is_excluded_path(p):
+            if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+                print(f"[PVH-2025][skip] excluded by path rules: {p}")
+            continue
         if p.is_dir() or looks_like_temp(p.name) or _is_excluded_path(p):
             continue
         try:
@@ -3082,6 +3099,8 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                         period = None
             if period is None:
                 period = infer_period_date(p)
+                if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+                    print(f"[PVH-2025][warn] No period in C4 / parse failed; falling back to filename/mtime for {p.name}")
             if team_name == "ECT":
                 cutoff = _dt(2024, 8, 19).date()
                 if isinstance(period, _dt):
@@ -3095,6 +3114,8 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 if isinstance(period, _date) and period > today:
                     print(f"[skip] TCT future period {period} -> {p}")
                     continue
+            if team_name == "PVH" and r"\Archive_Production Analysis\2025" in str(p):
+                print(f"[PVH-2025][period] {p.name} -> period={period}")
             values = read_metrics_from_file(p, cells_cfg, sumcols_cfg)
             cbs = team_cfg.get("cells_by_sheet") or {}
             if cbs:
@@ -3389,6 +3410,9 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 "error": str(e),
                 **error_cols
             })
+    if team_name == "PVH":
+        kept = sum(1 for r in rows if r.get("period_date") is not None)
+        print(f"[PVH] rows collected (incl. 2025): {kept} (total={len(rows)})")
     rows = apply_fallbacks_for_team(rows, team_cfg)
     return rows
 def apply_fallbacks_for_team(rows: list[dict], team_cfg: dict) -> list[dict]:
