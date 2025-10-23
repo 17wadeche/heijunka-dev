@@ -38,6 +38,7 @@ def read_excel_fast(path: Path, *, sheet_name: str, engine: str | None = None):
     return _read_excel_cached(sig_path, sheet_name, engine, sig_mtime, sig_size)
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
+REPO_XLSX = REPO_DIR / "metrics_aggregate_dev.xlsx"
 GIT_BRANCH = "main"
 TIMELINESS_CSV = REPO_DIR / "timeliness.csv"
 EXCLUDED_SOURCE_FILES = {
@@ -578,6 +579,69 @@ def _ensure_git_identity(repo_dir: Path):
     code, out, _ = _git(["git", "config", "--get", "user.name"], repo_dir)
     if code != 0 or not out:
         _git(["git", "config", "user.name", "Heijunka Bot"], repo_dir)
+def git_autocommit_and_push_many(repo_dir: Path, files: list[Path], branch: str = "main"):
+    if not (repo_dir / ".git").exists():
+        print(f"[WARN] {repo_dir} is not a git repo; skipping auto-commit.")
+        return
+    _git(["git", "config", "--global", "--add", "safe.directory", str(repo_dir)], repo_dir)
+    _ensure_git_identity(repo_dir)
+    code, remotes, _ = _git(["git", "remote"], repo_dir)
+    if code != 0 or not remotes.strip():
+        print("[WARN] No git remote configured (e.g., 'origin'); cannot push.")
+        return
+    remote = "origin" if "origin" in remotes.split() else remotes.split()[0]
+    code, heads, _ = _git(["git", "branch", "--list", branch], repo_dir)
+    _git(["git", "checkout", branch], repo_dir) if heads.strip() else _git(["git", "checkout", "-B", branch], repo_dir)
+    _, dirty, _ = _git(["git", "status", "--porcelain"], repo_dir)
+    if dirty.strip():
+        print("[git] Working tree has local changes; using --autostash during pull.")
+    _git(["git", "fetch", remote], repo_dir)
+    code, _, _ = _git(["git", "pull", "--rebase", "--autostash", remote, branch], repo_dir)
+    if code != 0:
+        print("[WARN] 'git pull --rebase --autostash' failed; skipping commit to avoid conflicts.")
+        return
+    staged_any = False
+    for fp in files:
+        if fp and fp.exists():
+            try:
+                rel = fp.relative_to(repo_dir).as_posix()
+            except Exception:
+                rel = str(fp)
+            _git(["git", "add", "--", rel], repo_dir)
+            staged_any = True
+    if not staged_any:
+        print("[git] Nothing to stage; skipping push.")
+        return
+    code, status, _ = _git(["git", "status", "--porcelain"], repo_dir)
+    if code != 0 or not status.strip():
+        print("[git] No changes detected after add; skipping push.")
+        return
+    msg = f"Auto-update metrics at {_dt.now().isoformat(timespec='seconds')}"
+    code, _, _ = _git(["git", "commit", "-m", msg], repo_dir)
+    if code != 0:
+        print("[WARN] git commit failed; see logs above.")
+        return
+    code, _, _ = _git(["git", "push", "-u", remote, branch], repo_dir)
+    if code != 0:
+        print("[WARN] git push failed; check credentials / PAT / VPN.")
+    else:
+        print("[git] Pushed:", ", ".join([str(f.name) for f in files if f.exists()]))
+def run_apply_closures():
+    try:
+        script = Path(__file__).with_name("apply_closures.py")
+        if not script.exists():
+            print(f"[apply_closures] Not found: {script}")
+            return
+        print(f"[apply_closures] Running: {script}")
+        res = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        if res.stdout.strip():
+            print("[apply_closures][stdout]\n" + res.stdout)
+        if res.stderr.strip():
+            print("[apply_closures][stderr]\n" + res.stderr)
+        if res.returncode != 0:
+            print(f"[apply_closures] Exit code {res.returncode}")
+    except Exception as e:
+        print(f"[apply_closures] Failed: {e}")
 def git_pull_repo(repo_dir: Path, branch: str = "main"):
     if not (repo_dir / ".git").exists():
         print(f"[WARN] {repo_dir} is not a git repo; skipping pre-pull.")
@@ -1722,6 +1786,12 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             if (not pd.isna(k)) and (str(k).strip())
         }
         cs_hours = _normalize_cell_station_hours(cs_hours_raw)
+        pairs_hours = sub[["station","person","completed_hours"]].copy()
+        pairs_hours = pairs_hours.rename(columns={"completed_hours":"hours"})
+        pairs_outs = sub[["station","person","actual_output","target_output"]].copy()
+        hours_pc = _nest_hours_person_by_station(pairs_hours)
+        outs_pc  = _nest_outputs_person_by_station(pairs_outs)
+        uplh_pc  = _uplh_by_person_by_station(hours_pc, outs_pc)
         rows.append({
             "team": team_name,
             "source_file": f"{file_path} :: {sheet}",
@@ -1735,6 +1805,9 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
             "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
             "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
             "Cell/Station Hours": json.dumps(cs_hours, ensure_ascii=False),
+            "Hours by Cell/Station - by person": json.dumps(hours_pc, ensure_ascii=False),
+            "Output by Cell/Station - by person": json.dumps(outs_pc, ensure_ascii=False),
+            "UPLH by Cell/Station - by person": json.dumps(uplh_pc, ensure_ascii=False),
         })
     print(f"[CAS][manual] Appended weekly rows: {len(rows)} from {file_path.name}")
     return rows
@@ -2354,6 +2427,61 @@ def safe_numeric(x):
         return float(s)
     except Exception:
         return None
+def _nest_hours_person_by_station(pairs: pd.DataFrame) -> dict:
+    if pairs.empty: 
+        return {}
+    pairs = pairs.copy()
+    pairs["station"] = pairs["station"].astype(str).str.strip()
+    pairs["person"]  = pairs["person"].astype(str).str.strip()
+    pairs["hours"]   = pd.to_numeric(pairs["hours"], errors="coerce")
+    pairs = pairs.dropna(subset=["station","person","hours"])
+    agg = pairs.groupby(["station","person"])["hours"].sum(min_count=1)
+    out = {}
+    for (st, pe), v in agg.items():
+        if pd.isna(v) or not st or not pe: 
+            continue
+        out.setdefault(st, {})[pe] = round(float(v), 2)
+    return out
+def _nest_outputs_person_by_station(pairs: pd.DataFrame) -> dict:
+    if pairs.empty:
+        return {}
+    pairs = pairs.copy()
+    pairs["station"] = pairs["station"].astype(str).str.strip()
+    pairs["person"]  = pairs["person"].astype(str).str.strip()
+    for c in ["actual_output","target_output"]:
+        pairs[c] = pd.to_numeric(pairs[c], errors="coerce").fillna(0.0)
+    agg = (pairs
+           .groupby(["station","person"])[["actual_output","target_output"]]
+           .sum(min_count=1)
+           .replace({np.nan: 0.0}))
+    out = {}
+    for (st, pe), row in agg.iterrows():
+        if not st or not pe:
+            continue
+        out.setdefault(st, {})[pe] = {
+            "output": round(float(row["actual_output"]), 2),
+            "target": round(float(row["target_output"]), 2),
+        }
+    for st in list(out.keys()):
+        for pe in list(out[st].keys()):
+            v = out[st][pe]
+            if (v.get("output",0)==0) and (v.get("target",0)==0):
+                del out[st][pe]
+        if not out[st]:
+            del out[st]
+    return out
+def _uplh_by_person_by_station(hours_by: dict, outs_by: dict) -> dict:
+    out = {}
+    for st, people in (hours_by or {}).items():
+        for pe, hrs in (people or {}).items():
+            try:
+                ao = ((outs_by or {}).get(st, {}) or {}).get(pe, {}).get("output")
+                uplh = (float(ao) / float(hrs)) if (ao is not None and float(hrs) > 0) else None
+            except Exception:
+                uplh = None
+            if uplh is not None:
+                out.setdefault(st, {})[pe] = round(float(uplh), 2)
+    return out
 def normalize_period_date(df: pd.DataFrame) -> pd.DataFrame:
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
@@ -2500,6 +2628,46 @@ def _sum_output_target_by(df: pd.DataFrame, key_col_idx: int, out_col_idx: int, 
             "target": float(round(row.get("target", 0.0) if pd.notna(row.get("target")) else 0.0, 2)),
         }
     return out
+def _person_cell_hours_outputs_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
+    team = (team_name or "").strip().casefold()
+    if team in ("svt","ect","pvh","crdn","aortic"):
+        sheet = "#12 Production Analysis"
+        person_idx = 2   # C
+        cell_idx   = 3   # D
+        mins_idx   = 6   # G (minutes)
+        tgt_idx    = 5 if team != "aortic" else 4  # F (most) / E (Aortic)
+        out_idx    = 8   # I (actual)
+    elif team == "tct clinical":
+        sheet = "Clinical #12 Prod Analysis"
+        person_idx = 2; cell_idx = 3; mins_idx = 7; tgt_idx = 6; out_idx = 9
+    elif team == "tct commercial":
+        sheet = "Commercial #12 Prod Analysis"
+        person_idx = 2; cell_idx = 3; mins_idx = 7; tgt_idx = 6; out_idx = 9
+    else:
+        return {}, {}
+    df = _read_sheet_as_df(file_path, sheet)
+    if df is None or df.empty:
+        return {}, {}
+    n = df.shape[1]
+    need = [person_idx, cell_idx, mins_idx, tgt_idx, out_idx]
+    if any(i >= n for i in need):
+        return {}, {}
+    sub = df.iloc[:, need].copy()
+    sub.columns = ["person","station","mins","target","actual"]
+    sub["person"]  = sub["person"].astype(str).str.strip()
+    sub["station"] = sub["station"].astype(str).str.strip()
+    sub["mins"]    = pd.to_numeric(sub["mins"], errors="coerce")
+    sub["target"]  = pd.to_numeric(sub["target"], errors="coerce")
+    sub["actual"]  = pd.to_numeric(sub["actual"], errors="coerce")
+    sub = sub[(sub[["person","station"]].ne("").all(axis=1)) &
+              (sub[["mins","target","actual"]].notna().any(axis=1))]
+    pairs_hours = sub.loc[sub["mins"].notna(), ["station","person","mins"]].rename(columns={"mins":"hours"})
+    hours_pc = _nest_hours_person_by_station(pairs_hours)
+    pairs_outs = sub.loc[:, ["station","person","actual","target"]].rename(
+        columns={"actual":"actual_output","target":"target_output"}
+    )
+    outs_pc = _nest_outputs_person_by_station(pairs_outs)
+    return hours_pc, outs_pc
 def _outputs_person_and_cell_for_team(file_path: Path, team_name: str) -> tuple[dict, dict]:
     team = (team_name or "").strip().casefold()
     if team in ("svt", "ect", "pvh", "crdn", "aortic"):
@@ -2844,6 +3012,18 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 except Exception:
                     pass
                 try:
+                    hours_pc, outs_pc = _person_cell_hours_outputs_for_team(p, team_name)
+                    if hours_pc:
+                        values["Hours by Cell/Station - by person"] = json.dumps(hours_pc, ensure_ascii=False)
+                    if outs_pc:
+                        values["Output by Cell/Station - by person"] = json.dumps(outs_pc, ensure_ascii=False)
+                    if hours_pc or outs_pc:
+                        uplh_pc = _uplh_by_person_by_station(hours_pc or {}, outs_pc or {})
+                        if uplh_pc:
+                            values["UPLH by Cell/Station - by person"] = json.dumps(uplh_pc, ensure_ascii=False)
+                except Exception:
+                    pass
+                try:
                     wb_tmp = load_workbook(p, data_only=True, read_only=True)
                     per_person = {}
                     if "Individual (WIP-Non WIP)" in wb_tmp.sheetnames:
@@ -3130,6 +3310,9 @@ def save_outputs(df: pd.DataFrame):
         "People in WIP", "Person Hours",
         "Outputs by Person", "Outputs by Cell/Station",
         "Cell/Station Hours",
+        "Hours by Cell/Station - by person",
+        "Output by Cell/Station - by person",
+        "UPLH by Cell/Station - by person",
         "Open Complaint Timeliness",
         "fallback_used", "error",
     ]
@@ -3164,6 +3347,21 @@ def save_outputs(df: pd.DataFrame):
     print(f"Saved Excel: {OUT_XLSX.resolve()}")
     print(f"Saved CSV:   {OUT_CSV.resolve()}")
     REPO_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copyfile(OUT_CSV,  REPO_CSV)
+        print(f"Copied CSV  -> {REPO_CSV.resolve()}")
+    except Exception as e:
+        print(f"[WARN] Copy CSV failed: {e}")
+    try:
+        shutil.copyfile(OUT_XLSX, REPO_XLSX)
+        print(f"Copied XLSX -> {REPO_XLSX.resolve()}")
+    except Exception as e:
+        print(f"[WARN] Copy XLSX failed: {e}")
+    run_apply_closures()
+    try:
+        git_autocommit_and_push_many(REPO_DIR, [REPO_CSV, REPO_XLSX], branch=GIT_BRANCH)
+    except Exception as e:
+        print(f"[WARN] Git push (many) failed: {e}")
     def _samefile(a: Path, b: Path) -> bool:
         try:
             return a.resolve().samefile(b.resolve())
