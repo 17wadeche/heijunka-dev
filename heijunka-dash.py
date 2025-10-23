@@ -1504,7 +1504,7 @@ with right:
                             .mark_bar(color="#2563eb")  # solid blue bars
                             .encode(
                                 x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
-                                y=alt.Y("Actual UPLH:Q", title="UPLH", scale=y_scale),
+                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
                                 tooltip=[
                                     "period_date:T",
                                     alt.Tooltip("cell_station:N", title="Cell/Station"),
