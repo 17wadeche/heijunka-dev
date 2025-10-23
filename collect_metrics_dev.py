@@ -3646,11 +3646,14 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
                 .str.lower()
                 .str.replace("/", "\\", regex=False))
         is_old = combined["_origin"] == "old"
+        pvh_allow_token = "\\cqxm - iv resource site - cos supportive materials\\archive_production analysis\\2025"
+        is_pvh = combined["team"].astype(str).str.casefold().eq("pvh")
+        allow_pvh_2025 = is_pvh & norm.str.contains(pvh_allow_token, regex=False)
         keep = pd.Series(True, index=combined.index)
         if EXCLUDED_SOURCE_FILES:
-            keep &= is_old | (~norm.isin(EXCLUDED_SOURCE_FILES))
+            keep &= is_old | allow_pvh_2025 | (~norm.isin(EXCLUDED_SOURCE_FILES))
         if EXCLUDED_DIRS:
-            keep &= is_old | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
+            keep &= is_old | allow_pvh_2025 | (~norm.str.startswith(tuple(EXCLUDED_DIRS)))
         combined = combined.loc[keep].copy()
     combined["_origin_rank"] = combined["_origin"].map({"old": 0, "new": 1}).fillna(1)
     combined = combined.sort_values(
