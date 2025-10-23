@@ -1156,8 +1156,6 @@ with left:
                                         tooltip=[
                                             alt.Tooltip("cell_station:N", title="Cell/Station"),
                                             alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
-                                            alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
-                                            alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
                                             alt.Tooltip("period_date:T", title="Week"),
                                         ],
                                     )
