@@ -1339,6 +1339,89 @@ with left:
                                 else []
                             )
                             if stations_in_week:
+                                picked_station_week = st.selectbox(
+                                    "Per-person breakdown (this week): choose a Cell/Station",
+                                    options=stations_in_week,
+                                    index=0,
+                                    key="hours_station_person_week_select",
+                                    help="Shows per-person Actual vs Available hours (Δ label) for the chosen station in the selected week"
+                                )
+                                per_person_cs = explode_cell_person_hours(f, team_name)
+                                wk_cs_person = (
+                                    per_person_cs[
+                                        (per_person_cs["period_date"] == picked_week) &
+                                        (per_person_cs["cell_station"] == picked_station_week)
+                                    ]
+                                    .copy()
+                                )
+                                if wk_cs_person.empty:
+                                    st.info("No per-person station hours recorded for this station in the selected week.")
+                                else:
+                                    wk_cs_person["Actual"] = pd.to_numeric(wk_cs_person["Actual Hours"], errors="coerce")
+                                    wk_cs_person["Avail"]  = pd.to_numeric(wk_cs_person["Available Hours"], errors="coerce")
+                                    wk_cs_person = wk_cs_person.loc[
+                                        ~((wk_cs_person["Actual"].fillna(0) == 0) & (wk_cs_person["Avail"].fillna(0) == 0))
+                                    ].copy()
+                                    wk_cs_person["Diff"] = wk_cs_person["Actual"] - wk_cs_person["Avail"]
+                                    wk_cs_person["HasAvail"] = wk_cs_person["Avail"].notna()
+                                    wk_cs_person["DiffRounded"] = np.where(wk_cs_person["HasAvail"], wk_cs_person["Diff"].round(1), np.nan)
+                                    wk_cs_person["DiffLabel"]   = np.where(wk_cs_person["HasAvail"], wk_cs_person["DiffRounded"].map(lambda x: f"{x:+.1f}"), "—")
+                                    wk_cs_person["LabelGroup"]  = np.where(
+                                        ~wk_cs_person["HasAvail"], "none",
+                                        np.where(wk_cs_person["Diff"] >= 0, "pos", "neg")
+                                    )
+                                    if wk_cs_person.empty:
+                                        st.info("Nothing to show after filtering zero-hour entries.")
+                                    else:
+                                        order_people = wk_cs_person.sort_values("Actual", ascending=False)["person"].tolist()
+                                        vmax = float(pd.to_numeric(wk_cs_person["Actual"], errors="coerce").max())
+                                        pad  = max(0.6, vmax * 0.18) if pd.notna(vmax) else 1.0
+                                        y_scale = alt.Scale(domain=[0, vmax + pad] if pd.notna(vmax) else [0, 1], nice=False, clamp=False)
+                                        label_pad = max(0.25, (vmax + pad) * 0.04) if pd.notna(vmax) else 0.4
+                                        wk_cs_person["LabelY"] = wk_cs_person["Actual"] + np.where(
+                                            wk_cs_person["DiffRounded"].fillna(-1) >= 0, label_pad, -label_pad
+                                        )
+                                        bars_pp = (
+                                            alt.Chart(wk_cs_person)
+                                            .mark_bar()
+                                            .encode(
+                                                x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                                                y=alt.Y("Actual:Q", title="Actual Hours", scale=y_scale),
+                                                tooltip=[
+                                                    alt.Tooltip("person:N", title="Person"),
+                                                    alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
+                                                    alt.Tooltip("Avail:Q",  title="Available Hours", format=",.1f"),
+                                                    alt.Tooltip("DiffLabel:N", title="Over / Under vs Avail"),
+                                                    alt.Tooltip("period_date:T", title="Week"),
+                                                ],
+                                            )
+                                            .properties(height=280)
+                                        )
+                                        labels_pp = (
+                                            alt.Chart(wk_cs_person)
+                                            .mark_text(dy=-8)
+                                            .encode(
+                                                x="person:N",
+                                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                                text="DiffLabel:N",
+                                                color=alt.Color(
+                                                    "LabelGroup:N",
+                                                    legend=None,
+                                                    scale=alt.Scale(
+                                                        domain=["pos", "neg", "none"],
+                                                        range=["#22c55e", "#ef4444", "#9ca3af"]  # green / red / gray
+                                                    )
+                                                ),
+                                            )
+                                        )
+                                        title_pp = f"{picked_station_week} • Per-person Hours (week of {pd.to_datetime(picked_week).date().isoformat()})"
+                                        st.altair_chart((bars_pp + labels_pp).properties(title=title_pp), use_container_width=True)
+                                    stations_in_week = (
+                                        wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
+                                        if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
+                                        else []
+                                    )
+                            if stations_in_week:
                                 picked_station_hours = st.selectbox(
                                     "Drill further: Deeper Trend (per-person hours over time)",
                                     options=stations_in_week,
