@@ -505,7 +505,13 @@ def _maybe_as_float(x):
     except Exception:
         return np.nan
 def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
-    col = "Outputs by Cell/Station"
+    col = _find_first_col(
+        df,
+        [
+            "Output by Cell/Station - by person",  # <- NEW: your per-person outputs column
+            "Outputs by Cell/Station",             # station totals
+        ]
+    )
     cols = ["team","period_date","cell_station","person","Actual","Target"]
     if df.empty or col not in df.columns:
         return pd.DataFrame(columns=cols)
@@ -536,8 +542,6 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "Actual": a,
                         "Target": t,
                     })
-            else:
-                continue
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
@@ -545,7 +549,15 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
 def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
     col = _find_first_col(
         df,
-        ["Cell/Station Hours", "Cell Station Hours", "Hours by Cell/Station", "Cell Hours", "Station Hours"]
+        [
+            "Hours by Cell/Station - by person",   # <- NEW: your per-person column
+            "Hours by Cell Station - by person",   # <- tolerant variant
+            "Cell/Station Hours",                  # totals (no person breakdown)
+            "Hours by Cell/Station",
+            "Cell Station Hours",
+            "Cell Hours",
+            "Station Hours",
+        ]
     )
     cols = ["team","period_date","cell_station","person","Actual Hours","Available Hours"]
     if not col or df.empty or col not in df.columns:
