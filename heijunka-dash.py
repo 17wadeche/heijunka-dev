@@ -1104,7 +1104,7 @@ with left:
                                             alt.Tooltip("period_date:T", title="Week"),
                                         ],
                                     )
-                                    .properties(height=260, title=f"{team_name} • Per-person Hours (Actual vs Available)")
+                                    .properties(height=260)
                                 )
                                 labels = (
                                     alt.Chart(wk2)
