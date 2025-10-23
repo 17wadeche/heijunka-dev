@@ -608,7 +608,7 @@ def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station:
         outs[outs["cell_station"] == station]
         .merge(hrs[hrs["cell_station"] == station][["period_date","person","Actual Hours"]],
                on=["period_date","person"], how="left")
-        .dropna(subset=["Actual"])     # need actual output
+        .dropna(subset=["Actual"])
     )
     if m.empty:
         return pd.DataFrame(columns=[
