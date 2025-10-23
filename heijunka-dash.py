@@ -499,6 +499,131 @@ def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def _maybe_as_float(x):
+    try:
+        return float(x)
+    except Exception:
+        return np.nan
+def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
+    col = "Outputs by Cell/Station"
+    cols = ["team","period_date","cell_station","person","Actual","Target"]
+    if df.empty or col not in df.columns:
+        return pd.DataFrame(columns=cols)
+    sub = df.loc[df["team"] == team, ["team","period_date", col]].dropna(subset=[col]).copy()
+    rows = []
+    for _, r in sub.iterrows():
+        payload = r[col]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            obj = None
+        if not isinstance(obj, dict):
+            continue
+        for station, vals in obj.items():
+            if isinstance(vals, dict) and any(isinstance(v, dict) for v in vals.values()):
+                for person, pv in vals.items():
+                    if not isinstance(pv, dict):
+                        continue
+                    a = _maybe_as_float(pv.get("actual", pv.get("output", pv.get("Actual"))))
+                    t = _maybe_as_float(pv.get("target", pv.get("Target")))
+                    if pd.isna(a) and pd.isna(t):
+                        continue
+                    rows.append({
+                        "team": r["team"],
+                        "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                        "cell_station": str(station).strip(),
+                        "person": str(person).strip(),
+                        "Actual": a,
+                        "Target": t,
+                    })
+            else:
+                continue
+    out = pd.DataFrame(rows, columns=cols)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
+    col = _find_first_col(
+        df,
+        ["Cell/Station Hours", "Cell Station Hours", "Hours by Cell/Station", "Cell Hours", "Station Hours"]
+    )
+    cols = ["team","period_date","cell_station","person","Actual Hours","Available Hours"]
+    if not col or df.empty or col not in df.columns:
+        return pd.DataFrame(columns=cols)
+    sub = df.loc[df["team"] == team, ["team","period_date", col]].dropna(subset=[col]).copy()
+    rows = []
+    for _, r in sub.iterrows():
+        payload = r[col]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            obj = None
+        if not isinstance(obj, dict):
+            continue
+        for station, vals in obj.items():
+            if isinstance(vals, dict) and any(isinstance(v, dict) for v in vals.values()):
+                for person, pv in vals.items():
+                    if not isinstance(pv, dict):
+                        continue
+                    a = _maybe_as_float(pv.get("actual"))
+                    t = _maybe_as_float(pv.get("available"))
+                    if pd.isna(a) and pd.isna(t):
+                        continue
+                    rows.append({
+                        "team": r["team"],
+                        "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                        "cell_station": str(station).strip(),
+                        "person": str(person).strip(),
+                        "Actual Hours": a,
+                        "Available Hours": t,
+                    })
+            else:
+                continue
+    out = pd.DataFrame(rows, columns=cols)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def build_station_person_outputs_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
+    cp = explode_outputs_by_cell_person(frame, team)
+    if cp.empty:
+        return pd.DataFrame(columns=["period_date","person","Actual","Target","Delta","LabelGroup"])
+    sub = cp[(cp["cell_station"] == station)].copy()
+    if sub.empty:
+        return pd.DataFrame(columns=["period_date","person","Actual","Target","Delta","LabelGroup"])
+    sub["Delta"] = sub["Actual"] - sub["Target"]
+    sub["LabelGroup"] = np.where(
+        sub["Target"].notna(),
+        np.where(sub["Delta"] >= 0, "pos", "neg"),
+        "none"
+    )
+    return sub.sort_values(["period_date","person"])
+def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
+    outs = explode_outputs_by_cell_person(frame, team)
+    hrs  = explode_cell_person_hours(frame, team)
+    if outs.empty or hrs.empty:
+        return pd.DataFrame(columns=[
+            "period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"
+        ])
+    m = (
+        outs[outs["cell_station"] == station]
+        .merge(hrs[hrs["cell_station"] == station][["period_date","person","Actual Hours"]],
+               on=["period_date","person"], how="left")
+        .dropna(subset=["Actual"])     # need actual output
+    )
+    if m.empty:
+        return pd.DataFrame(columns=[
+            "period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"
+        ])
+    m["Actual UPLH"] = (m["Actual"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["Target UPLH"] = (m["Target"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
+    m["Delta"] = m["Actual UPLH"] - m["Target UPLH"]
+    m["LabelGroup"] = np.where(
+        m["Target UPLH"].notna(),
+        np.where(m["Delta"] >= 0, "pos", "neg"),
+        "none"
+    )
+    keep = ["period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"]
+    return m[keep].sort_values(["period_date","person"])
 def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
     if outp.empty:
@@ -1288,6 +1413,66 @@ with mid:
                             )
                         )
                         st.altair_chart(bars + labels, use_container_width=True)
+                        stations_in_week = wk2[key_label].dropna().unique().tolist()
+                        if stations_in_week:
+                            picked_station = st.selectbox(
+                                "Drill further: Station over time (per-person lines)",
+                                options=stations_in_week,
+                                index=0,
+                                key="outputs_station_over_time_select",
+                            )
+                            ot = build_station_person_outputs_over_time(f, team_name, picked_station)
+                            if ot.empty:
+                                st.caption("No nested per-person outputs found for this station. Showing station totals over time.")
+                                stn_long = (
+                                    explode_outputs_json(f[f['team'] == team_name], "Outputs by Cell/Station", "cell_station")
+                                    .query("cell_station == @picked_station")
+                                    .rename(columns={"Actual": "Value", "Target": "Target"})
+                                    .dropna(subset=["period_date"])
+                                )
+                                if not stn_long.empty:
+                                    base_ts = alt.Chart(stn_long).encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Value:Q", title="Actual Output"),
+                                        tooltip=["period_date:T",
+                                                alt.Tooltip("Value:Q", title="Actual", format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target", format=",.0f")],
+                                    )
+                                    line_a = base_ts.mark_line(point=True, color="#2563eb")
+                                    line_t = alt.Chart(stn_long).mark_line(point=True, strokeDash=[4,3], color="#6b7280").encode(
+                                        x="period_date:T",
+                                        y=alt.Y("Target:Q", title="Target")
+                                    )
+                                    st.altair_chart((line_a + line_t).properties(
+                                        height=260, title=f"{picked_station} • Outputs over time (station total)"), use_container_width=True)
+                            else:
+                                ot = ot.assign(
+                                    DiffLabel=lambda d: np.where(d["Target"].notna(), d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—")
+                                )
+                                base_ts = alt.Chart(ot).encode(
+                                    x=alt.X("period_date:T", title="Week"),
+                                    y=alt.Y("Actual:Q", title="Actual Output"),
+                                    color=alt.Color("person:N", title="Person"),
+                                    tooltip=[
+                                        "period_date:T",
+                                        "person:N",
+                                        alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                        alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                        alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                    ],
+                                )
+                                lines = base_ts.mark_line()
+                                pts = base_ts.mark_point(size=70).encode(
+                                    fill=alt.Color(
+                                        "LabelGroup:N",
+                                        legend=None,
+                                        scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"])
+                                    )
+                                )
+                                st.altair_chart(
+                                    (lines + pts).properties(height=260, title=f"{picked_station} • Per-person outputs over time"),
+                                    use_container_width=True
+                                )
 with right:
     st.subheader("UPLH Trend")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
@@ -1548,6 +1733,72 @@ with right:
             st.altair_chart(top, use_container_width=True)
             if (not multi_team) and not (wp1_col and wp2_col) and team_for_drill == "PH":
                 st.info("No WP1/WP2 UPLH columns found. Expected columns like 'WP1 UPLH' and 'WP2 UPLH'.")
+        stations_in_week = wk["cell_station"].dropna().unique().tolist()
+        if stations_in_week:
+            picked_station_uplh = st.selectbox(
+                "Drill further: Station UPLH over time (per-person lines)",
+                options=stations_in_week,
+                index=0,
+                key="uplh_station_over_time_select",
+            )
+            ut = build_station_person_uplh_over_time(f, team_for_drill, picked_station_uplh)
+            if ut.empty:
+                st.caption("No nested per-person station-hours found. Showing station UPLH totals over time.")
+                stn_uplh_tot = (
+                    build_uplh_by_cell_long(f, team_for_drill)
+                    .query("cell_station == @picked_station_uplh")
+                    .dropna(subset=["period_date"])
+                )
+                if not stn_uplh_tot.empty:
+                    base_ts = alt.Chart(stn_uplh_tot).encode(
+                        x=alt.X("period_date:T", title="Week"),
+                        y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                        tooltip=[
+                            "period_date:T",
+                            alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                            alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                        ],
+                    )
+                    line_a = base_ts.mark_line(point=True, color="#2563eb")
+                    line_t = alt.Chart(stn_uplh_tot).mark_line(point=True, strokeDash=[4,3], color="#6b7280").encode(
+                        x="period_date:T",
+                        y=alt.Y("Target UPLH:Q", title="Target UPLH"),
+                    )
+                    st.altair_chart(
+                        (line_a + line_t).properties(height=260, title=f"{picked_station_uplh} • UPLH over time (station total)"),
+                        use_container_width=True
+                    )
+            else:
+                ut = ut.assign(
+                    DiffLabel=lambda d: np.where(d["Target UPLH"].notna(), d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—")
+                )
+                base_ts = alt.Chart(ut).encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                    color=alt.Color("person:N", title="Person"),
+                    tooltip=[
+                        "period_date:T",
+                        "person:N",
+                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
+                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
+                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
+                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                    ],
+                )
+                lines = base_ts.mark_line()
+                pts = base_ts.mark_point(size=70).encode(
+                    fill=alt.Color(
+                        "LabelGroup:N",
+                        legend=None,
+                        scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"])
+                    )
+                )
+                st.altair_chart(
+                    (lines + pts).properties(height=260, title=f"{picked_station_uplh} • Per-person UPLH over time"),
+                    use_container_width=True
+                )
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
@@ -1646,7 +1897,7 @@ with mid2:
                                     alt.Tooltip("Delta:Q", title="Over/Under vs 6.5", format="+.2f"),
                                 ],
                             )
-                            .properties(height=240, title=f"{team_name} • Per-person Avg Daily Hours")
+                            .properties(height=240)
                         )
                         label_pad = max(0.08, (y_hi - y_lo) * 0.03)
                         labels = (
