@@ -217,7 +217,7 @@ TEAM_CONFIG = [
                 "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
             }
         },
-        "unique_key": ["team", "period_date"],
+        "unique_key": ["team", "period_date", "source_file"],
     },
     {
         "name": "PVH",
@@ -237,7 +237,7 @@ TEAM_CONFIG = [
                 "Completed Hours Detail": {"col": "G", "row_start": 7, "row_end": 199, "divide": 60, "skip_hidden": True},
             }
         },
-        "unique_key": ["team", "period_date"],
+        "unique_key": ["team", "period_date", "source_file"],
     },
     {
         "name": "TCT Commercial",
@@ -509,9 +509,16 @@ def _filter_future_periods(df: pd.DataFrame) -> pd.DataFrame:
         return df
     today = pd.Timestamp.today().normalize()
     d = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    src = df.get("source_file", "").astype(str).str.lower()
-    is_pvh_archive_2025 = (df.get("team", "").astype(str).str.upper().eq("PVH") &
-                           src.str.contains(r"\archive_production analysis\2025".replace("\\","\\\\")))
+    src = (
+        df.get("source_file", "")
+          .astype(str)
+          .str.lower()
+          .str.replace("/", "\\", regex=False)
+    )
+    is_pvh_archive_2025 = (
+        df.get("team", "").astype(str).str.upper().eq("PVH")
+        & src.str.contains(r"\archive_production analysis\2025", regex=False)
+    )
     keep = d.isna() | (d <= today) | is_pvh_archive_2025
     return df.loc[keep].copy()
 def _filter_ph_zero_hours(df: pd.DataFrame) -> pd.DataFrame:
@@ -3686,6 +3693,11 @@ def merge_with_existing(new_df: pd.DataFrame) -> pd.DataFrame:
     combined = _filter_ph_zero_hours(combined)
     combined = _filter_pss_date_window(combined)
     combined = _filter_ect_min_year(combined)
+    dbg = combined.copy()
+    pvh = dbg[dbg["team"].astype(str).str.upper().eq("PVH")]
+    print("[debug] PVH rows:", len(pvh), 
+        "with period_date NA:", pvh["period_date"].isna().sum(),
+        "unique periods:", pvh["period_date"].dropna().dt.date.nunique())
     return combined
 def _dedupe_by_team_unique_key(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
