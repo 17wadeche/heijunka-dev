@@ -1036,7 +1036,6 @@ with left:
                 options=["Person", "Cell/Station"],
                 index=0,
                 key="hours_by_select",
-                help="Choose the drilldown grouping for actual vs available hours"
             )
             team_weeks = sorted(
                 pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()),
