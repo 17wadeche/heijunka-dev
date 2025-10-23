@@ -1910,6 +1910,26 @@ ref_line = alt.Chart(pd.DataFrame({"y": [1.0]})).mark_rule(strokeDash=[4,3]).enc
 st.altair_chart((eff_bar + ref_line).properties(height=260), use_container_width=True)
 st.markdown("---")
 st.subheader("Detailed Rows")
+_nw = load_non_wip()
+if not _nw.empty:
+    needed = ["team", "period_date", "total_non_wip_hours"]
+    for c in needed:
+        if c not in _nw.columns:
+            _nw[c] = np.nan
+    _nw["total_non_wip_hours"] = pd.to_numeric(_nw["total_non_wip_hours"], errors="coerce")
+    f_for_table = f.merge(_nw[needed], on=["team", "period_date"], how="left")
+else:
+    f_for_table = f.copy()
+    f_for_table["total_non_wip_hours"] = np.nan
+if {"Closures", "Completed Hours"}.issubset(f_for_table.columns):
+    denom = (
+        f_for_table["Completed Hours"].fillna(0).astype(float)
+        + f_for_table["total_non_wip_hours"].fillna(0).astype(float)
+    )
+    num = pd.to_numeric(f_for_table["Closures"], errors="coerce")
+    f_for_table["Productivity"] = np.where(denom > 0, num / denom, np.nan)
+else:
+    f_for_table["Productivity"] = np.nan
 hide_cols = {"source_file", "fallback_used", "error", "Person Hours", "UPLH WP1", "UPLH WP2", "People in WIP", "Cell/Station Hours", "Outputs by Cell/Station", "Outputs by Person"}
 drop_these = [c for c in f.columns if c in hide_cols or c.startswith("Unnamed:")]
 f_table = (
@@ -1929,6 +1949,10 @@ for col in ["Target UPLH", "Actual UPLH", "Actual HC used", "Efficiency vs Targe
         fmt_map[col] = "{:,.2f}"
 if "HC in WIP" in f_table.columns:
     fmt_map["HC in WIP"] = "{:,.0f}"
+if "Closures" in f_table.columns:
+    fmt_map["Closures"] = "{:,.0f}"
+if "Productivity" in f_table.columns:
+    fmt_map["Productivity"] = "{:.4f}"
 st.dataframe(
     f_table.style.format(fmt_map).hide(axis="index"),
     use_container_width=True
