@@ -1441,7 +1441,7 @@ with right:
                             .mark_bar(color="#2563eb")  # solid blue bars
                             .encode(
                                 x=alt.X("person:N", title="Person", sort=order_people),
-                                y=alt.Y("Actual UPLH:Q", title="UPLH", scale=y_scale),
+                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
                                 tooltip=[
                                     "period_date:T",
                                     "person:N",
