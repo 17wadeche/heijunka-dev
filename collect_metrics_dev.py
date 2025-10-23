@@ -3226,6 +3226,31 @@ def collect_for_team(team_cfg: dict) -> list[dict]:
                 except Exception:
                     pass
             try:
+                hours_pc2, outs_pc2 = _person_cell_hours_outputs_for_team(p, team_name)
+                if hours_pc2 and not values.get("Hours by Cell/Station - by person"):
+                    values["Hours by Cell/Station - by person"] = json.dumps(hours_pc2, ensure_ascii=False)
+                if outs_pc2:
+                    values["Output by Cell/Station - by person"] = json.dumps(outs_pc2, ensure_ascii=False)
+                uplh_hours_map = None
+                if hours_pc2:
+                    uplh_hours_map = hours_pc2
+                elif values.get("Hours by Cell/Station - by person"):
+                    try:
+                        uplh_hours_map = json.loads(values["Hours by Cell/Station - by person"])
+                    except Exception:
+                        uplh_hours_map = None
+                if uplh_hours_map and (outs_pc2 or values.get("Output by Cell/Station - by person")):
+                    if not outs_pc2:
+                        try:
+                            outs_pc2 = json.loads(values["Output by Cell/Station - by person"])
+                        except Exception:
+                            outs_pc2 = {}
+                    uplh_pc2 = _uplh_by_person_by_station(uplh_hours_map or {}, outs_pc2 or {})
+                    if uplh_pc2:
+                        values["UPLH by Cell/Station - by person"] = json.dumps(uplh_pc2, ensure_ascii=False)
+            except Exception:
+                pass
+            try:
                 cs_by_person = _hours_by_cs_by_person_for_team(p, team_name)
                 if cs_by_person and not values.get("Hours by Cell/Station - by person"):
                     values["Hours by Cell/Station - by person"] = json.dumps(cs_by_person, ensure_ascii=False)
