@@ -1232,7 +1232,7 @@ with left:
                                             alt.Tooltip("period_date:T", title="Week"),
                                         ],
                                     )
-                                    .properties(height=260)
+                                    .properties(height=280)
                                 )
                                 labels = (
                                     alt.Chart(wk2)
@@ -1287,7 +1287,7 @@ with left:
                                             alt.Tooltip("period_date:T", title="Week"),
                                         ],
                                     )
-                                    .properties(height=260)
+                                    .properties(height=280)
                                 )
                                 labels = (
                                     alt.Chart(wk2)
@@ -1400,7 +1400,7 @@ with mid:
                                     alt.Tooltip("period_date:T", title="Week"),
                                 ],
                             )
-                            .properties(height=260)
+                            .properties(height=280)
                         )
                         labels = (
                             alt.Chart(wk2)
@@ -1444,7 +1444,7 @@ with mid:
                                         y=alt.Y("Target:Q", title="Target")
                                     )
                                     st.altair_chart((line_a + line_t).properties(
-                                        height=260, title=f"{picked_station} • Outputs over time (station total)"), use_container_width=True)
+                                        height=280, title=f"{picked_station} • Outputs over time (station total)"), use_container_width=True)
                             else:
                                 ot = ot.assign(
                                     DiffLabel=lambda d: np.where(d["Target"].notna(), d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—")
@@ -1470,7 +1470,7 @@ with mid:
                                     )
                                 )
                                 st.altair_chart(
-                                    (lines + pts).properties(height=260, title=f"{picked_station} • Per-person outputs over time"),
+                                    (lines + pts).properties(height=280, title=f"{picked_station} • Per-person outputs over time"),
                                     use_container_width=True
                                 )
 with right:
@@ -1570,7 +1570,7 @@ with right:
                 color=alt.Color("WP:N", legend=None),
                 tooltip=["period_date:T", "WP:N", alt.Tooltip("UPLH:Q", format=",.2f")],
             )
-            .properties(height=230)
+            .properties(height=280)
         )
         combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
         st.altair_chart(combined, use_container_width=True)
@@ -1641,7 +1641,7 @@ with right:
                                     alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
                                 ],
                             )
-                            .properties(height=230)
+                            .properties(height=280)
                         )
                         label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
                         labels = (
@@ -1704,7 +1704,7 @@ with right:
                                     alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
                                 ],
                             )
-                            .properties(height=260)
+                            .properties(height=280)
                         )
                         label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
                         labels = (
@@ -1788,7 +1788,7 @@ with right:
                         y=alt.Y("Target UPLH:Q", title="Target UPLH"),
                     )
                     st.altair_chart(
-                        (line_a + line_t).properties(height=260, title=f"{picked_station_uplh} • UPLH over time (station total)"),
+                        (line_a + line_t).properties(height=280, title=f"{picked_station_uplh} • UPLH over time (station total)"),
                         use_container_width=True
                     )
             else:
@@ -1819,7 +1819,7 @@ with right:
                     )
                 )
                 st.altair_chart(
-                    (lines + pts).properties(height=260, title=f"{picked_station_uplh} • Per-person UPLH over time"),
+                    (lines + pts).properties(height=280, title=f"{picked_station_uplh} • Per-person UPLH over time"),
                     use_container_width=True
                 )
 st.markdown("---")
@@ -1835,7 +1835,7 @@ with left2:
             tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
         )
         st.altair_chart(
-            base_hc.mark_line(point=True).properties(height=260),
+            base_hc.mark_line(point=True).properties(height=280),
             use_container_width=True
         )
     else:
@@ -1851,7 +1851,7 @@ with mid2:
             tooltip=["team:N", "period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")]
         )
         st.altair_chart(
-            base_ahu.mark_line(point=True).properties(height=260),
+            base_ahu.mark_line(point=True).properties(height=280),
             use_container_width=True
         )
         if len(teams_in_view) == 1:
@@ -1920,7 +1920,7 @@ with mid2:
                                     alt.Tooltip("Delta:Q", title="Over/Under vs 6.5", format="+.2f"),
                                 ],
                             )
-                            .properties(height=240)
+                            .properties(height=280)
                         )
                         label_pad = max(0.08, (y_hi - y_lo) * 0.03)
                         labels = (
@@ -1970,7 +1970,7 @@ with right2:
             tooltip=["team:N", "period_date:T", alt.Tooltip("Timeliness %:Q", format=".0%")]
         )
         st.altair_chart(
-            base_tml.mark_line(point=True).properties(height=260),
+            base_tml.mark_line(point=True).properties(height=280),
             use_container_width=True
         )
     else:
