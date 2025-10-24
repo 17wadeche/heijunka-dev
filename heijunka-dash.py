@@ -1338,6 +1338,97 @@ with left:
                                 if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
                                 else []
                             )
+    stations_in_week = []
+    try:
+        stn_tot = explode_cell_station_hours(f)
+        if not stn_tot.empty:
+            stations_in_week = (
+                stn_tot.loc[
+                    (stn_tot["team"] == team_name) &
+                    (stn_tot["period_date"] == picked_week),
+                    "cell_station"
+                ]
+                .dropna().astype(str).str.strip().unique().tolist()
+            )
+    except Exception:
+        stations_in_week = []
+    if stations_in_week:
+        picked_station_hours = st.selectbox(
+            "Drill further: Station over time (per-person lines)",
+            options=stations_in_week,
+            index=0,
+            key="hours_station_over_time_select",
+        )
+        ht = build_station_person_hours_over_time(f, team_name, picked_station_hours)
+        if ht.empty:
+            st.caption("No nested per-person station-hours found. Showing station totals over time.")
+            stn_hours_tot = (
+                explode_cell_station_hours(f[f["team"] == team_name])
+                .query("cell_station == @picked_station_hours")
+                .dropna(subset=["period_date"])
+                .rename(columns={"Actual Hours": "Actual", "Available Hours": "Target"})
+            )
+            if not stn_hours_tot.empty:
+                base_ts = alt.Chart(stn_hours_tot).encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y("Actual:Q", title="Actual Hours"),
+                    tooltip=[
+                        "period_date:T",
+                        alt.Tooltip("Actual:Q", title="Actual", format=",.1f"),
+                        alt.Tooltip("Target:Q", title="Available", format=",.1f"),
+                    ],
+                )
+                line_a = base_ts.mark_line(point=True)
+                line_t = (
+                    alt.Chart(stn_hours_tot)
+                    .mark_line(point=True, strokeDash=[4, 3], color="#6b7280")
+                    .encode(x="period_date:T", y=alt.Y("Target:Q", title="Available"))
+                )
+                st.altair_chart(
+                    (line_a + line_t).properties(
+                        height=280,
+                        title=f"{picked_station_hours} • Hours over time (station total)",
+                    ),
+                    use_container_width=True,
+                )
+        else:
+            ht = ht.assign(
+                DiffLabel=lambda d: np.where(
+                    d["Available Hours"].notna(),
+                    d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
+                    "—",
+                )
+            )
+            base_ts = alt.Chart(ht).encode(
+                x=alt.X("period_date:T", title="Week"),
+                y=alt.Y("Actual Hours:Q", title="Actual Hours"),
+                color=alt.Color("person:N", title="Person"),
+                tooltip=[
+                    "period_date:T",
+                    "person:N",
+                    alt.Tooltip("Actual Hours:Q", title="Actual", format=",.1f"),
+                    alt.Tooltip("Available Hours:Q", title="Available", format=",.1f"),
+                    alt.Tooltip("DiffLabel:N", title="Δ vs Available"),
+                ],
+            )
+            lines = base_ts.mark_line()
+            pts = base_ts.mark_point(size=70).encode(
+                fill=alt.Color(
+                    "LabelGroup:N",
+                    legend=None,
+                    scale=alt.Scale(
+                        domain=["pos", "neg", "none"],
+                        range=["#22c55e", "#ef4444", "#9ca3af"],  # green/red/gray
+                    ),
+                )
+            )
+            st.altair_chart(
+                (lines + pts).properties(
+                    height=280,
+                    title=f"{picked_station_hours} • Per-person hours over time",
+                ),
+                use_container_width=True,
+            )                                               
 with mid:
     st.subheader("Output Trend")
     out_long = (
