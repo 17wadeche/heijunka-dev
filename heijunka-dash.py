@@ -1593,7 +1593,6 @@ with left:
                                     st.altair_chart(
                                         (lines + pts).properties(
                                             height=280,
-                                            title=f"{picked_station_hours} • Per-person hours over time",
                                         ),
                                         use_container_width=True,
                                     )
@@ -1805,7 +1804,7 @@ with mid:
                                     )
                                     st.altair_chart(
                                         (lines + pts)
-                                            .properties(height=280, title=f"{picked_station} • Per-person outputs over time"),
+                                            .properties(height=280),
                                         use_container_width=True
                                     )
                         elif by_choice == "Person":
@@ -2113,7 +2112,6 @@ with right:
                                 )
                                 drill = (lines + pts).properties(
                                     height=280,
-                                    title=f"{picked_person_uplh} • Per-station UPLH over time"
                                 )
             else:  # by_choice == "Cell/Station"
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
