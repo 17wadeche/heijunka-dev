@@ -2006,6 +2006,9 @@ with right:
             st.info("No weeks available for drilldown.")
         lower = None
         drill = None 
+        lower_area   = st.container()
+        controls_area = st.container()
+        drill_area   = st.container()
         if picked_week is not None:
             if by_choice == "Person":
                 uplh_person = build_uplh_by_person_long(f, team_for_drill)
@@ -2170,7 +2173,7 @@ with right:
                         lower = bars + labels
                         stations_in_week = wk_c["cell_station"].dropna().astype(str).str.strip().unique().tolist()
                         if stations_in_week:
-                            picked_station_uplh = st.selectbox(
+                            picked_station_uplh = controls_area.selectbox(
                                 "Drill further: Station UPLH over time (per-person lines)",
                                 options=stations_in_week,
                                 index=0,
@@ -2246,11 +2249,11 @@ with right:
                                     title=f"{picked_station_uplh} • Per-person UPLH over time"
                                 )
         if lower is not None:
-            st.altair_chart(lower, use_container_width=True)
+            lower_area.altair_chart(lower, use_container_width=True)
         else:
-            st.altair_chart(top, use_container_width=True)
+            lower_area.altair_chart(top, use_container_width=True)
         if drill is not None:
-            st.altair_chart(drill, use_container_width=True)
+             drill_area.altair_chart(drill, use_container_width=True)
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
