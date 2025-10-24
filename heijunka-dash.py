@@ -1082,6 +1082,104 @@ def build_person_station_outputs_over_time(df, team_name, person):
                     "Target": tgtv,
                 })
     return pd.DataFrame(rows)
+def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
+    def _first_col(cands):
+        for c in cands:
+            if c in df.columns:
+                return c
+        return None
+    col_uplh_pers   = _first_col(["UPLH by Cell/Station - by person"])  # nested {station:{person:{actual,target}}}
+    col_out_pers    = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])  # {station:{person:{output,target}}}
+    col_hrs_pers    = _first_col(["Hours by Cell/Station - by person"])  # {station:{person:{actual,target}}}
+    d = df.loc[df["team"] == team_name].copy()
+    if d.empty:
+        return pd.DataFrame()
+    d["period_date"] = pd.to_datetime(d["period_date"], errors="coerce").dt.normalize()
+    rows = []
+    for _, r in d.iterrows():
+        wk = r.get("period_date", pd.NaT)
+        if pd.isna(wk):
+            continue
+        def _parse_json_cell(value):
+            if pd.isna(value):
+                return {}
+            if isinstance(value, (dict, list)):
+                return value
+            try:
+                return json.loads(value)
+            except Exception:
+                return {}
+        uplh_blob  = _parse_json_cell(r.get(col_uplh_pers))  if col_uplh_pers else {}
+        out_blob   = _parse_json_cell(r.get(col_out_pers))   if col_out_pers  else {}
+        hrs_blob   = _parse_json_cell(r.get(col_hrs_pers))   if col_hrs_pers  else {}
+        stations = set()
+        for blob in (uplh_blob, out_blob, hrs_blob):
+            if isinstance(blob, dict):
+                stations.update(blob.keys())
+        for stn in sorted(stations):
+            stn_key = str(stn)
+            actual_uplh = target_uplh = np.nan
+            actual_out = target_out = np.nan
+            actual_hrs = target_hrs = np.nan
+            if isinstance(uplh_blob.get(stn), dict):
+                per_map = uplh_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_uplh = pd.to_numeric(rec.get("actual"), errors="coerce")
+                    target_uplh = pd.to_numeric(rec.get("target"), errors="coerce")
+            if isinstance(out_blob.get(stn), dict):
+                per_map = out_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_out = pd.to_numeric(rec.get("output"), errors="coerce")
+                    target_out = pd.to_numeric(rec.get("target"), errors="coerce")
+            if isinstance(hrs_blob.get(stn), dict):
+                per_map = hrs_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_hrs = pd.to_numeric(rec.get("actual"), errors="coerce")
+                    target_hrs = pd.to_numeric(rec.get("target"), errors="coerce")
+            if pd.isna(actual_uplh):
+                if pd.notna(actual_out) and pd.notna(actual_hrs) and actual_hrs not in (0, 0.0):
+                    actual_uplh = actual_out / actual_hrs
+            if pd.isna(target_uplh):
+                if pd.notna(target_out) and pd.notna(target_hrs) and target_hrs not in (0, 0.0):
+                    target_uplh = target_out / target_hrs
+            if (pd.isna(actual_out) or actual_out == 0) and (pd.isna(actual_hrs) or actual_hrs == 0) and pd.isna(actual_uplh):
+                continue
+            delta = np.nan
+            if pd.notna(actual_uplh) and pd.notna(target_uplh):
+                delta = actual_uplh - target_uplh
+            rows.append({
+                "period_date": wk,
+                "team": team_name,
+                "person": person_name,
+                "cell_station": stn_key,
+                "Actual": actual_out,
+                "Target": target_out,
+                "Actual Hours": actual_hrs,
+                "Target Hours": target_hrs,
+                "Actual UPLH": actual_uplh,
+                "Target UPLH": target_uplh,
+                "Delta": delta,
+            })
+    if not rows:
+        return pd.DataFrame()
+    out = pd.DataFrame(rows)
+    num_cols = ["Actual", "Target", "Actual Hours", "Target Hours", "Actual UPLH", "Target UPLH", "Delta"]
+    for c in num_cols:
+        out[c] = pd.to_numeric(out[c], errors="coerce")
+    out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
+    return out
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -1965,6 +2063,74 @@ with right:
                             )
                         )
                         lower = bars + labels
+                        people_in_week = wk["person"].dropna().unique().tolist()
+                        if people_in_week:
+                            picked_person_uplh = st.selectbox(
+                                "Drill further: Person UPLH over time (per-station lines)",
+                                options=sorted(people_in_week),
+                                index=0,
+                                key="uplh_person_over_time_select",
+                            )
+                            pu = build_person_station_uplh_over_time(f, team_for_drill, picked_person_uplh)
+                            if pu.empty:
+                                st.caption("No nested per-station UPLH found for this person.")
+                            else:
+                                pu = pu.assign(
+                                    HasTarget=lambda d: d["Target UPLH"].notna(),
+                                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
+                                )
+                                pu = pu.assign(
+                                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
+                                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
+                                )
+
+                                base_ts = alt.Chart(pu).encode(
+                                    x=alt.X("period_date:T", title="Week"),
+                                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                                    color=alt.Color("cell_station:N", title="Cell/Station"),  # line color per station
+                                    tooltip=[
+                                        "period_date:T",
+                                        alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
+                                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
+                                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
+                                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                                    ],
+                                )
+                                lines = base_ts.mark_line()
+                                pts = (
+                                    alt.Chart(pu)
+                                    .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                    .encode(
+                                        x="period_date:T",
+                                        y="Actual UPLH:Q",
+                                        stroke=alt.Color("cell_station:N", legend=None),  # stroke matches line
+                                        fill=alt.Color(
+                                            "LabelGroup:N",
+                                            legend=None,
+                                            scale=alt.Scale(
+                                                domain=["pos", "neg", "none"],
+                                                range=["#22c55e", "#ef4444", "#9ca3af"]
+                                            ),
+                                        ),
+                                        tooltip=[
+                                            "period_date:T",
+                                            alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                            alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                            alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                            alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                                        ],
+                                    )
+                                )
+                                st.altair_chart(
+                                    (lines + pts).properties(
+                                        height=280,
+                                        title=f"{picked_person_uplh} • Per-station UPLH over time"
+                                    ),
+                                    use_container_width=True
+                                )
             else:
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
                 if uplh_cell.empty:
@@ -2094,12 +2260,17 @@ with right:
                     )
             else:
                 ut = ut.assign(
-                    DiffLabel=lambda d: np.where(d["Target UPLH"].notna(), d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—")
+                    HasTarget=lambda d: d["Target UPLH"].notna(),
+                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
+                )
+                ut = ut.assign(
+                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
+                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
                 )
                 base_ts = alt.Chart(ut).encode(
                     x=alt.X("period_date:T", title="Week"),
                     y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
-                    color=alt.Color("person:N", title="Person"),
+                    color=alt.Color("person:N", title="Person"),  # line color
                     tooltip=[
                         "period_date:T",
                         "person:N",
@@ -2112,11 +2283,28 @@ with right:
                     ],
                 )
                 lines = base_ts.mark_line()
-                pts = base_ts.mark_point(size=70).encode(
-                    fill=alt.Color(
-                        "LabelGroup:N",
-                        legend=None,
-                        scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"])
+                pts = (
+                    alt.Chart(ut)
+                    .mark_point(size=85, filled=True, strokeWidth=1.2)
+                    .encode(
+                        x="period_date:T",
+                        y="Actual UPLH:Q",
+                        stroke=alt.Color("person:N", legend=None),  # stroke matches line
+                        fill=alt.Color(  # fill shows pass/fail/none
+                            "LabelGroup:N",
+                            legend=None,
+                            scale=alt.Scale(
+                                domain=["pos", "neg", "none"],
+                                range=["#22c55e", "#ef4444", "#9ca3af"]
+                            ),
+                        ),
+                        tooltip=[
+                            "period_date:T",
+                            "person:N",
+                            alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                            alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                            alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                        ],
                     )
                 )
                 st.altair_chart(
