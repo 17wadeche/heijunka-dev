@@ -1735,6 +1735,11 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         base_d = infer_period_date(file_path) or (_dt.today().date() - timedelta(days=_dt.today().weekday()))
         for i in range(len(segs)):
             segs[i]["date"] = (pd.Timestamp(base_d) + pd.Timedelta(days=7*i)).date()
+    RECENT_WEEKS = int(cfg.get("recent_weeks", 2))  # optional: configurable
+    today_d = _dt.today().date()
+    valid_segs = [s for s in segs if s.get("date") is not None and s["date"] <= today_d]
+    valid_segs.sort(key=lambda s: s["date"])  # ascending by date
+    segs = valid_segs[-RECENT_WEEKS:] if len(valid_segs) > RECENT_WEEKS else valid_segs
     for seg in segs:
         start_i, end_i, wk_d = seg["start"], seg["end"], seg["date"]
         sub_ix = idx_all[(idx_all >= start_i) & (idx_all <= end_i)]
