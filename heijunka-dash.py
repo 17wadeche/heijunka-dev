@@ -1722,7 +1722,6 @@ with mid:
                                             .properties(height=280, title=f"{picked_person} • Per-station outputs over time"),
                                         use_container_width=True
                                     )
-
 with right:
     st.subheader("UPLH Trend")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
