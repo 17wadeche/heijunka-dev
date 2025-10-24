@@ -608,6 +608,26 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def build_person_station_hours_over_time(frame: pd.DataFrame, team: str, person: str) -> pd.DataFrame:
+    hrs = explode_cell_person_hours(frame, team)
+    if hrs.empty:
+        return pd.DataFrame(columns=["period_date", "cell_station", "Actual Hours", "Available Hours"])
+    sub = (
+        hrs[(hrs["person"] == person)]
+        .copy()
+        .assign(
+            **{
+                "Actual Hours": pd.to_numeric(hrs.loc[hrs["person"] == person, "Actual Hours"], errors="coerce"),
+                "Available Hours": pd.to_numeric(hrs.loc[hrs["person"] == person, "Available Hours"], errors="coerce"),
+            }
+        )
+        .dropna(subset=["period_date", "cell_station"])
+    )
+    if not sub.empty:
+        sub = (sub
+               .groupby(["period_date", "cell_station"], as_index=False)
+               .agg({"Actual Hours": "sum", "Available Hours": "sum"}))
+    return sub.sort_values(["period_date", "cell_station"])
 def build_station_person_hours_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
     hrs = explode_cell_person_hours(frame, team)
     if hrs.empty:
@@ -1295,6 +1315,41 @@ with left:
                                     )
                                 )
                                 st.altair_chart(bars + labels, use_container_width=True)
+                                people_in_week = (
+                                    wk2["person"].dropna().astype(str).str.strip().drop_duplicates().tolist()
+                                    if "person" in wk2.columns and not wk2.empty else []
+                                )
+                                if people_in_week:
+                                    picked_person_hours = st.selectbox(
+                                        "Drill further: Person over time (per-station lines)",
+                                        options=sorted(people_in_week),
+                                        index=0,
+                                        key="hours_person_over_time_select",
+                                    )
+                                    pt = build_person_station_hours_over_time(f, team_name, picked_person_hours)
+                                    if pt.empty:
+                                        st.caption("No nested per-station hours found for this person.")
+                                    else:
+                                        base_ts = alt.Chart(pt).encode(
+                                            x=alt.X("period_date:T", title="Week"),
+                                            y=alt.Y("Actual Hours:Q", title="Actual Hours"),
+                                            color=alt.Color("cell_station:N", title="Cell/Station"),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                                alt.Tooltip("Actual Hours:Q", title="Actual", format=",.1f"),
+                                                alt.Tooltip("Available Hours:Q", title="Available", format=",.1f"),
+                                            ],
+                                        )
+                                        lines = base_ts.mark_line()
+                                        pts   = base_ts.mark_point(size=70, filled=True)  # points same color as line
+                                        st.altair_chart(
+                                            (lines + pts).properties(
+                                                height=280,
+                                                title=f"{picked_person_hours} • Hours by station over time",
+                                            ),
+                                            use_container_width=True,
+                                        )
                     pass
                 else:
                     cells_hours = explode_cell_station_hours(f)
