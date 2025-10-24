@@ -1419,8 +1419,6 @@ with left:
                     "period_date:T",
                     "person:N",
                     alt.Tooltip("Actual Hours:Q", title="Actual", format=",.1f"),
-                    alt.Tooltip("Available Hours:Q", title="Available", format=",.1f"),
-                    alt.Tooltip("DiffLabel:N", title="Δ vs Available"),
                 ],
             )
             lines = base_ts.mark_line()
