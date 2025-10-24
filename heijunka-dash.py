@@ -1405,6 +1405,14 @@ with left:
                                 if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
                                 else []
                             )
+                            # Only show the "Station over time (per-person lines)" drill when Hours by == "Cell/Station"
+if (
+    team_name is not None
+    and st.session_state.get("hours_by_select") == "Cell/Station"
+    and "hours_by_week_select" in st.session_state
+):
+    picked_week = pd.to_datetime(st.session_state["hours_by_week_select"]).normalize()
+
     stations_in_week = []
     try:
         stn_tot = explode_cell_station_hours(f)
@@ -1477,14 +1485,14 @@ with left:
                 ],
             )
             lines = base_ts.mark_line()
-            pts = base_ts.mark_point(size=70, filled=True)
+            pts = base_ts.mark_point(size=70, filled=True)  # points = line color
             st.altair_chart(
                 (lines + pts).properties(
                     height=280,
                     title=f"{picked_station_hours} • Per-person hours over time",
                 ),
                 use_container_width=True,
-            )                   
+            )
 with mid:
     st.subheader("Output Trend")
     out_long = (
