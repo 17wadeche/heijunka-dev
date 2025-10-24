@@ -2134,39 +2134,46 @@ with right:
                         vmax = float(pd.to_numeric(wk_c["Actual UPLH"], errors="coerce").max())
                         pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
                         y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
+                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
+                        wk_c["LabelY"] = wk_c["Actual UPLH"] + np.where(wk_c["Delta"].fillna(-1) >= 0, label_pad, -label_pad)
                         bars = (
                             alt.Chart(wk_c)
                             .mark_bar(color="#2563eb")
                             .encode(
-                                x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
+                                x=alt.X(
+                                    "cell_station:N",
+                                    sort=order_cells,
+                                    axis=alt.Axis(
+                                        title="Cell/Station",
+                                        labelAngle=-35,      # <- ensures the x-axis shows and is readable
+                                        labelOverlap=False,
+                                    ),
+                                ),
                                 y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
                                 tooltip=[
-                                    "period_date:T",
                                     alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                    alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                                    alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
-                                    alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
                                     alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
                                     alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
                                     alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
+                                    "period_date:T",
                                 ],
                             )
                             .properties(height=280)
                         )
-                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
                         labels = (
-                            alt.Chart(
-                                wk_c.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad))
-                            )
-                            .mark_text(dy=-10)
+                            alt.Chart(wk_c)
+                            .mark_text()
                             .encode(
                                 x="cell_station:N",
                                 y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DeltaLabel:N",
+                                text="DeltaLabel:N",  # already formatted with +/-
                                 color=alt.Color(
                                     "LabelGroup:N",
                                     legend=None,
-                                    scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
+                                    scale=alt.Scale(
+                                        domain=["pos", "neg", "none"],
+                                        range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
+                                    ),
                                 ),
                             )
                         )
@@ -2253,7 +2260,7 @@ with right:
         else:
             lower_area.altair_chart(top, use_container_width=True)
         if drill is not None:
-             drill_area.altair_chart(drill, use_container_width=True)
+            drill_area.altair_chart(drill, use_container_width=True)
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
