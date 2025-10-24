@@ -1660,7 +1660,12 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         print("[CAS][manual] 'manual_weeks' missing 'sheet' or 'starts'")
         return rows
     engine = "pyxlsb" if file_path.suffix.lower() == ".xlsb" else None
-    df = read_excel_fast(file_path, sheet_name=sheet, engine=engine)
+    df = read_excel_fast(
+        file_path,
+        sheet_name=sheet,
+        engine=engine,
+        usecols="A:AZ",   # adjust if you truly need more columns
+    )
     if df is None or df.empty:
         print(f"[CAS][manual] Empty or unreadable sheet: {sheet}")
         return rows
