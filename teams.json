@@ -1,0 +1,121 @@
+{
+    "Aortic": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - Aortic - Heijunka\\Aortic WIP+Non-WIP Heijunka Week of October 27 2025.xlsb",
+        "prod_sheet": "Aortic Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 22, "date": "2025-11-03" },
+                { "row": 42, "date": "2025-11-10" },
+                { "row": 62, "date": "2025-11-17" }
+            ],
+            "Aortic Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 247,"date":"2025-11-03" },
+                { "row": 488,"date":"2025-11-10" },
+                { "row": 728,"date":"2025-11-17" }
+            ]
+        }
+    },
+    "CRDN": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsb",
+        "prod_sheet": "CRDN Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 26, "date": "2025-11-03" },
+                { "row": 50, "date": "2025-11-10" },
+                { "row": 74, "date": "2025-11-17" },
+                { "row": 98,"date": "2025-11-24" },
+                { "row": 122,"date":"2025-12-01" },
+                { "row": 146,"date":"2025-12-08" },
+                { "row": 170,"date":"2025-12-15" }
+            ],
+            "CRDN Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 227,"date":"2025-11-03" },
+                { "row": 447,"date":"2025-11-10" },
+                { "row": 667,"date":"2025-11-17" },
+                { "row": 887,"date": "2025-11-24" },
+                { "row": 1107,"date":"2025-12-01" },
+                { "row": 1327,"date":"2025-12-08" },
+                { "row": 1547,"date":"2025-12-15" }
+            ]
+        }
+    },
+    "PVH": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - COS Supportive Materials\\PVH WIP+Non-WIP Heijunka Week of October 27 2025.xlsb",
+        "prod_sheet": "PVH Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 22, "date": "2025-11-03" },
+                { "row": 42, "date": "2025-11-10" },
+                { "row": 62, "date": "2025-11-17" }
+            ],
+            "PVH Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 247,"date":"2025-11-03" },
+                { "row": 488,"date":"2025-11-10" },
+                { "row": 728,"date":"2025-11-17" }
+            ]
+        }
+    },
+    "SVT": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\SVT PXM Team - Heijunka_Schedule_Finding Work\\SVT WIP+Non-WIP Heijunka.xlsb",
+        "prod_sheet": "SVT Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 16, "date": "2025-11-03" },
+                { "row": 30, "date": "2025-11-10" },
+                { "row": 44, "date": "2025-11-17" }
+            ],
+            "SVT Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 247,"date":"2025-11-03" },
+                { "row": 488,"date":"2025-11-10" },
+                { "row": 728,"date":"2025-11-17" }
+            ]
+        }
+    },
+    "TCT": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\TCT CQXM - 1 WIP and Schedule\\TCT NEW Heijunka Week of October 27, 2025.xlsb",
+        "prod_sheets": [
+            "Commercial Prod Analysis",
+            "Clinical Prod Analysis",
+            "Literature Prod Analysis"
+        ],
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 42, "date": "2025-11-03" },
+                { "row": 82, "date": "2025-11-10" },
+                { "row": 122,"date": "2025-11-17" }
+            ],
+            "Commercial Prod Analysis": [
+                { "row": 6,  "date": "2025-10-27" },
+                { "row": 191, "date": "2025-11-03" },
+                { "row": 376, "date": "2025-11-10" },
+                { "row": 561,"date": "2025-11-17" }
+            ],
+            "Clinical Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 192, "date": "2025-11-03" },
+                { "row": 377, "date": "2025-11-10" },
+                { "row": 562,"date": "2025-11-17" }
+            ],
+            "Literature Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 192, "date": "2025-11-03" },
+                { "row": 377, "date": "2025-11-10" },
+                { "row": 562,"date": "2025-11-17" }
+            ]
+        }
+    }
+}
