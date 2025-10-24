@@ -1976,14 +1976,12 @@ with right:
     elif not multi_team and team_for_drill is not None:
         top_ph = st.empty()
         top_ph.altair_chart(top, use_container_width=True)
-
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
             index=0,
             key="uplh_by_select",
         )
-
         team_weeks = sorted(
             pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()),
             reverse=True
