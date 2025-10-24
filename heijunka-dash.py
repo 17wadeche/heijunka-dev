@@ -2066,7 +2066,7 @@ with right:
                         lower = bars + labels
                         people_in_week = wk_p["person"].dropna().unique().tolist()
                         if people_in_week:
-                            picked_person_uplh = st.selectbox(
+                            picked_person_uplh = controls_area.selectbox(
                                 "Drill further: Person UPLH over time (per-station lines)",
                                 options=sorted(people_in_week),
                                 index=0,
