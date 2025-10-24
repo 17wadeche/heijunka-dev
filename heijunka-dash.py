@@ -2007,6 +2007,7 @@ with right:
             picked_week = None
             st.info("No weeks available for drilldown.")
         lower = None
+        drill = None 
         if picked_week is not None:
             if by_choice == "Person":
                 uplh_person = build_uplh_by_person_long(f, team_for_drill)
@@ -2110,9 +2111,9 @@ with right:
                                         ),
                                     )
                                 )
-                                st.altair_chart(
-                                    (lines + pts).properties(height=280, title=f"{picked_person_uplh} • Per-station UPLH over time"),
-                                    use_container_width=True
+                                drill = (lines + pts).properties(
+                                    height=280,
+                                    title=f"{picked_person_uplh} • Per-station UPLH over time"
                                 )
             else:  # by_choice == "Cell/Station"
                 uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
@@ -2201,9 +2202,9 @@ with right:
                                         .mark_line(point=True, strokeDash=[4,3], color="#6b7280")
                                         .encode(x="period_date:T", y=alt.Y("Target UPLH:Q", title="Target UPLH"))
                                     )
-                                    st.altair_chart(
-                                        (line_a + line_t).properties(height=280, title=f"{picked_station_uplh} • UPLH over time (station total)"),
-                                        use_container_width=True
+                                    drill = (line_a + line_t).properties(
+                                        height=280,
+                                        title=f"{picked_station_uplh} • UPLH over time (station total)"
                                     )
                             else:
                                 ut = ut.assign(
@@ -2242,14 +2243,16 @@ with right:
                                         ),
                                     )
                                 )
-                                st.altair_chart(
-                                    (lines + pts).properties(height=280, title=f"{picked_station_uplh} • Per-person UPLH over time"),
-                                    use_container_width=True
+                                drill = (lines + pts).properties(
+                                    height=280,
+                                    title=f"{picked_station_uplh} • Per-person UPLH over time"
                                 )
         if lower is not None:
             st.altair_chart(lower, use_container_width=True)
         else:
             st.altair_chart(top, use_container_width=True)
+        if drill is not None:
+            st.altair_chart(drill, use_container_width=True)
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
