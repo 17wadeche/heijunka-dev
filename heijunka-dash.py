@@ -572,14 +572,13 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
             obj = None
         if not isinstance(obj, dict):
             continue
-        for station, vals in obj.items():
-            if isinstance(vals, dict) and any(isinstance(v, dict) for v in vals.values()):
-                for person, pv in vals.items():
-                    if not isinstance(pv, dict):
-                        continue
-                    a = _maybe_as_float(pv.get("actual"))
-                    t = _maybe_as_float(pv.get("available"))
-                    if pd.isna(a) and pd.isna(t):
+        for station, per in obj.items():
+            if not isinstance(per, dict):
+                continue
+            if all(not isinstance(v, dict) for v in per.values()):
+                for person, hours in per.items():
+                    a = _maybe_as_float(hours)
+                    if pd.isna(a):
                         continue
                     rows.append({
                         "team": r["team"],
@@ -587,10 +586,24 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "cell_station": str(station).strip(),
                         "person": str(person).strip(),
                         "Actual Hours": a,
-                        "Available Hours": t,
+                        "Available Hours": np.nan,
                     })
-            else:
                 continue
+            for person, pv in per.items():
+                if not isinstance(pv, dict):
+                    continue
+                a = _maybe_as_float(pv.get("actual", pv.get("hours")))
+                t = _maybe_as_float(pv.get("available", pv.get("target")))
+                if pd.isna(a) and pd.isna(t):
+                    continue
+                rows.append({
+                    "team": r["team"],
+                    "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                    "cell_station": str(station).strip(),
+                    "person": str(person).strip(),
+                    "Actual Hours": a,
+                    "Available Hours": t,
+                })
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
