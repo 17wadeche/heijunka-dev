@@ -22,6 +22,7 @@ def _file_sig(path: str | Path) -> tuple[str, int, int]:
         return (str(p), st.st_mtime_ns, st.st_size)
     except Exception:
         return (str(p), 0, 0)
+
 from openpyxl import load_workbook as _load_workbook_orig
 @lru_cache(maxsize=128)
 def _load_workbook_cached(path_str: str, data_only: bool, read_only: bool, mtime_ns: int, size: int):
@@ -29,13 +30,24 @@ def _load_workbook_cached(path_str: str, data_only: bool, read_only: bool, mtime
 def load_workbook_fast(path: Path, *, data_only: bool = True, read_only: bool = True):
     sig_path, sig_mtime, sig_size = _file_sig(path)
     return _load_workbook_cached(sig_path, data_only, read_only, sig_mtime, sig_size)
+from functools import lru_cache
 @lru_cache(maxsize=256)
-def _read_excel_cached(path_str: str, sheet_name: str, engine: str | None, mtime_ns: int, size: int):
+def _read_excel_cached(path_str: str, sheet_name: str, engine: str | None,
+                       usecols, nrows, mtime_ns: int, size: int):
     from pandas import read_excel
-    return read_excel(path_str, sheet_name=sheet_name, engine=engine, header=None)
-def read_excel_fast(path: Path, *, sheet_name: str, engine: str | None = None):
+    return read_excel(
+        path_str,
+        sheet_name=sheet_name,
+        engine=engine,
+        header=None,
+        usecols=usecols,
+        nrows=nrows,
+    )
+def read_excel_fast(path: Path, *, sheet_name: str, engine: str | None = None,
+                    usecols=None, nrows: int | None = None):
+    usecols_key = tuple(usecols) if isinstance(usecols, list) else usecols
     sig_path, sig_mtime, sig_size = _file_sig(path)
-    return _read_excel_cached(sig_path, sheet_name, engine, sig_mtime, sig_size)
+    return _read_excel_cached(sig_path, sheet_name, engine, usecols_key, nrows, sig_mtime, sig_size)
 REPO_DIR = Path(r"C:\heijunka-dev")
 REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
 REPO_XLSX = REPO_DIR / "metrics_aggregate_dev.xlsx"
@@ -1660,10 +1672,12 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         print("[CAS][manual] 'manual_weeks' missing 'sheet' or 'starts'")
         return rows
     engine = "pyxlsb" if file_path.suffix.lower() == ".xlsb" else None
+    usecols = cfg.get("manual_weeks_usecols", "A:AJ")
     df = read_excel_fast(
         file_path,
         sheet_name=sheet,
         engine=engine,
+        usecols=usecols,
     )
     if df is None or df.empty:
         print(f"[CAS][manual] Empty or unreadable sheet: {sheet}")
