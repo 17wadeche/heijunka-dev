@@ -1422,23 +1422,14 @@ with left:
                 ],
             )
             lines = base_ts.mark_line()
-            pts = base_ts.mark_point(size=70).encode(
-                fill=alt.Color(
-                    "LabelGroup:N",
-                    legend=None,
-                    scale=alt.Scale(
-                        domain=["pos", "neg", "none"],
-                        range=["#22c55e", "#ef4444", "#9ca3af"],  # green/red/gray
-                    ),
-                )
-            )
+            pts = base_ts.mark_point(size=70, filled=True)
             st.altair_chart(
                 (lines + pts).properties(
                     height=280,
                     title=f"{picked_station_hours} • Per-person hours over time",
                 ),
                 use_container_width=True,
-            )                                               
+            )                   
 with mid:
     st.subheader("Output Trend")
     out_long = (
