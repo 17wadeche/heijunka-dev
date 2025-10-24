@@ -1664,7 +1664,6 @@ def _collect_cas_manual_weeks(cfg: dict) -> list[dict]:
         file_path,
         sheet_name=sheet,
         engine=engine,
-        usecols="A:AZ",   # adjust if you truly need more columns
     )
     if df is None or df.empty:
         print(f"[CAS][manual] Empty or unreadable sheet: {sheet}")
