@@ -1662,16 +1662,17 @@ with mid:
                                         )
                                 else:
                                     ot = ot.assign(
-                                        DiffLabel=lambda d: np.where(
-                                            d["Target"].notna(),
-                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
-                                            "—",
-                                        )
+                                        HasTarget=lambda d: d["Target"].notna(),
+                                        Delta=lambda d: d["Actual"] - d["Target"],
+                                    )
+                                    ot = ot.assign(
+                                        DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—"),
+                                        PointFillGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
                                     )
                                     base_ts = alt.Chart(ot).encode(
                                         x=alt.X("period_date:T", title="Week"),
                                         y=alt.Y("Actual:Q", title="Actual Output"),
-                                        color=alt.Color("person:N", title="Person"),
+                                        color=alt.Color("person:N", title="Person"),  # line/stroke color
                                         tooltip=[
                                             "period_date:T",
                                             "person:N",
@@ -1680,8 +1681,33 @@ with mid:
                                             alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                         ],
                                     )
+                                    lines = base_ts.mark_line()
+                                    pts = (
+                                        alt.Chart(ot)
+                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                        .encode(
+                                            x="period_date:T",
+                                            y="Actual:Q",
+                                            stroke=alt.Color("person:N", legend=None),
+                                            fill=alt.Color(
+                                                "PointFillGroup:N",
+                                                legend=None,
+                                                scale=alt.Scale(
+                                                    domain=["pos", "neg", "none"],
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"]
+                                                ),
+                                            ),
+                                            tooltip=[
+                                                "period_date:T",
+                                                "person:N",
+                                                alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                            ],
+                                        )
+                                    )
                                     st.altair_chart(
-                                        (base_ts.mark_line() + base_ts.mark_point(size=85, filled=True))
+                                        (lines + pts)
                                             .properties(height=280, title=f"{picked_station} • Per-person outputs over time"),
                                         use_container_width=True
                                     )
@@ -1699,11 +1725,12 @@ with mid:
                                     st.caption("No nested per-station outputs found for this person.")
                                 else:
                                     pt = pt.assign(
-                                        DiffLabel=lambda d: np.where(
-                                            d["Target"].notna(),
-                                            (d["Actual"] - d["Target"]).round(1).map(lambda x: f"{x:+.1f}"),
-                                            "—",
-                                        )
+                                        HasTarget=lambda d: d["Target"].notna(),
+                                        Delta=lambda d: d["Actual"] - d["Target"],
+                                    )
+                                    pt = pt.assign(
+                                        DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—"),
+                                        PointFillGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
                                     )
                                     base_ts = alt.Chart(pt).encode(
                                         x=alt.X("period_date:T", title="Week"),
@@ -1717,8 +1744,33 @@ with mid:
                                             alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                         ],
                                     )
+                                    lines = base_ts.mark_line()
+                                    pts = (
+                                        alt.Chart(pt)
+                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                        .encode(
+                                            x="period_date:T",
+                                            y="Actual:Q",
+                                            stroke=alt.Color("cell_station:N", legend=None),  # stroke matches line color
+                                            fill=alt.Color(
+                                                "PointFillGroup:N",
+                                                legend=None,
+                                                scale=alt.Scale(
+                                                    domain=["pos", "neg", "none"],
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"]
+                                                ),
+                                            ),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                                alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                            ],
+                                        )
+                                    )
                                     st.altair_chart(
-                                        (base_ts.mark_line() + base_ts.mark_point(size=85, filled=True))
+                                        (lines + pts)
                                             .properties(height=280, title=f"{picked_person} • Per-station outputs over time"),
                                         use_container_width=True
                                     )
