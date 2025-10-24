@@ -1474,7 +1474,6 @@ with left:
                                         st.altair_chart(
                                             (lines + pts).properties(
                                                 height=280,
-                                                title=f"{picked_person_hours} • Hours by station over time",
                                             ),
                                             use_container_width=True,
                                         )
