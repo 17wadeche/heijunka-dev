@@ -1867,7 +1867,7 @@ with mid:
                                     )
                                     st.altair_chart(
                                         (lines + pts)
-                                            .properties(height=280, title=f"{picked_person} • Per-station outputs over time"),
+                                            .properties(height=280),
                                         use_container_width=True
                                     )
 with right:
@@ -2250,7 +2250,6 @@ with right:
                                 )
                                 drill = (lines + pts).properties(
                                     height=280,
-                                    title=f"{picked_station_uplh} • Per-person UPLH over time"
                                 )
         if lower is not None:
             lower_area.altair_chart(lower, use_container_width=True)
