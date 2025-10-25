@@ -116,7 +116,7 @@ class WeekRollup:
         self.completed_hours = round(float(self.completed_hours or 0.0), 2)
         self.target_output = round(float(self.target_output or 0.0), 2)
         self.actual_output = round(float(self.actual_output or 0.0), 2)
-        self.target_uplh = round(self.target_output / self.total_available_hours, 2) if self.total_available_hours else None
+        self.target_uplh = round(self.target_output / self.completed_hours, 2) if self.completed_hours else None
         self.actual_uplh = round(self.actual_output / self.completed_hours, 2) if self.completed_hours else None
         self.hc_in_wip = sum(1 for v in self.person_hours.values() if (v.get("actual", 0) or 0) > 0)
         self.actual_hc_used = round(self.completed_hours / 30.0, 2) if self.completed_hours else None
@@ -600,6 +600,50 @@ def build_weekly_metrics_from_file(path: str, prod_hints: List[str], avail_hint:
             "UPLH by Cell/Station - by person": json.dumps(roll.uplh_by_cell_by_person, ensure_ascii=False),
         })
     return rows
+def _norm_week_str(s: str) -> str:
+    s = (s or "").strip()
+    try:
+        return datetime.fromisoformat(s).date().isoformat()
+    except Exception:
+        d = _to_date(s)
+        return d.isoformat() if d else s
+def _read_value_by_team_week(path: str, value_col: Optional[str], value_hint: Optional[str]) -> Tuple[Dict[Tuple[str,str], Any], str]:
+    if not path or not os.path.exists(path):
+        return {}, value_col or (value_hint or "Value")
+    with open(path, "r", newline="", encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        headers = [h for h in (r.fieldnames or [])]
+        team_col = next((h for h in headers if h.strip().lower() == "team"), None)
+        week_col = next((h for h in headers if h.strip().lower() == "week"), None)
+        if not team_col or not week_col:
+            raise RuntimeError(f"{path}: must contain 'Team' and 'Week' columns.")
+        val_col = value_col
+        if not val_col:
+            if value_hint:
+                lower = value_hint.strip().lower()
+                val_col = next((h for h in headers if lower in h.strip().lower() and h not in (team_col, week_col)), None)
+            if not val_col:
+                val_col = next((h for h in headers if h not in (team_col, week_col)), None)
+        if not val_col:
+            raise RuntimeError(f"{path}: no value column found (looked for hint '{value_hint}')")
+        out: Dict[Tuple[str, str], Any] = {}
+        for row in r:
+            team = str(row.get(team_col, "")).strip()
+            week = _norm_week_str(str(row.get(week_col, "")))
+            if not team or not week:
+                continue
+            val = row.get(val_col, "")
+            out[(team, week)] = val
+        return out, val_col
+def _apply_aux_column(rows: List[Dict[str, Any]], merged_cols: List[str], aux: Dict[Tuple[str,str], Any], colname: str):
+    if colname not in merged_cols:
+        merged_cols.append(colname)
+    for r in rows:
+        key = (str(r.get("Team","")).strip(), _norm_week_str(str(r.get("Week","")).strip()))
+        if key in aux:
+            r[colname] = aux[key]
+        elif colname not in r:
+            r[colname] = ""
 def _read_csv_if_exists(path: str) -> Tuple[List[Dict[str, Any]], List[str]]:
     if not os.path.exists(path):
         return [], []
@@ -645,6 +689,8 @@ def main():
     p.add_argument("--avail-sheet", help="Override: exact/partial name of the 'Available WIP+Non-WIP Hours' sheet")
     p.add_argument("workbook", nargs="?", help="Direct path to a single workbook (if not using --team/--config)")
     p.add_argument("--team-name", help="Team label to use when processing a single workbook without config")
+    p.add_argument("--closures", help="Path to closures.csv to append as 'Closures'")
+    p.add_argument("--timeliness", help="Path to timeliness.csv to append as 'Open Complaint Timeliness'")
     p.add_argument("--out", help="CSV output path", default="metrics.csv")
     args = p.parse_args()
     jobs: List[Tuple[str, str, List[str], str, Dict[str, List[Dict[str, Any]]]]] = []
@@ -714,6 +760,12 @@ def main():
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
     merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
     merged_rows = _sort_rows(merged_rows)
+    closures_map, closures_col = _read_value_by_team_week(args.closures, value_col=None, value_hint="closures") if getattr(args, "closures", None) else ({}, "Closures")
+    if closures_map:
+        _apply_aux_column(merged_rows, merged_cols, closures_map, "Closures")  # force the output column name
+    time_map, time_col = _read_value_by_team_week(args.timeliness, value_col=None, value_hint="timeliness") if getattr(args, "timeliness", None) else ({}, "Open Complaint Timeliness")
+    if time_map:
+        _apply_aux_column(merged_rows, merged_cols, time_map, "Open Complaint Timeliness")
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=merged_cols)
         w.writeheader()
