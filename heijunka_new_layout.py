@@ -693,6 +693,17 @@ def main():
     p.add_argument("--timeliness", help="Path to timeliness.csv to append as 'Open Complaint Timeliness'")
     p.add_argument("--out", help="CSV output path", default="metrics.csv")
     args = p.parse_args()
+    if not args.config and os.path.exists("teams.json"):
+        args.config = "teams.json"
+    if not args.out:
+        args.out = "metrics.csv"
+    if not getattr(args, "closures", None) and os.path.exists("closures.csv"):
+        args.closures = "closures.csv"
+    if not getattr(args, "timeliness", None) and os.path.exists("timeliness.csv"):
+        args.timeliness = "timeliness.csv"
+    if args.team and not args.config:
+        print("Provide --config or place teams.json in the current folder.", file=sys.stderr)
+        sys.exit(2)
     jobs: List[Tuple[str, str, List[str], str, Dict[str, List[Dict[str, Any]]]]] = []
     default_prod = "Prod Analysis"
     default_avail = "Available WIP+Non-WIP Hours"
