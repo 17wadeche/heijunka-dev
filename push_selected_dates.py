@@ -6,11 +6,15 @@ from typing import Dict, List, Tuple, Any, Optional
 def _clean(s: Any) -> str:
     return "" if s is None else str(s).strip()
 def _get(d: dict, *keys: str) -> Optional[str]:
+    def _norm(k: str) -> str:
+        return (k or "").lstrip("\ufeff").strip().lower()
     for k in keys:
         if k in d and d[k] is not None:
             return d[k]
+    for want in keys:
+        want_n = _norm(want)
         for dk in d.keys():
-            if dk.lower() == k.lower():
+            if _norm(dk) == want_n:
                 return d[dk]
     return None
 def _to_date_iso(v: Any) -> Optional[str]:
@@ -34,7 +38,7 @@ def _to_date_iso(v: Any) -> Optional[str]:
 def _read_csv(path: str) -> Tuple[List[Dict[str, str]], List[str]]:
     if not os.path.exists(path):
         return [], []
-    with open(path, "r", encoding="utf-8", newline="") as f:
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
         r = csv.DictReader(f)
         rows = [dict(row) for row in r]
         headers = list(r.fieldnames or [])
