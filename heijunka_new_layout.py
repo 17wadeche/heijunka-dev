@@ -5,6 +5,19 @@ from dataclasses import dataclass, field
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Optional, Any, Iterable
 from collections import defaultdict
+try:
+    import pythoncom
+    class _ComMessageFilter:
+        def HandleInComingCall(self, dwCallType, hTaskCaller, dwTickCount, lpInterfaceInfo):
+            return 0  # SERVERCALL_ISHANDLED
+        def RetryRejectedCall(self, hTaskCallee, dwTickCount, dwRejectType):
+            if dwRejectType == 2:
+                return 100  # retry in 100ms
+            return -1
+        def MessagePending(self, hTaskCallee, dwTickCount, dwPendingType):
+            return 2  # PENDINGMSG_WAITDEFPROCESS
+except Exception:
+    _ComMessageFilter = None
 def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
     if not anchors:
         return None
@@ -109,27 +122,9 @@ class WeekRollup:
                     "target": round(t / h, 2) if h else None,
                 }
         self.uplh_by_cell_by_person = uplh
-def _rows_from_xlsx_visible(path: str, sheet_name: str):
-    from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True, read_only=False)  # need dimensions
-    ws = wb[sheet_name]
-    max_row = ws.max_row or 0
-    max_col = ws.max_column or 0
-    for r in range(1, max_row + 1):
-        rd = ws.row_dimensions.get(r)
-        hidden = bool(getattr(rd, "hidden", False))
-        zero_h = (getattr(rd, "height", None) == 0)
-        if hidden or zero_h:
-            continue
-        vals = []
-        for c in range(1, max_col + 1):
-            cell = ws.cell(r, c)
-            vals.append(cell.value)
-        yield r, tuple(vals)
 def _rows_from_xlsb_visible(path: str, sheet_name: str):
     try:
-        import time
-        import os as _os
+        import time, os as _os
         import pythoncom
         import win32com.client as win32  # type: ignore
         import pywintypes  # type: ignore
@@ -140,72 +135,119 @@ def _rows_from_xlsb_visible(path: str, sheet_name: str):
             yield i, tuple(row)
         return
     norm_path = _os.path.abspath(path)
-    xl = None
-    wb = None
-    created_app = False        # did we create a new Excel instance?
-    opened_here = False        # did we open the workbook in this function?
-    try:
+    xl = wb = None
+    created_app = False
+    opened_here = False
+    mf_cookie = None
+    def _same_file(a: str, b: str) -> bool:
         try:
-            pythoncom.CoInitialize()
+            return _os.path.samefile(a, b)
+        except Exception:
+            return _os.path.normcase(_os.path.abspath(a)) == _os.path.normcase(_os.path.abspath(b))
+    def _get_ws(_wb, name: str):
+        try:
+            ws = _wb.Worksheets(name)
+        except Exception:
+            ws = None
+            for s in _wb.Worksheets:
+                if str(s.Name).strip().lower() == name.strip().lower():
+                    ws = s
+                    break
+        if ws is None:
+            raise RuntimeError(f"Worksheet '{name}' not found in '{norm_path}'")
+        try:
+            if int(getattr(ws, "Type", -4167)) != -4167:
+                raise RuntimeError(f"'{name}' is not a worksheet.")
         except Exception:
             pass
+        return ws
+    def _safe_used_range(ws):
+        last_err = None
+        for _ in range(8):
+            try:
+                ur = ws.UsedRange
+                r1 = int(ur.Row)
+                c1 = int(ur.Column)
+                rc = int(ur.Rows.Count)
+                cc = int(ur.Columns.Count)
+                if rc <= 0 or cc <= 0:
+                    return None
+                return (r1, c1, rc, cc)
+            except Exception as e:
+                last_err = e
+                time.sleep(0.15)
+        if last_err:
+            raise last_err
+        return None
+    try:
+        pythoncom.CoInitialize()
+        if _ComMessageFilter is not None:
+            mf_cookie = pythoncom.CoRegisterMessageFilter(_ComMessageFilter(), None)
+    except Exception:
+        pass
+    try:
         try:
             xl = win32.GetActiveObject("Excel.Application")
         except Exception:
             xl = win32.DispatchEx("Excel.Application")
             created_app = True
-        prev_visible = None
-        prev_display_alerts = None
         if created_app:
-            prev_visible = xl.Visible
-            prev_display_alerts = xl.DisplayAlerts
-            xl.Visible = False
-            xl.DisplayAlerts = False
-        def _same_file(a: str, b: str) -> bool:
             try:
-                return _os.path.samefile(a, b)
+                xl.Visible = False
+                xl.DisplayAlerts = False
             except Exception:
-                return _os.path.normcase(_os.path.abspath(a)) == _os.path.normcase(_os.path.abspath(b))
-        already_open = None
+                pass
         for w in xl.Workbooks:
             try:
                 if _same_file(str(w.FullName), norm_path):
-                    already_open = w
+                    wb = w
                     break
             except Exception:
                 continue
-        if already_open is not None:
-            wb = already_open
-            opened_here = False
-        else:
-            max_tries = 8
+        if wb is None:
+            OPEN_ARGS = dict(
+                UpdateLinks=0, ReadOnly=True, AddToMru=False,
+                IgnoreReadOnlyRecommended=True, Notify=False
+            )
+            max_tries = 15
             for attempt in range(1, max_tries + 1):
                 try:
-                    wb = xl.Workbooks.Open(norm_path, ReadOnly=True)
+                    wb = xl.Workbooks.Open(norm_path, **OPEN_ARGS)
                     opened_here = True
                     break
                 except pywintypes.com_error as e:
-                    if e.args and len(e.args) > 0 and e.args[0] == -2147418111 and attempt < max_tries:
-                        time.sleep(0.5 * attempt)  # backoff
+                    if e.args and e.args[0] in (-2147418111, -2147417848):
+                        try:
+                            pythoncom.PumpWaitingMessages()
+                        except Exception:
+                            pass
+                        time.sleep(min(0.2 * attempt, 2.5))
+                        continue
+                    if "Permission denied" in str(e).lower():
+                        time.sleep(min(0.3 * attempt, 4.0))
                         continue
                     raise
+                except PermissionError:
+                    time.sleep(min(0.3 * attempt, 4.0))
+                    continue
             if wb is None:
-                raise RuntimeError(f"Failed to open workbook: {norm_path}")
-        try:
-            ws = wb.Worksheets(sheet_name)
-        except Exception:
-            ws = None
-            for s in wb.Worksheets:
-                if str(s.Name).strip().lower() == sheet_name.strip().lower():
-                    ws = s
-                    break
-            if ws is None:
-                raise RuntimeError(f"Worksheet '{sheet_name}' not found in '{norm_path}'")
-        used = ws.UsedRange
-        first_row = int(used.Row)
-        rows = int(used.Rows.Count)
-        cols = int(used.Columns.Count)
-        data = used.Value
+                raise RuntimeError(f"Failed to open workbook read-only (it may be exclusively locked): {norm_path}")
+        ws = _get_ws(wb, sheet_name)
+        meta = _safe_used_range(ws)
+        if meta is None:
+            return  # empty sheet
+        first_row, first_col, rows, cols = meta
+        for attempt in range(6):
+            try:
+                last_row = first_row + rows - 1
+                last_col = first_col + cols - 1
+                rng = ws.Range(ws.Cells(first_row, first_col), ws.Cells(last_row, last_col))
+                data = rng.Value  # safe 2D array/tuple
+                break
+            except Exception:
+                time.sleep(0.1)
+        else:
+            data = ws.UsedRange.Value
         if rows == 1 and cols == 1:
             data = ((data,),)
         elif rows == 1:
@@ -214,8 +256,15 @@ def _rows_from_xlsb_visible(path: str, sheet_name: str):
             data = tuple((d,) for d in data)
         for i in range(rows):
             ridx = first_row + i
-            erow = ws.Rows(ridx)
-            if bool(erow.Hidden) or float(erow.RowHeight or 0) == 0.0:
+            hidden = False
+            for _ in range(3):
+                try:
+                    cell = ws.Cells(ridx, 1)
+                    hidden = bool(cell.EntireRow.Hidden) or float(cell.RowHeight or 0) == 0.0
+                    break
+                except Exception:
+                    time.sleep(0.05)
+            if hidden:
                 continue
             row_vals = data[i] if i < len(data) else tuple()
             if row_vals is None:
@@ -234,19 +283,18 @@ def _rows_from_xlsb_visible(path: str, sheet_name: str):
             pass
         if xl is not None and created_app:
             try:
-                try:
-                    if prev_display_alerts is not None:
-                        xl.DisplayAlerts = prev_display_alerts
-                except Exception:
-                    pass
-                try:
-                    if prev_visible is not None:
-                        xl.Visible = prev_visible
-                except Exception:
-                    pass
                 xl.Quit()
             except Exception:
                 pass
+        try:
+            if mf_cookie is not None:
+                pythoncom.CoRegisterMessageFilter(None, None)
+        except Exception:
+            pass
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
 def parse_available_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
                          anchors: Optional[List[Dict[str, Any]]] = None) -> Dict[date, Dict[str, float]]:
     day_idxs: Optional[List[int]] = None
@@ -277,11 +325,6 @@ def parse_available_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
             continue
         wk = _week_from_row(ridx, anchors or [])
         if wk is None:
-            for c in range(min(6, len(r))):
-                wk = _to_date(r[c])
-                if wk:
-                    break
-        if wk is None:
             continue
         cols = day_idxs or default_day_idxs
         s = 0.0
@@ -308,9 +351,7 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
     })
     for ridx, r in rows_with_idx:
         r = r or tuple()
-        wk = _to_date(r[COL_DATE] if len(r) > COL_DATE else None)
-        if wk is None:
-            wk = _week_from_row(ridx, anchors or [])
+        wk = _week_from_row(ridx, anchors or [])
         if wk is None:
             continue
         name = _clean_name(r[COL_NAME] if len(r) > COL_NAME else "")
@@ -321,11 +362,10 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
         if not (name or cell or tgt or mins or outp):
             continue
         b = buckets[wk]
-        if name and mins > 0:
+        if name and cell and mins > 0:
             hrs = mins / 60.0
             b["completed_hours_by_person"][name] += hrs
-            if cell:
-                b["hours_by_cell_by_person"][cell][name] += hrs
+            b["hours_by_cell_by_person"][cell][name] += hrs
             b["names_in_wip"].add(name)
         if name and (tgt or outp):
             b["outputs_by_person"][name]["target"] += tgt
@@ -345,9 +385,8 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
             "outputs_by_person": {k: dict(v) for k, v in b["outputs_by_person"].items()},
             "outputs_by_cell": {k: dict(v) for k, v in b["outputs_by_cell"].items()},
             "hours_by_cell_by_person": {k: dict(v) for k, v in b["hours_by_cell_by_person"].items()},
-            "outputs_by_cell_by_person": {
-                cell: {p: dict(vals) for p, vals in per.items()} for cell, per in b["outputs_by_cell_by_person"].items()
-            },
+            "outputs_by_cell_by_person": {cell: {p: dict(vals) for p, vals in per.items()}
+                                          for cell, per in b["outputs_by_cell_by_person"].items()},
             "target_output_total": b["target_output_total"],
             "actual_output_total": b["actual_output_total"],
             "hc_in_wip": len(b["names_in_wip"]),
@@ -376,10 +415,17 @@ def _get_visible_rows_reader(path: str):
     ext = os.path.splitext(path)[1].lower()
     if ext == ".xlsb":
         return _rows_from_xlsb_visible
-    elif ext in (".xlsx", ".xlsm"):
-        return _rows_from_xlsx_visible
     else:
         raise ValueError(f"Unsupported workbook extension '{ext}'.")
+def _sort_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _parse_week(r: Dict[str, Any]) -> date:
+        w = str(r.get("Week", "")).strip()
+        try:
+            return datetime.fromisoformat(w).date()
+        except Exception:
+            d = _to_date(w)
+            return d if d else date.min
+    return sorted(rows, key=lambda r: (str(r.get("Team","")), _parse_week(r)))
 def _find_sheet_by_hint(sheet_names: List[str], hint: str) -> str:
     exact = [nm for nm in sheet_names if nm.strip().lower() == hint.strip().lower()]
     if exact:
@@ -392,31 +438,71 @@ def build_weekly_metrics_from_file(path: str, prod_hints: List[str], avail_hint:
                                    week_anchors_by_sheet: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
     week_anchors_by_sheet = week_anchors_by_sheet or {}
     ext = os.path.splitext(path)[1].lower()
-    if ext == ".xlsb":
-        get_names = _sheetnames_xlsb
-        get_rows  = _rows_from_xlsb
-    elif ext in (".xlsx", ".xlsm"):
-        get_names = _sheetnames_xlsx_like
-        get_rows  = _rows_from_xlsx_like
-    else:
-        raise ValueError(f"Unsupported workbook extension '{ext}'.")
     sheet_names = (_sheetnames_xlsb(path) if ext == ".xlsb" else _sheetnames_xlsx_like(path))
     read_visible_rows = _get_visible_rows_reader(path)
-    prod_rows_all_with_idx: List[Tuple[int, Tuple[Any, ...]]] = []
+    avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
+    avail_rows_with_idx = list(read_visible_rows(path, avail_name))
+    avail = parse_available_rows(avail_rows_with_idx, anchors=week_anchors_by_sheet.get(avail_name, []))
+    prod_merged: Dict[date, Dict[str, Any]] = {}
     for hint in prod_hints:
         prod_name = _find_sheet_by_hint(sheet_names, hint)
-        prod_rows = list(read_visible_rows(path, prod_name))
-        prod_rows_all_with_idx.extend(prod_rows)
-        prod_rows_raw = list(get_rows(path, prod_name))
+        prod_rows_with_idx = list(read_visible_rows(path, prod_name))
         anchors = week_anchors_by_sheet.get(prod_name, [])
-    avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
-    avail_rows_raw = list(get_rows(path, avail_name))
-    avail_rows_with_idx = list(read_visible_rows(path, avail_name))
-    avail_rows = list(get_rows(path, avail_name))
-    avail = parse_available_rows(avail_rows_with_idx, anchors=week_anchors_by_sheet.get(avail_name, []))
-    merged_prod = parse_prod_rows(prod_rows_all_with_idx, anchors=None)  # anchors not needed if date present or we used week_anchors per sheet earlier
-    prod = merged_prod
-    all_weeks = sorted(set(avail.keys()) | set(prod.keys()))
+        prod_part = parse_prod_rows(prod_rows_with_idx, anchors=anchors)
+        for wk, b in prod_part.items():
+            if wk not in prod_merged:
+                prod_merged[wk] = {
+                    "completed_hours_by_person": defaultdict(float),
+                    "outputs_by_person": defaultdict(lambda: {"target": 0.0, "output": 0.0}),
+                    "outputs_by_cell": defaultdict(lambda: {"target": 0.0, "output": 0.0}),
+                    "hours_by_cell_by_person": defaultdict(lambda: defaultdict(float)),
+                    "outputs_by_cell_by_person": defaultdict(lambda: defaultdict(lambda: {"target": 0.0, "output": 0.0})),
+                    "target_output_total": 0.0,
+                    "actual_output_total": 0.0,
+                    "hc_in_wip": 0,
+                    "_names_in_wip": set(),
+                }
+            tgt = prod_merged[wk]
+            for name, hrs in b["completed_hours_by_person"].items():
+                tgt["completed_hours_by_person"][name] += hrs
+                tgt["_names_in_wip"].add(name)
+            for name, vv in b["outputs_by_person"].items():
+                tgt["outputs_by_person"][name]["target"] += vv.get("target", 0.0)
+                tgt["outputs_by_person"][name]["output"] += vv.get("output", 0.0)
+            for cell, vv in b["outputs_by_cell"].items():
+                tgt["outputs_by_cell"][cell]["target"] += vv.get("target", 0.0)
+                tgt["outputs_by_cell"][cell]["output"] += vv.get("output", 0.0)
+            for cell, per in b["hours_by_cell_by_person"].items():
+                for name, hrs in per.items():
+                    tgt["hours_by_cell_by_person"][cell][name] += hrs
+            for cell, per in b["outputs_by_cell_by_person"].items():
+                for name, vv in per.items():
+                    tgt["outputs_by_cell_by_person"][cell][name]["target"] += vv.get("target", 0.0)
+                    tgt["outputs_by_cell_by_person"][cell][name]["output"] += vv.get("output", 0.0)
+            tgt["target_output_total"] += b.get("target_output_total", 0.0)
+            tgt["actual_output_total"] += b.get("actual_output_total", 0.0)
+    prod: Dict[date, Dict[str, Any]] = {}
+    for wk, b in prod_merged.items():
+        prod[wk] = {
+            "completed_hours_by_person": dict(b["completed_hours_by_person"]),
+            "outputs_by_person": {k: dict(v) for k, v in b["outputs_by_person"].items()},
+            "outputs_by_cell": {k: dict(v) for k, v in b["outputs_by_cell"].items()},
+            "hours_by_cell_by_person": {k: dict(v) for k, v in b["hours_by_cell_by_person"].items()},
+            "outputs_by_cell_by_person": {
+                cell: {p: dict(vals) for p, vals in per.items()}
+                for cell, per in b["outputs_by_cell_by_person"].items()
+            },
+            "target_output_total": b["target_output_total"],
+            "actual_output_total": b["actual_output_total"],
+            "hc_in_wip": len(b["_names_in_wip"]),
+        }
+    allowed_weeks = set()
+    for sh, a in week_anchors_by_sheet.items():
+        for it in a or []:
+            d = _to_date(it.get("date"))
+            if d:
+                allowed_weeks.add(d)
+    all_weeks = sorted((set(avail.keys()) | set(prod.keys())) & allowed_weeks)
     rows: List[Dict[str, Any]] = []
     for wk in all_weeks:
         roll = WeekRollup(week=wk)
@@ -571,6 +657,7 @@ def main():
         sys.exit(1)
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
     merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
+    merged_rows = _sort_rows(merged_rows)
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=merged_cols)
         w.writeheader()
