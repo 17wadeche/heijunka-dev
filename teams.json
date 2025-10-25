@@ -1,6 +1,6 @@
 {
     "Aortic": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - Aortic - Heijunka\\Aortic WIP+Non-WIP Heijunka Week of October 27 2025.xlsb",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - Aortic - Heijunka\\Aortic WIP+Non-WIP Heijunka Week of October 27 2025.xlsm",
         "prod_sheet": "Aortic Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
@@ -19,7 +19,7 @@
         }
     },
     "CRDN": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsb",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsm",
         "prod_sheet": "CRDN Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
@@ -46,7 +46,7 @@
         }
     },
     "PVH": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - COS Supportive Materials\\PVH WIP+Non-WIP Heijunka Week of October 27 2025.xlsb",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - COS Supportive Materials\\PVH WIP+Non-WIP Heijunka Week of October 27 2025.xlsm",
         "prod_sheet": "PVH Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
@@ -65,7 +65,7 @@
         }
     },
     "SVT": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\SVT PXM Team - Heijunka_Schedule_Finding Work\\SVT WIP+Non-WIP Heijunka.xlsb",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\SVT PXM Team - Heijunka_Schedule_Finding Work\\SVT WIP+Non-WIP Heijunka.xlsm",
         "prod_sheet": "SVT Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
@@ -84,7 +84,7 @@
         }
     },
     "TCT": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\TCT CQXM - 1 WIP and Schedule\\TCT NEW Heijunka Week of October 27, 2025.xlsb",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\TCT CQXM - 1 WIP and Schedule\\TCT NEW Heijunka Week of October 27, 2025.xlsm",
         "prod_sheets": [
             "Commercial Prod Analysis",
             "Clinical Prod Analysis",

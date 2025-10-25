@@ -5,6 +5,18 @@ from dataclasses import dataclass, field
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Optional, Any, Iterable
 from collections import defaultdict
+import shutil, tempfile, uuid
+def _excel_path_for_open(p: str) -> str:
+    return os.path.abspath(p)
+def _copy_to_temp_if_needed(src_path: str) -> Optional[str]:
+    try:
+        tmp_dir = tempfile.gettempdir()
+        tmp_name = f"heijunka_{uuid.uuid4().hex}.xlsb"
+        tmp_path = os.path.join(tmp_dir, tmp_name)
+        shutil.copy2(src_path, tmp_path)
+        return tmp_path
+    except Exception:
+        return None
 try:
     import pythoncom
     class _ComMessageFilter:
@@ -122,6 +134,23 @@ class WeekRollup:
                     "target": round(t / h, 2) if h else None,
                 }
         self.uplh_by_cell_by_person = uplh
+def _rows_from_xlsx_visible(path: str, sheet_name: str):
+    from openpyxl import load_workbook
+    wb = load_workbook(path, data_only=True, read_only=False)  # need row_dimensions
+    ws = wb[sheet_name]
+    max_row = ws.max_row or 0
+    max_col = ws.max_column or 0
+    for r in range(1, max_row + 1):
+        rd = ws.row_dimensions.get(r)
+        hidden = bool(getattr(rd, "hidden", False))
+        zero_h = (getattr(rd, "height", None) == 0)
+        if hidden or zero_h:
+            continue
+        vals = []
+        for c in range(1, max_col + 1):
+            cell = ws.cell(r, c)
+            vals.append(cell.value)
+        yield r, tuple(vals)
 def _rows_from_xlsb_visible(path: str, sheet_name: str):
     try:
         import time, os as _os
@@ -149,14 +178,21 @@ def _rows_from_xlsb_visible(path: str, sheet_name: str):
             ws = _wb.Worksheets(name)
         except Exception:
             ws = None
-            for s in _wb.Worksheets:
-                if str(s.Name).strip().lower() == name.strip().lower():
-                    ws = s
-                    break
+            try:
+                for s in _wb.Worksheets:
+                    if str(s.Name).strip().lower() == name.strip().lower():
+                        ws = s
+                        break
+            except Exception:
+                pass
         if ws is None:
-            raise RuntimeError(f"Worksheet '{name}' not found in '{norm_path}'")
+            try:
+                available = [str(s.Name) for s in _wb.Worksheets]
+            except Exception:
+                available = []
+            raise RuntimeError(f"Worksheet '{name}' not found. Available: {available}")
         try:
-            if int(getattr(ws, "Type", -4167)) != -4167:
+            if int(getattr(ws, "Type", -4167)) != -4167:  # -4167 == xlWorksheet
                 raise RuntimeError(f"'{name}' is not a worksheet.")
         except Exception:
             pass
@@ -210,28 +246,46 @@ def _rows_from_xlsb_visible(path: str, sheet_name: str):
                 IgnoreReadOnlyRecommended=True, Notify=False
             )
             max_tries = 15
+            src_path = _excel_path_for_open(norm_path)
+            last_exc = None
             for attempt in range(1, max_tries + 1):
                 try:
-                    wb = xl.Workbooks.Open(norm_path, **OPEN_ARGS)
+                    wb = xl.Workbooks.Open(src_path, **OPEN_ARGS)
                     opened_here = True
                     break
                 except pywintypes.com_error as e:
-                    if e.args and e.args[0] in (-2147418111, -2147417848):
+                    last_exc = e
+                    code = e.args[0] if (e.args and isinstance(e.args[0], int)) else None
+                    msg  = str(e).lower()
+                    if code in (-2147418111, -2147417848):  # call rejected / disconnected
                         try:
                             pythoncom.PumpWaitingMessages()
                         except Exception:
                             pass
                         time.sleep(min(0.2 * attempt, 2.5))
                         continue
-                    if "Permission denied" in str(e).lower():
+                    if "cannot access the file" in msg or "same name as a currently open workbook" in msg:
+                        tmp_copy = _copy_to_temp_if_needed(src_path)
+                        if tmp_copy:
+                            try:
+                                wb = xl.Workbooks.Open(tmp_copy, **OPEN_ARGS)
+                                opened_here = True
+                                break
+                            except Exception as _e2:
+                                last_exc = _e2
+                        time.sleep(min(0.3 * attempt, 3.0))
+                        continue
+                    if "permission denied" in msg:
                         time.sleep(min(0.3 * attempt, 4.0))
                         continue
-                    raise
-                except PermissionError:
+                    time.sleep(min(0.2 * attempt, 1.5))
+                    continue
+                except PermissionError as e:
+                    last_exc = e
                     time.sleep(min(0.3 * attempt, 4.0))
                     continue
             if wb is None:
-                raise RuntimeError(f"Failed to open workbook read-only (it may be exclusively locked): {norm_path}")
+                raise RuntimeError(f"Failed to open workbook read-only (it may be exclusively locked or name-colliding): {norm_path} | last={last_exc}")
         ws = _get_ws(wb, sheet_name)
         meta = _safe_used_range(ws)
         if meta is None:
@@ -414,7 +468,9 @@ def _rows_from_xlsb(path: str, sheet_name: str) -> Iterable[Tuple[Any, ...]]:
 def _get_visible_rows_reader(path: str):
     ext = os.path.splitext(path)[1].lower()
     if ext == ".xlsb":
-        return _rows_from_xlsb_visible
+        return _rows_from_xlsb_visible  # keep only if you still have any .xlsb left
+    elif ext in (".xlsx", ".xlsm"):
+        return _rows_from_xlsx_visible
     else:
         raise ValueError(f"Unsupported workbook extension '{ext}'.")
 def _sort_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
