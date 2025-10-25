@@ -89,47 +89,65 @@ def _find_sheet_by_hint(sheet_names: List[str], hint: str) -> str:
     if contains:
         return contains[0]
     raise ValueError(f"Sheet '{hint}' not found. Available: {sheet_names}")
-def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]]) -> Dict[date, set]:
+def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
+    if not anchors:
+        return None
+    parsed = []
+    for a in anchors:
+        try:
+            r = int(a.get("row"))
+            d = _to_date(a.get("date"))
+            if d: parsed.append((r, d))
+        except Exception:
+            pass
+    if not parsed:
+        return None
+    parsed.sort(key=lambda x: x[0])  # by row index
+    wk = None
+    for r, d in parsed:
+        if ridx >= r:
+            wk = d
+        else:
+            break
+    return wk
+def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
+                                  anchors: List[Dict[str, Any]]) -> Dict[date, set]:
     PEOPLE_COL = 2  # C
-    WEEK_COL = 0    # A
-    LABEL_COL = 3   # D (may hold 'Available WIP' / 'Non-WIP' labels)
-    labels = {"available wip", "non-wip", "non wip"}
     out: Dict[date, set] = defaultdict(set)
-    for r in rows:
+    for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
-        wk = _to_date(r[WEEK_COL] if len(r) > WEEK_COL else None)
+        wk = _week_from_row(ridx, anchors)
         if not wk:
             continue
         name = _clean(r[PEOPLE_COL] if len(r) > PEOPLE_COL else "")
         if not name:
             continue
-        lbl = _clean(r[LABEL_COL] if len(r) > LABEL_COL else "").lower()
-        if lbl in labels:
-            continue
         out[wk].add(name)
     return out
-def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]]) -> Dict[date, Dict[str, Any]]:
-    COL_DATE, COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 0, 3, 4, 7, 11
+def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
+                        anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
+    COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 7, 11
+    nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
         "non_wip_by_person": defaultdict(float),  # person -> hours
         "non_wip_activities": [],                 # [{name, activity, hours}]
     })
-    for r in rows:
+    for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
-        wk = _to_date(r[COL_DATE] if len(r) > COL_DATE else None)
+        wk = _week_from_row(ridx, anchors)
         if not wk:
             continue
         name = _clean(r[COL_NAME] if len(r) > COL_NAME else "")
-        flag = _clean(r[COL_FLAG] if len(r) > COL_FLAG else "")
+        flag = _clean(r[COL_FLAG] if len(r) > COL_FLAG else "").lower()
         mins = _to_float(r[COL_MINUTES] if len(r) > COL_MINUTES else None) or 0.0
         act  = _clean(r[COL_ACTIVITY] if len(r) > COL_ACTIVITY else "")
         if not (flag or mins or name or act):
             continue
         b = buckets[wk]
-        if flag.lower() == "ooo" and mins > 0:
+        if flag == "ooo" and mins > 0:
             b["ooo_hours"] += mins / 60.0
-        if flag.lower() == "non wip" and mins > 0:
+        if flag in nonwip_flags and mins > 0:
             hrs = mins / 60.0
             if name:
                 b["non_wip_by_person"][name] += hrs
@@ -186,27 +204,41 @@ def build_non_wip_rows(config_path: str,
             raise SystemExit(f"[{team}] Missing 'avail_sheet' in config.")
         get_names, get_rows = _get_io(path)
         sheet_names = get_names(path)
-        prod_rows_all: List[Tuple[Any, ...]] = []
+        prod_buckets_merged: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
+            "ooo_hours": 0.0,
+            "non_wip_by_person": defaultdict(float),
+            "non_wip_activities": [],
+        })
         for hint in prod_hints:
             if not hint:
                 continue
             nm = _find_sheet_by_hint(sheet_names, hint)
-            prod_rows_all.extend(list(get_rows(path, nm)))
-        prod_buckets = parse_prod_analysis(prod_rows_all)
+            rows_s = list(get_rows(path, nm))
+            anchors_s = (entry.get("week_anchors", {}) or {}).get(nm, [])
+            pb = parse_prod_analysis(rows_s, anchors_s)
+            for wk, b in pb.items():
+                prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
+                for person, hrs in (b.get("non_wip_by_person", {}) or {}).items():
+                    prod_buckets_merged[wk]["non_wip_by_person"][person] += hrs
+                prod_buckets_merged[wk]["non_wip_activities"].extend(b.get("non_wip_activities", []))
+        for wk, b in prod_buckets_merged.items():
+            b["ooo_hours"] = round(b["ooo_hours"], 2)
+            b["non_wip_by_person"] = {k: round(float(v), 2) for k, v in b["non_wip_by_person"].items()}
         avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
         avail_rows = list(get_rows(path, avail_name))
-        people_by_week = people_by_week_from_available(avail_rows)
+        avail_anchors = (entry.get("week_anchors", {}) or {}).get(avail_name, [])
+        people_by_week = people_by_week_from_available(avail_rows, avail_anchors)
         team_weeks = weeks_for_team(metrics_csv, team)
         for iso in team_weeks:
             wk_date = _to_date(iso)
             people_count = len(people_by_week.get(wk_date, set())) if wk_date else 0
             completed = float(completed_index.get((team, iso), 0.0))
             total_non_wip_hours = max(0.0, (people_count * 40.0) - completed)
-            ooo_hours = float(prod_buckets.get(wk_date, {}).get("ooo_hours", 0.0) if wk_date else 0.0)
+            ooo_hours = float(prod_buckets_merged.get(wk_date, {}).get("ooo_hours", 0.0) if wk_date else 0.0)
             denom = completed + total_non_wip_hours
             pct_in_wip = round((completed / denom * 100.0), 2) if denom > 0 else None
-            non_wip_by_person = prod_buckets.get(wk_date, {}).get("non_wip_by_person", {}) if wk_date else {}
-            activities = prod_buckets.get(wk_date, {}).get("non_wip_activities", []) if wk_date else []
+            non_wip_by_person = prod_buckets_merged.get(wk_date, {}).get("non_wip_by_person", {}) if wk_date else {}
+            activities = prod_buckets_merged.get(wk_date, {}).get("non_wip_activities", []) if wk_date else []
             out_rows.append({
                 "Team": team,
                 "Week": iso,
