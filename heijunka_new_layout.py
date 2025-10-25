@@ -415,8 +415,9 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
         outp = _to_float(r[COL_OUTPUT] if len(r) > COL_OUTPUT else None) or 0.0
         if not (name or cell or tgt or mins or outp):
             continue
+        is_ooo = (cell.strip().upper() == "OOO")
         b = buckets[wk]
-        if name and cell and mins > 0:
+        if not is_ooo and name and cell and mins > 0:
             hrs = mins / 60.0
             b["completed_hours_by_person"][name] += hrs
             b["hours_by_cell_by_person"][cell][name] += hrs
@@ -424,10 +425,10 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
         if name and (tgt or outp):
             b["outputs_by_person"][name]["target"] += tgt
             b["outputs_by_person"][name]["output"] += outp
-        if cell and (tgt or outp):
+        if not is_ooo and cell and (tgt or outp):
             b["outputs_by_cell"][cell]["target"] += tgt
             b["outputs_by_cell"][cell]["output"] += outp
-        if cell and name and (tgt or outp):
+        if not is_ooo and cell and name and (tgt or outp):
             b["outputs_by_cell_by_person"][cell][name]["target"] += tgt
             b["outputs_by_cell_by_person"][cell][name]["output"] += outp
         b["target_output_total"] += tgt
