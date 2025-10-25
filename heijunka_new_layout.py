@@ -607,33 +607,47 @@ def _norm_week_str(s: str) -> str:
     except Exception:
         d = _to_date(s)
         return d.isoformat() if d else s
-def _read_value_by_team_week(path: str, value_col: Optional[str], value_hint: Optional[str]) -> Tuple[Dict[Tuple[str,str], Any], str]:
+def _read_value_by_team_week(path: str,
+                             value_col: Optional[str],
+                             value_hint: Optional[str]) -> Tuple[Dict[Tuple[str,str], Any], str]:
     if not path or not os.path.exists(path):
         return {}, value_col or (value_hint or "Value")
+    week_aliases = {"week", "period_date", "period", "period_start", "date"}
     with open(path, "r", newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
         headers = [h for h in (r.fieldnames or [])]
-        team_col = next((h for h in headers if h.strip().lower() == "team"), None)
-        week_col = next((h for h in headers if h.strip().lower() == "week"), None)
+        team_col = next((h for h in headers if h and h.strip().lower() == "team"), None)
+        if not team_col:
+            team_col = next((h for h in headers if h and "team" == h.strip().lower()), None)
+        lower_map = {h: (h or "").strip().lower() for h in headers if h}
+        week_col = None
+        for h, low in lower_map.items():
+            if low in week_aliases:
+                week_col = h
+                break
         if not team_col or not week_col:
-            raise RuntimeError(f"{path}: must contain 'Team' and 'Week' columns.")
+            raise RuntimeError(f"{path}: must contain Team and a week/period column "
+                               f"(accepted: {sorted(week_aliases)}). Got headers: {headers}")
         val_col = value_col
         if not val_col:
             if value_hint:
-                lower = value_hint.strip().lower()
-                val_col = next((h for h in headers if lower in h.strip().lower() and h not in (team_col, week_col)), None)
+                needle = value_hint.strip().lower()
+                val_col = next((h for h in headers
+                                if h not in (team_col, week_col)
+                                and needle in (h or "").strip().lower()), None)
             if not val_col:
                 val_col = next((h for h in headers if h not in (team_col, week_col)), None)
         if not val_col:
             raise RuntimeError(f"{path}: no value column found (looked for hint '{value_hint}')")
         out: Dict[Tuple[str, str], Any] = {}
         for row in r:
-            team = str(row.get(team_col, "")).strip()
-            week = _norm_week_str(str(row.get(week_col, "")))
+            team_raw = row.get(team_col, "")
+            week_raw = row.get(week_col, "")
+            team = str(team_raw).strip()
+            week = _norm_week_str(str(week_raw))
             if not team or not week:
                 continue
-            val = row.get(val_col, "")
-            out[(team, week)] = val
+            out[(team, week)] = row.get(val_col, "")
         return out, val_col
 def _apply_aux_column(rows: List[Dict[str, Any]], merged_cols: List[str], aux: Dict[Tuple[str,str], Any], colname: str):
     if colname not in merged_cols:
