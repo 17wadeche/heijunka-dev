@@ -18,6 +18,25 @@
             ]
         }
     },
+    "CAS": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CAS Virtual VMB - PA Board\\PA Board NEW.xlsm",
+        "prod_sheet": "CAS Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2,  "date": "2025-10-27" },
+                { "row": 36, "date": "2025-11-03" },
+                { "row": 70, "date": "2025-11-10" },
+                { "row": 104, "date": "2025-11-17" }
+            ],
+            "CAS Prod Analysis": [
+                { "row": 7,  "date": "2025-10-27" },
+                { "row": 192,"date":"2025-11-03" },
+                { "row": 377,"date":"2025-11-10" },
+                { "row": 562,"date":"2025-11-17" }
+            ]
+        }
+    },
     "CRDN": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsm",
         "prod_sheet": "CRDN Prod Analysis",
