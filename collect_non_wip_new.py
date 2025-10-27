@@ -110,6 +110,19 @@ def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
         else:
             break
     return wk
+def _is_non_person_label(name: Any) -> bool:
+    s = _clean(name).lower()
+    if not s:
+        return True
+    banned_exact = {
+        "available hours", "available", "ooo hours", "total hours",
+        "total", "people count", "hc", "hc in wip", "actual hc used",
+    }
+    if s in banned_exact:
+        return True
+    if "hour" in s or "total" in s:
+        return True
+    return False
 def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
                                   anchors: List[Dict[str, Any]]) -> Dict[date, set]:
     PEOPLE_COL = 2  # C
@@ -120,7 +133,7 @@ def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
         if not wk:
             continue
         name = _clean(r[PEOPLE_COL] if len(r) > PEOPLE_COL else "")
-        if not name:
+        if not name or _is_non_person_label(name):    # <-- add this check
             continue
         out[wk].add(name)
     return out
@@ -131,8 +144,9 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
     nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
-        "non_wip_by_person": defaultdict(float),  # person -> hours
-        "non_wip_activities": [],                 # [{name, activity, hours}]
+        "ooo_by_person": defaultdict(float),      # NEW
+        "non_wip_by_person": defaultdict(float),
+        "non_wip_activities": [],
     })
     for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
@@ -147,7 +161,10 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             continue
         b = buckets[wk]
         if flag == "ooo" and mins > 0:
-            b["ooo_hours"] += mins / 60.0
+            hrs = mins / 60.0
+            b["ooo_hours"] += hrs
+            if name:
+                b["ooo_by_person"][name] += hrs
         if flag in nonwip_flags:
             hrs: float = 0.0
             if mins > 0:
@@ -155,17 +172,16 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             else:
                 hrs_f = _to_float(r[COL_HOURS_F] if len(r) > COL_HOURS_F else None) or 0.0
                 if hrs_f > 0:
-                    hrs = hrs_f  # already hours; no conversion
+                    hrs = hrs_f
             if hrs > 0:
                 if name:
                     b["non_wip_by_person"][name] += hrs
                 b["non_wip_activities"].append({
-                    "name": name,
-                    "activity": act,
-                    "hours": round(hrs, 2),
+                    "name": name, "activity": act, "hours": round(hrs, 2),
                 })
     for wk, b in buckets.items():
         b["ooo_hours"] = round(b["ooo_hours"], 2)
+        b["ooo_by_person"] = {k: round(v, 2) for k, v in b["ooo_by_person"].items()}
         b["non_wip_by_person"] = {k: round(v, 2) for k, v in b["non_wip_by_person"].items()}
     return buckets
 def load_completed_hours(metrics_csv: str) -> Dict[Tuple[str, str], float]:
@@ -189,6 +205,39 @@ def weeks_for_team(metrics_csv: str, team: str) -> List[str]:
                 if w:
                     weeks.add(w)
     return sorted(weeks)
+def _loads_json_maybe(s: str) -> Optional[dict]:
+    if not s:
+        return None
+    s = s.strip()
+    try:
+        return json.loads(s)
+    except Exception:
+        try:
+            return json.loads(s.replace("''", '"').replace('""', '"'))
+        except Exception:
+            return None
+def load_person_metrics(metrics_csv: str) -> Dict[Tuple[str, str, str], Dict[str, float]]:
+    out: Dict[Tuple[str, str, str], Dict[str, float]] = {}
+    with open(metrics_csv, "r", encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            team = _clean(row.get("Team") or row.get("team") or "")
+            week = _clean(row.get("Week") or row.get("period_date") or "")
+            if not (team and week):
+                continue
+            ph_json_raw = row.get("Person Hours") or row.get("person_hours") or ""
+            ph = _loads_json_maybe(ph_json_raw) or {}
+            if not isinstance(ph, dict):
+                continue
+            for person, payload in ph.items():
+                if not person or _is_non_person_label(person):   # <-- skip labels
+                    continue
+                actual_val = None
+                if isinstance(payload, dict):
+                    actual_val = _to_float(payload.get("actual"))
+                actual = float(actual_val) if actual_val is not None else 0.0
+                out[(team, week, _clean(person))] = {"actual": actual}
+    return out
 def build_non_wip_rows(config_path: str,
                        chosen_teams: Optional[List[str]],
                        all_teams: bool,
@@ -199,6 +248,7 @@ def build_non_wip_rows(config_path: str,
     if not teams_to_run:
         raise SystemExit("No teams specified. Use --all or --team <NAME> (repeatable).")
     completed_index = load_completed_hours(metrics_csv)
+    person_metrics = load_person_metrics(metrics_csv)
     out_rows: List[Dict[str, Any]] = []
     for team in teams_to_run:
         entry = cfg.get(team) or {}
@@ -214,6 +264,7 @@ def build_non_wip_rows(config_path: str,
         sheet_names = get_names(path)
         prod_buckets_merged: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
             "ooo_hours": 0.0,
+            "ooo_by_person": defaultdict(float),   # person -> OOO hours for that week
             "non_wip_by_person": defaultdict(float),
             "non_wip_activities": [],
         })
@@ -226,11 +277,14 @@ def build_non_wip_rows(config_path: str,
             pb = parse_prod_analysis(rows_s, anchors_s)
             for wk, b in pb.items():
                 prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
+                for person, hrs in (b.get("ooo_by_person", {}) or {}).items():
+                    prod_buckets_merged[wk]["ooo_by_person"][person] += hrs
                 for person, hrs in (b.get("non_wip_by_person", {}) or {}).items():
                     prod_buckets_merged[wk]["non_wip_by_person"][person] += hrs
                 prod_buckets_merged[wk]["non_wip_activities"].extend(b.get("non_wip_activities", []))
         for wk, b in prod_buckets_merged.items():
             b["ooo_hours"] = round(b["ooo_hours"], 2)
+            b["ooo_by_person"] = {k: round(float(v), 2) for k, v in b["ooo_by_person"].items()}
             b["non_wip_by_person"] = {k: round(float(v), 2) for k, v in b["non_wip_by_person"].items()}
         avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
         avail_rows = list(get_rows(path, avail_name))
@@ -239,22 +293,34 @@ def build_non_wip_rows(config_path: str,
         team_weeks = weeks_for_team(metrics_csv, team)
         for iso in team_weeks:
             wk_date = _to_date(iso)
-            people_count = len(people_by_week.get(wk_date, set())) if wk_date else 0
+            wk_people = people_by_week.get(wk_date, set()) if wk_date else set()
+            wk_people = {p for p in wk_people if not _is_non_person_label(p)}   # <-- add this
+            people_count = len(wk_people)
             completed = float(completed_index.get((team, iso), 0.0))
-            total_non_wip_hours = max(0.0, (people_count * 40.0) - completed)
-            ooo_hours = float(prod_buckets_merged.get(wk_date, {}).get("ooo_hours", 0.0) if wk_date else 0.0)
+            bucket = prod_buckets_merged.get(wk_date, {}) if wk_date else {}
+            ooo_by_person = bucket.get("ooo_by_person", {})
+            per_person_nonwip: Dict[str, float] = {}
+            for person in sorted(wk_people):
+                ooo_p = float(ooo_by_person.get(person, 0.0))
+                capacity = max(0.0, 40.0 - ooo_p)
+                pm = person_metrics.get((team, iso, person), {"available": None, "actual": 0.0})
+                available = pm.get("available")  # may be None
+                actual = float(pm.get("actual", 0.0))
+                effective_person_hours = min(capacity, float(available)) if (available is not None) else capacity
+                per_person_nonwip[person] = round(max(0.0, effective_person_hours - actual), 2)
+            total_non_wip_hours = round(sum(per_person_nonwip.values()), 2)
+            ooo_hours_total = float(bucket.get("ooo_hours", 0.0))
             denom = completed + total_non_wip_hours
-            pct_in_wip = round((completed / denom * 100.0), 2) if denom > 0 else None
-            non_wip_by_person = prod_buckets_merged.get(wk_date, {}).get("non_wip_by_person", {}) if wk_date else {}
-            activities = prod_buckets_merged.get(wk_date, {}).get("non_wip_activities", []) if wk_date else []
+            pct_in_wIP = round((completed / denom * 100.0), 2) if denom > 0 else None
+            activities = bucket.get("non_wip_activities", [])
             out_rows.append({
                 "Team": team,
                 "Week": iso,
                 "People Count": people_count,
-                "Total Non-WIP Hours": round(total_non_wip_hours, 2),
-                "OOO Hours": round(ooo_hours, 2),
-                "% in WIP": pct_in_wip,
-                "Non-WIP by Person": json.dumps(non_wip_by_person, ensure_ascii=False),
+                "Total Non-WIP Hours": total_non_wip_hours,
+                "OOO Hours": round(ooo_hours_total, 2),
+                "% in WIP": pct_in_wIP,
+                "Non-WIP by Person": json.dumps(per_person_nonwip, ensure_ascii=False),
                 "Non-WIP Activities": json.dumps(activities, ensure_ascii=False),
             })
         print(f"[{team}] OK: {len(team_weeks)} week(s)")
