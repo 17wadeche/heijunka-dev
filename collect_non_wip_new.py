@@ -127,6 +127,7 @@ def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
 def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
                         anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
     COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
+    COL_HOURS_F = 6
     nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
@@ -147,15 +148,22 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
         b = buckets[wk]
         if flag == "ooo" and mins > 0:
             b["ooo_hours"] += mins / 60.0
-        if flag in nonwip_flags and mins > 0:
-            hrs = mins / 60.0
-            if name:
-                b["non_wip_by_person"][name] += hrs
-            b["non_wip_activities"].append({
-                "name": name,
-                "activity": act,
-                "hours": round(hrs, 2),
-            })
+        if flag in nonwip_flags:
+            hrs: float = 0.0
+            if mins > 0:
+                hrs = mins / 60.0
+            else:
+                hrs_f = _to_float(r[COL_HOURS_F] if len(r) > COL_HOURS_F else None) or 0.0
+                if hrs_f > 0:
+                    hrs = hrs_f  # already hours; no conversion
+            if hrs > 0:
+                if name:
+                    b["non_wip_by_person"][name] += hrs
+                b["non_wip_activities"].append({
+                    "name": name,
+                    "activity": act,
+                    "hours": round(hrs, 2),
+                })
     for wk, b in buckets.items():
         b["ooo_hours"] = round(b["ooo_hours"], 2)
         b["non_wip_by_person"] = {k: round(v, 2) for k, v in b["non_wip_by_person"].items()}
