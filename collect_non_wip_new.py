@@ -125,12 +125,8 @@ def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
         out[wk].add(name)
     return out
 def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
-                        anchors: List[Dict[str, Any]],
-                        col_shift: int = 0) -> Dict[date, Dict[str, Any]]:
-    COL_NAME     = max(0, 3  - col_shift)  # D -> C
-    COL_FLAG     = max(0, 4  - col_shift)  # E -> D
-    COL_MINUTES  = max(0, 7  - col_shift)  # H -> G
-    COL_ACTIVITY = max(0, 11 - col_shift)  # L -> K
+                        anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
+    COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 7, 11
     nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
@@ -219,11 +215,7 @@ def build_non_wip_rows(config_path: str,
             nm = _find_sheet_by_hint(sheet_names, hint)
             rows_s = list(get_rows(path, nm))
             anchors_s = (entry.get("week_anchors", {}) or {}).get(nm, [])
-            _needs_shift = nm.strip().lower() in {
-                "commercial prod analysis".lower(),
-                "clinical prod analysis".lower(),
-            }
-            pb = parse_prod_analysis(rows_s, anchors_s, col_shift=(1 if _needs_shift else 0))
+            pb = parse_prod_analysis(rows_s, anchors_s)
             for wk, b in pb.items():
                 prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
                 for person, hrs in (b.get("non_wip_by_person", {}) or {}).items():
