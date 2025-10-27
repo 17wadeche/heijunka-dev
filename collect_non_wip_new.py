@@ -112,7 +112,7 @@ def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
     return wk
 def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
                                   anchors: List[Dict[str, Any]]) -> Dict[date, set]:
-    PEOPLE_COL = 2  # C
+    PEOPLE_COL = 3  # C
     out: Dict[date, set] = defaultdict(set)
     for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
@@ -126,7 +126,7 @@ def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
     return out
 def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
                         anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
-    COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 7, 11
+    COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
     nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,

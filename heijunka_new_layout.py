@@ -395,7 +395,7 @@ def parse_available_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
     return avail_per_week
 def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
                     anchors: Optional[List[Dict[str, Any]]] = None) -> Dict[date, Dict[str, Any]]:
-    COL_DATE, COL_NAME, COL_CELL, COL_TARGET, COL_MINUTES, COL_OUTPUT = 0, 3, 4, 6, 7, 9
+    COL_DATE, COL_NAME, COL_CELL, COL_TARGET, COL_MINUTES, COL_OUTPUT = 0, 3, 4, 7, 8, 10
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "completed_hours_by_person": defaultdict(float),
         "outputs_by_person": defaultdict(lambda: {"target": 0.0, "output": 0.0}),
