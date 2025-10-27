@@ -394,8 +394,14 @@ def parse_available_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
             avail_per_week[wk][current_person] += s
     return avail_per_week
 def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
-                    anchors: Optional[List[Dict[str, Any]]] = None) -> Dict[date, Dict[str, Any]]:
-    COL_DATE, COL_NAME, COL_CELL, COL_TARGET, COL_MINUTES, COL_OUTPUT = 0, 3, 4, 6, 7, 9
+                    anchors: Optional[List[Dict[str, Any]]] = None,
+                    col_shift: int = 0) -> Dict[date, Dict[str, Any]]:
+    COL_DATE   = max(0, 0  - col_shift)
+    COL_NAME   = max(0, 3  - col_shift)
+    COL_CELL   = max(0, 4  - col_shift) 
+    COL_TARGET = max(0, 6  - col_shift)
+    COL_MINUTES= max(0, 7  - col_shift)
+    COL_OUTPUT = max(0, 9  - col_shift)
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "completed_hours_by_person": defaultdict(float),
         "outputs_by_person": defaultdict(lambda: {"target": 0.0, "output": 0.0}),
@@ -508,7 +514,11 @@ def build_weekly_metrics_from_file(path: str, prod_hints: List[str], avail_hint:
         prod_name = _find_sheet_by_hint(sheet_names, hint)
         prod_rows_with_idx = list(read_visible_rows(path, prod_name))
         anchors = week_anchors_by_sheet.get(prod_name, [])
-        prod_part = parse_prod_rows(prod_rows_with_idx, anchors=anchors)
+        _needs_shift = prod_name.strip().lower() in {
+            "commercial prod analysis".lower(),
+            "clinical prod analysis".lower(),
+        }
+        prod_part = parse_prod_rows(prod_rows_with_idx, anchors=anchors, col_shift=(1 if _needs_shift else 0))
         for wk, b in prod_part.items():
             if wk not in prod_merged:
                 prod_merged[wk] = {
