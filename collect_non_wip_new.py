@@ -112,7 +112,7 @@ def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
     return wk
 def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
                                   anchors: List[Dict[str, Any]]) -> Dict[date, set]:
-    PEOPLE_COL = 3  # C
+    PEOPLE_COL = 2  # C
     out: Dict[date, set] = defaultdict(set)
     for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
