@@ -127,7 +127,7 @@ def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
 def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
                         anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
     COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
-    COL_HOURS_F = 6
+    COL_HOURS_F = 5
     nonwip_flags = {"non wip", "non-wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
