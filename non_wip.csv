@@ -19,7 +19,7 @@ PVH,2025-10-27,9,360.0,0.0,0.0,{},[]
 PVH,2025-11-03,9,360.0,0.0,0.0,{},[]
 PVH,2025-11-10,9,360.0,0.0,0.0,{},[]
 PVH,2025-11-17,9,360.0,0.0,0.0,{},[]
-SVT,2025-10-27,6,240.0,16.0,0.0,"{""Madison"": 4.0}","[{""name"": ""Madison"", ""activity"": ""4 AM meetings ~ total 2 hrs"", ""hours"": 2.0}, {""name"": ""Madison"", ""activity"": ""Agile Training Cornerstone/Finish Scheduling"", ""hours"": 2.0}]"
+SVT,2025-10-27,6,239.0,16.0,0.42,"{""Madison"": 4.0}","[{""name"": ""Madison"", ""activity"": ""4 AM meetings ~ total 2 hrs"", ""hours"": 2.0}, {""name"": ""Madison"", ""activity"": ""Agile Training Cornerstone/Finish Scheduling"", ""hours"": 2.0}]"
 SVT,2025-11-03,6,240.0,0.0,0.0,{},[]
 SVT,2025-11-10,6,240.0,0.0,0.0,{},[]
 SVT,2025-11-17,6,240.0,0.0,0.0,{},[]
