@@ -383,12 +383,6 @@ TEAM_CONFIG = [
         "unique_key": ["team", "period_date"],
     },
     {
-        "name": "PH",
-        "ph_mode": True,
-        "file": r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx",
-        "unique_key": ["team", "period_date"],
-    },
-    {
         "name": "CAS",
         "cas_mode": True,
         "file": r"c:\Users\wadec8\Medtronic PLC\CAS Virtual VMB - PA Board\PA Board 2.xlsx",
