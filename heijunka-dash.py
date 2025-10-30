@@ -865,6 +865,12 @@ if nonwip_mode:
             )
             .dropna(subset=["Hours"])
         )
+        label_map = {
+            "Accounted_Other": "Other Team WIP",
+            "Accounted_NonOther": "Accounted",
+            "Unaccounted": "Unaccounted",
+        }
+        stack["CategoryLabel"] = stack["Category"].map(label_map)
         order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
         vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
         headroom = max(1.0, vmax * 0.18) if pd.notna(vmax) else 1.0
@@ -897,19 +903,16 @@ if nonwip_mode:
                 x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
                 y=alt.Y("Hours:Q", title="Non-WIP Hours (week)", stack="zero", scale=y_scale),
                 color=alt.Color(
-                    "Category:N",
+                    "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
-                        range=["#2563eb", "#22c55e", "#9ca3af"]   # blue for Other Team WIP, green for other accounted, gray unaccounted
-                    ),
-                    legend=alt.Legend(labelExpr="datum.value === 'Accounted_Other' ? 'Other Team WIP' : datum.value === 'Accounted_NonOther' ? 'Accounted' : 'Unaccounted'")
+                        domain=["Other Team WIP", "Accounted", "Unaccounted"],
+                        range=["#2563eb", "#22c55e", "#9ca3af"]
+                    )
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Category:N", title="Category",
-                                format=None,
-                                labelExpr="datum['Category'] === 'Accounted_Other' ? 'Other Team WIP' : (datum['Category'] === 'Accounted_NonOther' ? 'Accounted' : 'Unaccounted')"),
+                    alt.Tooltip("CategoryLabel:N", title="Category"),
                     alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Date"),
                 ],
@@ -921,13 +924,13 @@ if nonwip_mode:
             .encode(y=alt.Y("y:Q", scale=y_scale))
         )
         chart = (bars + ref + outline) \
-        .properties(
-            height=300,
-            title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
-            padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
-        ) \
-        .configure_axis(labelOverlap=True) \
-        .configure_view(stroke=None)
+            .properties(
+                height=300,
+                title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
+                padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
+            ) \
+            .configure_axis(labelOverlap=True) \
+            .configure_view(stroke=None)
     st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
