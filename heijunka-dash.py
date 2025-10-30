@@ -210,32 +210,39 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
-def accounted_nonwip_by_person_from_row(row) -> dict[str, float]:
+def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str, float]]:
     payload = row.get("non_wip_activities", "[]")
     try:
         activities = json.loads(payload) if isinstance(payload, str) else payload
     except Exception:
         activities = []
     if not isinstance(activities, list) or not activities:
-        return {}
+        return {}, {}
     import re
-    out: dict[str, float] = {}
+    other_team_key = "OTHERTEAMWIP"
+    accounted_other: dict[str, float] = {}
+    accounted_nonother: dict[str, float] = {}
     for d in activities:
         name = str(d.get("name", "")).strip()
         if not name:
             continue
         act_raw = str(d.get("activity", ""))
-        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())
+        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())  # normalize
         if act_key == "OOO":
-            continue  # OOO does not count toward “Accounted”
+            continue
         try:
             hrs = float(d.get("hours", 0) or 0)
         except Exception:
             hrs = 0.0
         if hrs <= 0:
             continue
-        out[name] = out.get(name, 0.0) + hrs
-    return {k: round(v, 2) for k, v in out.items()}
+        if act_key == other_team_key:
+            accounted_other[name] = accounted_other.get(name, 0.0) + hrs
+        else:
+            accounted_nonother[name] = accounted_nonother.get(name, 0.0) + hrs
+    accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
+    accounted_nonother = {k: round(v, 2) for k, v in accounted_nonother.items()}
+    return accounted_other, accounted_nonother
 def build_ooo_table_from_row(row) -> pd.DataFrame:
     payload = row.get("non_wip_activities", "[]")
     try:
@@ -833,18 +840,19 @@ if nonwip_mode:
     if wk_people.empty:
         st.info("No per-person Non-WIP breakdown for this selection.")
     else:
-        acct_map = accounted_nonwip_by_person_from_row(row)
+        acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(row)
         wk_people = wk_people.assign(
-            Accounted=lambda d: d.apply(
-                lambda r: min(float(r["Non-WIP Hours"]), float(acct_map.get(str(r["person"]).strip(), 0.0))),
-                axis=1
-            )
+            Accounted_Other=lambda d: d["person"].map(lambda p: float(acct_other_map.get(str(p).strip(), 0.0))),
+            Accounted_NonOther=lambda d: d["person"].map(lambda p: float(acct_nonother_map.get(str(p).strip(), 0.0))),
         )
-        wk_people["Unaccounted"] = (wk_people["Non-WIP Hours"] - wk_people["Accounted"]).clip(lower=0)
+        wk_people["Accounted_Other"] = wk_people[["Accounted_Other", "Non-WIP Hours"]].min(axis=1)
+        remaining = (wk_people["Non-WIP Hours"] - wk_people["Accounted_Other"]).clip(lower=0)
+        wk_people["Accounted_NonOther"] = wk_people[["Accounted_NonOther", remaining]].min(axis=1)
+        wk_people["Unaccounted"] = (wk_people["Non-WIP Hours"] - wk_people["Accounted_Other"] - wk_people["Accounted_NonOther"]).clip(lower=0)
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date"],
-                value_vars=["Accounted", "Unaccounted"],
+                value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
                 var_name="Category",
                 value_name="Hours"
             )
@@ -884,11 +892,17 @@ if nonwip_mode:
                 color=alt.Color(
                     "Category:N",
                     title="Legend",
-                    scale=alt.Scale(domain=["Accounted", "Unaccounted"], range=["#22c55e", "#9ca3af"])
+                    scale=alt.Scale(
+                        domain=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
+                        range=["#2563eb", "#22c55e", "#9ca3af"]   # blue for Other Team WIP, green for other accounted, gray unaccounted
+                    ),
+                    legend=alt.Legend(labelExpr="datum.value === 'Accounted_Other' ? 'Other Team WIP' : datum.value === 'Accounted_NonOther' ? 'Accounted' : 'Unaccounted'")
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Category:N"),
+                    alt.Tooltip("Category:N", title="Category",
+                                format=None,
+                                labelExpr="datum['Category'] === 'Accounted_Other' ? 'Other Team WIP' : (datum['Category'] === 'Accounted_NonOther' ? 'Accounted' : 'Unaccounted')"),
                     alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Date"),
                 ],
@@ -899,17 +913,15 @@ if nonwip_mode:
             .mark_rule(strokeDash=[4, 3], color="#6b7280")
             .encode(y=alt.Y("y:Q", scale=y_scale))
         )
-        chart = (
-            (bars + ref + outline)
-            .properties(
-                height=300,
-                title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
-                padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
-            )
-            .configure_axis(labelOverlap=True)
-            .configure_view(stroke=None)
-        )
-        st.altair_chart(chart, use_container_width=True)
+        chart = (bars + ref + outline) \
+        .properties(
+            height=300,
+            title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
+            padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
+        ) \
+        .configure_axis(labelOverlap=True) \
+        .configure_view(stroke=None)
+    st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:

@@ -30,7 +30,11 @@ try:
             return 2  # PENDINGMSG_WAITDEFPROCESS
 except Exception:
     _ComMessageFilter = None
-EXCLUDED_CELLS = {"OOO", "NON WIP", "NON-WIP", "NONWIP"}
+EXCLUDED_CELLS = {
+    "OOO",
+    "NON WIP", "NON-WIP", "NONWIP",
+    "OTHER TEAM WIP", "OTHER TEAM'S WIP", "OTHER_TEAM_WIP", "OTHERTEAMWIP"
+}
 def _is_excluded_cell(cell: str) -> bool:
     return (cell or "").strip().upper() in EXCLUDED_CELLS
 def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:

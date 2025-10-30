@@ -142,6 +142,7 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
     COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
     COL_HOURS_F = 5
     nonwip_flags = {"non wip", "non-wip"}
+    other_team_wip_flags = {"other team wip", "other-team-wip", "otherteamwip", "other team's wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
         "ooo_by_person": defaultdict(float),      # NEW
@@ -165,7 +166,12 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             b["ooo_hours"] += hrs
             if name:
                 b["ooo_by_person"][name] += hrs
-        if flag in nonwip_flags:
+        act_key = "".join(ch for ch in act.upper() if ch.isalnum())  # "OTHERTEAMWIP" style
+        is_other_team_wip = (
+            flag in other_team_wip_flags
+            or act_key == "OTHERTEAMWIP"
+        )
+        if flag in nonwip_flags or is_other_team_wip:
             hrs: float = 0.0
             if mins > 0:
                 hrs = mins / 60.0
@@ -176,8 +182,9 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             if hrs > 0:
                 if name:
                     b["non_wip_by_person"][name] += hrs
+                label = "Other Team WIP" if is_other_team_wip else (act or "Non-WIP")
                 b["non_wip_activities"].append({
-                    "name": name, "activity": act, "hours": round(hrs, 2),
+                    "name": name, "activity": label, "hours": round(hrs, 2),
                 })
     for wk, b in buckets.items():
         b["ooo_hours"] = round(b["ooo_hours"], 2)
