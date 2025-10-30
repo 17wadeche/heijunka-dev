@@ -847,8 +847,15 @@ if nonwip_mode:
         )
         wk_people["Accounted_Other"] = wk_people[["Accounted_Other", "Non-WIP Hours"]].min(axis=1)
         remaining = (wk_people["Non-WIP Hours"] - wk_people["Accounted_Other"]).clip(lower=0)
-        wk_people["Accounted_NonOther"] = wk_people[["Accounted_NonOther", remaining]].min(axis=1)
-        wk_people["Unaccounted"] = (wk_people["Non-WIP Hours"] - wk_people["Accounted_Other"] - wk_people["Accounted_NonOther"]).clip(lower=0)
+        wk_people["Accounted_NonOther"] = np.minimum(
+            wk_people["Accounted_NonOther"].astype(float),
+            remaining.astype(float)
+        )
+        wk_people["Unaccounted"] = (
+            wk_people["Non-WIP Hours"] 
+            - wk_people["Accounted_Other"] 
+            - wk_people["Accounted_NonOther"]
+        ).clip(lower=0)        
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date"],
