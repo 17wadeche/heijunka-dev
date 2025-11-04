@@ -481,6 +481,14 @@ def _get_visible_rows_reader(path: str):
         return _rows_from_xlsx_visible
     else:
         raise ValueError(f"Unsupported workbook extension '{ext}'.")
+def _get_all_rows_reader(path: str):
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".xlsb":
+        return _rows_from_xlsb
+    elif ext in (".xlsx", ".xlsm"):
+        return _rows_from_xlsx_like
+    else:
+        raise ValueError(f"Unsupported workbook extension '{ext}'.")
 def _sort_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def _parse_week(r: Dict[str, Any]) -> date:
         w = str(r.get("Week", "")).strip()
@@ -504,13 +512,17 @@ def build_weekly_metrics_from_file(path: str, prod_hints: List[str], avail_hint:
     ext = os.path.splitext(path)[1].lower()
     sheet_names = (_sheetnames_xlsb(path) if ext == ".xlsb" else _sheetnames_xlsx_like(path))
     read_visible_rows = _get_visible_rows_reader(path)
+    read_all_rows     = _get_all_rows_reader(path)
     avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
     avail_rows_with_idx = list(read_visible_rows(path, avail_name))
     avail = parse_available_rows(avail_rows_with_idx, anchors=week_anchors_by_sheet.get(avail_name, []))
     prod_merged: Dict[date, Dict[str, Any]] = {}
     for hint in prod_hints:
         prod_name = _find_sheet_by_hint(sheet_names, hint)
-        prod_rows_with_idx = list(read_visible_rows(path, prod_name))
+        prod_rows_with_idx = list(
+            (i + 1, tuple(r))
+            for i, r in enumerate(read_all_rows(path, prod_name))
+        )
         anchors = week_anchors_by_sheet.get(prod_name, [])
         prod_part = parse_prod_rows(prod_rows_with_idx, anchors=anchors)
         for wk, b in prod_part.items():
