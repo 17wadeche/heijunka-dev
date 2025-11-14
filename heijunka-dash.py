@@ -1313,7 +1313,7 @@ teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
 with left:
-    st.subheader("Hours Trend")
+    st.subheader("WIP Hours Trend")
     have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
     teams_in_view = sorted([t for t in f["team"].dropna().unique()])
     single_team = (len(teams_in_view) == 1)
