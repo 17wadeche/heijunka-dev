@@ -2387,34 +2387,6 @@ with mid2:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
-with right2:
-    st.subheader("Open Complaint Timeliness Trend")
-    if "Open Complaint Timeliness" in f.columns and f["Open Complaint Timeliness"].notna().any():
-        tml = f[["team", "period_date", "Open Complaint Timeliness"]].dropna().copy()
-        max_val = tml["Open Complaint Timeliness"].max()
-        divisor = 100.0 if pd.notna(max_val) and float(max_val) > 1.5 else 1.0
-        tml["Timeliness %"] = tml["Open Complaint Timeliness"].astype(float) / divisor
-        vmin = float(tml["Timeliness %"].min())
-        vmax = float(tml["Timeliness %"].max())
-        rng  = max(0.0, vmax - vmin)
-        pad  = max(0.02, rng * 0.15)
-        lo   = max(0.0, vmin - pad)
-        hi   = min(1.0, vmax + pad)
-        base_tml = alt.Chart(tml).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Timeliness %:Q",
-                    title="Timeliness",
-                    axis=alt.Axis(format="%"),
-                    scale=alt.Scale(domain=[lo, hi], clamp=True, nice=False)),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("seagreen"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("Timeliness %:Q", format=".0%")]
-        )
-        st.altair_chart(
-            base_tml.mark_line(point=True).properties(height=280),
-            use_container_width=True
-        )
-    else:
-        st.info("No 'Open Complaint Timeliness' data available in the selected range.")
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
