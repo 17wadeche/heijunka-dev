@@ -1322,6 +1322,25 @@ kpi(
     help="Closures ÷ All Available Hours",
 )
 st.markdown("---")
+if has_dates and min_date and max_date:
+    st.markdown("#### Date Range")
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        st.date_input(
+            "Start",
+            value=st.session_state["start_date"],
+            min_value=min_date,
+            max_value=max_date,
+            key="start_date",
+        )
+    with date_col2:
+        st.date_input(
+            "End",
+            value=st.session_state["end_date"],
+            min_value=min_date,
+            max_value=max_date,
+            key="end_date",
+        )
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
