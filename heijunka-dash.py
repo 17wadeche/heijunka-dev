@@ -1048,24 +1048,26 @@ default_teams = [teams[0]] if teams else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
+has_dates = df["period_date"].notna().any()
+min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
+max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
+if has_dates and min_date and max_date:
+    if "start_date" not in st.session_state:
+        st.session_state["start_date"] = min_date
+    if "end_date" not in st.session_state:
+        st.session_state["end_date"] = max_date
+    start = st.session_state["start_date"]
+    end = st.session_state["end_date"]
+    if start > end:
+        st.error("Start date cannot be after end date!")
+        start, end = min_date, max_date
+        st.session_state["start_date"] = start
+        st.session_state["end_date"] = end
+else:
+    start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
-with col2:
-    has_dates = df["period_date"].notna().any()
-    min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
-    max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
-    if min_date and max_date:
-        date_col1, date_col2 = st.columns(2)
-        with date_col1:
-            start = st.date_input("Start", value=min_date, min_value=min_date, max_value=max_date, key="start_date")
-        with date_col2:
-            end = st.date_input("End", value=max_date, min_value=min_date, max_value=max_date, key="end_date")
-        if start > end:
-            st.error("Start date cannot be after end date!")
-            start, end = None, None
-    else:
-        start, end = None, None
 current_qp = _get_qp_teams()
 if not _sets_equal(st.session_state.teams_sel, current_qp):
     _set_qp_teams(sorted(st.session_state.teams_sel))
