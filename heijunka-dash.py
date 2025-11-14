@@ -1268,7 +1268,7 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
     col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
-row1 = st.columns(4)
+row1 = st.columns(7)
 kpi(
     row1[0],
     "HC in WIP",
@@ -1299,21 +1299,21 @@ kpi_vs_target(
 )
 row2 = st.columns(3)
 kpi(
-    row2[0],
+    row1[4],
     "Closures",
     tot_closures,
     "{:,.0f}",
     help="Events Closed",
 )
 kpi(
-    row2[1],
+    row1[5],
     "Efficiency",
     efficiency,
     "{:.3f}",
     help="Closures ÷ Completed WIP Hours",
 )
 kpi(
-    row2[2],
+    row1[6],
     "Productivity",
     productivity,
     "{:,.3f}",
