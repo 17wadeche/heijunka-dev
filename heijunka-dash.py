@@ -1252,68 +1252,51 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
 with kpi_cols[0]:
     st.subheader("Latest (Selected Teams)")
 row1 = st.columns(4)
-kpi(row1[0], "Target Output", tot_target, "{:,.0f}")
-kpi_vs_target(row1[1], "Actual Output", tot_actual, tot_target, "{:,.0f}")
-kpi(row1[2],
-    "Target UPLH",
-    (tot_target / tot_tahl if tot_tahl else np.nan),
-    "{:.2f}",
-    help="Target Output ÷ Target Hours (Total Available Hours)",
-)
-kpi_vs_target(
-    row1[3],
-    "Actual UPLH",
-    actual_uplh,
-    target_uplh,
-    "{:.2f}",
-    help="Actual Output ÷ Actual Hours (Completed Hours)",
-)
-row2 = st.columns(4)
 kpi(
-    row2[0],
+    row1[0],
     "HC in WIP",
     tot_hc_wip,
     "{:,.0f}",
     help="Unique people with any time in WIP for the week",
 )
 kpi(
-    row2[1],
+    row1[1],
     "Actual HC used",
     tot_hc_used,
     "{:,.2f}",
     help="Based on 6 hours per person in WIP per day",
 )
 kpi(
-    row2[2],
+    row1[2],
     "Capacity Utilization",
     (tot_chl / tot_tahl if tot_tahl else np.nan),
     "{:.0%}",
     help="Completed vs Available hours",
 )
 kpi_vs_target(
-    row2[3],
+    row1[3],
     "Open Complaint Timeliness",
     timeliness_avg,
     0.87,
     "{:.0%}",
 )
-row3 = st.columns(3)
+row2 = st.columns(3)
 kpi(
-    row3[0],
+    row2[0],
     "Closures",
     tot_closures,
     "{:,.0f}",
     help="Events Closed",
 )
 kpi(
-    row3[1],
+    row2[1],
     "Efficiency",
     efficiency,
     "{:.3f}",
     help="Closures ÷ Completed WIP Hours",
 )
 kpi(
-    row3[2],
+    row2[2],
     "Productivity",
     productivity,
     "{:,.3f}",
