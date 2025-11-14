@@ -43,6 +43,14 @@ def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_U
     for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
+    if "% in WIP" in df.columns and "% Non-WIP" not in df.columns:
+        s = pd.to_numeric(df["% in WIP"], errors="coerce")
+        if pd.notna(s.max()):
+            if float(s.max()) <= 1.5:
+                pct_wip_0_100 = s * 100.0
+            else:
+                pct_wip_0_100 = s
+            df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
@@ -800,8 +808,11 @@ if nonwip_mode:
         st.info("No Non-WIP row for that team/week.")
         st.stop()
     row = sel.iloc[0]
-    pct_in_wip = float(row.get("% in WIP", np.nan))
-    pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    if "% Non-WIP" in row.index and pd.notna(row["% Non-WIP"]):
+        pct_non_wip = float(row["% Non-WIP"])
+    else:
+        pct_in_wip = float(row.get("% in WIP", np.nan))
+        pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
     def colored_percent_metric(container, label: str, value: float | None, threshold=80.0):
         if pd.isna(value):
             container.metric(label, "—")
@@ -823,8 +834,14 @@ if nonwip_mode:
     kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
     ooo_val = float(row.get("OOO Hours", np.nan)) if "OOO Hours" in sel.columns else np.nan
     kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}", help="8 hours per person per OOO day")
-    wip_val = float(pct_in_wip) if pd.notna(pct_in_wip) else np.nan
-    kpi_card(c4, "% in WIP", wip_val, fmt="{:.2f}%", color=percent_color(wip_val, threshold=80.0))
+    nonwip_val = float(pct_non_wip) if pd.notna(pct_non_wip) else np.nan
+    kpi_card(
+        c4,
+        "% Non-WIP",
+        nonwip_val,
+        fmt="{:.2f}%",
+        color=percent_color(nonwip_val, threshold=25.0, invert=True),
+    )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
     if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
@@ -957,17 +974,17 @@ if nonwip_mode:
                 .mark_line(point=True)
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% in WIP:Q", title="% in WIP"),
+                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
                     tooltip=[
                         alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% in WIP:Q", title="% in WIP", format=",.2f"),
+                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
                     ],
                 )
-                .properties(height=240, title="% in WIP")
+                .properties(height=240, title="% Non-WIP")
             )
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
-    show_cols = ["team","period_date","people_count","total_non_wip_hours","% in WIP"]
+    show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
     tbl = (
         team_hist[show_cols]
         .rename(columns={
@@ -975,7 +992,7 @@ if nonwip_mode:
             "period_date": "Date",
             "people_count": "People Count",
             "total_non_wip_hours": "Non-WIP Hours",
-            "% in WIP": "% in WIP",
+            "% Non-WIP": "% Non-WIP",
         })
         .sort_values("Date", ascending=False)
     )
@@ -985,7 +1002,7 @@ if nonwip_mode:
         tbl.style.format({
             "People Count": "{:,.0f}",
             "Non-WIP Hours": "{:,.1f}",
-            "% in WIP": "{:.2f}%",
+            "% Non-WIP": "{:.2f}%",
         }),
         use_container_width=True,
         hide_index=True,
