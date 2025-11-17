@@ -1402,7 +1402,7 @@ with left:
                 st.caption("Per-person & cell/station drilldowns are available when exactly one team is selected.")
         else:
             hours_by = st.selectbox(
-                "Hours by:",
+                "WIP Hours by:",
                 options=["Person", "Cell/Station"],
                 index=0,
                 key="hours_by_select",
