@@ -1640,30 +1640,52 @@ with left:
                                         use_container_width=True,
                                     )
 with mid:
-    st.subheader("Output Trend")
-    out_long = (
-        f.melt(
-            id_vars=["team", "period_date"],
-            value_vars=["Target Output", "Actual Output"],
-            var_name="Metric", value_name="Value"
-        ).dropna(subset=["Value"])
-    )
-    base = alt.Chart(out_long).encode(
-        x=alt.X("period_date:T", title="Week"),
-        y=alt.Y("Value:Q", title="Output"),
-        color=alt.Color("Metric:N", title="Series"),
-        tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")]
-    )
-    line = base.mark_line().encode(
-        detail="team:N",
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
-    )
-    pts = base.mark_point().encode(
-        shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-        size=alt.value(45),
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0)
-    )
-    st.altair_chart((line + pts).properties(height=280).add_params(team_sel), use_container_width=True)
+    st.subheader("Opened vs Closed")
+    needed_cols = {"Opened", "Closures"}
+    if not needed_cols.issubset(f.columns):
+        st.info("Need 'Opened' and 'Closures' columns to show this chart.")
+    else:
+        out_long = (
+            f.melt(
+                id_vars=["team", "period_date"],
+                value_vars=["Opened", "Closures"],
+                var_name="Metric",
+                value_name="Value",
+            )
+            .dropna(subset=["Value"])
+        )
+        base = alt.Chart(out_long).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Count"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=[
+                "team:N",
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.0f"),
+            ],
+        )
+        line = base.mark_line().encode(
+            detail="team:N",
+            opacity=alt.condition(
+                team_sel,
+                alt.value(1.0),
+                alt.value(0.25),
+            ) if multi_team else alt.value(1.0),
+        )
+        pts = base.mark_point().encode(
+            shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+            size=alt.value(45),
+            opacity=alt.condition(
+                team_sel,
+                alt.value(1.0),
+                alt.value(0.25),
+            ) if multi_team else alt.value(1.0),
+        )
+        st.altair_chart(
+            (line + pts).properties(height=280).add_params(team_sel),
+            use_container_width=True,
+        )
     if len(teams_in_view) != 1:
         st.caption("Select exactly one team to enable week drilldown.")
     else:
