@@ -1914,60 +1914,108 @@ with mid:
                                         use_container_width=True
                                     )
 with right:
-    st.subheader("UPLH Trend")
+    st.subheader("Productivity vs Efficiency")
     team_sel = alt.selection_point(fields=["team"], bind="legend")
-    have_target_uplh = "Target UPLH" in f.columns
-    uplh_vars = ["Actual UPLH"] + (["Target UPLH"] if have_target_uplh else [])
-    uplh_long = (
-        f.melt(
+    prod_df = f.copy()
+    if "total_non_wip_hours" not in prod_df.columns:
+        if "nw_all" in globals() and isinstance(nw_all, pd.DataFrame) and not nw_all.empty:
+            cols_needed = ["team", "period_date", "total_non_wip_hours"]
+            for c in cols_needed:
+                if c not in nw_all.columns:
+                    nw_all[c] = np.nan
+            nw_all["total_non_wip_hours"] = pd.to_numeric(
+                nw_all["total_non_wip_hours"], errors="coerce"
+            )
+            prod_df = prod_df.merge(
+                nw_all[cols_needed],
+                on=["team", "period_date"],
+                how="left",
+            )
+        else:
+            prod_df["total_non_wip_hours"] = np.nan
+    if {"Closures", "Completed Hours"}.issubset(prod_df.columns):
+        num_close = pd.to_numeric(prod_df["Closures"], errors="coerce")
+
+        denom_prod = (
+            prod_df["Completed Hours"].fillna(0).astype(float)
+            + prod_df["total_non_wip_hours"].fillna(0).astype(float)
+        )
+        prod_df["Productivity"] = np.where(
+            denom_prod > 0, num_close / denom_prod, np.nan
+        )
+
+        denom_eff = prod_df["Completed Hours"].astype(float)
+        prod_df["Efficiency"] = np.where(
+            denom_eff > 0, num_close / denom_eff, np.nan
+        )
+    else:
+        prod_df["Productivity"] = np.nan
+        prod_df["Efficiency"] = np.nan
+    pe_long = (
+        prod_df.melt(
             id_vars=["team", "period_date"],
-            value_vars=uplh_vars,
+            value_vars=["Productivity", "Efficiency"],
             var_name="Metric",
             value_name="Value",
         )
         .dropna(subset=["Value"])
     )
-    if not uplh_long.empty:
-        vmin = float(pd.to_numeric(uplh_long["Value"], errors="coerce").min())
-        vmax = float(pd.to_numeric(uplh_long["Value"], errors="coerce").max())
+    if not pe_long.empty:
+        vmin = float(pd.to_numeric(pe_long["Value"], errors="coerce").min())
+        vmax = float(pd.to_numeric(pe_long["Value"], errors="coerce").max())
         rng  = max(0.0, vmax - vmin)
-        pad  = max(0.2, rng * 0.15)
+        pad  = max(0.01, rng * 0.15)
         lo   = max(0.0, vmin - pad)
         hi   = vmax + pad
         y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
     else:
         y_scale = alt.Scale()
     sel_wk = alt.selection_point(
-        name="wk_uplh",
+        name="wk_prod_eff",
         fields=["period_date"],
         on="click",
         clear="dblclick",
         empty="none",
     )
     trend_base = (
-        alt.Chart(uplh_long)
+        alt.Chart(pe_long)
         .encode(
             x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="Actual UPLH", scale=y_scale),
+            y=alt.Y("Value:Q", title="Closures per Hour", scale=y_scale),
             color=alt.Color("Metric:N", title="Series"),
-            tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.2f")],
+            tooltip=[
+                "team:N",
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.3f"),
+            ],
         )
     )
     line = trend_base.mark_line().encode(
         detail="team:N",
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
+        opacity=(
+            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if multi_team else alt.value(1.0)
+        ),
     )
     pts = trend_base.mark_point(size=70).encode(
         shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-        opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25)) if multi_team else alt.value(1.0),
+        opacity=(
+            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if multi_team else alt.value(1.0)
+        ),
     )
     rule = (
-        alt.Chart(uplh_long)
+        alt.Chart(pe_long)
         .transform_filter(sel_wk)
         .mark_rule(strokeDash=[4, 3])
         .encode(x="period_date:T")
     )
-    top = alt.layer(line, pts, rule).properties(height=280).add_params(team_sel, sel_wk)
+    top = (
+        alt.layer(line, pts, rule)
+        .properties(height=280)
+        .add_params(team_sel, sel_wk)
+    )
     def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
         wp1, wp2 = None, None
         for c in df.columns:
