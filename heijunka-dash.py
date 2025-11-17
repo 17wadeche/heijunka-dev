@@ -1830,54 +1830,62 @@ with mid:
                                             use_container_width=True
                                         )
                                 else:
-                                    ot = ot.assign(
+                                    ot_sum = (
+                                        ot.groupby("period_date", as_index=False)
+                                        .agg({"Actual": "sum", "Target": "sum"})
+                                    )
+                                    ot_sum = ot_sum.assign(
                                         HasTarget=lambda d: d["Target"].notna(),
                                         Delta=lambda d: d["Actual"] - d["Target"],
                                     )
-                                    ot = ot.assign(
-                                        DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—"),
-                                        PointFillGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
+                                    ot_sum = ot_sum.assign(
+                                        DiffLabel=lambda d: np.where(
+                                            d["HasTarget"],
+                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
+                                            "—"
+                                        ),
+                                        PointFillGroup=lambda d: np.where(
+                                            ~d["HasTarget"],
+                                            "none",
+                                            np.where(d["Delta"] >= 0, "pos", "neg")
+                                        ),
                                     )
-                                    base_ts = alt.Chart(ot).encode(
+                                    base_ts = alt.Chart(ot_sum).encode(
                                         x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual:Q", title="Actual Output"),
-                                        color=alt.Color("person:N", title="Person"),  # line/stroke color
+                                        y=alt.Y("Actual:Q", title="Actual Output (all people)"),
                                         tooltip=[
                                             "period_date:T",
-                                            "person:N",
-                                            alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
-                                            alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
                                             alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                         ],
                                     )
                                     lines = base_ts.mark_line()
                                     pts = (
-                                        alt.Chart(ot)
+                                        alt.Chart(ot_sum)
                                         .mark_point(size=85, filled=True, strokeWidth=1.2)
                                         .encode(
                                             x="period_date:T",
                                             y="Actual:Q",
-                                            stroke=alt.Color("person:N", legend=None),
+                                            stroke=alt.value("#111827"),  # single stroke color
                                             fill=alt.Color(
                                                 "PointFillGroup:N",
                                                 legend=None,
                                                 scale=alt.Scale(
                                                     domain=["pos", "neg", "none"],
-                                                    range=["#22c55e", "#ef4444", "#9ca3af"]
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
                                                 ),
                                             ),
                                             tooltip=[
                                                 "period_date:T",
-                                                "person:N",
-                                                alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
-                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
                                                 alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                             ],
                                         )
                                     )
                                     st.altair_chart(
-                                        (lines + pts)
-                                            .properties(height=280),
+                                        (lines + pts).properties(height=280),
                                         use_container_width=True
                                     )
                         elif by_choice == "Person":
@@ -1893,54 +1901,62 @@ with mid:
                                 if pt.empty:
                                     st.caption("No nested per-station outputs found for this person.")
                                 else:
-                                    pt = pt.assign(
+                                    pt_sum = (
+                                        pt.groupby("period_date", as_index=False)
+                                        .agg({"Actual": "sum", "Target": "sum"})
+                                    )
+                                    pt_sum = pt_sum.assign(
                                         HasTarget=lambda d: d["Target"].notna(),
                                         Delta=lambda d: d["Actual"] - d["Target"],
                                     )
-                                    pt = pt.assign(
-                                        DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(1).map(lambda x: f"{x:+.1f}"), "—"),
-                                        PointFillGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
+                                    pt_sum = pt_sum.assign(
+                                        DiffLabel=lambda d: np.where(
+                                            d["HasTarget"],
+                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
+                                            "—"
+                                        ),
+                                        PointFillGroup=lambda d: np.where(
+                                            ~d["HasTarget"],
+                                            "none",
+                                            np.where(d["Delta"] >= 0, "pos", "neg")
+                                        ),
                                     )
-                                    base_ts = alt.Chart(pt).encode(
+                                    base_ts = alt.Chart(pt_sum).encode(
                                         x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual:Q", title="Actual Output"),
-                                        color=alt.Color("cell_station:N", title="Cell/Station"),
+                                        y=alt.Y("Actual:Q", title="Actual Output (all stations)"),
                                         tooltip=[
                                             "period_date:T",
-                                            alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                            alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
-                                            alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
                                             alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                         ],
                                     )
                                     lines = base_ts.mark_line()
                                     pts = (
-                                        alt.Chart(pt)
+                                        alt.Chart(pt_sum)
                                         .mark_point(size=85, filled=True, strokeWidth=1.2)
                                         .encode(
                                             x="period_date:T",
                                             y="Actual:Q",
-                                            stroke=alt.Color("cell_station:N", legend=None),  # stroke matches line color
+                                            stroke=alt.value("#111827"),
                                             fill=alt.Color(
                                                 "PointFillGroup:N",
                                                 legend=None,
                                                 scale=alt.Scale(
                                                     domain=["pos", "neg", "none"],
-                                                    range=["#22c55e", "#ef4444", "#9ca3af"]
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"],
                                                 ),
                                             ),
                                             tooltip=[
                                                 "period_date:T",
-                                                alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                                alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
-                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
                                                 alt.Tooltip("DiffLabel:N", title="Over / Under"),
                                             ],
                                         )
                                     )
                                     st.altair_chart(
-                                        (lines + pts)
-                                            .properties(height=280),
+                                        (lines + pts).properties(height=280),
                                         use_container_width=True
                                     )
 with right:
