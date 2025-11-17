@@ -1269,7 +1269,7 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
     delta_str = f"{diff:+.0%} vs target"
     col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
 with kpi_cols[0]:
-    st.subheader("Latest Week KPIs (Selected Teams)")
+    st.subheader("Latest Week (Selected Teams)")
 row1 = st.columns(7)
 kpi(
     row1[0],
