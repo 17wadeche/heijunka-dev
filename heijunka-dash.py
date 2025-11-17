@@ -2547,6 +2547,8 @@ if len(teams_in_view) == 1:
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".3f")]
             if metric == "Closures":                         
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
+            if metric == "Opened":                         
+                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
             return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=",.0f")]
         color_enc = alt.Color("metric:N", title="Series")
         single_sel = (len(selected) == 1)
