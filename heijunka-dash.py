@@ -1981,40 +1981,7 @@ with right:
         return wp1, wp2
     wp1_col, wp2_col = _find_wp_uplh_cols(f)
     team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
-    if (not multi_team) and team_for_drill == "PH" and wp1_col and wp2_col:
-        wp_long = (
-            f[["team", "period_date", wp1_col, wp2_col]]
-            .rename(columns={wp1_col: "WP1", wp2_col: "WP2"})
-            .melt(id_vars=["team", "period_date"], var_name="WP", value_name="UPLH")
-            .dropna(subset=["UPLH"])
-        )
-        title_text = (
-            alt.Chart(uplh_long)
-            .transform_filter(sel_wk)
-            .transform_aggregate(period_date="min(period_date)")
-            .transform_calculate(label="'WP1 vs WP2 UPLH (' + timeFormat(datum.period_date, '%Y-%m-%d') + ')'")
-            .mark_text(align="left", baseline="top")
-            .encode(x=alt.value(0), y=alt.value(16), text="label:N")
-            .properties(height=24)
-        )
-        base_wp = (
-            alt.Chart(wp_long)
-            .transform_filter(sel_wk)
-            .transform_filter(team_sel)
-        )
-        wp_chart = (
-            base_wp.mark_bar()
-            .encode(
-                x=alt.X("WP:N", title="WP"),
-                y=alt.Y("UPLH:Q", title="Actual UPLH", axis=alt.Axis(titlePadding=12, labelPadding=6)),
-                color=alt.Color("WP:N", legend=None),
-                tooltip=["period_date:T", "WP:N", alt.Tooltip("UPLH:Q", format=",.2f")],
-            )
-            .properties(height=280)
-        )
-        combined = alt.vconcat(top, title_text, wp_chart, spacing=0).resolve_legend(color="independent").add_params(team_sel, sel_wk)
-        st.altair_chart(combined, use_container_width=True)
-    elif not multi_team and team_for_drill is not None:
+    if not multi_team and team_for_drill is not None:
         top_ph = st.empty()
         top_ph.altair_chart(top, use_container_width=True)
         by_choice = st.selectbox(
