@@ -1624,23 +1624,27 @@ with left:
                                             use_container_width=True,
                                         )
                                 else:
-                                    base_ts = alt.Chart(ht).encode(
+                                    ht_sum = (
+                                        ht.groupby("period_date", as_index=False)
+                                        .agg({
+                                            "Actual Hours": "sum",
+                                            "Available Hours": "sum",
+                                        })
+                                    )
+                                    base_ts = alt.Chart(ht_sum).encode(
                                         x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual Hours:Q", title="Actual Hours"),
-                                        color=alt.Color("person:N", title="Person"),
+                                        y=alt.Y("Actual Hours:Q", title="Actual Hours (all people)"),
                                         tooltip=[
                                             "period_date:T",
-                                            "person:N",
-                                            alt.Tooltip("Actual Hours:Q", title="Actual", format=",.1f"),
-                                            alt.Tooltip("Available Hours:Q", title="Available", format=",.1f"),
+                                            alt.Tooltip("Actual Hours:Q",    title="Actual Hours (sum)",    format=",.1f"),
+                                            alt.Tooltip("Available Hours:Q", title="Available Hours (sum)", format=",.1f"),
                                         ],
                                     )
                                     lines = base_ts.mark_line()
                                     pts   = base_ts.mark_point(size=70, filled=True)
+
                                     st.altair_chart(
-                                        (lines + pts).properties(
-                                            height=280,
-                                        ),
+                                        (lines + pts).properties(height=280),
                                         use_container_width=True,
                                     )
 with mid:
