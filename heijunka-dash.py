@@ -2528,6 +2528,7 @@ if len(teams_in_view) == 1:
             "Actual Hours": "Completed Hours",
             "Actual HC used": "Actual HC used",
             "Closures": "Closures",
+            "Opened" : "Opened",
             "Efficiency": "Efficiency",
             "Productivity": "Productivity",
         }
