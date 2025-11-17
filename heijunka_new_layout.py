@@ -805,10 +805,28 @@ def main():
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
     merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
     merged_rows = _sort_rows(merged_rows)
-    closures_map, closures_col = _read_value_by_team_week(args.closures, value_col=None, value_hint="closures") if getattr(args, "closures", None) else ({}, "Closures")
+    closures_map = {}
+    opened_map   = {}
+    if getattr(args, "closures", None):
+        closures_map, _ = _read_value_by_team_week(
+            args.closures,
+            value_col="Closures",
+            value_hint="closures",
+        )
+        opened_map, _ = _read_value_by_team_week(
+            args.closures,
+            value_col="Opened",
+            value_hint="opened",
+        )
     if closures_map:
-        _apply_aux_column(merged_rows, merged_cols, closures_map, "Closures")  # force the output column name
-    time_map, time_col = _read_value_by_team_week(args.timeliness, value_col=None, value_hint="timeliness") if getattr(args, "timeliness", None) else ({}, "Open Complaint Timeliness")
+        _apply_aux_column(merged_rows, merged_cols, closures_map, "Closures")  # force name
+    if opened_map:
+        _apply_aux_column(merged_rows, merged_cols, opened_map, "Opened")      # NEW
+    time_map, time_col = _read_value_by_team_week(
+        args.timeliness,
+        value_col=None,
+        value_hint="timeliness",
+    ) if getattr(args, "timeliness", None) else ({}, "Open Complaint Timeliness")
     if time_map:
         _apply_aux_column(merged_rows, merged_cols, time_map, "Open Complaint Timeliness")
     with open(args.out, "w", newline="", encoding="utf-8") as f:

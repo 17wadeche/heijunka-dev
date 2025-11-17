@@ -95,7 +95,7 @@ METRICS_AGG_HEADERS = [
     "Actual Output","Target UPLH","Actual UPLH","UPLH WP1","UPLH WP2","HC in WIP",
     "Actual HC Used","People in WIP","Person Hours","Outputs by Person","Outputs by Cell/Station",
     "Cell/Station Hours","Hours by Cell/Station - by person","Output by Cell/Station - by person",
-    "UPLH by Cell/Station - by person","Open Complaint Timeliness","error","Closures"
+    "UPLH by Cell/Station - by person","Open Complaint Timeliness","error","Closures","Opened"
 ]
 NONWIP_OUT_HEADERS = [
     "team","period_date","source_file","people_count","total_non_wip_hours",
@@ -129,6 +129,7 @@ def project_metrics_row(src: Dict[str, str], source_file: str) -> Dict[str, Any]
         "Open Complaint Timeliness": _clean(_get(src, "Open Complaint Timeliness")),
         "error": "",
         "Closures": _clean(_get(src, "Closures")),
+        "Opened": _clean(_get(src, "Opened")),
     }
 def project_nonwip_row(src: Dict[str, str], source_file: str) -> Dict[str, Any]:
     team = _clean(_get(src, "Team", "team"))

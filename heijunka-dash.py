@@ -202,7 +202,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             v = v / 100.0
         df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures"]:
+                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
         if col in df.columns:
             s = (
                 df[col]
@@ -2741,6 +2741,8 @@ if "HC in WIP" in f_table.columns:
     fmt_map["HC in WIP"] = "{:,.0f}"
 if "Closures" in f_table.columns:
     fmt_map["Closures"] = "{:,.0f}"
+if "Opened" in f_table.columns:          # NEW
+    fmt_map["Opened"] = "{:,.0f}"
 if "Productivity" in f_table.columns:
     fmt_map["Productivity"] = "{:.4f}"
 f_table_display = f_table.rename(columns={"team": "Team", "period_date": "Date"})
