@@ -1973,7 +1973,6 @@ with right:
         prod_df["Productivity"] = np.where(
             denom_prod > 0, num_close / denom_prod, np.nan
         )
-
         denom_eff = prod_df["Completed Hours"].astype(float)
         prod_df["Efficiency"] = np.where(
             denom_eff > 0, num_close / denom_eff, np.nan
