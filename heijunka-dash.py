@@ -1072,7 +1072,6 @@ current_qp = _get_qp_teams()
 if not _sets_equal(st.session_state.teams_sel, current_qp):
     _set_qp_teams(sorted(st.session_state.teams_sel))
 f = df.copy()
-st.write("Columns in f:", list(f.columns))
 if st.session_state.teams_sel:
     f = f[f["team"].isin(st.session_state.teams_sel)]
 if start and end:
