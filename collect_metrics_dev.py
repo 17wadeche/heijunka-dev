@@ -3714,6 +3714,7 @@ def _dedupe_by_team_unique_key(df: pd.DataFrame) -> pd.DataFrame:
                 parts.append(r.get(c))
         return tuple(parts)
     df = df.copy()
+    
     df["_dedupe_key"] = df.apply(_make_key_row, axis=1)
     df = (df
           .sort_values(["team", "period_date", "source_file"], na_position="last")
