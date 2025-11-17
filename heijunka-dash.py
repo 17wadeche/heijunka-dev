@@ -2499,6 +2499,7 @@ if len(teams_in_view) == 1:
         "Actual Hours",
         "Actual HC used",
         "Closures",
+        "Opened",
         "Efficiency",
         "Productivity",
     ]
