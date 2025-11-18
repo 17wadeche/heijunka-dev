@@ -948,7 +948,7 @@ if nonwip_mode:
             ) \
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
-    st.altair_chart(chart, width="100%")
+    st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
