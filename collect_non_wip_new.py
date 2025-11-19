@@ -145,10 +145,11 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
     other_team_wip_flags = {"other team wip", "other-team-wip", "otherteamwip", "other team's wip"}
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
-        "ooo_by_person": defaultdict(float),      # NEW
+        "ooo_by_person": defaultdict(float),
         "non_wip_by_person": defaultdict(float),
         "non_wip_activities": [],
     })
+    import re  # <--- add this once here
     for ridx, r in enumerate(rows, start=1):
         r = r or tuple()
         wk = _week_from_row(ridx, anchors)
@@ -166,7 +167,7 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             b["ooo_hours"] += hrs
             if name:
                 b["ooo_by_person"][name] += hrs
-        act_key = "".join(ch for ch in act.upper() if ch.isalnum())  # "OTHERTEAMWIP" style
+        act_key = "".join(ch for ch in act.upper() if ch.isalnum())
         is_other_team_wip = (
             flag in other_team_wip_flags
             or act_key == "OTHERTEAMWIP"
@@ -176,15 +177,27 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             if mins > 0:
                 hrs = mins / 60.0
             else:
-                hrs_f = _to_float(r[COL_HOURS_F] if len(r) > COL_HOURS_F else None) or 0.0
-                if hrs_f > 0:
-                    hrs = hrs_f
+                comment = _clean(r[COL_ACTIVITY] if len(r) > COL_ACTIVITY else "")
+                if comment:
+                    nums = [ _to_float(m) or 0.0 for m in re.findall(r"\d+(\.\d+)?", comment) ]
+                    total_comment_mins = sum(nums)
+                else:
+                    total_comment_mins = 0.0
+
+                if total_comment_mins > 0:
+                    hrs = total_comment_mins / 60.0
+                else:
+                    hrs_f = _to_float(r[COL_HOURS_F] if len(r) > COL_HOURS_F else None) or 0.0
+                    if hrs_f > 0:
+                        hrs = hrs_f
             if hrs > 0:
                 if name:
                     b["non_wip_by_person"][name] += hrs
                 label = "Other Team WIP" if is_other_team_wip else (act or "Non-WIP")
                 b["non_wip_activities"].append({
-                    "name": name, "activity": label, "hours": round(hrs, 2),
+                    "name": name,
+                    "activity": label,
+                    "hours": round(hrs, 2),
                 })
     for wk, b in buckets.items():
         b["ooo_hours"] = round(b["ooo_hours"], 2)
