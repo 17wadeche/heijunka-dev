@@ -62,15 +62,31 @@ def _rows_from_xlsx_like_visible(path: str, sheet_name: str) -> Iterable[Tuple[A
     max_row = ws.max_row or 0
     max_col = ws.max_column or 0
     for r in range(1, max_row + 1):
-        rd = ws.row_dimensions.get(r)
-        hidden = bool(getattr(rd, "hidden", False))
-        zero_h = (getattr(rd, "height", None) == 0)
-        if hidden or zero_h:
-            continue
         row_vals = []
         for c in range(1, max_col + 1):
             row_vals.append(ws.cell(r, c).value)
         yield tuple(row_vals)
+from typing import Set 
+def _hidden_rows_xlsx_like(path: str, sheet_name: str) -> Set[int]:
+    from openpyxl import load_workbook
+    wb = load_workbook(path, data_only=True, read_only=False)
+    ws = wb[sheet_name]
+    max_row = ws.max_row or 0
+    hidden: Set[int] = set()
+    for r in range(1, max_row + 1):
+        rd = ws.row_dimensions.get(r)
+        if rd is None:
+            continue
+        is_hidden = bool(getattr(rd, "hidden", False))
+        zero_h = (getattr(rd, "height", None) == 0)
+        if is_hidden or zero_h:
+            hidden.add(r)
+    return hidden
+def _hidden_rows(path: str, sheet_name: str) -> Set[int]:
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".xlsx", ".xlsm"):
+        return _hidden_rows_xlsx_like(path, sheet_name)
+    return set()
 def _get_io(path: str):
     ext = os.path.splitext(path)[1].lower()
     if ext == ".xlsb":
@@ -123,22 +139,31 @@ def _is_non_person_label(name: Any) -> bool:
     if "hour" in s or "total" in s:
         return True
     return False
-def people_by_week_from_available(rows: Iterable[Tuple[Any, ...]],
-                                  anchors: List[Dict[str, Any]]) -> Dict[date, set]:
+def people_by_week_from_available(
+    rows: Iterable[Tuple[Any, ...]],
+    anchors: List[Dict[str, Any]],
+    hidden_rows: Optional[Set[int]] = None,
+) -> Dict[date, set]:
     PEOPLE_COL = 2  # C
     out: Dict[date, set] = defaultdict(set)
+    hidden_rows = hidden_rows or set()
     for ridx, r in enumerate(rows, start=1):
+        if ridx in hidden_rows:
+            continue  
         r = r or tuple()
         wk = _week_from_row(ridx, anchors)
         if not wk:
             continue
         name = _clean(r[PEOPLE_COL] if len(r) > PEOPLE_COL else "")
-        if not name or _is_non_person_label(name):    # <-- add this check
+        if not name or _is_non_person_label(name):
             continue
         out[wk].add(name)
     return out
-def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
-                        anchors: List[Dict[str, Any]]) -> Dict[date, Dict[str, Any]]:
+def parse_prod_analysis(
+    rows: Iterable[Tuple[Any, ...]],
+    anchors: List[Dict[str, Any]],
+    hidden_rows: Optional[Set[int]] = None,
+) -> Dict[date, Dict[str, Any]]:
     COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
     COL_HOURS_F = 5
     nonwip_flags = {"non wip", "non-wip"}
@@ -149,8 +174,11 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
         "non_wip_by_person": defaultdict(float),
         "non_wip_activities": [],
     })
-    import re  # <--- add this once here
+    import re
+    hidden_rows = hidden_rows or set()
     for ridx, r in enumerate(rows, start=1):
+        if ridx in hidden_rows:
+            continue  # <-- skip hidden Excel rows
         r = r or tuple()
         wk = _week_from_row(ridx, anchors)
         if not wk:
@@ -294,7 +322,8 @@ def build_non_wip_rows(config_path: str,
             nm = _find_sheet_by_hint(sheet_names, hint)
             rows_s = list(get_rows(path, nm))
             anchors_s = (entry.get("week_anchors", {}) or {}).get(nm, [])
-            pb = parse_prod_analysis(rows_s, anchors_s)
+            hidden_prod_rows = _hidden_rows(path, nm)
+            pb = parse_prod_analysis(rows_s, anchors_s, hidden_prod_rows)
             for wk, b in pb.items():
                 prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
                 for person, hrs in (b.get("ooo_by_person", {}) or {}).items():
@@ -309,7 +338,16 @@ def build_non_wip_rows(config_path: str,
         avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
         avail_rows = list(get_rows(path, avail_name))
         avail_anchors = (entry.get("week_anchors", {}) or {}).get(avail_name, [])
-        people_by_week = people_by_week_from_available(avail_rows, avail_anchors)
+        hidden_avail_rows = _hidden_rows(path, avail_name)
+        people_by_week = people_by_week_from_available(
+            avail_rows,
+            avail_anchors,
+            hidden_avail_rows,
+        )
+        if team == "Aortic":
+            print("Aortic people_by_week from avail:")
+            for d, names in sorted(people_by_week.items()):
+                print(" ", d, "->", len(names), names)
         team_weeks = weeks_for_team(metrics_csv, team)
         for iso in team_weeks:
             wk_date = _to_date(iso)
