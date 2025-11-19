@@ -872,7 +872,7 @@ if nonwip_mode:
             wk_people["Non-WIP Hours"] 
             - wk_people["Accounted_Other"] 
             - wk_people["Accounted_NonOther"]
-        ).clip(lower=0)        
+        ).clip(lower=0)
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date"],
@@ -917,7 +917,8 @@ if nonwip_mode:
             alt.Chart(stack)
             .mark_bar(clip=False)
             .encode(
-                x=alt.X("person:N", title="Person", sort=order_people, axis=alt.Axis(labelAngle=-30, labelLimit=140)),
+                x=alt.X("person:N", title="Person", sort=order_people,
+                        axis=alt.Axis(labelAngle=-30, labelLimit=140)),
                 y=alt.Y("Hours:Q", title="Non-WIP Hours (week)", stack="zero", scale=y_scale),
                 color=alt.Color(
                     "CategoryLabel:N",
@@ -948,7 +949,7 @@ if nonwip_mode:
             ) \
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
-    st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
