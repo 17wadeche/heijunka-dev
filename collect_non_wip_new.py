@@ -179,7 +179,7 @@ def parse_prod_analysis(rows: Iterable[Tuple[Any, ...]],
             else:
                 comment = _clean(r[COL_ACTIVITY] if len(r) > COL_ACTIVITY else "")
                 if comment:
-                    nums = [ _to_float(m) or 0.0 for m in re.findall(r"\d+(\.\d+)?", comment) ]
+                    nums = [ _to_float(m) or 0.0 for m in re.findall(r"\d+(?:\.\d+)?", comment) ]
                     total_comment_mins = sum(nums)
                 else:
                     total_comment_mins = 0.0
