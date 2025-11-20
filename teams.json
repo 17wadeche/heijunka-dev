@@ -37,6 +37,27 @@
             ]
         }
     },
+    "RPA Lab": {
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka (1)\\GWY RPA Lab WIP+Non-WIP Heijunka 2025.xlsm",
+        "prod_sheet": "GWY RPA Lab Prod Analysis",
+        "avail_sheet": "Available WIP+Non-WIP Hours",
+        "week_anchors": {
+            "Available WIP+Non-WIP Hours": [
+                { "row": 2, "date": "2025-11-17" },
+                { "row": 34,"date": "2025-11-24" },
+                { "row": 66,"date":"2025-12-01" },
+                { "row": 98, "date":"2025-12-08" },
+                { "row": 130,"date":"2025-12-15" }
+            ],
+            "GWY RPA Lab Prod Analysis": [
+                { "row": 7,"date":"2025-11-17" },
+                { "row": 367,"date": "2025-11-24" },
+                { "row": 727,"date":"2025-12-01" },
+                { "row": 1087,"date":"2025-12-08" },
+                { "row": 1447,"date":"2025-12-15" }
+            ]
+        }
+    },
     "CRDN": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsm",
         "prod_sheet": "CRDN Prod Analysis",
