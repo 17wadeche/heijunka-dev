@@ -38,7 +38,7 @@
         }
     },
     "RPA Lab": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka (1)\\GWY RPA Lab WIP+Non-WIP Heijunka 2025.xlsm",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka (1)\\GWY RPA Lab WIP+Non-WIP Heijunka  2025.xlsm",
         "prod_sheet": "GWY RPA Lab Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
@@ -47,14 +47,28 @@
                 { "row": 34,"date": "2025-11-24" },
                 { "row": 66,"date":"2025-12-01" },
                 { "row": 98, "date":"2025-12-08" },
-                { "row": 130,"date":"2025-12-15" }
+                { "row": 130,"date":"2025-12-15" },
+                { "row": 162, "date": "2025-12-22" },
+                { "row": 194, "date": "2025-12-29" },
+                { "row": 226,"date": "2026-01-05" },
+                { "row": 258,"date":"2026-01-12" },
+                { "row": 290, "date":"2026-01-19" },
+                { "row": 322,"date":"2026-01-26" },
+                { "row": 354,"date":"2026-02-02" }
             ],
             "GWY RPA Lab Prod Analysis": [
                 { "row": 7,"date":"2025-11-17" },
                 { "row": 367,"date": "2025-11-24" },
                 { "row": 727,"date":"2025-12-01" },
                 { "row": 1087,"date":"2025-12-08" },
-                { "row": 1447,"date":"2025-12-15" }
+                { "row": 1447,"date":"2025-12-15" },
+                { "row": 1807, "date": "2025-12-22" },
+                { "row": 2167, "date": "2025-12-29" },
+                { "row": 2527,"date": "2026-01-05" },
+                { "row": 2887,"date":"2026-01-12" },
+                { "row": 3247, "date":"2026-01-19" },
+                { "row": 3607,"date":"2026-01-26" },
+                { "row": 3967,"date":"2026-02-02" }
             ]
         }
     },
@@ -94,7 +108,17 @@
                 { "row": 2,  "date": "2025-10-27" },
                 { "row": 22, "date": "2025-11-03" },
                 { "row": 42, "date": "2025-11-10" },
-                { "row": 62, "date": "2025-11-17" }
+                { "row": 62, "date": "2025-11-17" },
+                { "row": 72, "date": "2025-11-24" },
+                { "row": 88, "date": "2025-12-01" },
+                { "row": 104, "date": "2025-12-08" },
+                { "row": 120, "date": "2025-12-15" },
+                { "row": 136, "date": "2025-12-22" },
+                { "row": 152, "date": "2025-12-29" },
+                { "row": 168, "date": "2026-01-05" },
+                { "row": 184, "date": "2026-01-12" },
+                { "row": 200, "date": "2026-01-19" },
+                { "row": 216, "date": "2026-01-26" }
             ],
             "PVH Prod Analysis": [
                 { "row": 7,  "date": "2025-10-27" },
