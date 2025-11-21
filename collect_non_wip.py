@@ -887,12 +887,15 @@ def _read_people_from_file_for_team(xlsx_path: Path, team_name: str) -> list[str
     col      = cfg.get("col", "A")
     start    = cfg.get("start", 1)
     return _read_names_from_sheet_col_xlsx(xlsx_path, sheet_patterns=patterns, col_letter=col, start_row=start)
-def main():
+def main(team_filters: list[str] | None = None):
     if not REPO_CSV.exists():
         raise FileNotFoundError(f"metrics CSV not found: {REPO_CSV}")
     df = pd.read_csv(REPO_CSV, dtype=str, keep_default_na=False)
     df["team_norm"] = df.get("team", "").astype(str).str.casefold()
     df = df[(df.get("source_file", "") != "")]
+    if team_filters:
+        wanted = {t.casefold() for t in team_filters}
+        df = df[df["team_norm"].isin(wanted)]
     if df.empty:
         print("[non-wip] No rows found in metrics_aggregate_dev.csv with a source file")
         return
@@ -1094,4 +1097,6 @@ def main():
         w.writerows(out_rows)
     print(f"[non-wip] Wrote {len(out_rows)} rows to {OUT_CSV}")
 if __name__ == "__main__":
-    main()
+    import sys
+    teams = sys.argv[1:]
+    main(teams or None)
