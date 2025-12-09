@@ -2540,9 +2540,11 @@ with right2:
                     (f["period_date"] == wk_choice)
                 ]
                 if "Completed Hours" in f.columns and not team_week_row.empty:
-                    wip_total = float(
-                        pd.to_numeric(team_week_row["Completed Hours"], errors="coerce").sum()
-                    )
+                    ch = pd.to_numeric(team_week_row["Completed Hours"], errors="coerce")
+                    if ch.notna().any() and ch.sum() > 0:
+                        wip_total = float(ch.sum())
+                    else:
+                        wip_total = float(wk_people_wip["WIP Hours"].sum())
                 else:
                     wip_total = float(wk_people_wip["WIP Hours"].sum())
                 nw_full = load_non_wip()
