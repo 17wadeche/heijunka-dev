@@ -2750,26 +2750,21 @@ with right2:
                             ],
                         )
                         .properties(
-                            height=80,
+                            height=280,
                             title=f"{team_name} • WIP vs Non-WIP (team total)",
                         )
                         .configure_view(stroke=None)
                     )
-
-                # --- If no per-person data, just show combined and exit ---
                 if wip_total <= 0 and (nonwip_total <= 0 or wk_nw_people.empty):
                     if total_chart is not None:
                         st.altair_chart(total_chart, use_container_width=True)
                     st.caption("Per-person breakdown not available for this selection.")
                 else:
-                    # --- Per-person stacked breakdown ---
                     wip_person = wk_people_wip[["person", "WIP Hours"]].copy()
-
                     if not wk_nw_people.empty:
                         cols_keep = ["person", "Non-WIP Hours"]
                         if has_nonwip_breakdown:
                             cols_keep += ["Accounted_Other", "Accounted_NonOther", "Unaccounted"]
-
                         wk_nw_people_agg = (
                             wk_nw_people[cols_keep]
                             .groupby("person", as_index=False)
@@ -2777,16 +2772,13 @@ with right2:
                         )
                     else:
                         wk_nw_people_agg = pd.DataFrame(columns=["person", "Non-WIP Hours"])
-
                     people_merged = wip_person.merge(
                         wk_nw_people_agg,
                         on="person",
                         how="outer",
                     ).fillna(0.0)
-
                     if "Non-WIP Hours" not in people_merged.columns:
                         people_merged["Non-WIP Hours"] = 0.0
-
                     if has_nonwip_breakdown:
                         for c in ["Accounted_Other", "Accounted_NonOther", "Unaccounted"]:
                             if c not in people_merged.columns:
@@ -2795,12 +2787,10 @@ with right2:
                         people_merged["Accounted_Other"] = 0.0
                         people_merged["Accounted_NonOther"] = 0.0
                         people_merged["Unaccounted"] = people_merged["Non-WIP Hours"]
-
                     people_merged["TotalHours"] = (
                         people_merged["WIP Hours"] + people_merged["Non-WIP Hours"]
                     )
                     people_merged["NonWipTotal"] = people_merged["Non-WIP Hours"]
-
                     seg_cols = [
                         "WIP Hours",
                         "Accounted_NonOther",
@@ -2813,7 +2803,6 @@ with right2:
                         "Unaccounted": "Unaccounted Non-WIP",
                         "Accounted_Other": "Other Team WIP",
                     }
-
                     person_long = (
                         people_merged.melt(
                             id_vars=["person", "TotalHours", "NonWipTotal"],
@@ -2824,7 +2813,6 @@ with right2:
                         .query("Hours > 0")
                         .copy()
                     )
-
                     if person_long.empty:
                         if total_chart is not None:
                             st.altair_chart(total_chart, use_container_width=True)
@@ -2845,9 +2833,7 @@ with right2:
                                 np.nan,
                             ),
                         )
-
                         order_people = sorted(people_merged["person"].astype(str).tolist())
-
                         person_chart = (
                             alt.Chart(person_long)
                             .mark_bar()
@@ -2895,12 +2881,9 @@ with right2:
                             )
                             .configure_view(stroke=None)
                         )
-
-                        # --- NEW LAYOUT: combined chart on top, per-person below ---
                         if total_chart is not None:
                             st.altair_chart(total_chart, use_container_width=True)
                         st.altair_chart(person_chart, use_container_width=True)
-
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
