@@ -2750,8 +2750,7 @@ with right2:
                             ],
                         )
                         .properties(
-                            height=280,
-                            title=f"{team_name} • WIP vs Non-WIP (team total)",
+                            height=280
                         )
                         .configure_view(stroke=None)
                     )
@@ -2876,8 +2875,7 @@ with right2:
                                 ],
                             )
                             .properties(
-                                height=260,
-                                title=f"{team_name} • WIP vs Non-WIP (per person)",
+                                height=280,
                             )
                             .configure_view(stroke=None)
                         )
