@@ -916,6 +916,7 @@ if nonwip_mode:
                         range=["#22c55e", "#ef4444"],
                     ),
                 ),
+                tooltip=None,
             )
         )
         bars = (
@@ -959,7 +960,7 @@ if nonwip_mode:
             .mark_rule(strokeDash=[4, 3], color="#6b7280")
             .encode(y=alt.Y("y:Q", scale=y_scale))
         )
-        chart = (bars + ref + outline) \
+        chart = (outline + ref + bars) \
             .properties(
                 height=300,
                 title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
