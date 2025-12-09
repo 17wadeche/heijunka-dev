@@ -1356,6 +1356,7 @@ if has_dates and min_date and max_date:
             max_value=max_date,
             key="end_date",
         )
+st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
