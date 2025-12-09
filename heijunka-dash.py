@@ -883,7 +883,7 @@ if nonwip_mode:
             .dropna(subset=["Hours"])
         )
         stack = stack.merge(
-            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted Non-WIP"]],
+            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted"]],
             on="person",
             how="left",
         )
