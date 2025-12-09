@@ -875,12 +875,17 @@ if nonwip_mode:
         ).clip(lower=0)
         stack = (
             wk_people.melt(
-                id_vars=["person", "period_date"],
+                id_vars=["person", "period_date", "Non-WIP Hours"],
                 value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
                 var_name="Category",
                 value_name="Hours"
             )
             .dropna(subset=["Hours"])
+        )
+        stack = stack.merge(
+            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted"]],
+            on="person",
+            how="left",
         )
         label_map = {
             "Accounted_Other": "Other Team WIP",
@@ -917,22 +922,35 @@ if nonwip_mode:
             alt.Chart(stack)
             .mark_bar(clip=False)
             .encode(
-                x=alt.X("person:N", title="Person", sort=order_people,
-                        axis=alt.Axis(labelAngle=-30, labelLimit=140)),
-                y=alt.Y("Hours:Q", title="Non-WIP Hours (week)", stack="zero", scale=y_scale),
+                x=alt.X(
+                    "person:N",
+                    title="Person",
+                    sort=order_people,
+                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                ),
+                y=alt.Y(
+                    "Hours:Q",
+                    title="Non-WIP Hours (week)",
+                    stack="zero",
+                    scale=y_scale,
+                ),
                 color=alt.Color(
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
                         domain=["Other Team WIP", "Accounted", "Unaccounted"],
-                        range=["#2563eb", "#22c55e", "#9ca3af"]
-                    )
+                        range=["#2563eb", "#22c55e", "#9ca3af"],
+                    ),
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
                     alt.Tooltip("CategoryLabel:N", title="Category"),
-                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                    alt.Tooltip("period_date:T", title="Date"),
+                    alt.Tooltip("Hours:Q", title="Segment Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_NonOther:Q", title="Accounted Hours", format=",.2f"),
+                    alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
+                    alt.Tooltip("Non-WIP Hours:Q", title="Total Non-WIP Hours", format=",.2f"),
+                    alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
         )
