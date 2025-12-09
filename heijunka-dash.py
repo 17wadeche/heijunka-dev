@@ -2509,7 +2509,6 @@ with right2:
         team_name = teams_in_view[0]
         if 'ppl_hours' not in locals():
             ppl_hours = explode_person_hours(f)
-
         team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
         if team_people.empty:
             st.info(f"No per-person WIP hours available for {team_name}.")
@@ -2529,21 +2528,17 @@ with right2:
                     key="wip_nonwip_week_select",
                 )
                 wk_choice = pd.to_datetime(wk_choice).normalize()
-
                 wk_people_wip = team_people.loc[team_people["period_date"] == wk_choice].copy()
                 if wk_people_wip.empty:
                     st.info("No per-person WIP hours available for this week.")
-
                 wk_people_wip["WIP Hours"] = pd.to_numeric(
                     wk_people_wip["Actual Hours"],
                     errors="coerce"
                 ).fillna(0.0)
-
                 team_week_row = f[
                     (f["team"] == team_name) &
                     (f["period_date"] == wk_choice)
                 ]
-
                 if "Completed Hours" in f.columns and not team_week_row.empty:
                     ch = pd.to_numeric(team_week_row["Completed Hours"], errors="coerce")
                     if ch.notna().any() and ch.sum() > 0:
@@ -2552,8 +2547,6 @@ with right2:
                         wip_total = float(wk_people_wip["WIP Hours"].sum())
                 else:
                     wip_total = float(wk_people_wip["WIP Hours"].sum())
-
-                # --- Non-WIP side ---
                 nw_full = load_non_wip()
                 if nw_full.empty:
                     st.info("No Non-WIP data available; showing WIP only.")
@@ -2567,7 +2560,6 @@ with right2:
                             nw_full["period_date"],
                             errors="coerce"
                         ).dt.normalize()
-
                     sel_nw = nw_full[
                         (nw_full["team"] == team_name)
                         & (nw_full["period_date"] == wk_choice)
@@ -2598,13 +2590,11 @@ with right2:
                             and str(row_nw.get("non_wip_activities", "")).strip() not in ("", "[]", "None", "none")
                             and not wk_nw_people.empty
                         )
-
                         if has_nonwip_breakdown:
                             wk_nw_people["Non-WIP Hours"] = pd.to_numeric(
                                 wk_nw_people["Non-WIP Hours"],
                                 errors="coerce"
                             ).fillna(0.0)
-
                             acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(row_nw)
                             wk_nw_people["Accounted_Other"] = wk_nw_people["person"].map(
                                 lambda p: float(acct_other_map.get(str(p).strip(), 0.0))
@@ -2612,23 +2602,19 @@ with right2:
                             wk_nw_people["Accounted_NonOther"] = wk_nw_people["person"].map(
                                 lambda p: float(acct_nonother_map.get(str(p).strip(), 0.0))
                             )
-
                             wk_nw_people["Accounted_Other"] = wk_nw_people[
                                 ["Accounted_Other", "Non-WIP Hours"]
                             ].min(axis=1)
-
                             remaining = (wk_nw_people["Non-WIP Hours"] - wk_nw_people["Accounted_Other"]).clip(lower=0)
                             wk_nw_people["Accounted_NonOther"] = np.minimum(
                                 wk_nw_people["Accounted_NonOther"].astype(float),
                                 remaining.astype(float)
                             )
-
                             wk_nw_people["Unaccounted"] = (
                                 wk_nw_people["Non-WIP Hours"]
                                 - wk_nw_people["Accounted_Other"]
                                 - wk_nw_people["Accounted_NonOther"]
                             ).clip(lower=0)
-
                             nonwip_split_total = float(
                                 wk_nw_people[["Accounted_Other", "Accounted_NonOther", "Unaccounted"]]
                                 .sum()
@@ -2641,8 +2627,6 @@ with right2:
                                 wk_nw_people.get("Non-WIP Hours", 0.0),
                                 errors="coerce"
                             ).fillna(0.0)
-
-                # --- Combined (team-total) stacked bar ---
                 total_chart = None
                 total_segments = []
                 if wip_total > 0:
@@ -2680,17 +2664,14 @@ with right2:
                             "SegmentLabel": "Non-WIP Hours",
                             "Hours": nonwip_total,
                         })
-
                 if not total_segments:
                     st.info("No WIP or Non-WIP hours found for this selection.")
                 else:
                     total_df = pd.DataFrame(total_segments)
                     total_df["Bar"] = "Team Total"
-
                     tot_hours = float(total_df["Hours"].sum())
                     nonwip_mask = ~total_df["Segment"].eq("WIP Hours")
                     nonwip_sum = float(total_df.loc[nonwip_mask, "Hours"].sum())
-
                     total_df["Share"] = np.where(tot_hours > 0, total_df["Hours"] / tot_hours, np.nan)
                     total_df["PctOfTotal"] = total_df["Share"]
                     total_df["PctOfNonWip"] = np.where(
@@ -2698,7 +2679,6 @@ with right2:
                         total_df["Hours"] / nonwip_sum,
                         np.nan,
                     )
-
                     seg_order = [
                         "WIP Hours",
                         "Accounted Non-WIP",
@@ -2706,8 +2686,6 @@ with right2:
                         "Other Team WIP",
                         "Non-WIP Hours",
                     ]
-
-                    # nicer combined chart: horizontal stacked bar on top
                     total_chart = (
                         alt.Chart(total_df)
                         .mark_bar()
