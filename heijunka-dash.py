@@ -1011,11 +1011,11 @@ if nonwip_mode:
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
-- **Target UPLH** — Target Output ÷ Target Hours (i.e., **Total Available Hours**)
-- **Actual UPLH** — Actual Output ÷ Actual Hours (i.e., **Completed Hours**)
-- **Capacity Utilization** — Completed Hours ÷ Available Hours (Amount of the Capacity that has been used)
+- **Target UPLH** — Target Output ÷ Target Hours from Available Hours Tab (i.e., **Total Available Hours**)
+- **Actual UPLH** — Actual Output ÷ Actual Hours in WIP (i.e., **Completed Hours**)
+- **Capacity Utilization** — Completed Hours in WIP ÷ Available Hours from Available Hours Tab (Amount of the Capacity that has been used)
 - **HC in WIP** — Number of **unique people** who logged any time in WIP during the week
-- **Actual HC used** — Total actual hours worked ÷ **30**  
+- **Actual HC used** — Total actual hours worked in WIP ÷ **30**  
   <small>(assumes **6 hours in WIP per person per day × 5 days**)</small>
 - **Closures** — Number of **PEs** closed during the week
 - **Efficiency** — Closures ÷ Completed WIP Hours.
