@@ -2658,11 +2658,8 @@ with right2:
                     tot_hours = float(total_df["Hours"].sum())
                     nonwip_mask = ~total_df["Segment"].eq("WIP Hours")
                     nonwip_sum = float(total_df.loc[nonwip_mask, "Hours"].sum())
-                    total_df["PctOfTotal"] = np.where(
-                        tot_hours > 0,
-                        total_df["Hours"] / tot_hours,
-                        np.nan,
-                    )
+                    total_df["Share"] = np.where(tot_hours > 0, total_df["Hours"] / tot_hours, np.nan)
+                    total_df["PctOfTotal"] = total_df["Share"]
                     total_df["PctOfNonWip"] = np.where(
                         nonwip_mask & (nonwip_sum > 0),
                         total_df["Hours"] / nonwip_sum,
@@ -2681,9 +2678,12 @@ with right2:
                         .encode(
                             x=alt.X("Bar:N", title=""),
                             y=alt.Y(
-                                "Hours:Q",
-                                stack="normalize",
-                                title="Share of hours (WIP + Non-WIP)",
+                                "Share:Q",
+                                stack="zero",
+                                axis=alt.Axis(
+                                    title="Share of hours (WIP + Non-WIP)",
+                                    format=".0%"
+                                ),
                             ),
                             color=alt.Color(
                                 "SegmentLabel:N",
@@ -2708,8 +2708,8 @@ with right2:
                             ),
                             tooltip=[
                                 alt.Tooltip("SegmentLabel:N", title="Segment"),
-                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                                alt.Tooltip("PctOfTotal:Q", title="% of total", format=".1%"),
+                                alt.Tooltip("Hours:Q",       title="Hours",      format=",.2f"),
+                                alt.Tooltip("PctOfTotal:Q",  title="% of total", format=".1%"),
                                 alt.Tooltip("PctOfNonWip:Q", title="% of Non-WIP", format=".1%"),
                             ],
                         )
@@ -2765,6 +2765,16 @@ with right2:
                         "Unaccounted": "Unaccounted Non-WIP",
                         "Accounted_Other": "Other Team WIP",
                     }
+                    person_long["HoursText"] = person_long["Hours"].map(lambda v: f"{v:.1f}h")
+                    person_long["PctText"] = person_long["PctOfPerson"].map(
+                        lambda v: f"{v:.0%}" if pd.notna(v) else ""
+                    )
+                    min_pct_for_label = 0.03
+                    person_long["Label"] = np.where(
+                        person_long["PctOfPerson"].fillna(0) >= min_pct_for_label,
+                        person_long["HoursText"] + " (" + person_long["PctText"] + ")",
+                        "",
+                    )
                     person_long = (
                         people_merged.melt(
                             id_vars=["person", "TotalHours", "NonWipTotal"],
@@ -2796,7 +2806,7 @@ with right2:
                         order_people = (
                             people_merged.sort_values("TotalHours", ascending=False)["person"].tolist()
                         )
-                        person_chart = (
+                        bars = (
                             alt.Chart(person_long)
                             .mark_bar()
                             .encode(
@@ -2830,21 +2840,30 @@ with right2:
                                     ),
                                 ),
                                 tooltip=[
-                                    alt.Tooltip("person:N", title="Person"),
-                                    alt.Tooltip("SegmentLabel:N", title="Segment"),
-                                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                                    alt.Tooltip(
-                                        "PctOfPerson:Q",
-                                        title="% of person's hours",
-                                        format=".1%",
-                                    ),
-                                    alt.Tooltip(
-                                        "PctOfNonWip:Q",
-                                        title="% of Non-WIP",
-                                        format=".1%",
-                                    ),
+                                    alt.Tooltip("person:N",       title="Person"),
+                                    alt.Tooltip("SegmentLabel:N",  title="Segment"),
+                                    alt.Tooltip("Hours:Q",         title="Hours",           format=",.2f"),
+                                    alt.Tooltip("PctOfPerson:Q",   title="% of person",     format=".1%"),
+                                    alt.Tooltip("PctOfNonWip:Q",   title="% of Non-WIP",    format=".1%"),
                                 ],
                             )
+                        )
+                        labels = (
+                            alt.Chart(person_long)
+                            .mark_text(baseline="middle", size=10)
+                            .encode(
+                                x=alt.X(
+                                    "person:N",
+                                    sort=order_people,
+                                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                                ),
+                                y=alt.Y("Hours:Q", stack="normalize"),
+                                detail="SegmentLabel:N",
+                                text="Label:N",
+                            )
+                        )
+                        person_chart = (
+                            (bars + labels)
                             .properties(
                                 height=260,
                                 title=f"{team_name} • WIP vs Non-WIP (per person)",
