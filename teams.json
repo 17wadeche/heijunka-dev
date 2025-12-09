@@ -107,7 +107,23 @@
                 { "row": 3607,"date":"2026-01-26" },
                 { "row": 3967,"date":"2026-02-02" }
             ]
-        }
+        },
+        "irl_people": [
+            "Anne",
+            "Catherine",
+            "Denis",
+            "Eoin",
+            "Eugene",
+            "Fola",
+            "Laura",
+            "Majella",
+            "Margaret",
+            "Myles",
+            "Nicola",
+            "Scott",
+            "Sivaprasad",
+            "Tomas"
+        ]
     },
     "CRDN": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsm",
@@ -130,7 +146,16 @@
                 { "row": 1327,"date":"2025-12-08" },
                 { "row": 1547,"date":"2025-12-15" }
             ]
-        }
+        },
+        "irl_people": [
+            "Ciara",
+            "Lidiane",
+            "Kristy",
+            "Michelle",
+            "Grainne",
+            "Ana",
+            "Mary"
+        ]
     },
     "PVH": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - COS Supportive Materials\\PVH WIP+Non-WIP Heijunka Week of October 27 2025.xlsm",
@@ -162,7 +187,15 @@
                 { "row": 1188, "date": "2025-12-01" },
                 { "row": 1408, "date": "2025-12-08" }
             ]
-        }
+        },
+        "irl_people": [
+            "Christina",
+            "Matthew",
+            "Emma",
+            "Eimear",
+            "Pat",
+            "Danielis"
+        ]
     },
     "SVT": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\SVT PXM Team - Heijunka_Schedule_Finding Work\\SVT WIP+Non-WIP Heijunka.xlsm",
@@ -184,7 +217,14 @@
                 { "row": 593, "date": "2025-12-01" },
                 { "row": 698, "date": "2025-12-08" }
             ]
-        }
+        },
+        "irl_people": [
+            "Augustine",
+            "Kaitlin",
+            "Madison",
+            "Ritu",
+            "Sean"
+        ]
     },
     "TCT": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\TCT CQXM - 1 WIP and Schedule\\TCT NEW Heijunka Week of October 27, 2025.xlsm",
