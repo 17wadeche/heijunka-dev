@@ -2862,8 +2862,13 @@ with right2:
                             .configure_view(stroke=None)
                         )
                         if total_chart is not None:
-                            st.altair_chart(total_chart, use_container_width=True)
-                        st.altair_chart(person_chart, use_container_width=True)
+                            col_total, col_person = st.columns([1, 3])  # tweak widths as you like
+                            with col_total:
+                                st.altair_chart(total_chart, use_container_width=True)
+                            with col_person:
+                                st.altair_chart(person_chart, use_container_width=True)
+                        else:
+                            st.altair_chart(person_chart, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
