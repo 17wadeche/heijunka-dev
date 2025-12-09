@@ -2730,8 +2730,7 @@ with right2:
                                         "WIP Hours",
                                         "Accounted Non-WIP",
                                         "Unaccounted Non-WIP",
-                                        "Other Team WIP (Non-WIP)",
-                                        "Non-WIP Hours",
+                                        "Other Team WIP",
                                     ],
                                     range=[
                                         "#2563eb",  # WIP
