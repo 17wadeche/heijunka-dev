@@ -1329,7 +1329,6 @@ if has_dates and min_date and max_date:
     with date_col1:
         st.date_input(
             "Start",
-            value=st.session_state["start_date"],
             min_value=min_date,
             max_value=max_date,
             key="start_date",
@@ -1337,7 +1336,6 @@ if has_dates and min_date and max_date:
     with date_col2:
         st.date_input(
             "End",
-            value=st.session_state["end_date"],
             min_value=min_date,
             max_value=max_date,
             key="end_date",
