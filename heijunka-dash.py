@@ -971,41 +971,39 @@ if nonwip_mode:
             .configure_view(stroke=None)
         st.altair_chart(chart, use_container_width=True)
         st.markdown("#### Non-WIP Activities (for this week)")
-        if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
-            st.info("No Non-WIP activities recorded for this selection.")
-        else:
+        if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
             act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
-            if act_tbl2.empty:
-                st.info("No Non-WIP activities recorded for this selection.")
-            else:
-                display_tbl2 = act_tbl2.drop(columns=["HoursRaw"], errors="ignore")
-                st.dataframe(display_tbl2, use_container_width=True, hide_index=True)
-                if "HoursRaw" in act_tbl2.columns:
-                    cat = (
-                        act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
-                                .sum()
-                                .rename(columns={"HoursRaw": "Hours"})
-                    )
-                    if not cat.empty:
-                        cat = cat.sort_values("Hours", ascending=False)
-                        order_acts = cat["Activity"].tolist()
-                        act_chart = (
-                            alt.Chart(cat)
-                            .mark_bar()
-                            .encode(
-                                x=alt.X("Activity:N", title="Activity", sort=order_acts),
-                                y=alt.Y("Hours:Q", title="Total Non-WIP Hours (week)"),
-                                tooltip=[
-                                    alt.Tooltip("Activity:N", title="Activity"),
-                                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                                ],
-                            )
-                            .properties(
-                                height=260,
-                                title="Total Non-WIP Hours by Activity"
-                            )
+            if not act_tbl2.empty and "HoursRaw" in act_tbl2.columns:
+                cat = (
+                    act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
+                            .sum()
+                            .rename(columns={"HoursRaw": "Hours"})
+                )
+                if not cat.empty:
+                    cat = cat.sort_values("Hours", ascending=False)
+                    order_acts = cat["Activity"].tolist()
+                    act_chart = (
+                        alt.Chart(cat)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X(
+                                "Activity:N",
+                                title="Activity",
+                                sort=order_acts,
+                                axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                            ),
+                            y=alt.Y("Hours:Q", title="Total Non-WIP Hours (week)"),
+                            tooltip=[
+                                alt.Tooltip("Activity:N", title="Activity"),
+                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                            ],
                         )
-                        st.altair_chart(act_chart, use_container_width=True)
+                        .properties(
+                            height=260,
+                            title="Total Non-WIP Hours by Activity"
+                        )
+                    )
+                    st.altair_chart(act_chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
