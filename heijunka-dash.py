@@ -278,7 +278,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
           .agg(
               hours=("hours", "sum"),
               days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
-              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()])))
+              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
           )
     )
     def _label_row(r):
@@ -300,15 +300,18 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         return "Week"
     grp["Day"] = grp.apply(_label_row, axis=1)
     out = (
-        grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "Time"})
-           [["Activity", "Day", "Name", "Time"]]
+        grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
+           [["Activity", "Day", "Name", "HoursRaw"]]
            .assign(
                Activity=lambda d: d["Activity"].astype(str).str.strip(),
                Name=lambda d: d["Name"].astype(str).str.strip(),
-               Time=lambda d: d["Time"].fillna(0).map(_fmt_hours_minutes),   # <-- here
            )
+    )
+    out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
+    out = (
+        out[["Activity", "Day", "Name", "Time", "HoursRaw"]]
            .sort_values(["Activity", "Name"])
-           .reset_index(drop=True)                                           # <-- and here
+           .reset_index(drop=True)
     )
     return out
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
@@ -851,7 +854,8 @@ if nonwip_mode:
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
-            st.dataframe(act_tbl, use_container_width=True, hide_index=True)
+            display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
+            st.dataframe(display_tbl, use_container_width=True, hide_index=True)
     long_nw = explode_non_wip_by_person(nw)
     wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
     if wk_people.empty:
@@ -966,6 +970,42 @@ if nonwip_mode:
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
         st.altair_chart(chart, use_container_width=True)
+        st.markdown("#### Non-WIP Activities (for this week)")
+        if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
+            st.info("No Non-WIP activities recorded for this selection.")
+        else:
+            act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
+            if act_tbl2.empty:
+                st.info("No Non-WIP activities recorded for this selection.")
+            else:
+                display_tbl2 = act_tbl2.drop(columns=["HoursRaw"], errors="ignore")
+                st.dataframe(display_tbl2, use_container_width=True, hide_index=True)
+                if "HoursRaw" in act_tbl2.columns:
+                    cat = (
+                        act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
+                                .sum()
+                                .rename(columns={"HoursRaw": "Hours"})
+                    )
+                    if not cat.empty:
+                        cat = cat.sort_values("Hours", ascending=False)
+                        order_acts = cat["Activity"].tolist()
+                        act_chart = (
+                            alt.Chart(cat)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("Activity:N", title="Activity", sort=order_acts),
+                                y=alt.Y("Hours:Q", title="Total Non-WIP Hours (week)"),
+                                tooltip=[
+                                    alt.Tooltip("Activity:N", title="Activity"),
+                                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                                ],
+                            )
+                            .properties(
+                                height=260,
+                                title="Total Non-WIP Hours by Activity"
+                            )
+                        )
+                        st.altair_chart(act_chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
