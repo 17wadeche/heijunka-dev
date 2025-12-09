@@ -2862,17 +2862,8 @@ with right2:
                             .configure_view(stroke=None)
                         )
                         if total_chart is not None:
-                            combined_chart = (
-                                alt.Chart(
-                                    total_chart,
-                                    person_chart,
-                                    spacing=12,
-                                )
-                                .resolve_scale(y="independent")
-                            )
-                            st.altair_chart(combined_chart, use_container_width=True)
-                        else:
-                            st.altair_chart(person_chart, use_container_width=True)
+                            st.altair_chart(total_chart, use_container_width=True)
+                        st.altair_chart(person_chart, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
