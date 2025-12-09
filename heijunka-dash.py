@@ -2655,7 +2655,7 @@ with right2:
                         if tot_other > 0:
                             total_segments.append({
                                 "Segment": "Other Team WIP",
-                                "SegmentLabel": "Other Team WIP (Non-WIP)",
+                                "SegmentLabel": "Other Team WIP",
                                 "Hours": tot_other,
                             })
                     else:
