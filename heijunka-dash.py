@@ -2529,11 +2529,22 @@ with right2:
                 )
                 wk_choice = pd.to_datetime(wk_choice).normalize()
                 wk_people_wip = team_people.loc[team_people["period_date"] == wk_choice].copy()
+                if wk_people_wip.empty:
+                    st.info("No per-person WIP hours available for this week.")
                 wk_people_wip["WIP Hours"] = pd.to_numeric(
                     wk_people_wip["Actual Hours"],
                     errors="coerce"
                 ).fillna(0.0)
-                wip_total = float(wk_people_wip["WIP Hours"].sum())
+                team_week_row = f[
+                    (f["team"] == team_name) &
+                    (f["period_date"] == wk_choice)
+                ]
+                if "Completed Hours" in f.columns and not team_week_row.empty:
+                    wip_total = float(
+                        pd.to_numeric(team_week_row["Completed Hours"], errors="coerce").sum()
+                    )
+                else:
+                    wip_total = float(wk_people_wip["WIP Hours"].sum())
                 nw_full = load_non_wip()
                 if nw_full.empty:
                     st.info("No Non-WIP data available; showing WIP only.")
@@ -2793,19 +2804,7 @@ with right2:
                                 np.nan,
                             ),
                         )
-                        person_long["HoursText"] = person_long["Hours"].map(lambda v: f"{v:.1f}h")
-                        person_long["PctText"] = person_long["PctOfPerson"].map(
-                            lambda v: f"{v:.0%}" if pd.notna(v) else ""
-                        )
-                        min_pct_for_label = 0.03
-                        person_long["Label"] = np.where(
-                            person_long["PctOfPerson"].fillna(0) >= min_pct_for_label,
-                            person_long["HoursText"] + " (" + person_long["PctText"] + ")",
-                            "",
-                        )
-                        order_people = (
-                            people_merged.sort_values("TotalHours", ascending=False)["person"].tolist()
-                        )
+                        order_people = sorted(people_merged["person"].astype(str).tolist())
                         bars = (
                             alt.Chart(person_long)
                             .mark_bar()
@@ -2848,22 +2847,8 @@ with right2:
                                 ],
                             )
                         )
-                        labels = (
-                            alt.Chart(person_long)
-                            .mark_text(baseline="middle", size=10)
-                            .encode(
-                                x=alt.X(
-                                    "person:N",
-                                    sort=order_people,
-                                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
-                                ),
-                                y=alt.Y("Hours:Q", stack="normalize"),
-                                detail="SegmentLabel:N",
-                                text="Label:N",
-                            )
-                        )
                         person_chart = (
-                            (bars + labels)
+                            bars
                             .properties(
                                 height=260,
                                 title=f"{team_name} • WIP vs Non-WIP (per person)",
