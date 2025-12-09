@@ -28,7 +28,16 @@
                 {"row": 1521,"date":"2025-12-15" },
                 {"row": 1762,"date":"2025-12-22" }
             ]
-        }
+        },
+        "irl_people": [
+            "Ailbhe",
+            "Sacra",
+            "Louise",
+            "Isabella",
+            "Rosarii",
+            "Ciara",
+            "Lavina"
+        ]
     },
     "CAS": {
         "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CAS Virtual VMB - PA Board\\PA Board NEW.xlsm",

@@ -303,6 +303,7 @@ def build_non_wip_rows(config_path: str,
         path = entry.get("workbook")
         if not path or not os.path.exists(path):
             raise SystemExit(f"[{team}] Workbook not found: {path}")
+        irl_people = {p.strip() for p in (entry.get("irl_people") or [])}
         prod_cfg = entry.get("prod_sheets") or entry.get("prod_sheet") or []
         prod_hints = prod_cfg if isinstance(prod_cfg, list) else [prod_cfg]
         avail_hint = entry.get("avail_sheet")
@@ -360,11 +361,16 @@ def build_non_wip_rows(config_path: str,
             per_person_nonwip: Dict[str, float] = {}
             for person in sorted(wk_people):
                 ooo_p = float(ooo_by_person.get(person, 0.0))
-                capacity = max(0.0, 40.0 - ooo_p)
+                base_capacity = 39.0 if person in irl_people else 40.0
+                capacity = max(0.0, base_capacity - ooo_p)
                 pm = person_metrics.get((team, iso, person), {"available": None, "actual": 0.0})
                 available = pm.get("available")  # may be None
                 actual = float(pm.get("actual", 0.0))
-                effective_person_hours = min(capacity, float(available)) if (available is not None) else capacity
+                effective_person_hours = (
+                    min(capacity, float(available))
+                    if (available is not None) else
+                    capacity
+                )
                 per_person_nonwip[person] = round(max(0.0, effective_person_hours - actual), 2)
             total_non_wip_hours = round(sum(per_person_nonwip.values()), 2)
             ooo_hours_total = float(bucket.get("ooo_hours", 0.0))
