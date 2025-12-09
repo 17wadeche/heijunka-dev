@@ -2765,16 +2765,6 @@ with right2:
                         "Unaccounted": "Unaccounted Non-WIP",
                         "Accounted_Other": "Other Team WIP",
                     }
-                    person_long["HoursText"] = person_long["Hours"].map(lambda v: f"{v:.1f}h")
-                    person_long["PctText"] = person_long["PctOfPerson"].map(
-                        lambda v: f"{v:.0%}" if pd.notna(v) else ""
-                    )
-                    min_pct_for_label = 0.03
-                    person_long["Label"] = np.where(
-                        person_long["PctOfPerson"].fillna(0) >= min_pct_for_label,
-                        person_long["HoursText"] + " (" + person_long["PctText"] + ")",
-                        "",
-                    )
                     person_long = (
                         people_merged.melt(
                             id_vars=["person", "TotalHours", "NonWipTotal"],
@@ -2802,6 +2792,16 @@ with right2:
                                 person_long["Hours"] / person_long["NonWipTotal"],
                                 np.nan,
                             ),
+                        )
+                        person_long["HoursText"] = person_long["Hours"].map(lambda v: f"{v:.1f}h")
+                        person_long["PctText"] = person_long["PctOfPerson"].map(
+                            lambda v: f"{v:.0%}" if pd.notna(v) else ""
+                        )
+                        min_pct_for_label = 0.03
+                        person_long["Label"] = np.where(
+                            person_long["PctOfPerson"].fillna(0) >= min_pct_for_label,
+                            person_long["HoursText"] + " (" + person_long["PctText"] + ")",
+                            "",
                         )
                         order_people = (
                             people_merged.sort_values("TotalHours", ascending=False)["person"].tolist()
@@ -2841,10 +2841,10 @@ with right2:
                                 ),
                                 tooltip=[
                                     alt.Tooltip("person:N",       title="Person"),
-                                    alt.Tooltip("SegmentLabel:N",  title="Segment"),
-                                    alt.Tooltip("Hours:Q",         title="Hours",           format=",.2f"),
-                                    alt.Tooltip("PctOfPerson:Q",   title="% of person",     format=".1%"),
-                                    alt.Tooltip("PctOfNonWip:Q",   title="% of Non-WIP",    format=".1%"),
+                                    alt.Tooltip("SegmentLabel:N", title="Segment"),
+                                    alt.Tooltip("Hours:Q",        title="Hours",        format=",.2f"),
+                                    alt.Tooltip("PctOfPerson:Q",  title="% of person",  format=".1%"),
+                                    alt.Tooltip("PctOfNonWip:Q",  title="% of Non-WIP", format=".1%"),
                                 ],
                             )
                         )
