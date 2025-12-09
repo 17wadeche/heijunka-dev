@@ -2627,6 +2627,7 @@ with right2:
                                 wk_nw_people.get("Non-WIP Hours", 0.0),
                                 errors="coerce"
                             ).fillna(0.0)
+                total_chart = None  # <-- NEW: we'll use this later with the per-person chart
                 total_segments = []
                 if wip_total > 0:
                     total_segments.append({
@@ -2711,11 +2712,11 @@ with right2:
                                         "Non-WIP Hours",
                                     ],
                                     range=[
-                                        "#2563eb",  # WIP
-                                        "#22c55e",  # accounted non-wip
-                                        "#9ca3af",  # unaccounted
-                                        "#6366f1",  # other team wip
-                                        "#22c55e",  # fallback Non-WIP
+                                        "#2563eb",
+                                        "#22c55e",
+                                        "#9ca3af",
+                                        "#6366f1",
+                                        "#22c55e",
                                     ],
                                 ),
                             ),
@@ -2731,8 +2732,9 @@ with right2:
                             title=f"{team_name} • WIP vs Non-WIP (team total)",
                         )
                     )
-                    st.altair_chart(total_chart, use_container_width=True)
                 if wip_total <= 0 and (nonwip_total <= 0 or wk_nw_people.empty):
+                    if total_chart is not None:
+                        st.altair_chart(total_chart, use_container_width=True)
                     st.caption("Per-person breakdown not available for this selection.")
                 else:
                     wip_person = wk_people_wip[["person", "WIP Hours"]].copy()
@@ -2789,6 +2791,8 @@ with right2:
                         .copy()
                     )
                     if person_long.empty:
+                        if total_chart is not None:
+                            st.altair_chart(total_chart, use_container_width=True)
                         st.caption("No per-person hours to show for this selection.")
                     else:
                         person_long["SegmentLabel"] = person_long["Segment"].map(seg_label_map)
@@ -2857,7 +2861,18 @@ with right2:
                             )
                             .configure_view(stroke=None)
                         )
-                        st.altair_chart(person_chart, use_container_width=True)
+                        if total_chart is not None:
+                            combined_chart = (
+                                alt.vconcat(
+                                    total_chart,
+                                    person_chart,
+                                    spacing=12,
+                                )
+                                .resolve_scale(y="independent")
+                            )
+                            st.altair_chart(combined_chart, use_container_width=True)
+                        else:
+                            st.altair_chart(person_chart, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
