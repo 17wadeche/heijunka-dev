@@ -916,7 +916,6 @@ if nonwip_mode:
                         range=["#22c55e", "#ef4444"],
                     ),
                 ),
-                tooltip=None,
             )
         )
         bars = (
