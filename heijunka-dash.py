@@ -2863,7 +2863,7 @@ with right2:
                         )
                         if total_chart is not None:
                             combined_chart = (
-                                alt(
+                                alt.Chart(
                                     total_chart,
                                     person_chart,
                                     spacing=12,
