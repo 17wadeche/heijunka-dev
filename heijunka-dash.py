@@ -883,13 +883,13 @@ if nonwip_mode:
             .dropna(subset=["Hours"])
         )
         stack = stack.merge(
-            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted"]],
+            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted Non-WIP"]],
             on="person",
             how="left",
         )
         label_map = {
             "Accounted_Other": "Other Team WIP",
-            "Accounted_NonOther": "Accounted",
+            "Accounted_NonOther": "Accounted Non-WIP",
             "Unaccounted": "Unaccounted",
         }
         stack["CategoryLabel"] = stack["Category"].map(label_map)
@@ -938,7 +938,7 @@ if nonwip_mode:
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["Other Team WIP", "Accounted", "Unaccounted"],
+                        domain=["Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
                         range=["#2563eb", "#22c55e", "#9ca3af"],
                     ),
                 ),
@@ -947,7 +947,7 @@ if nonwip_mode:
                     alt.Tooltip("CategoryLabel:N", title="Category"),
                     alt.Tooltip("Hours:Q", title="Segment Hours", format=",.2f"),
                     alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
-                    alt.Tooltip("Accounted_NonOther:Q", title="Accounted Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
                     alt.Tooltip("Non-WIP Hours:Q", title="Total Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Week"),
