@@ -320,14 +320,35 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     if cat.empty:
         return cat
     def _canon_activity(label: str) -> str:
-        s = str(label or "").strip()
-        if not s:
-            return s
-        key = re.sub(r"\s+", "", s).lower()
-        key = key.replace("emails", "email")
-        if re.fullmatch(r"email(s)?(&|and|/)?im", key):
+        s_orig = str(label or "").strip()
+        if not s_orig:
+            return s_orig
+        s = re.sub(r"\s+", " ", s_orig).strip()
+        lower = s.lower()
+        compact = re.sub(r"[^a-z0-9]", "", lower)
+        if re.fullmatch(r"email(s)?(&|and|/)?im", compact):
             return "Email & IM"
-        return s
+        acronym_tokens = {"im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto"}
+        words = lower.split(" ")
+        if len(words) == 1:
+            w = words[0]
+            if w.endswith("s") and not w.endswith("ss") and len(w) > 3:
+                w = w[:-1]
+            if w in acronym_tokens:
+                return w.upper()
+            return w.capitalize()
+        last = words[-1]
+        if last.endswith("s") and not last.endswith("ss") and len(last) > 3:
+            words[-1] = last[:-1]
+        pretty = []
+        for w in words:
+            if not w:
+                continue
+            if w in acronym_tokens:
+                pretty.append(w.upper())
+            else:
+                pretty.append(w.capitalize())
+        return " ".join(pretty)
     rows: list[dict] = []
     for _, r in cat.iterrows():
         activity_text = str(r["Activity"])
@@ -355,7 +376,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
                 continue
             label = re.sub(r"\([^)]*$", "", label)       # half-open "( ... "
             label = re.sub(r"\(.*?\)", "", label)        # full "( ... )"
-            label = re.sub(r"[:\-–—]+$", "", label)      # trailing :, -, –, —
+            label = re.sub(r"[:\-–—]+$", "", label)      # trailing punctuation
             label = label.strip(" ,;:()[]-–—")
             label = re.sub(r"\s+", " ", label).strip()
             label = _canon_activity(label)
