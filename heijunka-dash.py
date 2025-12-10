@@ -324,16 +324,48 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         if not s_orig:
             return s_orig
         s = re.sub(r"\s+", " ", s_orig).strip()
+        s = re.sub(r"^[\.\,\;\:\-\–\—\s]+", "", s).strip()
+        s = re.sub(r"[:\-\–\—]\s*\d+\s*$", "", s).strip()
+        if not s:
+            return s
         lower = s.lower()
         compact = re.sub(r"[^a-z0-9]", "", lower)
         if re.fullmatch(r"email(s)?(&|and|/)?im", compact):
             return "Email & IM"
-        acronym_tokens = {"im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto"}
+        key = lower
+        explicit_map = {
+            "capa": "CAPA",
+            "capa remediation review": "CAPA",
+            "ri": "RI",
+            "ri aortic meeting": "RI",
+            "scrum&action": "Scrum & Action",
+            "scrum & action": "Scrum & Action",
+            "scrum and action": "Scrum & Action",
+            "scrum& action": "Scrum & Action",
+            "scrum &action": "Scrum & Action",
+            "meeting": "Meeting",
+            "meeeting": "Meeting",
+            ". meeting": "Meeting",  # extra safety; usually cleaned earlier
+            "qa review": "QA Review",
+            "qa review/correction": "QA Review",
+            "qa review/update": "QA Review",
+            "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
+            "risk mangement knowledge sharing call": "Risk Management Knowledge Sharing Call",
+            "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
+        }
+        if key in explicit_map:
+            return explicit_map[key]
+        if key in {"email", "emails"}:
+            return "Email"
+        acronym_tokens = {
+            "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
+            "ri", "capa",
+        }
         words = lower.split(" ")
         if len(words) == 1:
             w = words[0]
             if w.endswith("s") and not w.endswith("ss") and len(w) > 3:
-                w = w[:-1]
+                w = w[:-1]  # emails -> email
             if w in acronym_tokens:
                 return w.upper()
             return w.capitalize()
