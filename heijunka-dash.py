@@ -1008,7 +1008,7 @@ if nonwip_mode:
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
         st.altair_chart(chart, use_container_width=True)
-        st.markdown("#### Non-WIP Activities (for this week)")
+        st.markdown("#### Non-WIP Activities")
         if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
             act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
             if not act_tbl2.empty and "HoursRaw" in act_tbl2.columns:
@@ -1031,7 +1031,7 @@ if nonwip_mode:
                                 sort=order_acts,
                                 axis=alt.Axis(labelAngle=-30, labelLimit=140),
                             ),
-                            y=alt.Y("Hours:Q", title="Total Non-WIP Hours (week)"),
+                            y=alt.Y("Hours:Q", title="Total Non-WIP Hours"),
                             tooltip=[
                                 alt.Tooltip("Activity:N", title="Activity"),
                                 alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
