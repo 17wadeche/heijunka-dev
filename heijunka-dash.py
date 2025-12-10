@@ -314,6 +314,44 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            .reset_index(drop=True)
     )
     return out
+def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
+    import re
+    if cat.empty:
+        return cat
+    rows: list[dict] = []
+    for _, r in cat.iterrows():
+        activity = str(r["Activity"])
+        total_hours_raw = pd.to_numeric(r["Hours"], errors="coerce")
+        total_hours = float(total_hours_raw) if pd.notna(total_hours_raw) else 0.0
+        parts = [p.strip() for p in re.split(r"[;,]", activity) if p.strip()]
+        sub_acts: list[tuple[str, int]] = []
+        for p in parts:
+            m = re.match(r"(.+?):\s*([0-9]+)\s*$", p)
+            if not m:
+                continue
+            label = m.group(1).strip()
+            mins = int(m.group(2))
+            if mins > 0:
+                sub_acts.append((label, mins))
+        if sub_acts:
+            total_minutes = sum(m for _, m in sub_acts)
+            if total_hours <= 0 and total_minutes > 0:
+                total_hours = total_minutes / 60.0
+            if total_hours > 0 and total_minutes > 0:
+                for label, mins in sub_acts:
+                    h_sub = total_hours * (mins / total_minutes)
+                    rows.append({"Activity": label, "Hours": h_sub})
+            else:
+                rows.append({"Activity": activity, "Hours": total_hours})
+        else:
+            rows.append({"Activity": activity, "Hours": total_hours})
+    out = pd.DataFrame(rows)
+    if out.empty:
+        return cat
+    return (
+        out.groupby("Activity", as_index=False)["Hours"]
+           .sum()
+    )
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
@@ -979,6 +1017,7 @@ if nonwip_mode:
                             .sum()
                             .rename(columns={"HoursRaw": "Hours"})
                 )
+                cat = split_nonwip_activity_minutes(cat)
                 if not cat.empty:
                     cat = cat.sort_values("Hours", ascending=False)
                     order_acts = cat["Activity"].tolist()
