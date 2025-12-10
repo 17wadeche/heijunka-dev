@@ -334,10 +334,19 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             return "Email & IM"
         key = lower
         explicit_map = {
+            "Email Etc.":"Email",
+            "Emails Etc.":"Email",
+            "Emails Misc": "Email",
             "capa": "CAPA",
+            "Em/etc": "Em Etc",
             "CAPA Meeting": "CAPA",
             "Scrum/checkin": "Scrum",
             "Pmpa Weekly Meeting": "Pmpa Meeting",
+            "Finish Scheduling": "Scheduling",
+            "Audit Checkin" : "Audit",
+            "Scrumb": "Scrum",
+            "Mtg" : "Meeting",
+            "Scheduling/heijunka Update": "Scheduling",
             "E-mail": "Email",
             "Scrum/checking": "Scrum",
             "Heijunka Population": "Heijunka",
