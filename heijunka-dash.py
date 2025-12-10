@@ -1038,8 +1038,7 @@ if nonwip_mode:
                             ],
                         )
                         .properties(
-                            height=280,
-                            title="Total Non-WIP Hours by Activity"
+                            height=280
                         )
                     )
                     st.altair_chart(act_chart, use_container_width=True)
