@@ -258,20 +258,27 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     except Exception:
         obj = []
     if not isinstance(obj, list) or not obj:
-        return pd.DataFrame(columns=["Activity", "Name", "Time"])
+        return pd.DataFrame(columns=["Activity", "Day", "Name", "Time"])
     df = pd.DataFrame(obj)
-    for c in ["activity", "name", "hours"]:
+    for c in ["activity", "day", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
     if "days" not in df.columns:
         df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
     df["days"]  = pd.to_numeric(df["days"], errors="coerce")
+    df["day_norm"] = (
+        df["day"]
+        .astype(str)
+        .str.strip()
+        .replace({"": np.nan, "None": np.nan, "nan": np.nan})
+    )
     grp = (
         df.groupby(["activity", "name"], as_index=False)
           .agg(
               hours=("hours", "sum"),
               days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
+              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
           )
     )
     def _label_row(r):
