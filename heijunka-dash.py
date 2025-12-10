@@ -258,9 +258,9 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     except Exception:
         obj = []
     if not isinstance(obj, list) or not obj:
-        return pd.DataFrame(columns=["Activity", "Day", "Name", "Time"])
+        return pd.DataFrame(columns=["Activity", "Name", "Time"])
     df = pd.DataFrame(obj)
-    for c in ["activity", "day", "name", "hours"]:
+    for c in ["activity", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
     if "days" not in df.columns:
