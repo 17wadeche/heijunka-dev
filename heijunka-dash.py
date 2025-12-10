@@ -336,6 +336,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         explicit_map = {
             "capa": "CAPA",
             "Rpa Lab Meeting": "Rpa Meeting",
+            "Email Catch Up": "Email",
             "RI Response":"RI",
             "Other Queurie": "Other Querie",
             "Jumped To Another Meeting) Global Quality Meeting": "Global Quality Meeting",
