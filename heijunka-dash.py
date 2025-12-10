@@ -316,24 +316,49 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     return out
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
+    import numpy as np
     if cat.empty:
         return cat
     rows: list[dict] = []
     for _, r in cat.iterrows():
-        activity = str(r["Activity"])
+        activity_text = str(r["Activity"])
         total_hours_raw = pd.to_numeric(r["Hours"], errors="coerce")
         total_hours = float(total_hours_raw) if pd.notna(total_hours_raw) else 0.0
-        parts = [p.strip() for p in re.split(r"[;,]", activity) if p.strip()]
+        s = activity_text.replace(";", " ").replace(",", " ")
+        s = re.sub(r"\s+", " ", s).strip()
+        if not s:
+            rows.append({"Activity": activity_text, "Hours": total_hours})
+            continue
+        pattern = re.compile(
+            r"(?P<num>\d+)\s*(?P<unit>h|hr|hrs|hour|hours|m|min|mins|minute|minutes)?\b",
+            re.IGNORECASE,
+        )
         sub_acts: list[tuple[str, int]] = []
-        for p in parts:
-            m = re.match(r"(.+?):\s*([0-9]+)\s*$", p)
-            if not m:
+        prev_end = 0
+        for m in pattern.finditer(s):
+            num = int(m.group("num"))
+            unit = (m.group("unit") or "").lower()
+            if unit in ("h", "hr", "hrs", "hour", "hours"):
+                mins = num * 60
+            else:
+                mins = num
+            label = s[prev_end:m.start()]
+            prev_end = m.end()
+            label = label.strip()
+            if not label:
                 continue
-            label = m.group(1).strip()
-            mins = int(m.group(2))
-            if mins > 0:
+            label = re.sub(r"\([^)]*$", "", label)       # half-open "( ... "
+            label = re.sub(r"\(.*?\)", "", label)        # full "( ... )"
+            label = re.sub(r"[:\-–—]+$", "", label)      # trailing :, -, –, —
+            label = label.strip(" ,;:()[]-–—")
+            label = re.sub(r"\s+", " ", label).strip()
+            if label and mins > 0:
                 sub_acts.append((label, mins))
         if sub_acts:
+            has_delims = bool(re.search(r"[;,]", activity_text))
+            if len(sub_acts) == 1 and not has_delims:
+                rows.append({"Activity": activity_text, "Hours": total_hours})
+                continue
             total_minutes = sum(m for _, m in sub_acts)
             if total_hours <= 0 and total_minutes > 0:
                 total_hours = total_minutes / 60.0
@@ -342,16 +367,13 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
                     h_sub = total_hours * (mins / total_minutes)
                     rows.append({"Activity": label, "Hours": h_sub})
             else:
-                rows.append({"Activity": activity, "Hours": total_hours})
+                rows.append({"Activity": activity_text, "Hours": total_hours})
         else:
-            rows.append({"Activity": activity, "Hours": total_hours})
+            rows.append({"Activity": activity_text, "Hours": total_hours})
     out = pd.DataFrame(rows)
     if out.empty:
         return cat
-    return (
-        out.groupby("Activity", as_index=False)["Hours"]
-           .sum()
-    )
+    return out.groupby("Activity", as_index=False)["Hours"].sum()
 def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str], people_df: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "Actual HC used" not in frame.columns:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
