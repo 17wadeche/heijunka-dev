@@ -324,7 +324,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         activity_text = str(r["Activity"])
         total_hours_raw = pd.to_numeric(r["Hours"], errors="coerce")
         total_hours = float(total_hours_raw) if pd.notna(total_hours_raw) else 0.0
-        s = activity_text.replace(";", " ").replace(",", " ")
+        s = activity_text.replace(";", " ").replace(",", " ").replace(":", " ")
         s = re.sub(r"\s+", " ", s).strip()
         if not s:
             rows.append({"Activity": activity_text, "Hours": total_hours})
