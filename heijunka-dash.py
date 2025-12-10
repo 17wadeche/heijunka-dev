@@ -267,18 +267,11 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
     df["days"]  = pd.to_numeric(df["days"], errors="coerce")
-    df["day_norm"] = (
-        df["day"]
-        .astype(str)
-        .str.strip()
-        .replace({"": np.nan, "None": np.nan, "nan": np.nan})
-    )
     grp = (
         df.groupby(["activity", "name"], as_index=False)
           .agg(
               hours=("hours", "sum"),
               days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
-              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
           )
     )
     def _label_row(r):
