@@ -357,7 +357,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "clinical task training" : "Clinical Task",
             "training meeting": "Training",
             "problem solving meeting":"Problem Solving",
-            "training (shadowing, scheduling, meeting, Etc.)": "Training",
+            "training (shadowing, scheduling, meeting, etc.)": "Training",
             "scrim": "Scrum",
             "review feedback": "Feedback",
             "rpa lab meeting": "Rpa Meeting",
