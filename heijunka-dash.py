@@ -1038,7 +1038,7 @@ if nonwip_mode:
                             ],
                         )
                         .properties(
-                            height=260,
+                            height=280,
                             title="Total Non-WIP Hours by Activity"
                         )
                     )
