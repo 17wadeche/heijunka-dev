@@ -9,8 +9,8 @@ SHEET_NAME = "WIP Tracking"
 OUT_DIR = r"C:\Users\wadec8\OneDrive - Medtronic PLC"
 OUT_BASENAME = "wip_tracking_long"
 REFRESH_TIMEOUT_SECONDS = 1200
-TEAM_LIST_CSV_PATH = r"C:\heijunka-dev\timeliness.csv"
 TEAM_LIST_TEAM_COL = "team"
+CLOSURES_CSV_PATH = r"C:\heijunka-dev\closures.csv"
 CTTYPE_FIELD_CANDIDATES = [
     "[WipIO].[tType].[tType]",
 ]
@@ -573,6 +573,71 @@ def select_item_on_field(pf, unique_name: str):
     except Exception:
         pass
     raise RuntimeError(f"Failed to select item on field '{pf.Name}': {unique_name}")
+def upsert_closures_csv(path: str, new_df: pd.DataFrame):
+    if new_df is None or new_df.empty:
+        return 0, 0
+    in_df = new_df.copy()
+    col_l = {c.lower(): c for c in in_df.columns}
+    def _need(colname):
+        if colname not in col_l:
+            raise RuntimeError(f"new_df missing required column '{colname}'. Have: {list(in_df.columns)}")
+        return col_l[colname]
+    team_col = _need("team")
+    date_col = _need("period_date")
+    closures_col = col_l.get("closures")
+    opened_col = col_l.get("opened")
+    if closures_col is None or opened_col is None:
+        raise RuntimeError(f"new_df must have 'Opened' and 'Closures'. Have: {list(in_df.columns)}")
+    in_df = in_df.rename(columns={
+        team_col: "team",
+        date_col: "period_date",
+        opened_col: "Opened",
+        closures_col: "Closures",
+    })
+    in_df["team"] = in_df["team"].astype(str).str.strip()
+    in_df["period_date"] = pd.to_datetime(in_df["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    in_df = in_df.dropna(subset=["team", "period_date"])
+    in_df = in_df[in_df["team"].ne("")]
+    in_df = in_df.drop_duplicates(subset=["team", "period_date"], keep="last")
+    if os.path.exists(path):
+        cur = pd.read_csv(path, dtype={"team": str, "period_date": str})
+    else:
+        cur = pd.DataFrame(columns=["team", "period_date", "closures", "Opened"])
+    cur_cols_l = {c.lower(): c for c in cur.columns}
+    cur_team = cur_cols_l.get("team", "team")
+    cur_date = cur_cols_l.get("period_date", "period_date")
+    cur_opened = cur_cols_l.get("opened", "Opened")
+    cur_closures = cur_cols_l.get("closures", "closures")
+    cur_norm = cur.rename(columns={
+        cur_team: "team",
+        cur_date: "period_date",
+        cur_opened: "Opened",
+        cur_closures: "Closures",
+    }).copy()
+    cur_norm["team"] = cur_norm["team"].astype(str).str.strip()
+    cur_norm["period_date"] = pd.to_datetime(cur_norm["period_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    cur_norm = cur_norm.set_index(["team", "period_date"])
+    in_norm = in_df.set_index(["team", "period_date"])
+    common_idx = cur_norm.index.intersection(in_norm.index)
+    before = cur_norm.loc[common_idx, ["Opened", "Closures"]].copy()
+    cur_norm.update(in_norm[["Opened", "Closures"]])
+    after = cur_norm.loc[common_idx, ["Opened", "Closures"]]
+    updated_rows = int((before.ne(after)).any(axis=1).sum())
+    missing_idx = in_norm.index.difference(cur_norm.index)
+    added_rows = int(len(missing_idx))
+    if added_rows:
+        cur_norm = pd.concat([cur_norm, in_norm.loc[missing_idx, ["Opened", "Closures"]]], axis=0)
+    out = cur_norm.reset_index()
+    out = out.rename(columns={
+        "Closures": cur_closures,  # likely "closures"
+        "Opened": cur_opened,      # likely "Opened"
+    })
+    desired = [cur_team, cur_date, cur_closures, cur_opened]
+    existing_order = [c for c in desired if c in out.columns] + [c for c in out.columns if c not in desired]
+    out = out[existing_order]
+    out = out.sort_values([cur_team, cur_date])
+    out.to_csv(path, index=False)
+    return updated_rows, added_rows
 def main():
     if not os.path.exists(WORKBOOK_PATH):
         raise FileNotFoundError(WORKBOOK_PATH)
@@ -603,6 +668,8 @@ def main():
         if out_df.empty:
             raise RuntimeError("Export produced 0 rows. (Is the pivot expanded + showing weeks/teams?)")
         out_df = out_df.sort_values(["team", "period_date"])
+        updated, added = upsert_closures_csv(CLOSURES_CSV_PATH, out_df)
+        print(f"Updated {updated} row(s), added {added} row(s) in {CLOSURES_CSV_PATH}")
         out_df.to_csv(out_path, index=False)
         print(f"Wrote: {out_path} ({len(out_df)} rows)")
     finally:
