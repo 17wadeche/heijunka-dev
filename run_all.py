@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import subprocess
 import sys
+from datetime import date
 PYTHON_BIN = sys.executable
 commands = [
     [PYTHON_BIN, "get_closures.py"],
@@ -17,10 +18,31 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-08"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-15"],
 ]
-for cmd in commands:
+def run(cmd, *, cwd=None):
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print(f"❌ Command failed: {' '.join(cmd)}")
-        sys.exit(result.returncode)
-print("✅ All scripts completed successfully.")
+    subprocess.run(cmd, cwd=cwd, check=True)
+def has_git_changes(*, cwd=None) -> bool:
+    r = subprocess.run(["git", "diff", "--quiet"], cwd=cwd)
+    if r.returncode == 1:
+        return True
+    r = subprocess.run(["git", "diff", "--quiet", "--staged"], cwd=cwd)
+    return r.returncode == 1
+def main():
+    repo_root = None
+    try:
+        for cmd in commands:
+            run(cmd, cwd=repo_root)
+        run(["git", "add", "-A"], cwd=repo_root)
+        if has_git_changes(cwd=repo_root):
+            msg = f"Automated update ({date.today().isoformat()})"
+            run(["git", "commit", "-m", msg], cwd=repo_root)
+            run(["git", "push"], cwd=repo_root)
+            print("✅ Committed and pushed.")
+        else:
+            print("ℹ️ No git changes to commit. Skipping commit/push.")
+        print("✅ All scripts completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Command failed (exit {e.returncode}): {e.cmd}")
+        sys.exit(e.returncode)
+if __name__ == "__main__":
+    main()
