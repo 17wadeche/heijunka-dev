@@ -533,6 +533,8 @@ def extract_from_expanded_pivot(pt, teams_set=None):
         team = first_label_in_row(r)
         if not team:
             continue
+        if is_numeric_team_label(team):
+            continue
         if team.strip().lower() in {"fiscal time groups", "enterprise", "all"}:
             continue
         if is_excluded_team(team):
@@ -573,6 +575,16 @@ def select_item_on_field(pf, unique_name: str):
     except Exception:
         pass
     raise RuntimeError(f"Failed to select item on field '{pf.Name}': {unique_name}")
+def is_numeric_team_label(x) -> bool:
+    if x is None:
+        return False
+    if isinstance(x, (int, float)) and not isinstance(x, bool):
+        return True
+    s = clean_label(x)
+    if not s:
+        return False
+    s2 = s.replace(",", "")
+    return re.fullmatch(r"-?\d+(\.\d+)?", s2) is not None
 def upsert_closures_csv(path: str, new_df: pd.DataFrame):
     if new_df is None or new_df.empty:
         return 0, 0
