@@ -25,7 +25,28 @@ PORTFOLIO_FIELD_CANDIDATES = [
 ]
 INCOMING_HEADER_HINTS = ["incoming", "pe"]
 CLOSED_TOTAL_HEADER_HINTS = ["closed", "total"]
-EXCLUDE_TEAMS = set()
+EXCLUDE_TEAMS = {
+    "Structural Heart and Aortic",
+    "Neuroscience",
+    "Medical Surgical",
+    "Mechanical Circulatory Support",
+    "Cardiovascular",
+    "Cardiac Surgery",
+    "Cardiac Rhythm Management",   
+}
+TEAM_MAP = {
+    "Cardiac Ablation Solutions": "CAS",
+    "Coronary & Renal Denervation": "CRDN",
+    "Peripheral Vascular Health": "PVH",
+    "Structural Heart": "TCT",
+}
+TEAM_MAP_NORM = {k.strip().lower(): v for k, v in TEAM_MAP.items()}
+def map_team_name(team: str) -> str:
+    t = team.strip()
+    return TEAM_MAP_NORM.get(t.lower(), t)
+EXCLUDE_TEAMS_NORM = {t.strip().lower() for t in EXCLUDE_TEAMS}
+def is_excluded_team(team: str) -> bool:
+    return team.strip().lower() in EXCLUDE_TEAMS_NORM
 def excel_serial_to_date(n: float) -> date:
     return (datetime(1899, 12, 30) + timedelta(days=float(n))).date()
 def week_monday(d: date) -> date:
@@ -381,8 +402,8 @@ def extract_week_rows(df: pd.DataFrame, incoming_col: int, closed_col: int, team
         records.append({
             "team": team_name,
             "period_date": week_monday(d).strftime("%Y-%m-%d"),
-            "incoming_pes_13w_avg": inc,
-            "closed_total": clo,
+            "Opened": inc,
+            "Closures": clo,
         })
     return records
 def get_page_field(pt, want: str):
@@ -512,8 +533,11 @@ def extract_from_expanded_pivot(pt, teams_set=None):
         team = first_label_in_row(r)
         if not team:
             continue
-        if team.lower() in {"fiscal time groups", "enterprise", "all"}:
+        if team.strip().lower() in {"fiscal time groups", "enterprise", "all"}:
             continue
+        if is_excluded_team(team):
+            continue
+        team = map_team_name(team)
         if teams_set is not None and team not in teams_set:
             continue
         inc = safe_float(wide.iat[r, incoming_col])
@@ -523,8 +547,8 @@ def extract_from_expanded_pivot(pt, teams_set=None):
         records.append({
             "team": team,
             "period_date": current_week,
-            "incoming_pes_13w_avg": inc,
-            "closed_total": clo,
+            "Opened": inc,
+            "Closures": clo,
         })
     return records
 def select_item_on_field(pf, unique_name: str):
