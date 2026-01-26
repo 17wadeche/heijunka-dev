@@ -4,9 +4,6 @@ import sys
 from datetime import date
 PYTHON_BIN = sys.executable
 commands = [
-    [PYTHON_BIN, "get_closures.py"],
-    [PYTHON_BIN, "get_timeliness.py"],
-    [PYTHON_BIN, "collect_metrics_dev.py", "--team", "ECT"],
     [PYTHON_BIN, "heijunka_new_layout.py", "--all"],
     [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "metrics.csv", "--all", "--out", "non_wip.csv"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-10-27"],
@@ -18,6 +15,11 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-08"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-15"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-22"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-29"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-05"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-12"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-19"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-26"],
 ]
 def run(cmd, *, cwd=None):
     print(f"Running: {' '.join(cmd)}")
