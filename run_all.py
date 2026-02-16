@@ -23,6 +23,7 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-26"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-02-02"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-02-09"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-02-16"],
 ]
 def run(cmd, *, cwd=None):
     print(f"Running: {' '.join(cmd)}")
