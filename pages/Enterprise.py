@@ -9,6 +9,8 @@ footer {visibility: hidden;}
 
 /* Hide only the pencil (Edit) button */
 header button[title*="Edit"],
+header button[title*="Source"],
+header button[aria-label*="Source"] { display:none !important; }
 header button[aria-label*="Edit"] {
   display: none !important;
 }
