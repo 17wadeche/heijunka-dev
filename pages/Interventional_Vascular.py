@@ -91,12 +91,10 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
 hide_streamlit_style = """
-    <style>
-    [data-testid="stToolbar"] { display: none; }
-    #MainMenu { visibility: hidden; }
-    header { visibility: hidden; }
-    footer { visibility: hidden; }
-    </style>
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+</style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 if hasattr(st, "autorefresh"):
