@@ -14,8 +14,24 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
+/* keep these hidden if you want */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
+/* Hide only the pencil (Edit) button */
+header button[title*="Edit"],
+header button[title*="Source"],
+header button[aria-label*="Source"] { display:none !important; }
+header button[aria-label*="Edit"] {
+  display: none !important;
+}
+
+/* Hide only the GitHub icon/link */
+header a[href*="github.com"],
+header button[title*="GitHub"],
+header button[aria-label*="GitHub"] {
+  display: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
