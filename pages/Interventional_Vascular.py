@@ -10,7 +10,7 @@ import json
 st.set_page_config(
     page_title="Enterprise",
     layout="wide",
-    initial_sidebar_state="expanded" if st.session_state.sidebar_open else "collapsed",
+    initial_sidebar_state="expanded",
 )
 st.markdown("""
 <style>
