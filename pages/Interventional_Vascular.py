@@ -111,13 +111,6 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
-hide_streamlit_style = """
-<style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-</style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
