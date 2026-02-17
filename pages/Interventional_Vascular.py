@@ -7,11 +7,6 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
-st.set_page_config(
-    page_title="Heijunka Metrics",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 st.markdown("""
 <style>
 /* Optional: hide hamburger + footer */
