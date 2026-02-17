@@ -1,4 +1,5 @@
 # IV.py
+import hmac
 import os
 from pathlib import Path
 import pandas as pd
@@ -948,7 +949,7 @@ def percent_color(v: float | None, threshold: float, invert: bool = False) -> st
         return "#111827"
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
-st.markdown("<h1 style='text-align: center;'>Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>IV Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
     label,
