@@ -1,5 +1,10 @@
 import hmac
 import streamlit as st
+st.set_page_config(
+    page_title="Enterprise",
+    layout="wide",
+    initial_sidebar_state="expanded" if st.session_state.sidebar_open else "collapsed",
+)
 st.markdown("""
 <style>
 /* Optional: hide hamburger + footer */
@@ -37,11 +42,6 @@ if "sidebar_open" not in st.session_state:
     st.session_state.sidebar_open = True
 if st.button("Toggle sidebar"):
     st.session_state.sidebar_open = not st.session_state.sidebar_open
-st.set_page_config(
-    page_title="Enterprise",
-    layout="wide",
-    initial_sidebar_state="expanded" if st.session_state.sidebar_open else "collapsed",
-)
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 if not ENTERPRISE_PASSCODE:
     st.error("Enterprise passcode is not configured.")

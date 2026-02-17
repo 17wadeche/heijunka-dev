@@ -7,6 +7,11 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+st.set_page_config(
+    page_title="Enterprise",
+    layout="wide",
+    initial_sidebar_state="expanded" if st.session_state.sidebar_open else "collapsed",
+)
 st.markdown("""
 <style>
 /* Optional: hide hamburger + footer */
@@ -44,11 +49,6 @@ if "sidebar_open" not in st.session_state:
     st.session_state.sidebar_open = True
 if st.button("Toggle sidebar"):
     st.session_state.sidebar_open = not st.session_state.sidebar_open
-st.set_page_config(
-    page_title="Enterprise",
-    layout="wide",
-    initial_sidebar_state="expanded" if st.session_state.sidebar_open else "collapsed",
-)
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
