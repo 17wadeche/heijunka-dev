@@ -9,13 +9,11 @@ import json
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
-    v = os.environ.get(name)
-    if v not in (None, ""):
-        return v
+    import os
     try:
-        return st.secrets.get(name, default)
+        return st.secrets.get(name, os.environ.get(name, default))
     except Exception:
-        return default
+        return os.environ.get(name, default)
 NON_WIP_DATA_URL = _safe_secret("NON_WIP_DATA_URL")
 DATA_URL = _safe_secret("HEIJUNKA_DATA_URL")
 def _fmt_hours_minutes(x) -> str:
