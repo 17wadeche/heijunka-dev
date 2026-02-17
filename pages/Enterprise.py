@@ -6,20 +6,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",  # always open
 )
-
-st.markdown("""
-<style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-
-/* hide top-right toolbar actions only */
-div[data-testid="stToolbarActions"] { display: none !important; }
-div[data-testid="stToolbar"] button,
-div[data-testid="stToolbar"] a { display: none !important; }
-
-/* DO NOT hide sidebar controls if you want reliable expansion */
-</style>
-""", unsafe_allow_html=True)
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 if not ENTERPRISE_PASSCODE:
     st.error("Enterprise passcode is not configured.")
