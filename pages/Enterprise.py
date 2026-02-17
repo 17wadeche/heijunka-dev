@@ -10,6 +10,15 @@ if not ENTERPRISE_PASSCODE:
     st.stop()
 if "enterprise_unlocked" not in st.session_state:
     st.session_state.enterprise_unlocked = False
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}                /* Streamlit header area */
+[data-testid="stToolbar"] {display: none;} /* in-app toolbar */
+[data-testid="stDecoration"] {display: none;}
+</style>
+""", unsafe_allow_html=True)
 st.title("Enterprise Dashboard")
 if not st.session_state.enterprise_unlocked:
     st.warning("This page is restricted.")

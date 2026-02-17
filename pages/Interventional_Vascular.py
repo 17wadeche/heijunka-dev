@@ -97,6 +97,15 @@ footer {visibility: hidden;}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}                /* Streamlit header area */
+[data-testid="stToolbar"] {display: none;} /* in-app toolbar */
+[data-testid="stDecoration"] {display: none;}
+</style>
+""", unsafe_allow_html=True)
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
