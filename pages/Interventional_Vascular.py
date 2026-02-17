@@ -16,15 +16,11 @@ st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-section[data-testid="stSidebar"] {display:block !important;}
+header[data-testid="stHeader"] {visibility: hidden;}
 [data-testid="collapsedControl"] {
-    display:flex !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    position:fixed !important;
-    top:0.75rem !important;
-    left:0.75rem !important;
-    z-index:999999 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 </style>
 """, unsafe_allow_html=True)
