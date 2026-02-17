@@ -1,4 +1,4 @@
-# heijunka-dash.py
+# IV.py
 import os
 from pathlib import Path
 import pandas as pd
@@ -7,7 +7,13 @@ import streamlit as st
 import altair as alt
 import json
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
-NON_WIP_DATA_URL = st.secrets.get("NON_WIP_DATA_URL", os.environ.get("NON_WIP_DATA_URL"))
+def _safe_secret(name: str, default=None):
+    try:
+        return st.secrets.get(name, default)
+    except Exception:
+        return os.environ.get(name, default)
+NON_WIP_DATA_URL = _safe_secret("NON_WIP_DATA_URL")
+DATA_URL = _safe_secret("HEIJUNKA_DATA_URL")
 def _fmt_hours_minutes(x) -> str:
     try:
         total_mins = int(round(float(x) * 60))
@@ -82,7 +88,6 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
-DATA_URL = st.secrets.get("HEIJUNKA_DATA_URL", os.environ.get("HEIJUNKA_DATA_URL"))
 st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 hide_streamlit_style = """
     <style>
