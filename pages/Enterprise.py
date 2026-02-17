@@ -3,23 +3,34 @@ import streamlit as st
 st.set_page_config(page_title="Enterprise", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
-/* keep these hidden if you want */
+/* Optional: hide hamburger + footer */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
-/* Hide only the pencil (Edit) button */
-header button[title*="Edit"],
-header button[title*="Source"],
-header button[aria-label*="Source"] { display:none !important; }
-header button[aria-label*="Edit"] {
-  display: none !important;
+/* ---- Robust toolbar hide rules ---- */
+
+/* Hide entire top-right toolbar actions cluster (keeps sidebar/nav intact) */
+div[data-testid="stToolbarActions"] {
+    display: none !important;
 }
 
-/* Hide only the GitHub icon/link */
+/* Fallbacks for older/newer builds */
+div[data-testid="stToolbar"] button,
+div[data-testid="stToolbar"] a {
+    display: none !important;
+}
+
+/* Extra fallback selectors */
+header [data-testid="baseButton-header"],
+header button[kind="header"],
 header a[href*="github.com"],
+header button[aria-label*="GitHub"],
 header button[title*="GitHub"],
-header button[aria-label*="GitHub"] {
-  display: none !important;
+header button[aria-label*="Edit"],
+header button[title*="Edit"],
+header button[aria-label*="Source"],
+header button[title*="Source"] {
+    display: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
