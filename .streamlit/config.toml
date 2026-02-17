@@ -4,3 +4,4 @@ allowed_emails = ["chey.wade@medtronic.com", "leader@company.com"]
 allowed_domains = ["metronic.com"]
 request_sink = "file"
 request_file = "access_requests.jsonl"
+auth_enabled = true
