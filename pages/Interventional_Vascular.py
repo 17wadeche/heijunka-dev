@@ -6,12 +6,16 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
+    v = os.environ.get(name)
+    if v not in (None, ""):
+        return v
     try:
         return st.secrets.get(name, default)
     except Exception:
-        return os.environ.get(name, default)
+        return default
 NON_WIP_DATA_URL = _safe_secret("NON_WIP_DATA_URL")
 DATA_URL = _safe_secret("HEIJUNKA_DATA_URL")
 def _fmt_hours_minutes(x) -> str:
@@ -88,7 +92,6 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
-st.set_page_config(page_title="Heijunka Metrics", layout="wide")
 hide_streamlit_style = """
     <style>
     [data-testid="stToolbar"] { display: none; }
