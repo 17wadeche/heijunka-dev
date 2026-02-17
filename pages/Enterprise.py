@@ -10,15 +10,23 @@ if not ENTERPRISE_PASSCODE:
     st.stop()
 if "enterprise_unlocked" not in st.session_state:
     st.session_state.enterprise_unlocked = False
-st.markdown("""
-<style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}                /* Streamlit header area */
-[data-testid="stToolbar"] {display: none;} /* in-app toolbar */
-[data-testid="stDecoration"] {display: none;}
-</style>
-""", unsafe_allow_html=True)
+def hide_cloud_chrome():
+    st.markdown("""
+    <style>
+    /* Existing cleanup */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    [data-testid="stToolbar"] {display: none;}
+    [data-testid="stDecoration"] {display: none;}
+    header {visibility: hidden;}
+
+    /* Streamlit Cloud bottom-right Manage app launcher */
+    [data-testid="manage-app-button"] {display: none !important;}
+    button[aria-label*="Manage app" i] {display: none !important;}
+    div[aria-label*="Manage app" i] {display: none !important;}
+    </style>
+    """, unsafe_allow_html=True)
+hide_cloud_chrome()
 st.title("Enterprise Dashboard")
 if not st.session_state.enterprise_unlocked:
     st.warning("This page is restricted.")
