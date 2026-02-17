@@ -7,7 +7,27 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
-st.set_page_config(page_title="Heijunka Metrics", layout="wide")
+st.set_page_config(
+    page_title="Heijunka Metrics",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+section[data-testid="stSidebar"] {display:block !important;}
+[data-testid="collapsedControl"] {
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    position:fixed !important;
+    top:0.75rem !important;
+    left:0.75rem !important;
+    z-index:999999 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
