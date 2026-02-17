@@ -1,4 +1,5 @@
 import json
+import hmac
 from pathlib import Path
 from datetime import datetime, timezone
 import streamlit as st
@@ -6,61 +7,45 @@ import streamlit as st
 st.set_page_config(page_title="Enterprise", layout="wide")
 
 # ---------------------------
-# Config (prefer secrets)
+# Config
 # ---------------------------
 ALLOWED_EMAILS = {
     str(e).strip().lower()
-    for e in st.secrets.get("allowed_emails", ["you@company.com", "leader@company.com"])
+    for e in st.secrets.get("allowed_emails", [])
 }
 ALLOWED_DOMAINS = {
     str(d).strip().lower()
-    for d in st.secrets.get("allowed_domains", ["company.com"])
+    for d in st.secrets.get("allowed_domains", [])
 }
 
 REQUEST_SINK = str(st.secrets.get("request_sink", "file")).strip().lower()
 REQUESTS_FILE = Path(str(st.secrets.get("request_file", "access_requests.jsonl")))
 
-# Optional explicit toggle so UI knows whether to show Sign in button.
-# Set in secrets.toml: auth_enabled = true
-AUTH_ENABLED = bool(st.secrets.get("auth_enabled", False))
+# Native auth is NOT available in your current deployment
+AUTH_ENABLED = bool(st.secrets.get("auth_enabled", False)) and hasattr(st, "login")
+
+# Fallback shared gate secret (required when AUTH_ENABLED = false)
+ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 
 # ---------------------------
-# Compatibility-safe user helpers
+# Helpers
 # ---------------------------
-def _user_attr(key: str, default=""):
-    try:
-        return getattr(st.user, key, default)
-    except Exception:
-        return default
-
-def current_email() -> str:
-    return str(_user_attr("email", "") or "").strip().lower()
-
-def current_name() -> str:
-    return str(_user_attr("name", "") or "").strip()
-
-def is_logged_in() -> bool:
-    flag = _user_attr("is_logged_in", None)
-    if isinstance(flag, bool):
-        return flag
-    return bool(current_email())
-
-def is_allowed(email: str) -> bool:
+def is_allowed_email(email: str) -> bool:
+    email = (email or "").strip().lower()
     if not email:
         return False
     if email in ALLOWED_EMAILS:
         return True
     if "@" in email:
-        domain = email.rsplit("@", 1)[-1].lower()
-        if domain in ALLOWED_DOMAINS:
-            return True
+        domain = email.rsplit("@", 1)[-1]
+        return domain in ALLOWED_DOMAINS
     return False
 
 def save_request(email: str, name: str, reason: str):
     payload = {
         "ts_utc": datetime.now(timezone.utc).isoformat(),
-        "email": email,
-        "name": name,
+        "email": (email or "").strip().lower(),
+        "name": (name or "").strip(),
         "reason": reason.strip(),
         "app": "enterprise_dashboard",
     }
@@ -69,76 +54,70 @@ def save_request(email: str, name: str, reason: str):
         with REQUESTS_FILE.open("a", encoding="utf-8") as f:
             f.write(json.dumps(payload) + "\n")
 
-def try_login():
-    try:
-        st.login()
-    except Exception:
-        st.error(
-            "Sign-in is not configured for this deployed app yet. "
-            "Enable authentication in your Streamlit Cloud app settings, then try again."
-        )
-
-def try_logout():
-    try:
-        st.logout()
-    except Exception:
-        st.warning("Sign-out is currently unavailable in this deployment.")
+def passcode_ok(user_input: str) -> bool:
+    # constant-time compare
+    return bool(ENTERPRISE_PASSCODE) and hmac.compare_digest(
+        user_input.strip(), ENTERPRISE_PASSCODE
+    )
 
 # ---------------------------
 # UI
 # ---------------------------
 st.title("Enterprise Dashboard")
 
-# 1) Not logged in
-if not is_logged_in():
-    st.warning("This page is restricted.")
-    st.write(
-        "Please sign in to continue. If you don't have access yet, "
-        "you can request it after signing in."
-    )
-
-    if AUTH_ENABLED:
-        if st.button("Sign in", type="primary"):
-            try_login()
-    else:
-        st.info(
-            "Authentication is currently disabled for this deployment. "
-            "After you enable auth in Streamlit Cloud, set `auth_enabled = true` in secrets."
-        )
+if AUTH_ENABLED:
+    # If you later get native auth, you can re-enable this branch.
+    st.info("Native auth mode is enabled for this deployment.")
+    # ... your st.login/st.user flow here ...
     st.stop()
 
-email = current_email()
-name = current_name()
+# ---- Fallback: passcode-gated access ----
+st.warning("This page is restricted.")
 
-# 2) Logged in but not authorized
-if not is_allowed(email):
-    st.error("You are signed in, but you don’t currently have Enterprise access.")
+if "enterprise_unlocked" not in st.session_state:
+    st.session_state.enterprise_unlocked = False
 
-    with st.expander("Request access", expanded=True):
-        st.write(f"Signed in as: **{email or 'Unknown account'}**")
-        reason = st.text_area(
-            "Why do you need access?",
-            placeholder="Team, business need, timeframe…",
-            height=120,
-        )
+if not st.session_state.enterprise_unlocked:
+    st.write("Enter your Enterprise access code to continue.")
+    code = st.text_input("Enterprise access code", type="password")
+    col1, col2 = st.columns([1, 3])
 
-        if st.button("Submit access request"):
-            if not reason.strip():
-                st.warning("Please add a short reason.")
+    with col1:
+        if st.button("Unlock", type="primary"):
+            if passcode_ok(code):
+                st.session_state.enterprise_unlocked = True
+                st.rerun()
             else:
-                try:
-                    save_request(email=email, name=name, reason=reason)
-                    st.success("Request submitted. You’ll be contacted after review.")
-                except Exception:
-                    st.error("Could not submit request. Please try again.")
+                st.error("Invalid access code.")
 
-    if AUTH_ENABLED and st.button("Sign out"):
-        try_logout()
+    with col2:
+        if st.button("Request access"):
+            st.session_state.show_request = True
+
+    if st.session_state.get("show_request", False):
+        with st.expander("Request Enterprise access", expanded=True):
+            req_email = st.text_input("Work email")
+            req_name = st.text_input("Name")
+            reason = st.text_area(
+                "Why do you need access?",
+                placeholder="Team, business need, timeframe…",
+                height=120,
+            )
+            if st.button("Submit request"):
+                if not req_email.strip() or not reason.strip():
+                    st.warning("Please provide at least email and reason.")
+                else:
+                    try:
+                        save_request(req_email, req_name, reason)
+                        st.success("Request submitted. You’ll be contacted after review.")
+                    except Exception as e:
+                        st.error(f"Could not submit request: {e}")
     st.stop()
 
-# 3) Authorized
-st.success(f"Welcome, {name or email}!")
+# ---- Authorized content ----
+st.success("Welcome to Enterprise.")
 st.info("Enterprise dashboard content goes here.")
 
-if AUTH_ENABLED and st.button("Sign out"):
-    try_logout()
+if st.button("Lock page"):
+    st.session_state.enterprise_unlocked = False
+    st.rerun()
