@@ -3,8 +3,22 @@ import streamlit as st
 st.set_page_config(page_title="Enterprise", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
+/* keep these hidden if you want */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
+/* Hide only the pencil (Edit) button */
+header button[title*="Edit"],
+header button[aria-label*="Edit"] {
+  display: none !important;
+}
+
+/* Hide only the GitHub icon/link */
+header a[href*="github.com"],
+header button[title*="GitHub"],
+header button[aria-label*="GitHub"] {
+  display: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
