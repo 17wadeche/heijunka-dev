@@ -1,6 +1,19 @@
 import hmac
 import streamlit as st
 st.set_page_config(page_title="Enterprise", layout="wide")
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header[data-testid="stHeader"] {visibility: hidden;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="collapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 if not ENTERPRISE_PASSCODE:
     st.error("Enterprise passcode is not configured.")
