@@ -1,6 +1,6 @@
 import hmac
 import streamlit as st
-st.set_page_config(page_title="Enterprise", layout="wide")
+st.set_page_config(page_title="Enterprise", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
 /* Hide hamburger main menu + footer */
