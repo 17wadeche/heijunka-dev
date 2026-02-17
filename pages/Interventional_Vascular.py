@@ -30,6 +30,12 @@ div[data-testid="stToolbar"] button,
 div[data-testid="stToolbar"] a {
     display: none !important;
 }
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
 
 /* Extra fallback selectors */
 header [data-testid="baseButton-header"],
@@ -45,10 +51,6 @@ header button[title*="Source"] {
 }
 </style>
 """, unsafe_allow_html=True)
-if "sidebar_open" not in st.session_state:
-    st.session_state.sidebar_open = True
-if st.button("Toggle sidebar"):
-    st.session_state.sidebar_open = not st.session_state.sidebar_open
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
