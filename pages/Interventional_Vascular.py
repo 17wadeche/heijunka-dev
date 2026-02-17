@@ -16,7 +16,6 @@ st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header[data-testid="stHeader"] {visibility: hidden;}
 [data-testid="collapsedControl"] {
   display: flex !important;
   visibility: visible !important;
