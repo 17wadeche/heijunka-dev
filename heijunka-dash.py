@@ -10,4 +10,3 @@ pg = st.navigation(
         st.Page("pages/Interventional_Vascular.py", title="Interventional Vascular"),
     ]
 )
-pg.run()
