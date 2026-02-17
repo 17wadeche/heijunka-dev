@@ -3,16 +3,34 @@ import streamlit as st
 st.set_page_config(page_title="Enterprise", layout="wide")
 st.markdown("""
 <style>
+/* Hide hamburger main menu + footer */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-[data-testid="stToolbar"] {display: none !important;}
+
+/* Keep header visible so sidebar toggle can exist */
+header[data-testid="stHeader"] {
+  visibility: visible !important;
+  background: transparent !important;
+}
+
+/* Hide only the top-right toolbar items */
+[data-testid="stToolbar"] {
+  display: none !important;
+}
+
+/* Ensure sidebar collapsed/expand button stays visible & clickable */
 [data-testid="collapsedControl"] {
   display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: fixed !important;
+  top: 0.75rem !important;
+  left: 0.75rem !important;
+  z-index: 999999 !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 if not ENTERPRISE_PASSCODE:
     st.error("Enterprise passcode is not configured.")
