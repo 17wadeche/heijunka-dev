@@ -4,5 +4,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.title("Enterprise Dashboard")
-st.info("Enterprise dashboard coming soon.")
+pg = st.navigation(
+    [
+        st.Page("heijunka-dash.py", title="Enterprise"),
+        st.Page("pages/Interventional_Vascular.py", title="Interventional Vascular"),
+    ]
+)
+pg.run()
