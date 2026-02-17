@@ -16,10 +16,24 @@ st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
+/* Keep header visible so sidebar/nav controls can render */
+header[data-testid="stHeader"] {
+  visibility: visible !important;
+  height: auto !important;
+}
+
+/* Hide top-right toolbar only */
+[data-testid="stToolbar"] {
+  display: none !important;
+}
+
+/* Keep sidebar toggle visible */
 [data-testid="collapsedControl"] {
   display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
+  z-index: 999999 !important;
 }
 </style>
 """, unsafe_allow_html=True)
