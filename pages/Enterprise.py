@@ -358,20 +358,7 @@ with st.sidebar:
         default=default_teams,
         help="Select teams to include in the dashboard.",
     )
-
     show_raw = st.toggle("Show raw tables", value=False)
-    st.divider()
-    st.caption("Detected data files")
-    if data:
-        for k in sorted(data.keys()):
-            st.write(f"{k} ({len(data[k])} rows)")
-    else:
-        st.write("No CSVs found at repo root.")
-
-
-# ----------------------------
-# Filtering
-# ----------------------------
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -388,8 +375,6 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
 
 
 st.markdown(
-    f"**Org:** {org.org_name} &nbsp;&nbsp;|&nbsp;&nbsp; "
-    f"**Teams in config:** {len(org.teams)} &nbsp;&nbsp;|&nbsp;&nbsp; "
     f"**Selected teams:** {len(team_filter)}"
 )
 
