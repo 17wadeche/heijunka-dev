@@ -15,19 +15,20 @@
     { "portfolio": "CRM", "team": "PCS & CDS", "ou": "PCS & CDS" },
     { "portfolio": "CRM", "team": "MCS", "ou": "MCS" },
 
-    { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "CRDN", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "ECT", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "SVT", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "PVH" },
+    { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "SHA" },
+    { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "SHA" },
+    { "portfolio": "Interventional Vascular", "team": "CRDN", "ou": "CRDN" },
+    { "portfolio": "Interventional Vascular", "team": "RPA Lab", "ou": "CRDN" },
+    { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "CAS" },
+    { "portfolio": "Interventional Vascular", "team": "ECT", "ou": "CS" },
+    { "portfolio": "Interventional Vascular", "team": "SVT", "ou": "CS" },
 
-    { "portfolio": "Medical Surgical", "team": "Surgical AST-GST", "ou": "" },
-    { "portfolio": "Medical Surgical", "team": "Surgical Robotics", "ou": "" },
-    { "portfolio": "Medical Surgical", "team": "Surgical Legal", "ou": "" },
-    { "portfolio": "Medical Surgical", "team": "ACM", "ou": "" },
-    { "portfolio": "Medical Surgical", "team": "Endoscopy", "ou": "" },
-    { "portfolio": "Medical Surgical", "team": "VSS", "ou": "" }
+    { "portfolio": "Medical Surgical", "team": "Surgical AST-GST", "ou": "Surgical" },
+    { "portfolio": "Medical Surgical", "team": "Surgical Robotics", "ou": "Surgical" },
+    { "portfolio": "Medical Surgical", "team": "Surgical Legal", "ou": "Surgical" },
+    { "portfolio": "Medical Surgical", "team": "ACM", "ou": "ACM" },
+    { "portfolio": "Medical Surgical", "team": "Endoscopy", "ou": "Endoscopy" },
+    { "portfolio": "Medical Surgical", "team": "VSS", "ou": "VSS" }
   ]
 }
