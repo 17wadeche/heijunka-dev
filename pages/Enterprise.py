@@ -257,11 +257,6 @@ def _loads_json_maybe(v: Any) -> Any:
         except Exception:
             return None
     return None
-
-
-# ----------------------------
-# App
-# ----------------------------
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 _maybe_apply_styles()
 st.title("Enterprise Dashboard")
@@ -893,8 +888,6 @@ with tabs[4]:
 
                 if show_raw:
                     st.dataframe(weekly_by_activity, use_container_width=True)
-
-    # non_wip_activities.csv table + download
     if "non_wip_activities" in data:
         st.divider()
         st.markdown("### `non_wip_activities.csv` (raw weekly extract)")
@@ -909,26 +902,3 @@ with tabs[4]:
                 file_name="non_wip_activities_filtered.csv",
                 mime="text/csv",
             )
-
-
-# ----------------------------
-# Config tab
-# ----------------------------
-with tabs[5]:
-    st.subheader("Org config")
-    st.caption("Parsed view (supports teams as strings or objects).")
-
-    cfg_table = pd.DataFrame(
-        [
-            {
-                "team": t.name,
-                "enabled": t.enabled,
-                **(t.meta or {}),
-            }
-            for t in org.teams
-        ]
-    )
-    st.dataframe(cfg_table, use_container_width=True)
-
-    with st.expander("Raw JSON", expanded=False):
-        st.json(org.raw)
