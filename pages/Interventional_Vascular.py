@@ -7,11 +7,6 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
-st.set_page_config(
-    page_title="Enterprise",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
