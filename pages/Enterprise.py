@@ -188,23 +188,35 @@ all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 with st.sidebar:
     st.subheader(org.org_name)
+    all_portfolios = sorted(
+        {str((t.meta or {}).get("portfolio")).strip() for t in org.teams if (t.meta or {}).get("portfolio") is not None}
+    )
+    portfolio_filter = st.multiselect(
+        "Portfolio",
+        options=all_portfolios,
+        default=all_portfolios,
+        help="Filter the org by portfolio.",
+    )
+    teams_after_portfolio = (
+        [t for t in org.teams if str((t.meta or {}).get("portfolio")).strip() in set(portfolio_filter)]
+        if portfolio_filter
+        else []
+    )
     all_ous = sorted(
-        {str((t.meta or {}).get("ou")).strip() for t in org.teams if (t.meta or {}).get("ou") is not None}
+        {str((t.meta or {}).get("ou")).strip() for t in teams_after_portfolio if (t.meta or {}).get("ou") is not None}
     )
     ou_filter = st.multiselect(
         "OU",
         options=all_ous,
         default=all_ous,
-        help="Filter the Teams list by OU.",
+        help="Filter the Teams list by OU (within the selected portfolios).",
     )
-    if ou_filter:
-        team_options = [
-            t.name
-            for t in org.teams
-            if str((t.meta or {}).get("ou")).strip() in set(ou_filter)
-        ]
-    else:
-        team_options = []
+    teams_after_ou = (
+        [t for t in teams_after_portfolio if str((t.meta or {}).get("ou")).strip() in set(ou_filter)]
+        if ou_filter
+        else []
+    )
+    team_options = [t.name for t in teams_after_ou]
     default_teams = [t for t in enabled_team_names if t in team_options]
     if not default_teams and team_options:
         default_teams = team_options
