@@ -327,13 +327,6 @@ def section_date_range(
         "Past year",
         "Past 2 years",
     ]
-    preset = st.selectbox(
-        "Quick range",
-        options=presets,
-        index=0,
-        key=f"{key}_preset",
-        help="Choose a preset, or pick Custom to select exact dates.",
-    )
     days_map = {
         "Past week": 7,
         "Past month": 30,
@@ -342,18 +335,32 @@ def section_date_range(
         "Past year": 365,
         "Past 2 years": 730,
     }
+    preset_key = f"{key}_preset"
+    dates_key = f"{key}_dates"
+    last_preset_key = f"{key}_last_preset"
+    preset = st.selectbox(
+        f"{label} — quick range",
+        options=presets,
+        index=0,
+        key=preset_key,
+        help="Choose a preset, or pick Custom to select exact dates.",
+    )
     if preset in days_map:
         start_default = max(min_d, (pd.to_datetime(anchor_end) - pd.Timedelta(days=days_map[preset])).date())
         end_default = anchor_end
     else:
         start_default = min_d
         end_default = max_d
+    prev = st.session_state.get(last_preset_key)
+    if prev != preset:
+        st.session_state[dates_key] = (start_default, end_default)
+        st.session_state[last_preset_key] = preset
+        st.rerun()
     dr = st.date_input(
         label,
-        value=(start_default, end_default),
         min_value=min_d,
         max_value=max_d,
-        key=f"{key}_dates",
+        key=dates_key,
         help="Filters only this section.",
     )
     if isinstance(dr, tuple) and len(dr) == 2:
@@ -363,21 +370,6 @@ def section_date_range(
     start_ts = pd.to_datetime(start_d)
     end_ts = pd.to_datetime(end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     return start_ts, end_ts
-def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
-    if not team_filter:
-        return df.iloc[0:0]
-    team_cols = [
-        c for c in df.columns
-        if c.strip().lower() in {"team", "team_name", "squad", "org_team"}
-    ]
-    if not team_cols:
-        tc = _get_team_col(df)
-        if tc:
-            team_cols = [tc]
-    if not team_cols:
-        return df
-    col = team_cols[0]
-    return df[df[col].astype(str).isin(set(team_filter))]
 def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
     if start_ts is None or end_ts is None:
         return df
