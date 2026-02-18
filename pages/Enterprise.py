@@ -315,9 +315,11 @@ def section_date_range(
     if mn is None or mx is None:
         st.info("No date column detected for this section.")
         return None, None
+    import datetime
     min_d = mn.date()
     max_d = mx.date()
-    anchor_end = max_d
+    today_d = datetime.date.today()
+    anchor_end = min(max(today_d, min_d), max_d)
     presets = [
         "Custom",
         "Past week",
