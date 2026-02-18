@@ -16,8 +16,7 @@
     { "portfolio": "CRM", "team": "MCS", "ou": "MCS" },
 
     { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "TCT Commercial", "ou": "" },
-    { "portfolio": "Interventional Vascular", "team": "TCT Clinical", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "" },
     { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "" },
     { "portfolio": "Interventional Vascular", "team": "CRDN", "ou": "" },
     { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "" },
