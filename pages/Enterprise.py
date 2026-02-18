@@ -147,7 +147,7 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         "non_wip": repo_root / "non_wip.csv",
         "non_wip_activities": repo_root / "non_wip_activities.csv",
         "closures": repo_root / "closures.csv",
-        "timelines": repo_root / "timelines.csv",
+        "timeliness": repo_root / "timeliness.csv",
         "metrics_aggregate_dev": repo_root / "metrics_aggregate_dev.csv",
     }
     out: Dict[str, pd.DataFrame] = {}
@@ -214,15 +214,15 @@ st.markdown(f"**Org:** {org.org_name} &nbsp;&nbsp;|&nbsp;&nbsp; **Teams in confi
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
-tabs = st.tabs(["Overview", "Metrics", "Timelines", "Closures", "Non-WIP", "Config"])
+tabs = st.tabs(["Overview", "Metrics", "timeliness", "Closures", "Non-WIP", "Config"])
 with tabs[0]:
     col1, col2, col3, col4 = st.columns(4)
     metrics_rows = len(filter_by_team(data["metrics"])) if "metrics" in data else 0
-    timelines_rows = len(filter_by_team(data["timelines"])) if "timelines" in data else 0
+    timeliness_rows = len(filter_by_team(data["timeliness"])) if "timeliness" in data else 0
     closures_rows = len(filter_by_team(data["closures"])) if "closures" in data else 0
     nonwip_rows = len(filter_by_team(data["non_wip"])) if "non_wip" in data else 0
     col1.metric("Metrics rows", f"{metrics_rows:,}")
-    col2.metric("Timelines rows", f"{timelines_rows:,}")
+    col2.metric("timeliness rows", f"{timeliness_rows:,}")
     col3.metric("Closures rows", f"{closures_rows:,}")
     col4.metric("Non-WIP rows", f"{nonwip_rows:,}")
     st.divider()
@@ -269,11 +269,11 @@ with tabs[1]:
                 mime="text/csv",
             )
 with tabs[2]:
-    st.subheader("Timelines")
-    if "timelines" not in data:
-        st.info("No timelines CSV found (expected `timelines.csv`).")
+    st.subheader("timeliness")
+    if "timeliness" not in data:
+        st.info("No timeliness CSV found (expected `timeliness.csv`).")
     else:
-        dft = filter_by_team(data["timelines"])
+        dft = filter_by_team(data["timeliness"])
         if dft.empty:
             st.warning("No rows after team filter.")
         else:
@@ -291,9 +291,9 @@ with tabs[2]:
             if show_raw:
                 st.dataframe(dft, use_container_width=True)
             st.download_button(
-                "Download filtered timelines as CSV",
+                "Download filtered timeliness as CSV",
                 data=dft.to_csv(index=False).encode("utf-8"),
-                file_name="timelines_filtered.csv",
+                file_name="timeliness_filtered.csv",
                 mime="text/csv",
             )
 with tabs[3]:
