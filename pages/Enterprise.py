@@ -127,8 +127,6 @@ def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[str], Op
         return org, None, attempted_str, str(cfg_path)
     except Exception as e:
         return None, f"Failed to read/parse config:\n{cfg_path}\n\n{e}", attempted_str, str(cfg_path)
-
-
 def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
     if cfg_path_str:
         p = Path(cfg_path_str)
@@ -137,8 +135,6 @@ def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
                 return p.parent.parent
             return p.parent
     return Path(__file__).resolve().parents[1]
-
-
 def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
     try:
         if path.exists() and path.is_file():
@@ -146,8 +142,6 @@ def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
     except Exception:
         return None
     return None
-
-
 @st.cache_data(show_spinner=False)
 def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
     repo_root = Path(repo_root_str)
@@ -166,49 +160,30 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         if df is not None and not df.empty:
             out[key] = df
     return out
-
-
 def _maybe_apply_styles():
     try:
         from utils.styles import apply_global_styles  # type: ignore
-
         apply_global_styles()
     except Exception:
         pass
-
-
 def _norm(s: str) -> str:
     return str(s).strip().lower().replace(" ", "_")
-
-
 def _first_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
     cols = {_norm(c): c for c in df.columns}
     for cand in candidates:
         if cand in cols:
             return cols[cand]
     return None
-
-
 def _get_team_col(df: pd.DataFrame) -> Optional[str]:
     return _first_col(df, ["team", "team_name", "org_team", "squad"])
-
-
 def _get_date_col(df: pd.DataFrame) -> Optional[str]:
     return _first_col(df, ["week", "period_date", "date", "day", "as_of", "timestamp"])
-
-
 def _safe_to_datetime(df: pd.DataFrame, col: str) -> pd.Series:
     return pd.to_datetime(df[col], errors="coerce")
-
-
 def _weekly_start(s: pd.Series) -> pd.Series:
     return s.dt.to_period("W-MON").dt.start_time
-
-
 def _to_num(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce")
-
-
 def _loads_json_maybe(v: Any) -> Any:
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return None
@@ -223,14 +198,11 @@ def _loads_json_maybe(v: Any) -> Any:
         except Exception:
             return None
     return None
-
-
 def _workdays_per_week_assumption() -> int:
     return 5
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 _maybe_apply_styles()
 st.title("Enterprise Dashboard")
-
 org, org_err, attempted_paths, cfg_path_str = load_org_config()
 if org is None:
     st.error("No org config found.")
@@ -247,21 +219,13 @@ if org is None:
     with st.expander("Paths checked (debug)", expanded=False):
         st.write("\n".join(attempted_paths[:300]))
     st.stop()
-
 repo_root = _repo_root_from_cfg_path_str(cfg_path_str)
 data = load_common_data(str(repo_root))
-
 enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
-
-
-# ----------------------------
-# Sidebar filters
-# ----------------------------
 with st.sidebar:
     st.subheader(org.org_name)
-
     all_portfolios = sorted(
         {
             str((t.meta or {}).get("portfolio")).strip()
@@ -275,7 +239,6 @@ with st.sidebar:
         default=all_portfolios,
         help="Filter the org by portfolio.",
     )
-
     teams_after_portfolio = (
         [
             t
@@ -285,7 +248,6 @@ with st.sidebar:
         if portfolio_filter
         else []
     )
-
     all_ous = sorted(
         {
             str((t.meta or {}).get("ou")).strip()
@@ -299,7 +261,6 @@ with st.sidebar:
         default=all_ous,
         help="Filter the Teams list by OU (within selected portfolios).",
     )
-
     teams_after_ou = (
         [
             t
@@ -309,12 +270,10 @@ with st.sidebar:
         if ou_filter
         else []
     )
-
     team_options = [t.name for t in teams_after_ou]
     default_teams = [t for t in enabled_team_names if t in team_options]
     if not default_teams and team_options:
         default_teams = team_options
-
     team_filter = st.multiselect(
         "Teams",
         options=team_options,
@@ -337,9 +296,7 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
         return df
     col = team_cols[0]
     return df[df[col].astype(str).isin(set(team_filter))]
-
 def _date_bounds_for_df(df: pd.DataFrame) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp], Optional[str]]:
-    """Return (min_ts, max_ts, date_col) if df has a date column with parseable values."""
     dc = _get_date_col(df)
     if not dc:
         return None, None, None
@@ -347,43 +304,65 @@ def _date_bounds_for_df(df: pd.DataFrame) -> tuple[Optional[pd.Timestamp], Optio
     if ser.empty:
         return None, None, dc
     return ser.min(), ser.max(), dc
-
-
-def section_date_range(label: str, df: Optional[pd.DataFrame], key: str) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
-    """
-    Render a date range picker for THIS section.
-    Returns (start_ts, end_ts) as pandas Timestamps, or (None, None) if unavailable.
-    """
+def section_date_range(
+    label: str,
+    df: Optional[pd.DataFrame],
+    key: str,
+) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
     if df is None or df.empty:
         return None, None
-
     mn, mx, _ = _date_bounds_for_df(df)
     if mn is None or mx is None:
         st.info("No date column detected for this section.")
         return None, None
-
-    start_default = mn.date()
-    end_default = mx.date()
-
+    min_d = mn.date()
+    max_d = mx.date()
+    anchor_end = max_d
+    presets = [
+        "Custom",
+        "Past week",
+        "Past month",
+        "Past 3 months",
+        "Past 6 months",
+        "Past year",
+        "Past 2 years",
+    ]
+    preset = st.selectbox(
+        "Quick range",
+        options=presets,
+        index=0,
+        key=f"{key}_preset",
+        help="Choose a preset, or pick Custom to select exact dates.",
+    )
+    days_map = {
+        "Past week": 7,
+        "Past month": 30,
+        "Past 3 months": 90,
+        "Past 6 months": 180,
+        "Past year": 365,
+        "Past 2 years": 730,
+    }
+    if preset in days_map:
+        start_default = max(min_d, (pd.to_datetime(anchor_end) - pd.Timedelta(days=days_map[preset])).date())
+        end_default = anchor_end
+    else:
+        start_default = min_d
+        end_default = max_d
     dr = st.date_input(
         label,
         value=(start_default, end_default),
-        min_value=start_default,
-        max_value=end_default,
-        key=key,  # IMPORTANT: unique per section
+        min_value=min_d,
+        max_value=max_d,
+        key=f"{key}_dates",
         help="Filters only this section.",
     )
-
     if isinstance(dr, tuple) and len(dr) == 2:
         start_d, end_d = dr
     else:
         start_d, end_d = start_default, end_default
-
     start_ts = pd.to_datetime(start_d)
     end_ts = pd.to_datetime(end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     return start_ts, end_ts
-
-
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -399,10 +378,7 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
         return df
     col = team_cols[0]
     return df[df[col].astype(str).isin(set(team_filter))]
-
-
 def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
-    """Apply a provided date range if we can find a date column."""
     if start_ts is None or end_ts is None:
         return df
     dc = _get_date_col(df)
@@ -412,18 +388,13 @@ def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end
     tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
     tmp = tmp.dropna(subset=[dc])
     return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
-
-
 def filter_df(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
     return filter_by_date_range(filter_by_team(df), start_ts, end_ts)
-
 st.markdown(f"**Selected teams:** {len(team_filter)}")
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
-
 tabs = st.tabs(["Overview", "Non-WIP"])
-
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
         d = filter_by_team(data["metrics"])
@@ -454,8 +425,6 @@ def _metrics_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
         "people_in_wip": _first_col(df, ["people_in_wip"]),
         "person_hours_json": _first_col(df, ["person_hours"]),
     }
-
-
 def _nonwip_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
     return {
         "date": _get_date_col(df),
@@ -465,10 +434,7 @@ def _nonwip_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
         "ooohours": _first_col(df, ["ooo_hours", "ooo_hours."]),
         "activities_json": _first_col(df, ["non-wip_activities", "non_wip_activities"]),
     }
-
-
 def _people_lookup_by_week(dfnw: pd.DataFrame) -> Dict[pd.Timestamp, float]:
-    """Map week(date) -> people_count for denominator."""
     out: Dict[pd.Timestamp, float] = {}
     nwc = _nonwip_cols(dfnw)
     if not (nwc["date"] and nwc["people_count"]):
@@ -477,7 +443,6 @@ def _people_lookup_by_week(dfnw: pd.DataFrame) -> Dict[pd.Timestamp, float]:
     tmp[nwc["date"]] = pd.to_datetime(tmp[nwc["date"]], errors="coerce")
     tmp = tmp.dropna(subset=[nwc["date"]])
     tmp["people_count"] = _to_num(tmp[nwc["people_count"]]).fillna(0.0)
-    # If multiple teams -> multiple rows per week; sum gives "total people" across selected teams
     grp = tmp.groupby(nwc["date"], as_index=False)["people_count"].sum()
     for _, r in grp.iterrows():
         out[pd.to_datetime(r[nwc["date"]])] = float(r["people_count"])
@@ -590,11 +555,8 @@ with tabs[0]:
                 .sort_values("week_start")
             )
             wk["team_total"] = wk["wip_hours"] / float(wd)
-
-            # build per-person weekly series (same logic as above, but weekly)
             wk["per_person"] = pd.NA
             if denom_mode == "Total HC on team" and people_by_week:
-                # people_by_week keys may be exact dates; align by week_start
                 people_by_week_start = {
                     pd.to_datetime(k).to_period("W-MON").start_time: v
                     for k, v in people_by_week.items()
@@ -603,7 +565,6 @@ with tabs[0]:
                 wk["per_person"] = wk["wip_hours"] / (float(wd) * wk["people_count"])
                 wk.loc[wk["people_count"].fillna(0) <= 0, "per_person"] = pd.NA
             elif mc["hc_in_wip"] and mc["hc_in_wip"] in temp.columns:
-                # Need weekly hc_in_wip sum too
                 temp["hc_in_wip"] = _to_num(temp[mc["hc_in_wip"]]).fillna(0.0)
                 wk_hc = (
                     temp.groupby("week_start", as_index=False)
@@ -613,12 +574,9 @@ with tabs[0]:
                 wk = wk.merge(wk_hc, on="week_start", how="left")
                 wk["per_person"] = wk["wip_hours"] / (float(wd) * wk["hc_in_wip"])
                 wk.loc[wk["hc_in_wip"].fillna(0) <= 0, "per_person"] = pd.NA
-
-            # --- NEW: "only go up" enforcement ---
             wk["team_total_up_only"] = wk["team_total"].cummax()
             if wk["per_person"].notna().any():
                 wk["per_person_up_only"] = wk["per_person"].cummax()
-
             view = st.selectbox("Trend view", ["Team total", "Per person"], index=0)
             if view == "Team total":
                 st.line_chart(wk.set_index("week_start")["team_total_up_only"])
