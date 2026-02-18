@@ -1,27 +1,16 @@
 # pages/Enterprise.py
 from __future__ import annotations
-
 import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
 import pandas as pd
 import streamlit as st
-
-
-# -----------------------------
-# Path + config discovery
-# -----------------------------
 def _candidate_repo_roots(start: Path) -> List[Path]:
     roots: List[Path] = []
     p = start.resolve()
-
-    # Walk up to filesystem root
     for parent in [p, *p.parents]:
         roots.append(parent)
-
-    # Common container mounts / names
     roots.extend(
         [
             Path("/mount/src/heijunka-dev"),
@@ -30,8 +19,6 @@ def _candidate_repo_roots(start: Path) -> List[Path]:
             Path.cwd(),
         ]
     )
-
-    # De-dup while preserving order
     seen = set()
     out: List[Path] = []
     for r in roots:
@@ -44,30 +31,19 @@ def _candidate_repo_roots(start: Path) -> List[Path]:
             out.append(rr)
     return out
 
-
 def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
-    """
-    Find config/enterprise_org.json robustly (avoids case-sensitive path issues).
-    Returns: (found_path_or_None, attempted_paths)
-    """
     attempted: List[Path] = []
     start = Path(__file__).resolve()
-
-    # Prefer "repo_root/config/enterprise_org.json" where repo_root is parent of /pages
     preferred_root = start.parents[1] if len(start.parents) >= 2 else start.parent
     preferred = preferred_root / "config" / "enterprise_org.json"
     attempted.append(preferred)
     if preferred.exists():
         return preferred, attempted
-
-    # Search upward candidates for config/enterprise_org.json
     for root in _candidate_repo_roots(start):
         cand = root / "config" / "enterprise_org.json"
         attempted.append(cand)
         if cand.exists():
             return cand, attempted
-
-    # Last resort: case-insensitive file name scan for enterprise_org.json under any "config" dir
     for root in _candidate_repo_roots(start):
         config_dir = root / "config"
         if config_dir.is_dir():
@@ -78,27 +54,17 @@ def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
                         return f, attempted
             except Exception:
                 pass
-
     return None, attempted
-
-
-# -----------------------------
-# Config model + parsing
-# -----------------------------
 @dataclass(frozen=True)
 class TeamConfig:
     name: str
     enabled: bool = True
     meta: Dict[str, Any] = None  # any extra fields
-
-
 @dataclass(frozen=True)
 class OrgConfig:
     org_name: str
     teams: List[TeamConfig]
     raw: Dict[str, Any]
-
-
 def _coerce_bool(v: Any, default: bool = True) -> bool:
     if v is None:
         return default
@@ -109,26 +75,15 @@ def _coerce_bool(v: Any, default: bool = True) -> bool:
     if isinstance(v, str):
         return v.strip().lower() in {"1", "true", "yes", "y", "enabled", "on"}
     return default
-
-
 def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
-    """
-    Accepts a few shapes, to stay compatible with older/newer configs:
-
-    1) {"org_name": "Acme", "teams": ["Team A", "Team B"]}
-    2) {"org_name": "Acme", "teams": [{"name": "Team A", "enabled": true, ...}, ...]}
-    3) {"org": {"name": "Acme"}, "teams": ...}
-    """
     org_name = (
         data.get("org_name")
         or (data.get("org") or {}).get("name")
         or data.get("name")
         or "Enterprise"
     )
-
     teams_raw = data.get("teams") or data.get("Teams") or []
     teams: List[TeamConfig] = []
-
     if isinstance(teams_raw, list):
         for t in teams_raw:
             if isinstance(t, str):
@@ -141,7 +96,6 @@ def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
                 meta = {k: v for k, v in t.items() if k not in {"name", "team", "Team", "enabled"}}
                 teams.append(TeamConfig(name=str(name), enabled=enabled, meta=meta))
     elif isinstance(teams_raw, dict):
-        # e.g. {"Team A": {...}, "Team B": {...}}
         for name, tmeta in teams_raw.items():
             if isinstance(tmeta, dict):
                 enabled = _coerce_bool(tmeta.get("enabled"), True)
@@ -149,27 +103,16 @@ def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
             else:
                 enabled, meta = True, {}
             teams.append(TeamConfig(name=str(name), enabled=enabled, meta=meta))
-
     return OrgConfig(org_name=str(org_name), teams=teams, raw=data)
-
-
 def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[str], Optional[str]]:
-    """
-    NOT cached: avoids Streamlit serialization errors.
-    Returns:
-      (OrgConfig|None, error_message|None, attempted_paths_as_str, config_path_as_str|None)
-    """
     cfg_path, attempted = find_org_config_path()
     attempted_str = [str(p) for p in attempted]
-
     if cfg_path is None:
         return None, None, attempted_str, None
-
     try:
         text = cfg_path.read_text(encoding="utf-8")
         data = json.loads(text)
         org = parse_org_config(data)
-
         if not org.teams:
             return (
                 None,
@@ -178,15 +121,9 @@ def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[str], Op
                 attempted_str,
                 str(cfg_path),
             )
-
         return org, None, attempted_str, str(cfg_path)
     except Exception as e:
         return None, f"Failed to read/parse config:\n{cfg_path}\n\n{e}", attempted_str, str(cfg_path)
-
-
-# -----------------------------
-# Data loading helpers
-# -----------------------------
 def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
     if cfg_path_str:
         p = Path(cfg_path_str)
@@ -195,8 +132,6 @@ def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
                 return p.parent.parent
             return p.parent
     return Path(__file__).resolve().parents[1]
-
-
 def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
     try:
         if path.exists() and path.is_file():
@@ -204,16 +139,9 @@ def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
     except Exception:
         return None
     return None
-
-
 @st.cache_data(show_spinner=False)
 def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
-    """
-    Cached: pandas DataFrames are supported by st.cache_data.
-    Note: take str arg (serializable) instead of Path.
-    """
     repo_root = Path(repo_root_str)
-
     candidates = {
         "metrics": repo_root / "metrics.csv",
         "non_wip": repo_root / "non_wip.csv",
@@ -222,37 +150,24 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         "timelines": repo_root / "timelines.csv",
         "metrics_aggregate_dev": repo_root / "metrics_aggregate_dev.csv",
     }
-
     out: Dict[str, pd.DataFrame] = {}
     for key, p in candidates.items():
         df = _try_read_csv(p)
         if df is not None and not df.empty:
             out[key] = df
     return out
-
-
 def _maybe_apply_styles():
     try:
         from utils.styles import apply_global_styles  # type: ignore
-
         apply_global_styles()
     except Exception:
         pass
-
-
-# -----------------------------
-# UI
-# -----------------------------
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 _maybe_apply_styles()
-
 st.title("Enterprise Dashboard")
-
 org, org_err, attempted_paths, cfg_path_str = load_org_config()
-
 if org is None:
     st.error("No org config found.")
-
     expected_example = "/mount/src/heijunka-dev/config/enterprise_org.json"
     st.caption(
         "Expected file at: "
@@ -261,10 +176,8 @@ if org is None:
         "Tip: On Linux, folder names are case-sensitive. If your repo folder is `HEIJUNKA-DEV`, "
         "hard-coded paths to `heijunka-dev` will fail."
     )
-
     if org_err:
         st.code(org_err)
-
     with st.expander("Paths checked (debug)", expanded=False):
         st.write("\n".join(attempted_paths[:300]))
     st.stop()
