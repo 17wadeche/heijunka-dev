@@ -241,7 +241,7 @@ with tabs[1]:
     if "metrics" not in data and "metrics_aggregate_dev" not in data:
         st.info("No metrics CSV found (expected `metrics.csv` or `metrics_aggregate_dev.csv`).")
     else:
-        dfm = data.get("metrics") or data.get("metrics_aggregate_dev")
+        dfm = data["metrics"] if "metrics" in data else data["metrics_aggregate_dev"]
         dfm = filter_by_team(dfm)
         if dfm.empty:
             st.warning("No rows after team filter.")
