@@ -1,0 +1,34 @@
+{
+  "teams": [
+    { "portfolio": "Neuroscience", "team": "TDD", "ou": "NM" },
+    { "portfolio": "Neuroscience", "team": "DBS", "ou": "NM" },
+    { "portfolio": "Neuroscience", "team": "SCS", "ou": "NM" },
+    { "portfolio": "Neuroscience", "team": "Pelvic Health", "ou": "PH" },
+    { "portfolio": "Neuroscience", "team": "Neurovascular", "ou": "NV" },
+    { "portfolio": "Neuroscience", "team": "ENT", "ou": "ENT" },
+    { "portfolio": "Neuroscience", "team": "PSS", "ou": "CST" },
+    { "portfolio": "Neuroscience", "team": "Spine", "ou": "CST" },
+    { "portfolio": "Neuroscience", "team": "Enabling Technologies", "ou": "CST" },
+
+    { "portfolio": "CRM", "team": "CPT", "ou": "CPT" },
+    { "portfolio": "CRM", "team": "DS", "ou": "DS" },
+    { "portfolio": "CRM", "team": "PCS & CDS", "ou": "PCS & CDS" },
+    { "portfolio": "CRM", "team": "MCS", "ou": "MCS" },
+
+    { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "TCT Commercial", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "TCT Clinical", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "CRDN", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "ECT", "ou": "" },
+    { "portfolio": "Interventional Vascular", "team": "SVT", "ou": "" },
+
+    { "portfolio": "Medical Surgical", "team": "Surgical AST-GST", "ou": "" },
+    { "portfolio": "Medical Surgical", "team": "Surgical Robotics", "ou": "" },
+    { "portfolio": "Medical Surgical", "team": "Surgical Legal", "ou": "" },
+    { "portfolio": "Medical Surgical", "team": "ACM", "ou": "" },
+    { "portfolio": "Medical Surgical", "team": "Endoscopy", "ou": "" },
+    { "portfolio": "Medical Surgical", "team": "VSS", "ou": "" }
+  ]
+}
