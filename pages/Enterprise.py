@@ -215,13 +215,6 @@ with st.sidebar:
         help="Select teams to include in the dashboard.",
     )
     show_raw = st.toggle("Show raw tables", value=False)
-    st.divider()
-    st.caption("Detected data files")
-    if data:
-        for k in sorted(data.keys()):
-            st.write(f"{k} ({len(data[k])} rows)")
-    else:
-        st.write("No CSVs found at repo root.")
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
