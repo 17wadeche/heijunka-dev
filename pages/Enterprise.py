@@ -638,7 +638,6 @@ with tabs[0]:
         st.info("No metrics data loaded for selected teams.")
 
 with tabs[1]:
-    st.subheader("Non-WIP")
     if "non_wip" not in data and "non_wip_activities" not in data:
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
         st.stop()
