@@ -188,10 +188,30 @@ all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 with st.sidebar:
     st.subheader(org.org_name)
+    all_ous = sorted(
+        {str((t.meta or {}).get("ou")).strip() for t in org.teams if (t.meta or {}).get("ou") is not None}
+    )
+    ou_filter = st.multiselect(
+        "OU",
+        options=all_ous,
+        default=all_ous,
+        help="Filter the Teams list by OU.",
+    )
+    if ou_filter:
+        team_options = [
+            t.name
+            for t in org.teams
+            if str((t.meta or {}).get("ou")).strip() in set(ou_filter)
+        ]
+    else:
+        team_options = []
+    default_teams = [t for t in enabled_team_names if t in team_options]
+    if not default_teams and team_options:
+        default_teams = team_options
     team_filter = st.multiselect(
         "Teams",
-        options=all_team_names,
-        default=enabled_team_names,
+        options=team_options,
+        default=default_teams,
         help="Select teams to include in the dashboard.",
     )
     show_raw = st.toggle("Show raw tables", value=False)
