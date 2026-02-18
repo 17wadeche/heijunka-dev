@@ -893,7 +893,7 @@ with tabs[4]:
             )
 
     st.divider()
-    st.markdown("### Non-WIP activities (nice-to-have)")
+    st.markdown("### Non-WIP activities")
 
     source_df = None
     if "non_wip" in data:
