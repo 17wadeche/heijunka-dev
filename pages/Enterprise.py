@@ -571,7 +571,6 @@ with tabs[0]:
             view = st.selectbox("Trend view", ["Team total", "Per person"], index=0)
             if view == "Team total":
                 st.line_chart(wk.set_index("week_start")["team_total_up_only"])
-                st.caption("WoW (weekly) and forced non-decreasing: **cummax(Completed Hours / 5)**. Future weeks excluded.")
             else:
                 if "per_person_up_only" not in wk.columns or wk["per_person_up_only"].notna().sum() == 0:
                     st.info("Per-person trend not available (no People Count / HC in WIP found for selected range).")
