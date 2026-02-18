@@ -237,7 +237,6 @@ with st.sidebar:
         "Portfolio",
         options=all_portfolios,
         default=all_portfolios,
-        help="Filter the org by portfolio.",
     )
     teams_after_portfolio = (
         [
@@ -259,7 +258,6 @@ with st.sidebar:
         "OU",
         options=all_ous,
         default=all_ous,
-        help="Filter the Teams list by OU (within selected portfolios).",
     )
     teams_after_ou = (
         [
@@ -278,7 +276,6 @@ with st.sidebar:
         "Teams",
         options=team_options,
         default=default_teams,
-        help="Select teams to include in the dashboard.",
     )
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
