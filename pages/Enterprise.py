@@ -243,11 +243,6 @@ def _loads_json_maybe(v: Any) -> Any:
 
 def _workdays_per_week_assumption() -> int:
     return 5
-
-
-# ----------------------------
-# App init
-# ----------------------------
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 _maybe_apply_styles()
 st.title("Enterprise Dashboard")
@@ -454,7 +449,7 @@ def _metrics_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
         "date": _get_date_col(df),
         "wip_hours": _first_col(df, ["completed_hours", "wip_hours", "completedhours"]),
         "avail_hours": _first_col(df, ["total_available_hours", "person_hours", "total_available_hours."]),
-        "hc_used": _first_col(df, ["actual_hc_used"]),
+        "hc_used": _first_col(df, ["actual_hc_used", "actual_hc_used."]),
         "hc_in_wip": _first_col(df, ["hc_in_wip"]),
         "people_in_wip": _first_col(df, ["people_in_wip"]),
         "person_hours_json": _first_col(df, ["person_hours"]),
@@ -502,22 +497,29 @@ with tabs[0]:
     # Denominator choice for per-person calcs
     denom_mode = st.radio(
         "Per-person denominator for WIP daily hours",
-        options=["People Count (from non_wip.csv)", "HC in WIP (from metrics)"],
+        options=["Total HC on team", "HC that worked in WIP"],
         index=0,
         horizontal=True,
         help="Team-total daily WIP = Completed Hours/5. Per-person daily WIP divides by headcount too.",
     )
-
     avg_daily_wip_team = None
     avg_daily_wip_per_person = None
     avg_daily_nonwip_team = None
     avg_daily_nonwip_per_person = None
     pct_wip = None
-
     people_by_week: Dict[pd.Timestamp, float] = {}
     if dfnw is not None and not dfnw.empty:
         people_by_week = _people_lookup_by_week(dfnw)
-
+    hc_used_value: Optional[float] = None
+    if dfm is not None:
+        mc0 = _metrics_cols(dfm)
+        if mc0["date"] and mc0["hc_used"] and mc0["hc_used"] in dfm.columns:
+            tmp_hc = dfm.copy()
+            tmp_hc[mc0["date"]] = _safe_to_datetime(tmp_hc, mc0["date"])
+            tmp_hc = tmp_hc.dropna(subset=[mc0["date"]]).sort_values(mc0["date"])
+            tmp_hc["hc_used"] = _to_num(tmp_hc[mc0["hc_used"]])
+            if tmp_hc["hc_used"].notna().any():
+                hc_used_value = float(tmp_hc["hc_used"].dropna().mean())
     if dfm is not None:
         mc = _metrics_cols(dfm)
         if mc["date"] and mc["wip_hours"]:
@@ -531,7 +533,7 @@ with tabs[0]:
             avg_daily_wip_team = float(temp["daily_wip_team"].mean())
 
             # Per-person avg daily WIP
-            if denom_mode.startswith("People Count") and people_by_week:
+            if denom_mode == "Total HC on team" and people_by_week:
                 temp["people_count"] = temp[mc["date"]].map(people_by_week)
                 temp["daily_wip_per_person"] = temp["wip_hours"] / (float(wd) * temp["people_count"])
                 temp.loc[temp["people_count"].fillna(0) <= 0, "daily_wip_per_person"] = pd.NA
@@ -578,12 +580,13 @@ with tabs[0]:
     ):
         pct_wip = 100.0 * avg_daily_wip_per_person / (avg_daily_wip_per_person + avg_daily_nonwip_per_person)
 
-    k1, k2, k3, k4, k5 = st.columns(5)
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
     k1.metric("Avg daily WIP (team total)", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
     k2.metric("Avg daily WIP (per person)", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
     k3.metric("Avg daily Non-WIP (team total)", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
     k4.metric("Avg daily Non-WIP (per person)", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
     k5.metric("% WIP (WIP / (WIP+Non-WIP))", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    k6.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
 
     st.caption("Daily averages assume **5 workdays/week**. Per-person uses headcount where available.")
     st.divider()
@@ -601,7 +604,7 @@ with tabs[0]:
 
             # build per-person series (same logic as above)
             per_person = None
-            if denom_mode.startswith("People Count") and people_by_week:
+            if denom_mode == "Total HC on team" and people_by_week:
                 per_person = temp["wip_hours"] / (float(wd) * temp[mc["date"]].map(people_by_week))
             elif mc["hc_in_wip"] and mc["hc_in_wip"] in temp.columns:
                 temp["hc_in_wip"] = _to_num(temp[mc["hc_in_wip"]]).fillna(0.0)
@@ -714,12 +717,14 @@ with tabs[1]:
     if wip_mean is not None and avg_daily_nonwip_team is not None and (wip_mean + avg_daily_nonwip_team) > 0:
         pct_wip = 100.0 * wip_mean / (wip_mean + avg_daily_nonwip_team)
 
-    k1, k2, k3, k4, k5 = st.columns(5)
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
     k1.metric("Avg daily WIP (team total)", f"{float(temp['avg_daily_wip_team'].mean()):.2f}" if not temp.empty else "—")
     k2.metric("Avg daily WIP (per person)", f"{float(temp['avg_daily_wip_per_person'].dropna().mean()):.2f}" if temp["avg_daily_wip_per_person"].notna().any() else "—")
     k3.metric("Avg daily Non-WIP (team total)", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
     k4.metric("Avg daily Non-WIP (per person)", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
     k5.metric("% WIP (team total)", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    k6.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
+
 
     st.caption("Per-person uses People Count (preferred) or HC in WIP (fallback).")
     st.divider()
@@ -938,7 +943,6 @@ with tabs[4]:
                                 "hours": float(hrs) if str(hrs) != "" else 0.0,
                             }
                         )
-
             if not rows:
                 st.info("No parsable activity rows found in the JSON column.")
             else:
@@ -946,29 +950,23 @@ with tabs[4]:
                 act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
                 act_df = act_df.dropna(subset=["week"])
                 act_df["week_start"] = _weekly_start(act_df["week"])
-
                 weekly_by_activity = (
                     act_df.groupby(["week_start", "activity"], as_index=False)
                     .agg(hours=("hours", "sum"))
                     .sort_values(["week_start", "hours"], ascending=[True, False])
                 )
-
                 avg_weekly = (
                     weekly_by_activity.groupby("activity", as_index=False)
                     .agg(avg_weekly_hours=("hours", "mean"))
                     .sort_values("avg_weekly_hours", ascending=False)
                     .head(12)
                 )
-
                 st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
                 st.caption("Top activities by **average weekly hours** (top 12).")
-
                 last_week = weekly_by_activity["week_start"].max()
                 last = weekly_by_activity[weekly_by_activity["week_start"] == last_week].copy()
                 last = last.sort_values("hours", ascending=False)
-
                 st.write(f"Most recent week starting: **{pd.to_datetime(last_week).date()}**")
-
                 if len(last) > 9:
                     top = last.head(8)
                     other = pd.DataFrame(
@@ -983,9 +981,7 @@ with tabs[4]:
                     pie_df = pd.concat([top, other], ignore_index=True)
                 else:
                     pie_df = last
-
-                import matplotlib.pyplot as plt  # local import (KEEP)
-
+                import matplotlib.pyplot as plt
                 fig, ax = plt.subplots()
                 ax.pie(
                     pie_df["hours"],
@@ -995,10 +991,8 @@ with tabs[4]:
                 )
                 ax.axis("equal")
                 st.pyplot(fig)
-
                 if show_raw:
                     st.dataframe(weekly_by_activity, use_container_width=True)
-
     if "non_wip_activities" in data:
         st.divider()
         st.markdown("### `non_wip_activities.csv` (raw weekly extract)")
