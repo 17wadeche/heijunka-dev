@@ -520,9 +520,9 @@ with tabs[0]:
     ):
         pct_wip = 100.0 * avg_daily_wip_per_person / (avg_daily_wip_per_person + avg_daily_nonwip_per_person)
     k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("Avg daily WIP (team total)", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
+    k1.metric("Avg daily WIP (group total)", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
     k2.metric("Avg daily WIP (per person)", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    k3.metric("Avg daily Non-WIP (team total)", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
+    k3.metric("Avg daily Non-WIP (group total)", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
     k4.metric("Avg daily Non-WIP (per person)", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
     k5.metric("% WIP (WIP / (WIP+Non-WIP))", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
     k6.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
@@ -568,8 +568,8 @@ with tabs[0]:
             wk["team_total_up_only"] = wk["team_total"].cummax()
             if wk["per_person"].notna().any():
                 wk["per_person_up_only"] = wk["per_person"].cummax()
-            view = st.selectbox("Trend view", ["Team total", "Per person"], index=0)
-            if view == "Team total":
+            view = st.selectbox("Trend view", ["Group total", "Per person"], index=0)
+            if view == "Group total":
                 st.line_chart(wk.set_index("week_start")["team_total_up_only"])
             else:
                 if "per_person_up_only" not in wk.columns or wk["per_person_up_only"].notna().sum() == 0:
