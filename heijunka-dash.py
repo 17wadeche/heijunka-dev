@@ -1,5 +1,4 @@
 import streamlit as st
-
 st.set_page_config(
     page_title="Enterprise Dashboard",
     layout="wide",
@@ -9,6 +8,12 @@ st.markdown("""
     <style>
     [data-testid="stToolbar"] {
         visibility: hidden;
+    }
+    [data-testid="collapsedControl"] {
+        visibility: visible !important;
+    }
+    button[kind="header"] {
+        visibility: visible !important;
     }
     </style>
 """, unsafe_allow_html=True)
