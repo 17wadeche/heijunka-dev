@@ -14,11 +14,6 @@ import streamlit as st
 # Path + config discovery
 # -----------------------------
 def _candidate_repo_roots(start: Path) -> List[Path]:
-    """
-    Yield plausible repo roots starting from this file:
-    - walk upward from current file
-    - also try common mount points (case-insensitive-ish)
-    """
     roots: List[Path] = []
     p = start.resolve()
 
@@ -38,7 +33,7 @@ def _candidate_repo_roots(start: Path) -> List[Path]:
 
     # De-dup while preserving order
     seen = set()
-    out = []
+    out: List[Path] = []
     for r in roots:
         try:
             rr = r.resolve()
@@ -76,10 +71,13 @@ def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
     for root in _candidate_repo_roots(start):
         config_dir = root / "config"
         if config_dir.is_dir():
-            for f in config_dir.iterdir():
-                attempted.append(f)
-                if f.is_file() and f.name.lower() == "enterprise_org.json":
-                    return f, attempted
+            try:
+                for f in config_dir.iterdir():
+                    attempted.append(f)
+                    if f.is_file() and f.name.lower() == "enterprise_org.json":
+                        return f, attempted
+            except Exception:
+                pass
 
     return None, attempted
 
@@ -155,14 +153,17 @@ def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
     return OrgConfig(org_name=str(org_name), teams=teams, raw=data)
 
 
-@st.cache_data(show_spinner=False)
-def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[Path]]:
+def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[str], Optional[str]]:
     """
-    Returns (OrgConfig|None, error_message|None, attempted_paths)
+    NOT cached: avoids Streamlit serialization errors.
+    Returns:
+      (OrgConfig|None, error_message|None, attempted_paths_as_str, config_path_as_str|None)
     """
     cfg_path, attempted = find_org_config_path()
+    attempted_str = [str(p) for p in attempted]
+
     if cfg_path is None:
-        return None, None, attempted
+        return None, None, attempted_str, None
 
     try:
         text = cfg_path.read_text(encoding="utf-8")
@@ -174,27 +175,25 @@ def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[Path]]:
                 None,
                 f"Found config at:\n{cfg_path}\n\n…but it has no teams. "
                 "Add a `teams` list (strings or objects with `name`).",
-                attempted,
+                attempted_str,
+                str(cfg_path),
             )
 
-        return org, None, attempted
+        return org, None, attempted_str, str(cfg_path)
     except Exception as e:
-        return None, f"Failed to read/parse config:\n{cfg_path}\n\n{e}", attempted
+        return None, f"Failed to read/parse config:\n{cfg_path}\n\n{e}", attempted_str, str(cfg_path)
 
 
 # -----------------------------
 # Data loading helpers
 # -----------------------------
-def _repo_root_from_cfg(cfg_path: Optional[Path]) -> Path:
-    """
-    Best guess repo root:
-    - if cfg_path is .../config/enterprise_org.json => parent of config
-    - else use parent of pages
-    """
-    if cfg_path and cfg_path.exists():
-        if cfg_path.parent.name.lower() == "config":
-            return cfg_path.parent.parent
-        return cfg_path.parent
+def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
+    if cfg_path_str:
+        p = Path(cfg_path_str)
+        if p.exists():
+            if p.parent.name.lower() == "config":
+                return p.parent.parent
+            return p.parent
     return Path(__file__).resolve().parents[1]
 
 
@@ -208,10 +207,13 @@ def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
 
 
 @st.cache_data(show_spinner=False)
-def load_common_data(repo_root: Path) -> Dict[str, pd.DataFrame]:
+def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
     """
-    Load the CSVs that appear in your repo (per screenshot), if present.
+    Cached: pandas DataFrames are supported by st.cache_data.
+    Note: take str arg (serializable) instead of Path.
     """
+    repo_root = Path(repo_root_str)
+
     candidates = {
         "metrics": repo_root / "metrics.csv",
         "non_wip": repo_root / "non_wip.csv",
@@ -230,15 +232,11 @@ def load_common_data(repo_root: Path) -> Dict[str, pd.DataFrame]:
 
 
 def _maybe_apply_styles():
-    """
-    Optional: use utils/styles.py if you have it (won't break if it changes).
-    """
     try:
         from utils.styles import apply_global_styles  # type: ignore
 
         apply_global_styles()
     except Exception:
-        # Keep dashboard functional even if styles helper changes
         pass
 
 
@@ -250,13 +248,11 @@ _maybe_apply_styles()
 
 st.title("Enterprise Dashboard")
 
-org, org_err, attempted_paths = load_org_config()
+org, org_err, attempted_paths, cfg_path_str = load_org_config()
 
-# If config not found (or invalid), show the exact error the user posted, but with extra debugging.
 if org is None:
     st.error("No org config found.")
 
-    # Keep the original-style expected path message, but make it robust
     expected_example = "/mount/src/heijunka-dev/config/enterprise_org.json"
     st.caption(
         "Expected file at: "
@@ -270,23 +266,20 @@ if org is None:
         st.code(org_err)
 
     with st.expander("Paths checked (debug)", expanded=False):
-        st.write("\n".join(str(p) for p in attempted_paths[:200]))
+        st.write("\n".join(attempted_paths[:300]))
 
     st.stop()
 
-# If we got here, org config exists and has teams
-cfg_path, _ = find_org_config_path()
-repo_root = _repo_root_from_cfg(cfg_path)
-data = load_common_data(repo_root)
+repo_root = _repo_root_from_cfg_path_str(cfg_path_str)
+data = load_common_data(str(repo_root))
 
 enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 
-# Sidebar controls
 with st.sidebar:
     st.subheader(org.org_name)
-    st.caption(f"Config: {cfg_path if cfg_path else 'unknown'}")
+    st.caption(f"Config: {cfg_path_str or 'unknown'}")
     st.caption(f"Repo root: {repo_root}")
 
     team_filter = st.multiselect(
@@ -306,7 +299,7 @@ with st.sidebar:
     else:
         st.write("No CSVs found at repo root.")
 
-# Helpers to filter by team if a column exists
+
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -317,24 +310,18 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     return df[df[col].astype(str).isin(set(team_filter))]
 
 
-# Top summary
 st.markdown(f"**Org:** {org.org_name} &nbsp;&nbsp;|&nbsp;&nbsp; **Teams in config:** {len(org.teams)}")
 
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
 
-# Layout
-tab_names = ["Overview", "Metrics", "Timelines", "Closures", "Non-WIP", "Config"]
-tabs = st.tabs(tab_names)
+tabs = st.tabs(["Overview", "Metrics", "Timelines", "Closures", "Non-WIP", "Config"])
 
-# -----------------------------
-# Overview
-# -----------------------------
+
 with tabs[0]:
     col1, col2, col3, col4 = st.columns(4)
 
-    # Show counts from whatever data we have
     metrics_rows = len(filter_by_team(data["metrics"])) if "metrics" in data else 0
     timelines_rows = len(filter_by_team(data["timelines"])) if "timelines" in data else 0
     closures_rows = len(filter_by_team(data["closures"])) if "closures" in data else 0
@@ -358,23 +345,19 @@ with tabs[0]:
             st.write(f"**{key}**")
             st.caption("Columns: " + ", ".join(df.columns.astype(str).tolist()[:40]))
 
-# -----------------------------
-# Metrics
-# -----------------------------
+
 with tabs[1]:
     st.subheader("Metrics")
 
     if "metrics" not in data and "metrics_aggregate_dev" not in data:
         st.info("No metrics CSV found (expected `metrics.csv` or `metrics_aggregate_dev.csv`).")
     else:
-        # Prefer metrics.csv, fallback to aggregate
         dfm = data.get("metrics") or data.get("metrics_aggregate_dev")
         dfm = filter_by_team(dfm)
 
         if dfm.empty:
             st.warning("No rows after team filter.")
         else:
-            # Try to find a date column
             date_cols = [c for c in dfm.columns if c.strip().lower() in {"date", "day", "as_of", "timestamp"}]
             if date_cols:
                 dc = date_cols[0]
@@ -382,7 +365,6 @@ with tabs[1]:
                 dfm2[dc] = pd.to_datetime(dfm2[dc], errors="coerce")
                 dfm2 = dfm2.dropna(subset=[dc]).sort_values(dc)
 
-                # Numeric columns for quick charting
                 numeric_cols = dfm2.select_dtypes(include="number").columns.tolist()
                 if numeric_cols:
                     metric_col = st.selectbox("Metric column", numeric_cols, index=0)
@@ -394,6 +376,7 @@ with tabs[1]:
 
             if show_raw:
                 st.dataframe(dfm, use_container_width=True)
+
             st.download_button(
                 "Download filtered metrics as CSV",
                 data=dfm.to_csv(index=False).encode("utf-8"),
@@ -401,9 +384,7 @@ with tabs[1]:
                 mime="text/csv",
             )
 
-# -----------------------------
-# Timelines
-# -----------------------------
+
 with tabs[2]:
     st.subheader("Timelines")
 
@@ -414,7 +395,6 @@ with tabs[2]:
         if dft.empty:
             st.warning("No rows after team filter.")
         else:
-            # Heuristic: look for start/end columns
             start_cols = [c for c in dft.columns if c.strip().lower() in {"start", "start_date", "begin"}]
             end_cols = [c for c in dft.columns if c.strip().lower() in {"end", "end_date", "finish"}]
 
@@ -438,9 +418,7 @@ with tabs[2]:
                 mime="text/csv",
             )
 
-# -----------------------------
-# Closures
-# -----------------------------
+
 with tabs[3]:
     st.subheader("Closures")
 
@@ -451,7 +429,6 @@ with tabs[3]:
         if dfc.empty:
             st.warning("No rows after team filter.")
         else:
-            # Try a basic breakdown by a status-like column
             status_cols = [c for c in dfc.columns if c.strip().lower() in {"status", "state", "outcome"}]
             if status_cols:
                 sc = status_cols[0]
@@ -469,9 +446,7 @@ with tabs[3]:
                 mime="text/csv",
             )
 
-# -----------------------------
-# Non-WIP
-# -----------------------------
+
 with tabs[4]:
     st.subheader("Non-WIP")
 
@@ -502,9 +477,7 @@ with tabs[4]:
                 mime="text/csv",
             )
 
-# -----------------------------
-# Config
-# -----------------------------
+
 with tabs[5]:
     st.subheader("Org config")
     st.caption("This is the parsed view (supports teams as strings or objects).")
