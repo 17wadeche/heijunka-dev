@@ -1,3 +1,4 @@
+# pages/Enterprise.py
 import hmac
 import streamlit as st
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
