@@ -267,39 +267,30 @@ if org is None:
 
     with st.expander("Paths checked (debug)", expanded=False):
         st.write("\n".join(attempted_paths[:300]))
-
     st.stop()
-
 repo_root = _repo_root_from_cfg_path_str(cfg_path_str)
 data = load_common_data(str(repo_root))
-
 enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
-
 with st.sidebar:
     st.subheader(org.org_name)
     st.caption(f"Config: {cfg_path_str or 'unknown'}")
     st.caption(f"Repo root: {repo_root}")
-
     team_filter = st.multiselect(
         "Teams",
         options=all_team_names,
         default=enabled_team_names,
         help="Select teams to include in the dashboard.",
     )
-
     show_raw = st.toggle("Show raw tables", value=False)
     st.divider()
-
     st.caption("Detected data files")
     if data:
         for k in sorted(data.keys()):
-            st.write(f"✅ {k} ({len(data[k])} rows)")
+            st.write(f"{k} ({len(data[k])} rows)")
     else:
         st.write("No CSVs found at repo root.")
-
-
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -308,32 +299,22 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
         return df
     col = team_cols[0]
     return df[df[col].astype(str).isin(set(team_filter))]
-
-
 st.markdown(f"**Org:** {org.org_name} &nbsp;&nbsp;|&nbsp;&nbsp; **Teams in config:** {len(org.teams)}")
-
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
-
 tabs = st.tabs(["Overview", "Metrics", "Timelines", "Closures", "Non-WIP", "Config"])
-
-
 with tabs[0]:
     col1, col2, col3, col4 = st.columns(4)
-
     metrics_rows = len(filter_by_team(data["metrics"])) if "metrics" in data else 0
     timelines_rows = len(filter_by_team(data["timelines"])) if "timelines" in data else 0
     closures_rows = len(filter_by_team(data["closures"])) if "closures" in data else 0
     nonwip_rows = len(filter_by_team(data["non_wip"])) if "non_wip" in data else 0
-
     col1.metric("Metrics rows", f"{metrics_rows:,}")
     col2.metric("Timelines rows", f"{timelines_rows:,}")
     col3.metric("Closures rows", f"{closures_rows:,}")
     col4.metric("Non-WIP rows", f"{nonwip_rows:,}")
-
     st.divider()
-
     if not data:
         st.info(
             "Config loaded successfully, but no CSV data files were found at the repo root. "
@@ -344,17 +325,13 @@ with tabs[0]:
         for key, df in sorted(data.items()):
             st.write(f"**{key}**")
             st.caption("Columns: " + ", ".join(df.columns.astype(str).tolist()[:40]))
-
-
 with tabs[1]:
     st.subheader("Metrics")
-
     if "metrics" not in data and "metrics_aggregate_dev" not in data:
         st.info("No metrics CSV found (expected `metrics.csv` or `metrics_aggregate_dev.csv`).")
     else:
         dfm = data.get("metrics") or data.get("metrics_aggregate_dev")
         dfm = filter_by_team(dfm)
-
         if dfm.empty:
             st.warning("No rows after team filter.")
         else:
@@ -364,7 +341,6 @@ with tabs[1]:
                 dfm2 = dfm.copy()
                 dfm2[dc] = pd.to_datetime(dfm2[dc], errors="coerce")
                 dfm2 = dfm2.dropna(subset=[dc]).sort_values(dc)
-
                 numeric_cols = dfm2.select_dtypes(include="number").columns.tolist()
                 if numeric_cols:
                     metric_col = st.selectbox("Metric column", numeric_cols, index=0)
@@ -373,21 +349,16 @@ with tabs[1]:
                     st.info("No numeric columns found to chart in metrics data.")
             else:
                 st.info("No date-like column found to chart. Showing table instead.")
-
             if show_raw:
                 st.dataframe(dfm, use_container_width=True)
-
             st.download_button(
                 "Download filtered metrics as CSV",
                 data=dfm.to_csv(index=False).encode("utf-8"),
                 file_name="metrics_filtered.csv",
                 mime="text/csv",
             )
-
-
 with tabs[2]:
     st.subheader("Timelines")
-
     if "timelines" not in data:
         st.info("No timelines CSV found (expected `timelines.csv`).")
     else:
@@ -397,7 +368,6 @@ with tabs[2]:
         else:
             start_cols = [c for c in dft.columns if c.strip().lower() in {"start", "start_date", "begin"}]
             end_cols = [c for c in dft.columns if c.strip().lower() in {"end", "end_date", "finish"}]
-
             if start_cols and end_cols:
                 sc, ec = start_cols[0], end_cols[0]
                 temp = dft.copy()
@@ -407,21 +377,16 @@ with tabs[2]:
                 st.bar_chart(temp.dropna(subset=["duration_days"])["duration_days"])
             else:
                 st.caption("No start/end columns detected for a simple duration view.")
-
             if show_raw:
                 st.dataframe(dft, use_container_width=True)
-
             st.download_button(
                 "Download filtered timelines as CSV",
                 data=dft.to_csv(index=False).encode("utf-8"),
                 file_name="timelines_filtered.csv",
                 mime="text/csv",
             )
-
-
 with tabs[3]:
     st.subheader("Closures")
-
     if "closures" not in data:
         st.info("No closures CSV found (expected `closures.csv`).")
     else:
@@ -435,21 +400,16 @@ with tabs[3]:
                 st.bar_chart(dfc[sc].astype(str).value_counts())
             else:
                 st.caption("No status/state/outcome column found for a breakdown.")
-
             if show_raw:
                 st.dataframe(dfc, use_container_width=True)
-
             st.download_button(
                 "Download filtered closures as CSV",
                 data=dfc.to_csv(index=False).encode("utf-8"),
                 file_name="closures_filtered.csv",
                 mime="text/csv",
             )
-
-
 with tabs[4]:
     st.subheader("Non-WIP")
-
     if "non_wip" not in data and "non_wip_activities" not in data:
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
     else:
@@ -464,7 +424,6 @@ with tabs[4]:
                 file_name="non_wip_filtered.csv",
                 mime="text/csv",
             )
-
         if "non_wip_activities" in data:
             st.markdown("**non_wip_activities.csv**")
             dfa = filter_by_team(data["non_wip_activities"])
@@ -476,12 +435,9 @@ with tabs[4]:
                 file_name="non_wip_activities_filtered.csv",
                 mime="text/csv",
             )
-
-
 with tabs[5]:
     st.subheader("Org config")
     st.caption("This is the parsed view (supports teams as strings or objects).")
-
     cfg_table = pd.DataFrame(
         [
             {
@@ -493,6 +449,5 @@ with tabs[5]:
         ]
     )
     st.dataframe(cfg_table, use_container_width=True)
-
     with st.expander("Raw JSON", expanded=False):
         st.json(org.raw)
