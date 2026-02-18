@@ -188,8 +188,6 @@ all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 with st.sidebar:
     st.subheader(org.org_name)
-    st.caption(f"Config: {cfg_path_str or 'unknown'}")
-    st.caption(f"Repo root: {repo_root}")
     team_filter = st.multiselect(
         "Teams",
         options=all_team_names,
