@@ -1,15 +1,11 @@
 # pages/Enterprise.py
 from __future__ import annotations
-
 import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
 import pandas as pd
 import streamlit as st
-
-
 def _candidate_repo_roots(start: Path) -> List[Path]:
     roots: List[Path] = []
     p = start.resolve()
@@ -34,8 +30,6 @@ def _candidate_repo_roots(start: Path) -> List[Path]:
             seen.add(rr)
             out.append(rr)
     return out
-
-
 def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
     attempted: List[Path] = []
     start = Path(__file__).resolve()
@@ -60,22 +54,16 @@ def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
             except Exception:
                 pass
     return None, attempted
-
-
 @dataclass(frozen=True)
 class TeamConfig:
     name: str
     enabled: bool = True
     meta: Dict[str, Any] = None  # extra fields like portfolio/ou/etc
-
-
 @dataclass(frozen=True)
 class OrgConfig:
     org_name: str
     teams: List[TeamConfig]
     raw: Dict[str, Any]
-
-
 def _coerce_bool(v: Any, default: bool = True) -> bool:
     if v is None:
         return default
@@ -86,8 +74,6 @@ def _coerce_bool(v: Any, default: bool = True) -> bool:
     if isinstance(v, str):
         return v.strip().lower() in {"1", "true", "yes", "y", "enabled", "on"}
     return default
-
-
 def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
     org_name = (
         data.get("org_name")
@@ -121,8 +107,6 @@ def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
                 enabled, meta = True, {}
             teams.append(TeamConfig(name=str(name), enabled=enabled, meta=meta))
     return OrgConfig(org_name=str(org_name), teams=teams, raw=data)
-
-
 def load_org_config() -> Tuple[Optional[OrgConfig], Optional[str], List[str], Optional[str]]:
     cfg_path, attempted = find_org_config_path()
     attempted_str = [str(p) for p in attempted]
@@ -337,44 +321,6 @@ with st.sidebar:
         default=default_teams,
         help="Select teams to include in the dashboard.",
     )
-
-    # --- NEW: Date filter ---
-    st.divider()
-    st.caption("Date filter (applies across all tabs)")
-
-    # Build a global min/max from all loaded datasets that have a date column
-    date_candidates: List[pd.Timestamp] = []
-    for k, df in data.items():
-        dc = _get_date_col(df)
-        if not dc:
-            continue
-        ser = pd.to_datetime(df[dc], errors="coerce").dropna()
-        if not ser.empty:
-            date_candidates.append(ser.min())
-            date_candidates.append(ser.max())
-
-    if date_candidates:
-        global_min = min(date_candidates).date()
-        global_max = max(date_candidates).date()
-        date_range = st.date_input(
-            "Date range",
-            value=(global_min, global_max),
-            min_value=global_min,
-            max_value=global_max,
-            help="Filter rows to this date range (inclusive).",
-        )
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            date_start, date_end = date_range
-        else:
-            date_start, date_end = global_min, global_max
-    else:
-        st.info("No date columns detected in CSVs.")
-        date_start, date_end = None, None
-
-    st.divider()
-    show_raw = st.toggle("Show raw tables", value=False)
-
-
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -392,10 +338,72 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     col = team_cols[0]
     return df[df[col].astype(str).isin(set(team_filter))]
 
+def _date_bounds_for_df(df: pd.DataFrame) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp], Optional[str]]:
+    """Return (min_ts, max_ts, date_col) if df has a date column with parseable values."""
+    dc = _get_date_col(df)
+    if not dc:
+        return None, None, None
+    ser = pd.to_datetime(df[dc], errors="coerce").dropna()
+    if ser.empty:
+        return None, None, dc
+    return ser.min(), ser.max(), dc
 
-def filter_by_date(df: pd.DataFrame) -> pd.DataFrame:
-    """Apply the global sidebar date filter if we can find a date column."""
-    if date_start is None or date_end is None:
+
+def section_date_range(label: str, df: Optional[pd.DataFrame], key: str) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
+    """
+    Render a date range picker for THIS section.
+    Returns (start_ts, end_ts) as pandas Timestamps, or (None, None) if unavailable.
+    """
+    if df is None or df.empty:
+        return None, None
+
+    mn, mx, _ = _date_bounds_for_df(df)
+    if mn is None or mx is None:
+        st.info("No date column detected for this section.")
+        return None, None
+
+    start_default = mn.date()
+    end_default = mx.date()
+
+    dr = st.date_input(
+        label,
+        value=(start_default, end_default),
+        min_value=start_default,
+        max_value=end_default,
+        key=key,  # IMPORTANT: unique per section
+        help="Filters only this section.",
+    )
+
+    if isinstance(dr, tuple) and len(dr) == 2:
+        start_d, end_d = dr
+    else:
+        start_d, end_d = start_default, end_default
+
+    start_ts = pd.to_datetime(start_d)
+    end_ts = pd.to_datetime(end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+    return start_ts, end_ts
+
+
+def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
+    if not team_filter:
+        return df.iloc[0:0]
+    team_cols = [
+        c for c in df.columns
+        if c.strip().lower() in {"team", "team_name", "squad", "org_team"}
+    ]
+    if not team_cols:
+        tc = _get_team_col(df)
+        if tc:
+            team_cols = [tc]
+    if not team_cols:
+        return df
+    col = team_cols[0]
+    return df[df[col].astype(str).isin(set(team_filter))]
+
+
+def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
+    """Apply a provided date range if we can find a date column."""
+    if start_ts is None or end_ts is None:
         return df
     dc = _get_date_col(df)
     if not dc:
@@ -403,14 +411,11 @@ def filter_by_date(df: pd.DataFrame) -> pd.DataFrame:
     tmp = df.copy()
     tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
     tmp = tmp.dropna(subset=[dc])
-    start_ts = pd.to_datetime(date_start)
-    end_ts = pd.to_datetime(date_end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
 
 
-def filter_df(df: pd.DataFrame) -> pd.DataFrame:
-    return filter_by_date(filter_by_team(df))
-
+def filter_df(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
+    return filter_by_date_range(filter_by_team(df), start_ts, end_ts)
 
 st.markdown(f"**Selected teams:** {len(team_filter)}")
 if not team_filter:
@@ -421,28 +426,24 @@ tabs = st.tabs(["Overview", "Non-WIP"])
 
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
-        d = filter_df(data["metrics"])
+        d = filter_by_team(data["metrics"])
         if not d.empty:
             return d
     if "metrics_aggregate_dev" in data:
-        d = filter_df(data["metrics_aggregate_dev"])
+        d = filter_by_team(data["metrics_aggregate_dev"])
         if not d.empty:
             return d
     return None
-
-
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
     if "non_wip" in data:
-        d = filter_df(data["non_wip"])
+        d = filter_by_team(data["non_wip"])
         if not d.empty:
             return d
     if "non_wip_activities" in data:
-        d = filter_df(data["non_wip_activities"])
+        d = filter_by_team(data["non_wip_activities"])
         if not d.empty:
             return d
     return None
-
-
 def _metrics_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
     return {
         "date": _get_date_col(df),
@@ -481,19 +482,15 @@ def _people_lookup_by_week(dfnw: pd.DataFrame) -> Dict[pd.Timestamp, float]:
     for _, r in grp.iterrows():
         out[pd.to_datetime(r[nwc["date"]])] = float(r["people_count"])
     return out
-
-
-# ----------------------------
-# Overview
-# ----------------------------
 with tabs[0]:
-    dfm = _get_metrics_df()
-    dfnw = _get_nonwip_df()
+    dfm_raw = _get_metrics_df()
+    dfnw_raw = _get_nonwip_df()
+    bounds_df = dfm_raw if (dfm_raw is not None and not dfm_raw.empty) else dfnw_raw
+    ov_start, ov_end = section_date_range("Overview date range", bounds_df, key="dr_overview")
+    dfm = filter_by_date_range(dfm_raw, ov_start, ov_end) if dfm_raw is not None else None
+    dfnw = filter_by_date_range(dfnw_raw, ov_start, ov_end) if dfnw_raw is not None else None
     wd = _workdays_per_week_assumption()
-
     st.subheader("Summary")
-
-    # Denominator choice for per-person calcs
     denom_mode = st.radio(
         "Per-person denominator for WIP daily hours",
         options=["Total HC on team", "HC that worked in WIP"],
@@ -636,104 +633,106 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
-
 with tabs[1]:
     if "non_wip" not in data and "non_wip_activities" not in data:
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
         st.stop()
     st.markdown("### Non-WIP activities")
-    source_df = None
+    source_raw = None
     if "non_wip" in data:
-        cand = filter_df(data["non_wip"])
+        cand = filter_by_team(data["non_wip"])
         if not cand.empty:
-            source_df = cand
-    if source_df is None and "non_wip_activities" in data:
-        cand = filter_df(data["non_wip_activities"])
+            source_raw = cand
+    if source_raw is None and "non_wip_activities" in data:
+        cand = filter_by_team(data["non_wip_activities"])
         if not cand.empty:
-            source_df = cand
-    if source_df is None:
-        st.info("No Non-WIP activity data available after filtering.")
-    else:
-        dc = _get_date_col(source_df)
-        json_col = None
-        for c in source_df.columns:
-            if _norm(c) in {"non-wip_activities", "non_wip_activities"}:
-                json_col = c
-                break
-        if not (dc and json_col):
-            st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
-        else:
-            tmp = source_df.copy()
-            tmp[dc] = _safe_to_datetime(tmp, dc)
-            tmp = tmp.dropna(subset=[dc]).sort_values(dc)
-            rows: List[Dict[str, Any]] = []
-            for _, r in tmp.iterrows():
-                wk = r[dc]
-                payload = _loads_json_maybe(r[json_col])
-                if not payload:
+            source_raw = cand
+    if source_raw is None or source_raw.empty:
+        st.info("No Non-WIP activity data available after team filtering.")
+        st.stop()
+    nw_start, nw_end = section_date_range("Non-WIP date range", source_raw, key="dr_nonwip")
+    source_df = filter_by_date_range(source_raw, nw_start, nw_end)
+    if source_df.empty:
+        st.info("No Non-WIP activity data available in this date range.")
+        st.stop()
+    dc = _get_date_col(source_df)
+    json_col = None
+    for c in source_df.columns:
+        if _norm(c) in {"non-wip_activities", "non_wip_activities"}:
+            json_col = c
+            break
+    if not (dc and json_col):
+        st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
+        st.stop()
+    tmp = source_df.copy()
+    tmp[dc] = _safe_to_datetime(tmp, dc)
+    tmp = tmp.dropna(subset=[dc]).sort_values(dc)
+    rows: List[Dict[str, Any]] = []
+    for _, r in tmp.iterrows():
+        wk = r[dc]
+        payload = _loads_json_maybe(r[json_col])
+        if not payload:
+            continue
+        if isinstance(payload, list):
+            for item in payload:
+                if not isinstance(item, dict):
                     continue
-                if isinstance(payload, list):
-                    for item in payload:
-                        if not isinstance(item, dict):
-                            continue
-                        act = item.get("activity") or item.get("Activity") or item.get("type")
-                        hrs = item.get("hours") or item.get("Hours")
-                        if act is None or hrs is None:
-                            continue
-                        rows.append(
-                            {
-                                "week": wk,
-                                "activity": str(act).strip(),
-                                "hours": float(hrs) if str(hrs) != "" else 0.0,
-                            }
-                        )
-            if not rows:
-                st.info("No parsable activity rows found in the JSON column.")
-            else:
-                act_df = pd.DataFrame(rows)
-                act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
-                act_df = act_df.dropna(subset=["week"])
-                act_df["week_start"] = _weekly_start(act_df["week"])
-                weekly_by_activity = (
-                    act_df.groupby(["week_start", "activity"], as_index=False)
-                    .agg(hours=("hours", "sum"))
-                    .sort_values(["week_start", "hours"], ascending=[True, False])
+                act = item.get("activity") or item.get("Activity") or item.get("type")
+                hrs = item.get("hours") or item.get("Hours")
+                if act is None or hrs is None:
+                    continue
+                rows.append(
+                    {
+                        "week": wk,
+                        "activity": str(act).strip(),
+                        "hours": float(hrs) if str(hrs) != "" else 0.0,
+                    }
                 )
-                avg_weekly = (
-                    weekly_by_activity.groupby("activity", as_index=False)
-                    .agg(avg_weekly_hours=("hours", "mean"))
-                    .sort_values("avg_weekly_hours", ascending=False)
-                    .head(12)
-                )
-                st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
-                st.caption("Top activities by **average weekly hours** (top 12).")
-                last_week = weekly_by_activity["week_start"].max()
-                last = weekly_by_activity[weekly_by_activity["week_start"] == last_week].copy()
-                last = last.sort_values("hours", ascending=False)
-                st.write(f"Most recent week starting: **{pd.to_datetime(last_week).date()}**")
-                if len(last) > 9:
-                    top = last.head(8)
-                    other = pd.DataFrame(
-                        [
-                            {
-                                "week_start": last_week,
-                                "activity": "Other",
-                                "hours": float(last["hours"].iloc[8:].sum()),
-                            }
-                        ]
-                    )
-                    pie_df = pd.concat([top, other], ignore_index=True)
-                else:
-                    pie_df = last
-                import matplotlib.pyplot as plt
-                fig, ax = plt.subplots()
-                ax.pie(
-                    pie_df["hours"],
-                    labels=pie_df["activity"],
-                    autopct="%1.0f%%",
-                    startangle=90,
-                )
-                ax.axis("equal")
-                st.pyplot(fig)
-                if show_raw:
-                    st.dataframe(weekly_by_activity, use_container_width=True)
+    if not rows:
+        st.info("No parsable activity rows found in the JSON column.")
+        st.stop()
+    act_df = pd.DataFrame(rows)
+    act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
+    act_df = act_df.dropna(subset=["week"])
+    act_df["week_start"] = _weekly_start(act_df["week"])
+    weekly_by_activity = (
+        act_df.groupby(["week_start", "activity"], as_index=False)
+        .agg(hours=("hours", "sum"))
+        .sort_values(["week_start", "hours"], ascending=[True, False])
+    )
+    avg_weekly = (
+        weekly_by_activity.groupby("activity", as_index=False)
+        .agg(avg_weekly_hours=("hours", "mean"))
+        .sort_values("avg_weekly_hours", ascending=False)
+        .head(12)
+    )
+    st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
+    st.caption("Top activities by **average weekly hours** (top 12).")
+    last_week = weekly_by_activity["week_start"].max()
+    last = weekly_by_activity[weekly_by_activity["week_start"] == last_week].copy()
+    last = last.sort_values("hours", ascending=False)
+    st.write(f"Most recent week starting: **{pd.to_datetime(last_week).date()}**")
+    if len(last) > 9:
+        top = last.head(8)
+        other = pd.DataFrame(
+            [
+                {
+                    "week_start": last_week,
+                    "activity": "Other",
+                    "hours": float(last["hours"].iloc[8:].sum()),
+                }
+            ]
+        )
+        pie_df = pd.concat([top, other], ignore_index=True)
+    else:
+        pie_df = last
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.pie(
+        pie_df["hours"],
+        labels=pie_df["activity"],
+        autopct="%1.0f%%",
+        startangle=90,
+    )
+    ax.axis("equal")
+    st.pyplot(fig)
