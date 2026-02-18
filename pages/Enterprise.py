@@ -342,11 +342,6 @@ with tabs[0]:
     timeliness_rows = len(filter_by_team(data.get("timeliness", data.get("Timeliness", pd.DataFrame())))) if ("timeliness" in data or "Timeliness" in data) else 0
     closures_rows = len(filter_by_team(data["closures"])) if "closures" in data else 0
     nonwip_rows = len(filter_by_team(data["non_wip"])) if "non_wip" in data else 0
-    col1.metric("Metrics rows", f"{metrics_rows:,}")
-    col2.metric("Timeliness rows", f"{timeliness_rows:,}")
-    col3.metric("Closures rows", f"{closures_rows:,}")
-    col4.metric("Non-WIP rows", f"{nonwip_rows:,}")
-    st.divider()
     st.subheader("Enterprise summary (selected teams)")
     dfm = _get_metrics_df()
     dfnw = _get_nonwip_df()
