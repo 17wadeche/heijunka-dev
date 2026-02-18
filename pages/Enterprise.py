@@ -502,7 +502,7 @@ with tabs[0]:
     # Denominator choice for per-person calcs
     denom_mode = st.radio(
         "Per-person denominator for WIP daily hours",
-        options=["Total HC", "HC that worked in WIP"],
+        options=["People Count (from non_wip.csv)", "HC in WIP (from metrics)"],
         index=0,
         horizontal=True,
         help="Team-total daily WIP = Completed Hours/5. Per-person daily WIP divides by headcount too.",
