@@ -771,16 +771,3 @@ with tabs[1]:
                 st.pyplot(fig)
                 if show_raw:
                     st.dataframe(weekly_by_activity, use_container_width=True)
-    if "non_wip_activities" in data:
-        st.divider()
-        st.markdown("### `non_wip_activities.csv` (raw weekly extract)")
-        dfa = filter_df(data["non_wip_activities"])
-        if show_raw and not dfa.empty:
-            st.dataframe(dfa, use_container_width=True)
-        if not dfa.empty:
-            st.download_button(
-                "Download filtered non_wip_activities as CSV",
-                data=dfa.to_csv(index=False).encode("utf-8"),
-                file_name="non_wip_activities_filtered.csv",
-                mime="text/csv",
-            )
