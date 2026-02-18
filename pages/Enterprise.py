@@ -393,17 +393,6 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
-    st.divider()
-    if not data:
-        st.info(
-            "Config loaded successfully, but no CSV data files were found at the repo root. "
-            "If your CSVs live elsewhere, update your pipeline or adjust the loader paths in this page."
-        )
-    else:
-        st.subheader("Available datasets")
-        for key, df in sorted(data.items()):
-            st.write(f"**{key}**")
-            st.caption("Columns: " + ", ".join(df.columns.astype(str).tolist()[:40]))
 with tabs[1]:
     st.subheader("WIP & Capacity")
     dfm = _get_metrics_df()
