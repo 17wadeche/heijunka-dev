@@ -1,23 +1,11 @@
-# heijunka-dash.py
 import streamlit as st
+from utils.styles import apply_global_styles
 st.set_page_config(
     page_title="Enterprise Dashboard",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.markdown("""
-    <style>
-    [data-testid="stToolbar"] {
-        visibility: hidden;
-    }
-    [data-testid="collapsedControl"] {
-        visibility: visible !important;
-    }
-    button[kind="header"] {
-        visibility: visible !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+apply_global_styles()
 pg = st.navigation([
     st.Page("pages/Enterprise.py", title="Enterprise"),
     st.Page("pages/Interventional_Vascular.py", title="Interventional Vascular"),

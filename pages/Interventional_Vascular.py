@@ -1,12 +1,15 @@
 # pages/Interventional_Vascular.py
 import hmac
-import os
+import os, sys
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import streamlit as st
 import altair as alt
 import json
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.styles import apply_global_styles
+apply_global_styles()
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os

@@ -1,6 +1,10 @@
 # pages/Enterprise.py
 import hmac
 import streamlit as st
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.styles import apply_global_styles
+apply_global_styles()
 ENTERPRISE_PASSCODE = str(st.secrets.get("enterprise_passcode", "")).strip()
 if not ENTERPRISE_PASSCODE:
     st.error("Enterprise passcode is not configured.")
