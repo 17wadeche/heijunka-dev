@@ -417,8 +417,7 @@ if not team_filter:
     st.warning("No teams selected.")
     st.stop()
 
-tabs = st.tabs(["Overview", "WIP & Capacity", "Timeliness", "Closures", "Non-WIP"])
-
+tabs = st.tabs(["Overview", "Timeliness", "Closures", "Non-WIP"])
 
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
@@ -628,138 +627,6 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
-
-
-# ----------------------------
-# WIP & Capacity
-# ----------------------------
-with tabs[1]:
-    st.subheader("WIP & Capacity")
-
-    dfm = _get_metrics_df()
-    dfnw = _get_nonwip_df()
-    wd = _workdays_per_week_assumption()
-
-    if dfm is None or dfm.empty:
-        st.info("No metrics data found (expected `metrics.csv` or `metrics_aggregate_dev.csv`).")
-        st.stop()
-
-    mc = _metrics_cols(dfm)
-    if not (mc["date"] and mc["wip_hours"]):
-        st.info("Metrics data needs columns: `Week` (or `period_date`) and `Completed Hours`.")
-        st.stop()
-
-    temp = dfm.copy()
-    temp[mc["date"]] = _safe_to_datetime(temp, mc["date"])
-    temp = temp.dropna(subset=[mc["date"]]).sort_values(mc["date"])
-    temp["wip_hours"] = _to_num(temp[mc["wip_hours"]]).fillna(0.0)
-
-    temp["avg_daily_wip_team"] = temp["wip_hours"] / float(wd)
-
-    # Per-person WIP daily (prefer People Count from non_wip)
-    people_by_week = {}
-    if dfnw is not None and not dfnw.empty:
-        people_by_week = _people_lookup_by_week(dfnw)
-    if people_by_week:
-        temp["people_count"] = temp[mc["date"]].map(people_by_week)
-        temp["avg_daily_wip_per_person"] = temp["wip_hours"] / (float(wd) * temp["people_count"])
-        temp.loc[temp["people_count"].fillna(0) <= 0, "avg_daily_wip_per_person"] = pd.NA
-    elif mc["hc_in_wip"] and mc["hc_in_wip"] in temp.columns:
-        temp["hc_in_wip"] = _to_num(temp[mc["hc_in_wip"]]).fillna(0.0)
-        temp["avg_daily_wip_per_person"] = temp["wip_hours"] / (float(wd) * temp["hc_in_wip"])
-        temp.loc[temp["hc_in_wip"] <= 0, "avg_daily_wip_per_person"] = pd.NA
-    else:
-        temp["avg_daily_wip_per_person"] = pd.NA
-
-    # Actual HC Used
-    hc_used_value = None
-    if mc["hc_used"] and mc["hc_used"] in temp.columns:
-        temp["hc_used"] = _to_num(temp[mc["hc_used"]])
-        hc_used_value = float(temp["hc_used"].dropna().mean()) if temp["hc_used"].notna().any() else None
-    if hc_used_value is None and dfnw is not None and not dfnw.empty:
-        nwc = _nonwip_cols(dfnw)
-        if nwc["date"] and nwc["people_count"]:
-            tn = dfnw.copy()
-            tn[nwc["date"]] = _safe_to_datetime(tn, nwc["date"])
-            tn = tn.dropna(subset=[nwc["date"]])
-            tn["people_count"] = _to_num(tn[nwc["people_count"]]).fillna(0.0)
-            merged = temp[[mc["date"], "wip_hours"]].merge(
-                tn[[nwc["date"], "people_count"]],
-                left_on=mc["date"],
-                right_on=nwc["date"],
-                how="inner",
-            )
-            if not merged.empty and merged["people_count"].sum() > 0:
-                merged["hc_used_proxy"] = merged["wip_hours"] / (6.0 * float(wd) * merged["people_count"])
-                hc_used_value = float(merged["hc_used_proxy"].mean())
-
-    # Non-WIP daily
-    avg_daily_nonwip_team = None
-    avg_daily_nonwip_per_person = None
-    if dfnw is not None and not dfnw.empty:
-        nwc = _nonwip_cols(dfnw)
-        if nwc["date"] and nwc["total_nonwip"]:
-            tn = dfnw.copy()
-            tn[nwc["date"]] = _safe_to_datetime(tn, nwc["date"])
-            tn = tn.dropna(subset=[nwc["date"]]).sort_values(nwc["date"])
-            tn["nonwip_hours"] = _to_num(tn[nwc["total_nonwip"]]).fillna(0.0)
-            tn["avg_daily_nonwip_team"] = tn["nonwip_hours"] / float(wd)
-            avg_daily_nonwip_team = float(tn["avg_daily_nonwip_team"].mean())
-            if nwc["people_count"]:
-                tn["people_count"] = _to_num(tn[nwc["people_count"]]).fillna(0.0)
-                tn["avg_daily_nonwip_per_person"] = tn["nonwip_hours"] / (float(wd) * tn["people_count"])
-                tn.loc[tn["people_count"] <= 0, "avg_daily_nonwip_per_person"] = pd.NA
-                if tn["avg_daily_nonwip_per_person"].notna().any():
-                    avg_daily_nonwip_per_person = float(tn["avg_daily_nonwip_per_person"].dropna().mean())
-
-    pct_wip = None
-    wip_mean = float(temp["avg_daily_wip_team"].mean()) if not temp.empty else None
-    if wip_mean is not None and avg_daily_nonwip_team is not None and (wip_mean + avg_daily_nonwip_team) > 0:
-        pct_wip = 100.0 * wip_mean / (wip_mean + avg_daily_nonwip_team)
-
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("Avg daily WIP (team total)", f"{float(temp['avg_daily_wip_team'].mean()):.2f}" if not temp.empty else "—")
-    k2.metric("Avg daily WIP (per person)", f"{float(temp['avg_daily_wip_per_person'].dropna().mean()):.2f}" if temp["avg_daily_wip_per_person"].notna().any() else "—")
-    k3.metric("Avg daily Non-WIP (team total)", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
-    k4.metric("Avg daily Non-WIP (per person)", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    k5.metric("% WIP (team total)", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    k6.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
-
-
-    st.caption("Per-person uses People Count (preferred) or HC in WIP (fallback).")
-    st.divider()
-
-    st.subheader("Trend: avg daily WIP hours")
-    view = st.selectbox("Trend view (WIP & Capacity tab)", ["Team total", "Per person"], index=0, key="wipcap_trend_view")
-    series = "avg_daily_wip_team" if view == "Team total" else "avg_daily_wip_per_person"
-    if series == "avg_daily_wip_per_person" and not temp["avg_daily_wip_per_person"].notna().any():
-        st.info("Per-person trend not available (no People Count / HC in WIP found for selected range).")
-    else:
-        st.line_chart(temp.set_index(mc["date"])[series])
-
-    if dfnw is not None and not dfnw.empty:
-        nwc = _nonwip_cols(dfnw)
-        if nwc["date"] and nwc["pct_in_wip"]:
-            tn = dfnw.copy()
-            tn[nwc["date"]] = _safe_to_datetime(tn, nwc["date"])
-            tn = tn.dropna(subset=[nwc["date"]]).sort_values(nwc["date"])
-            tn["pct_in_wip"] = _to_num(tn[nwc["pct_in_wip"]])
-            if tn["pct_in_wip"].notna().any():
-                st.subheader("Trend: % in WIP (from Non-WIP dataset)")
-                st.line_chart(tn.set_index(nwc["date"])["pct_in_wip"])
-
-    if show_raw:
-        st.divider()
-        st.subheader("Raw (filtered) metrics")
-        st.dataframe(temp, use_container_width=True)
-
-    st.download_button(
-        "Download filtered metrics as CSV",
-        data=temp.to_csv(index=False).encode("utf-8"),
-        file_name="metrics_filtered.csv",
-        mime="text/csv",
-    )
-
 
 # ----------------------------
 # Timeliness
