@@ -377,7 +377,7 @@ if not team_filter:
     st.warning("No teams selected.")
     st.stop()
 
-tabs = st.tabs(["Overview", "WIP & Capacity", "Timeliness", "Closures", "Non-WIP", "Config"])
+tabs = st.tabs(["Overview", "WIP & Capacity", "Timeliness", "Closures", "Non-WIP"])
 
 
 # ----------------------------
@@ -516,8 +516,6 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
-
-    # --- Show available datasets quick glance ---
     st.divider()
     if not data:
         st.info(
@@ -529,11 +527,6 @@ with tabs[0]:
         for key, df in sorted(data.items()):
             st.write(f"**{key}**")
             st.caption("Columns: " + ", ".join(df.columns.astype(str).tolist()[:40]))
-
-
-# ----------------------------
-# WIP & Capacity tab (1/2/3)
-# ----------------------------
 with tabs[1]:
     st.subheader("WIP & Capacity")
 
