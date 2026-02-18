@@ -417,7 +417,7 @@ if not team_filter:
     st.warning("No teams selected.")
     st.stop()
 
-tabs = st.tabs(["Overview", "Timeliness", "Closures", "Non-WIP"])
+tabs = st.tabs(["Overview", "Non-WIP"])
 
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
@@ -629,98 +629,9 @@ with tabs[0]:
         st.info("No metrics data loaded for selected teams.")
 
 # ----------------------------
-# Timeliness
-# ----------------------------
-with tabs[2]:
-    st.subheader("Timeliness")
-    tim_key = "timeliness" if "timeliness" in data else ("Timeliness" if "Timeliness" in data else None)
-    if tim_key is None:
-        st.info("No timeliness CSV found (expected `timeliness.csv` or `Timeliness.csv`).")
-        st.stop()
-
-    dft = filter_df(data[tim_key])
-    if dft.empty:
-        st.warning("No rows after filters.")
-        st.stop()
-
-    dc = _get_date_col(dft)
-    valc = _first_col(dft, ["open_complaint_timeliness"])
-    if not (dc and valc):
-        st.info("Timeliness data needs columns: `period_date` (or Week) and `Open Complaint Timeliness`.")
-        if show_raw:
-            st.dataframe(dft, use_container_width=True)
-        st.stop()
-
-    tmp = dft.copy()
-    tmp[dc] = _safe_to_datetime(tmp, dc)
-    tmp = tmp.dropna(subset=[dc]).sort_values(dc)
-    tmp["timeliness"] = _to_num(tmp[valc])
-    st.line_chart(tmp.set_index(dc)["timeliness"])
-
-    if show_raw:
-        st.dataframe(tmp, use_container_width=True)
-
-    st.download_button(
-        "Download filtered timeliness as CSV",
-        data=tmp.to_csv(index=False).encode("utf-8"),
-        file_name="timeliness_filtered.csv",
-        mime="text/csv",
-    )
-
-
-# ----------------------------
-# Closures
-# ----------------------------
-with tabs[3]:
-    st.subheader("Closures")
-    if "closures" not in data:
-        st.info("No closures CSV found (expected `closures.csv`).")
-        st.stop()
-
-    dfc = filter_df(data["closures"])
-    if dfc.empty:
-        st.warning("No rows after filters.")
-        st.stop()
-
-    dc = _get_date_col(dfc)
-    closedc = _first_col(dfc, ["closures"])
-    openedc = _first_col(dfc, ["opened"])
-
-    if dc:
-        tmp = dfc.copy()
-        tmp[dc] = _safe_to_datetime(tmp, dc)
-        tmp = tmp.dropna(subset=[dc]).sort_values(dc)
-        if closedc:
-            tmp["closures"] = _to_num(tmp[closedc])
-        if openedc:
-            tmp["opened"] = _to_num(tmp[openedc])
-
-        if closedc and openedc:
-            st.line_chart(tmp.set_index(dc)[["closures", "opened"]])
-        elif closedc:
-            st.line_chart(tmp.set_index(dc)["closures"])
-        elif openedc:
-            st.line_chart(tmp.set_index(dc)["opened"])
-        else:
-            st.info("Closures data missing `Closures` and/or `Opened` columns.")
-    else:
-        st.info("Closures data missing date column (`period_date`).")
-
-    if show_raw:
-        st.dataframe(dfc, use_container_width=True)
-
-    st.download_button(
-        "Download filtered closures as CSV",
-        data=dfc.to_csv(index=False).encode("utf-8"),
-        file_name="closures_filtered.csv",
-        mime="text/csv",
-    )
-
-
-# ----------------------------
 # Non-WIP
 # ----------------------------
-with tabs[4]:
+with tabs[1]:
     st.subheader("Non-WIP")
     if "non_wip" not in data and "non_wip_activities" not in data:
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
