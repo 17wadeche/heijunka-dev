@@ -583,16 +583,10 @@ with tabs[0]:
             temp[mc["date"]] = _safe_to_datetime(temp, mc["date"])
             temp = temp.dropna(subset=[mc["date"]]).sort_values(mc["date"])
             temp["wip_hours"] = _to_num(temp[mc["wip_hours"]]).fillna(0.0)
-
-            # --- NEW: true WoW buckets + exclude future weeks ---
             temp["week_start"] = _weekly_start(temp[mc["date"]])
-
-            # "Current week" boundary (Mon-start week)
             today = pd.Timestamp.now()
             current_week_start = today.to_period("W-MON").start_time
             temp = temp[temp["week_start"] <= current_week_start]
-
-            # Weekly aggregation across selected teams
             wk = (
                 temp.groupby("week_start", as_index=False)
                 .agg(wip_hours=("wip_hours", "sum"))
@@ -648,38 +642,6 @@ with tabs[1]:
     if "non_wip" not in data and "non_wip_activities" not in data:
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
         st.stop()
-    if "non_wip" in data:
-        st.markdown("### Weekly Non-WIP summary (`non_wip.csv`)")
-        dfn = filter_df(data["non_wip"])
-        if dfn.empty:
-            st.warning("No rows after filters.")
-        else:
-            dc = _get_date_col(dfn)
-            total_col = _first_col(dfn, ["total_non-wip_hours", "total_non_wip_hours"])
-            pct_col = _first_col(dfn, ["%_in_wip"])
-            if dc:
-                tmp = dfn.copy()
-                tmp[dc] = _safe_to_datetime(tmp, dc)
-                tmp = tmp.dropna(subset=[dc]).sort_values(dc)
-                if total_col:
-                    tmp["total_nonwip_hours"] = _to_num(tmp[total_col]).fillna(0.0)
-                    tmp["avg_daily_nonwip"] = tmp["total_nonwip_hours"] / float(_workdays_per_week_assumption())
-                    st.line_chart(tmp.set_index(dc)["avg_daily_nonwip"])
-                if pct_col:
-                    tmp["pct_in_wip"] = _to_num(tmp[pct_col])
-                    if tmp["pct_in_wip"].notna().any():
-                        st.line_chart(tmp.set_index(dc)["pct_in_wip"])
-            else:
-                st.caption("No Week/period_date column found for charts.")
-            if show_raw:
-                st.dataframe(dfn, use_container_width=True)
-            st.download_button(
-                "Download filtered non_wip as CSV",
-                data=dfn.to_csv(index=False).encode("utf-8"),
-                file_name="non_wip_filtered.csv",
-                mime="text/csv",
-            )
-    st.divider()
     st.markdown("### Non-WIP activities")
     source_df = None
     if "non_wip" in data:
