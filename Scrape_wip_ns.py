@@ -264,7 +264,10 @@ def main():
             f"Input file not found: {source_file}\n"
             "Tip: edit `source_file` in this script or pass a valid path."
         )
+    EPS = 1e-9
     rows = scrape_workbook(source_file)
+    rows = [r for r in rows if abs(safe_float(r.get("Total Available Hours"))) > EPS]
+    rows = [r for r in rows if safe_str(r.get("period_date")) != "2023-11-06"]
     write_csv(rows, out_file)
     print(f"Wrote {len(rows)} rows to {out_file}")
 if __name__ == "__main__":
