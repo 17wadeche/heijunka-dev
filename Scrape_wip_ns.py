@@ -72,6 +72,29 @@ def parse_sheet_date(sheet_name: str) -> str:
         return dt.isoformat()
     except Exception:
         return name
+def parse_sheet_date_scs_missing_year(sheet_name: str) -> str:
+    name = sheet_name.strip()
+    if any(k in name.lower() for k in ["template", "heijunka"]):
+        return ""
+    fmts = ["%b %d", "%B %d", "%b %d,", "%B %d,"]
+    mm = dd = None
+    for fmt in fmts:
+        try:
+            dt = datetime.strptime(name.replace(",", ""), fmt)
+            mm, dd = dt.month, dt.day
+            break
+        except ValueError:
+            pass
+    if mm is None or dd is None:
+        return ""
+    for y in range(date.today().year, 1999, -1):
+        try:
+            d = date(y, mm, dd)
+        except ValueError:
+            continue
+        if d.weekday() == 0:  # Monday
+            return d.isoformat()
+    return ""
 def col_range(start_col_letter: str, end_col_letter: str) -> range:
     start = ord(start_col_letter.upper()) - ord("A") + 1
     end = ord(end_col_letter.upper()) - ord("A") + 1
@@ -103,7 +126,10 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
     rows_out: list[dict] = []
     cols = col_range(cfg["person_cols"][0], cfg["person_cols"][1])
     for ws in wb.worksheets:
-        period_date = parse_sheet_date(ws.title)
+        date_parser = cfg.get("date_parser", parse_sheet_date)
+        period_date = date_parser(ws.title)
+        if not period_date:
+            continue
         total_available_hours = safe_float(ws[cfg["cells"]["total_available_hours"]].value)
         completed_hours = safe_float(ws[cfg["cells"]["completed_hours"]].value)
         wp1_out = safe_float(ws[cfg["cells"]["wp1_output"]].value)
@@ -251,11 +277,14 @@ def write_csv(rows: list, out_path: str) -> None:
 def main():
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
+    scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
     if not os.path.exists(meic_source_file):
         raise FileNotFoundError(f"Input file not found: {meic_source_file}")
+    if not os.path.exists(scs_source_file):
+        raise FileNotFoundError(f"Input file not found: {scs_source_file}")
     PH_CFG = {
         "team": "PH",
         "person_cols": ("B", "R"),
@@ -318,8 +347,41 @@ def main():
         },
         "outputs_by_person_output": {"type": "row", "row": 73},
     }
+    SCS_CELL1_CFG = {
+        "team": "SCS Cell 1",
+        "person_cols": ("B", "R"),
+        "date_parser": parse_sheet_date_scs_missing_year,  # <--- key part
+        "cells": {
+            "total_available_hours": "S111",
+            "completed_hours": "S50",
+            "wp1_output": "T2",
+            "wp1_target": "T7",
+            "wp2_output": "V2",
+            "wp2_target": "V7",
+            "uplh_wp1": "T5",
+            "uplh_wp2": "V5",
+            "wp1_hours": "T4",
+            "wp2_hours": "V4",
+        },
+        "rows": {
+            "hc_row": 25,  # count non-zero in row 25, B..R
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 111,
+            "person_name_row_for_outputs_by_person": 53,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [54, 58, 62, 66, 70],
+            "wp2_output_rows_by_person": [55, 59, 63, 67, 71],
+        },
+        "outputs_by_person_output": {"type": "row", "row": 73},
+    }
     rows = []
     rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
+    rows.extend(scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
     cutoff = date.fromisoformat("2025-09-01")
     meic_rows = [
