@@ -1,7 +1,7 @@
 import csv
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
 HEADERS = [
@@ -52,13 +52,13 @@ def safe_div(n: float, d: float) -> Optional[float]:
 def parse_sheet_date(sheet_name: str) -> str:
     name = sheet_name.strip()
     fmts = [
-        "%b %d %Y",   # Jan 19 2026
-        "%b %d, %Y",  # Jan 19, 2026
-        "%B %d %Y",   # January 19 2026
-        "%B %d, %Y",  # January 19, 2026
-        "%Y-%m-%d",   # 2026-01-19
-        "%m/%d/%Y",   # 01/19/2026
-        "%m/%d/%y",   # 01/19/26
+        "%b %d %Y",
+        "%b %d, %Y",
+        "%B %d %Y",
+        "%B %d, %Y",
+        "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
     ]
     for fmt in fmts:
         try:
@@ -72,18 +72,16 @@ def parse_sheet_date(sheet_name: str) -> str:
         return dt.isoformat()
     except Exception:
         return name
-def col_range_B_to_R() -> range:
-    return range(2, 19)
-def sum_range(ws, row_start: int, row_end: int, col: int) -> float:
-    total = 0.0
-    for r in range(row_start, row_end + 1):
-        total += safe_float(ws.cell(row=r, column=col).value)
-    return total
+def col_range(start_col_letter: str, end_col_letter: str) -> range:
+    start = ord(start_col_letter.upper()) - ord("A") + 1
+    end = ord(end_col_letter.upper()) - ord("A") + 1
+    return range(start, end + 1)
+def sum_rows(ws, rows: list[int], col: int) -> float:
+    return sum(safe_float(ws.cell(row=r, column=col).value) for r in rows)
 def read_lookup_csv(path: str) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], str]:
     lookup: Dict[Tuple[str, str], Dict[str, Any]] = {}
     if not os.path.exists(path):
         return lookup, f"Missing file: {os.path.basename(path)}"
-
     try:
         with open(path, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
@@ -95,112 +93,105 @@ def read_lookup_csv(path: str) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], s
         return lookup, ""
     except Exception as e:
         return lookup, f"Failed reading {os.path.basename(path)}: {e}"
-def build_person_hours(ws) -> Dict[str, Dict[str, float]]:
-    out: Dict[str, Dict[str, float]] = {}
-    for c in col_range_B_to_R():
-        name = safe_str(ws.cell(row=53, column=c).value)
-        if not name:
-            continue
-        actual = safe_float(ws.cell(row=50, column=c).value)
-        available = safe_float(ws.cell(row=59, column=c).value)
-        out[name] = {"actual": actual, "available": available}
-    return out
-def build_outputs_by_person(ws) -> Dict[str, Dict[str, float]]:
-    out: Dict[str, Dict[str, float]] = {}
-    for c in col_range_B_to_R():
-        name = safe_str(ws.cell(row=53, column=c).value)
-        if not name:
-            continue
-        output = sum_range(ws, 11, 24, c)
-        target = safe_float(ws.cell(row=25, column=c).value)
-        if output != 0.0 or target != 0.0:
-            out[name] = {"output": output, "target": target}
-    return out
-def build_outputs_by_cell(ws) -> Dict[str, Dict[str, float]]:
-    return {
-        "WP1": {"output": safe_float(ws["Z2"].value), "target": safe_float(ws["Z7"].value)},
-        "WP2": {"output": safe_float(ws["AB2"].value), "target": safe_float(ws["AB7"].value)},
-    }
-def build_cell_station_hours(ws) -> Dict[str, float]:
-    return {"WP1": safe_float(ws["Z4"].value), "WP2": safe_float(ws["AB4"].value)}
-def build_hours_by_cell_by_person(ws) -> Dict[str, Dict[str, float]]:
-    wp1_rows = [31, 35, 39, 43, 47]
-    wp2_rows = [32, 36, 40, 44, 48]
-    wp1: Dict[str, float] = {}
-    wp2: Dict[str, float] = {}
-    for c in col_range_B_to_R():
-        name = safe_str(ws.cell(row=30, column=c).value)
-        if not name:
-            continue
-        wp1_hours = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_rows)
-        wp2_hours = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_rows)
-        if wp1_hours != 0.0:
-            wp1[name] = wp1_hours
-        if wp2_hours != 0.0:
-            wp2[name] = wp2_hours
-    return {"WP1": wp1, "WP2": wp2}
-def build_output_by_cell_by_person(ws) -> Dict[str, Dict[str, float]]:
-    wp1_rows = [11, 14, 17, 20, 23]
-    wp2_rows = [12, 15, 18, 21, 24]
-    wp1: Dict[str, float] = {}
-    wp2: Dict[str, float] = {}
-    for c in col_range_B_to_R():
-        name = safe_str(ws.cell(row=10, column=c).value)
-        if not name:
-            continue
-        wp1_out = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_rows)
-        wp2_out = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_rows)
-        if wp1_out != 0.0:
-            wp1[name] = wp1_out
-        if wp2_out != 0.0:
-            wp2[name] = wp2_out
-    return {"WP1": wp1, "WP2": wp2}
-def build_uplh_by_cell_by_person(
-    output_by_cell_by_person: Dict[str, Dict[str, float]],
-    hours_by_cell_by_person: Dict[str, Dict[str, float]],
-) -> Dict[str, Dict[str, Optional[float]]]:
-    out: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
-    for wp in ("WP1", "WP2"):
-        for person, out_val in output_by_cell_by_person.get(wp, {}).items():
-            hrs = hours_by_cell_by_person.get(wp, {}).get(person, 0.0)
-            out[wp][person] = safe_div(out_val, hrs)
-    return out
-def count_hc_in_wip(ws) -> int:
-    count = 0
-    for c in col_range_B_to_R():
-        if safe_float(ws.cell(row=50, column=c).value) != 0.0:
-            count += 1
-    return count
-def scrape_workbook(source_file: str) -> list:
+def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[dict]:
     excel_dir = os.path.dirname(os.path.abspath(source_file))
     timeliness_path = os.path.join(excel_dir, "timeliness.csv")
     closures_path = os.path.join(excel_dir, "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
     closures_lu, closures_err = read_lookup_csv(closures_path)
     wb = load_workbook(source_file, data_only=True)
-    rows = []
+    rows_out: list[dict] = []
+    cols = col_range(cfg["person_cols"][0], cfg["person_cols"][1])
     for ws in wb.worksheets:
         period_date = parse_sheet_date(ws.title)
-        total_available_hours = safe_float(ws["T59"].value)
-        completed_hours = safe_float(ws["T50"].value)
-        target_output = safe_float(ws["Z7"].value) + safe_float(ws["AB7"].value)
-        actual_output = safe_float(ws["Z2"].value) + safe_float(ws["AB2"].value)
+        total_available_hours = safe_float(ws[cfg["cells"]["total_available_hours"]].value)
+        completed_hours = safe_float(ws[cfg["cells"]["completed_hours"]].value)
+        wp1_out = safe_float(ws[cfg["cells"]["wp1_output"]].value)
+        wp2_out = safe_float(ws[cfg["cells"]["wp2_output"]].value)
+        wp1_tgt = safe_float(ws[cfg["cells"]["wp1_target"]].value)
+        wp2_tgt = safe_float(ws[cfg["cells"]["wp2_target"]].value)
+        target_output = wp1_tgt + wp2_tgt
+        actual_output = wp1_out + wp2_out
         target_uplh = safe_div(target_output, completed_hours)
         actual_uplh = safe_div(actual_output, completed_hours)
-        uplh_wp1 = safe_float(ws["Z5"].value)
-        uplh_wp2 = safe_float(ws["AB5"].value)
-        hc_in_wip = count_hc_in_wip(ws)
+        uplh_wp1 = safe_float(ws[cfg["cells"]["uplh_wp1"]].value)
+        uplh_wp2 = safe_float(ws[cfg["cells"]["uplh_wp2"]].value)
+        hc_row = cfg["rows"]["hc_row"]
+        hc_in_wip = 0
+        for c in cols:
+            if safe_float(ws.cell(row=hc_row, column=c).value) != 0.0:
+                hc_in_wip += 1
         actual_hc_used = safe_div(completed_hours, 32.5)
-        person_hours = build_person_hours(ws)
-        outputs_by_person = build_outputs_by_person(ws)
-        outputs_by_cell = build_outputs_by_cell(ws)
-        cell_station_hours = build_cell_station_hours(ws)
-        hours_by_cell_by_person = build_hours_by_cell_by_person(ws)
-        output_by_cell_by_person = build_output_by_cell_by_person(ws)
-        uplh_by_cell_by_person = build_uplh_by_cell_by_person(
-            output_by_cell_by_person, hours_by_cell_by_person
-        )
-        team = "PH"
+        person_hours: Dict[str, Dict[str, float]] = {}
+        name_row_ph = cfg["rows"]["person_name_row_for_person_hours"]
+        actual_row_ph = cfg["rows"]["person_actual_row_for_person_hours"]
+        avail_row_ph = cfg["rows"]["person_available_row_for_person_hours"]
+        for c in cols:
+            name = safe_str(ws.cell(row=name_row_ph, column=c).value)
+            if not name:
+                continue
+            actual = safe_float(ws.cell(row=actual_row_ph, column=c).value)
+            available = safe_float(ws.cell(row=avail_row_ph, column=c).value)
+            person_hours[name] = {"actual": actual, "available": available}
+        outputs_by_person: Dict[str, Dict[str, float]] = {}
+        name_row_op = cfg["rows"]["person_name_row_for_outputs_by_person"]
+        target_row_op = cfg["rows"]["person_target_row_for_outputs_by_person"]
+        output_spec = cfg["outputs_by_person_output"]  
+        for c in cols:
+            name = safe_str(ws.cell(row=name_row_op, column=c).value)
+            if not name:
+                continue
+            if output_spec["type"] == "row":
+                output_val = safe_float(ws.cell(row=output_spec["row"], column=c).value)
+            elif output_spec["type"] == "sum_rows":
+                output_val = sum_rows(ws, output_spec["rows"], c)
+            else:
+                output_val = 0.0
+            target_val = safe_float(ws.cell(row=target_row_op, column=c).value)
+            if output_val != 0.0 or target_val != 0.0:
+                outputs_by_person[name] = {"output": output_val, "target": target_val}
+        outputs_by_cell = {
+            "WP1": {"output": wp1_out, "target": wp1_tgt},
+            "WP2": {"output": wp2_out, "target": wp2_tgt},
+        }
+        cell_station_hours = {
+            "WP1": safe_float(ws[cfg["cells"]["wp1_hours"]].value),
+            "WP2": safe_float(ws[cfg["cells"]["wp2_hours"]].value),
+        }
+        hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        name_row_hc = cfg["rows"]["person_name_row_for_hours_by_cell_by_person"]
+        wp1_hour_rows = cfg["rows"]["wp1_hour_rows"]
+        wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
+        for c in cols:
+            name = safe_str(ws.cell(row=name_row_hc, column=c).value)
+            if not name:
+                continue
+            wp1_hrs = sum_rows(ws, wp1_hour_rows, c)
+            wp2_hrs = sum_rows(ws, wp2_hour_rows, c)
+            if wp1_hrs != 0.0:
+                hours_by_cell_by_person["WP1"][name] = wp1_hrs
+            if wp2_hrs != 0.0:
+                hours_by_cell_by_person["WP2"][name] = wp2_hrs
+        output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        name_row_oc = cfg["rows"]["person_name_row_for_output_by_cell_by_person"]
+        wp1_out_rows = cfg["rows"]["wp1_output_rows_by_person"]
+        wp2_out_rows = cfg["rows"]["wp2_output_rows_by_person"]
+        for c in cols:
+            name = safe_str(ws.cell(row=name_row_oc, column=c).value)
+            if not name:
+                continue
+            wp1_o = sum_rows(ws, wp1_out_rows, c)
+            wp2_o = sum_rows(ws, wp2_out_rows, c)
+            if wp1_o != 0.0:
+                output_by_cell_by_person["WP1"][name] = wp1_o
+            if wp2_o != 0.0:
+                output_by_cell_by_person["WP2"][name] = wp2_o
+        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+        for wp in ("WP1", "WP2"):
+            for person, out_val in output_by_cell_by_person[wp].items():
+                hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
+                uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
+        team = cfg["team"]
         key = (team, period_date)
         open_complaint_timeliness = ""
         closures = ""
@@ -221,35 +212,36 @@ def scrape_workbook(source_file: str) -> list:
             errs.append(f"No timeliness match for {team} {period_date}")
         if not crow and not closures_err:
             errs.append(f"No closures match for {team} {period_date}")
-        row = {
-            "team": team,
-            "period_date": period_date,
-            "source_file": source_file,
-            "Total Available Hours": total_available_hours,
-            "Completed Hours": completed_hours,
-            "Target Output": target_output,
-            "Actual Output": actual_output,
-            "Target UPLH": target_uplh,
-            "Actual UPLH": actual_uplh,
-            "UPLH WP1": uplh_wp1,
-            "UPLH WP2": uplh_wp2,
-            "HC in WIP": hc_in_wip,
-            "Actual HC Used": actual_hc_used,
-            "People in WIP": "",
-            "Person Hours": json.dumps(person_hours, ensure_ascii=False),
-            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
-            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
-            "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
-            "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
-            "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
-            "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-            "Open Complaint Timeliness": open_complaint_timeliness,
-            "error": " | ".join(errs) if errs else "",
-            "Closures": closures,
-            "Opened": opened,
-        }
-        rows.append(row)
-    return rows
+        rows_out.append(
+            {
+                "team": team,
+                "period_date": period_date,
+                "source_file": source_file,
+                "Total Available Hours": total_available_hours,
+                "Completed Hours": completed_hours,
+                "Target Output": target_output,
+                "Actual Output": actual_output,
+                "Target UPLH": target_uplh,
+                "Actual UPLH": actual_uplh,
+                "UPLH WP1": uplh_wp1,
+                "UPLH WP2": uplh_wp2,
+                "HC in WIP": hc_in_wip,
+                "Actual HC Used": actual_hc_used,
+                "People in WIP": "",
+                "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+                "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+                "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+                "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+                "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+                "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+                "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+                "Open Complaint Timeliness": open_complaint_timeliness,
+                "error": " | ".join(errs) if errs else "",
+                "Closures": closures,
+                "Opened": opened,
+            }
+        )
+    return rows_out
 def write_csv(rows: list, out_path: str) -> None:
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=HEADERS)
@@ -257,16 +249,87 @@ def write_csv(rows: list, out_path: str) -> None:
         for r in rows:
             w.writerow({h: r.get(h, "") for h in HEADERS})
 def main():
-    source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
+    ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
+    meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     out_file = "NS_metrics.csv"
-    if not os.path.exists(source_file):
-        raise FileNotFoundError(
-            f"Input file not found: {source_file}\n"
-            "Tip: edit `source_file` in this script or pass a valid path."
+    if not os.path.exists(ph_source_file):
+        raise FileNotFoundError(f"Input file not found: {ph_source_file}")
+    if not os.path.exists(meic_source_file):
+        raise FileNotFoundError(f"Input file not found: {meic_source_file}")
+    PH_CFG = {
+        "team": "PH",
+        "person_cols": ("B", "R"),
+        "cells": {
+            "total_available_hours": "T59",
+            "completed_hours": "T50",
+            "wp1_output": "Z2",
+            "wp1_target": "Z7",
+            "wp2_output": "AB2",
+            "wp2_target": "AB7",
+            "uplh_wp1": "Z5",
+            "uplh_wp2": "AB5",
+            "wp1_hours": "Z4",
+            "wp2_hours": "AB4",
+        },
+        "rows": {
+            "hc_row": 50,
+            "person_name_row_for_person_hours": 53,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 59,
+            "person_name_row_for_outputs_by_person": 53,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
+    MEIC_PH_CFG = {
+        "team": "MEIC PH",
+        "person_cols": ("B", "Q"),
+        "cells": {
+            "total_available_hours": "S111",
+            "completed_hours": "S50",
+            "wp1_output": "Y2",
+            "wp1_target": "Y7",
+            "wp2_output": "AA2",
+            "wp2_target": "AA7",
+            "uplh_wp1": "Y5",
+            "uplh_wp2": "AA5",
+            "wp1_hours": "Y4",
+            "wp2_hours": "AA4",
+        },
+        "rows": {
+            "hc_row": 50,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 111,
+            "person_name_row_for_outputs_by_person": 30,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 53,
+            "wp1_output_rows_by_person": [54, 58, 62, 66, 70],
+            "wp2_output_rows_by_person": [55, 57, 63, 67, 71],
+        },
+        "outputs_by_person_output": {"type": "row", "row": 73},
+    }
+    rows = []
+    rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
+    meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
+    cutoff = date.fromisoformat("2025-09-01")
+    meic_rows = [
+        r for r in meic_rows
+        if (
+            safe_str(r.get("period_date")) >= "2025-09-01"
         )
-    EPS = 1e-9
-    rows = scrape_workbook(source_file)
-    rows = [r for r in rows if abs(safe_float(r.get("Total Available Hours"))) > EPS]
+    ]
+    rows.extend(meic_rows)
+    rows = [r for r in rows if safe_float(r.get("Total Available Hours")) != 0.0]
     rows = [r for r in rows if safe_str(r.get("period_date")) != "2023-11-06"]
     write_csv(rows, out_file)
     print(f"Wrote {len(rows)} rows to {out_file}")
