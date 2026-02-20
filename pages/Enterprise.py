@@ -526,15 +526,12 @@ with tabs[0]:
             pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
     st.markdown("""
         <style>
-        [data-testid="stMetric"] {
+        [data-testid="stMetricLabel"] p {
             text-align: center;
-        }
-        [data-testid="stMetricLabel"] > div {
-            justify-content: center;
             width: 100%;
         }
-        [data-testid="stMetricValue"] > div {
-            justify-content: center;
+        [data-testid="stMetricValue"] {
+            text-align: center;
             width: 100%;
         }
         </style>
