@@ -297,6 +297,8 @@ def build_non_wip_rows(config_path: str,
         raise SystemExit("No teams specified. Use --all or --team <NAME> (repeatable).")
     completed_index = load_completed_hours(metrics_csv)
     person_metrics = load_person_metrics(metrics_csv)
+    wip_workers_all: Dict[str, set] = defaultdict(set)          # team -> set(person)
+    wip_workers_by_week: Dict[Tuple[str, str], set] = defaultdict(set)
     out_rows: List[Dict[str, Any]] = []
     for team in teams_to_run:
         entry = cfg.get(team) or {}
@@ -354,6 +356,14 @@ def build_non_wip_rows(config_path: str,
             wk_date = _to_date(iso)
             wk_people = people_by_week.get(wk_date, set()) if wk_date else set()
             wk_people = {p for p in wk_people if not _is_non_person_label(p)}   # <-- add this
+            wk_wip_workers = set()
+            candidates = wk_people
+            for person in candidates:
+                actual = float(person_metrics.get((team, iso, person), {}).get("actual", 0.0) or 0.0)
+                if actual > 0:
+                    wk_wip_workers.add(person)
+            wip_workers_all[team].update(wk_wip_workers)
+            wip_workers_by_week[(team, iso)].update(wk_wip_workers)
             people_count = len(wk_people)
             completed = float(completed_index.get((team, iso), 0.0))
             bucket = prod_buckets_merged.get(wk_date, {}) if wk_date else {}
@@ -386,8 +396,13 @@ def build_non_wip_rows(config_path: str,
                 "% in WIP": pct_in_wIP,
                 "Non-WIP by Person": json.dumps(per_person_nonwip, ensure_ascii=False),
                 "Non-WIP Activities": json.dumps(activities, ensure_ascii=False),
+                "WIP Workers": json.dumps(sorted(wk_wip_workers), ensure_ascii=False),
+                "WIP Workers Count": len(wk_wip_workers),
             })
-        print(f"[{team}] OK: {len(team_weeks)} week(s)")
+        names = sorted(wip_workers_all[team])
+        print(f"[{team}] Unique people who worked in WIP (actual > 0): {len(names)}")
+        for n in names:
+            print("  -", n)
     return out_rows
 def main():
     ap = argparse.ArgumentParser(description="Collect Non-WIP/OOO metrics into a new CSV.")
@@ -418,6 +433,8 @@ def main():
         "% in WIP",
         "Non-WIP by Person",
         "Non-WIP Activities",
+        "WIP Workers",
+        "WIP Workers Count",
     ]
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
