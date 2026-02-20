@@ -528,14 +528,22 @@ with tabs[0]:
         <style>
         [data-testid="stMetricLabel"] {
             justify-content: center;
+            width: 100%;
         }
         [data-testid="stMetricLabel"] > div {
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        [data-testid="stMetricLabel"] [data-testid="stMarkdownContainer"] {
+            display: flex;
+            justify-content: center;
             width: 100%;
         }
         [data-testid="stMetricLabel"] p {
             text-align: center;
             width: 100%;
+            margin: 0;
         }
         [data-testid="stMetricValue"] {
             text-align: center;
