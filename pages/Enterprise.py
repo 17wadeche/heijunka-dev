@@ -423,6 +423,10 @@ def _nonwip_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
         "people_count": _first_col(df, ["people_count", "people_count."]),
         "pct_in_wip": _first_col(df, ["%_in_wip", "%_in_wip."]),
         "ooohours": _first_col(df, ["ooo_hours", "ooo_hours."]),
+        "nonwip_by_person_json": _first_col(df, ["non-wip_by_person", "non_wip_by_person", "non_wip_by_person."]),
+        "wip_workers_json": _first_col(df, ["wip_workers", "wip_workers."]),
+        "wip_workers_count": _first_col(df, ["wip_workers_count", "wip_workers_count."]),
+        "wip_workers_ooo": _first_col(df, ["wip_workers_ooo_hours", "wip_workers_ooo_hours."]),
         "activities_json": _first_col(df, ["non-wip_activities", "non_wip_activities"]),
     }
 def _people_lookup_by_week(dfnw: pd.DataFrame) -> Dict[pd.Timestamp, float]:
@@ -438,6 +442,128 @@ def _people_lookup_by_week(dfnw: pd.DataFrame) -> Dict[pd.Timestamp, float]:
     for _, r in grp.iterrows():
         out[pd.to_datetime(r[nwc["date"]])] = float(r["people_count"])
     return out
+def _weekly_rollup_summary(
+    dfm: Optional[pd.DataFrame],
+    dfnw: Optional[pd.DataFrame],
+    dfnw_act: Optional[pd.DataFrame],
+    denom_mode: str,
+    wd: int,
+) -> Tuple[
+    Optional[float], Optional[float], Optional[float], Optional[float],  # avg daily wip pp, avg daily nonwip pp, avg weekly ooo, avg weekly unacct
+    Optional[float], Optional[float], Optional[float], Optional[float],  # pct_wip, pct_nonwip, pct_ooo, pct_unacct
+]:
+    if dfm is None or dfm.empty or dfnw is None or dfnw.empty:
+        return (None, None, None, None, None, None, None, None)
+    mc = _metrics_cols(dfm)
+    nwc = _nonwip_cols(dfnw)
+    if not (mc["date"] and mc["wip_hours"] and nwc["date"]):
+        return (None, None, None, None, None, None, None, None)
+    m = dfm.copy()
+    m[mc["date"]] = _safe_to_datetime(m, mc["date"])
+    m = m.dropna(subset=[mc["date"]])
+    m["week_start"] = _weekly_start(m[mc["date"]])
+    m["completed"] = _to_num(m[mc["wip_hours"]]).fillna(0.0)
+    m_wk = m.groupby("week_start", as_index=False).agg(completed=("completed", "sum"))
+    n = dfnw.copy()
+    n[nwc["date"]] = _safe_to_datetime(n, nwc["date"])
+    n = n.dropna(subset=[nwc["date"]])
+    n["week_start"] = _weekly_start(n[nwc["date"]])
+
+    if nwc["people_count"] and nwc["people_count"] in n.columns:
+        n["people_count"] = _to_num(n[nwc["people_count"]]).fillna(0.0)
+    else:
+        n["people_count"] = 0.0
+
+    if nwc["total_nonwip"] and nwc["total_nonwip"] in n.columns:
+        n["nonwip_total"] = _to_num(n[nwc["total_nonwip"]]).fillna(0.0)
+    else:
+        n["nonwip_total"] = 0.0
+
+    if nwc["ooohours"] and nwc["ooohours"] in n.columns:
+        n["ooo_total"] = _to_num(n[nwc["ooohours"]]).fillna(0.0)
+    else:
+        n["ooo_total"] = 0.0
+    def _col_num(colkey: str) -> pd.Series:
+        c = nwc.get(colkey)
+        if c and c in n.columns:
+            return _to_num(n[c]).fillna(0.0)
+        return pd.Series([0.0] * len(n), index=n.index)
+    n["wip_workers_count"] = _col_num("wip_workers_count")
+    n["wip_workers_ooo"] = _col_num("wip_workers_ooo")
+    wip_workers_by_week: Dict[pd.Timestamp, List[str]] = {}
+    if nwc.get("wip_workers_json") and nwc["wip_workers_json"] in n.columns:
+        for _, r in n.iterrows():
+            wk = r["week_start"]
+            payload = _loads_json_maybe(r[nwc["wip_workers_json"]])
+            if isinstance(payload, list):
+                wip_workers_by_week[pd.to_datetime(wk)] = [str(x).strip() for x in payload if str(x).strip()]
+    n_wk = n.groupby("week_start", as_index=False).agg(
+        people_count=("people_count", "sum"),
+        nonwip_total=("nonwip_total", "sum"),
+        ooo_total=("ooo_total", "sum"),
+        wip_workers_count=("wip_workers_count", "sum"),
+        wip_workers_ooo=("wip_workers_ooo", "sum"),
+    )
+    nonwip_wipworkers_by_week: Dict[pd.Timestamp, float] = {}
+    if denom_mode == "HC that worked in WIP" and dfnw_act is not None and not dfnw_act.empty:
+        act = dfnw_act.copy()
+        adc = _get_date_col(act)
+        if adc is not None:
+            act[adc] = _safe_to_datetime(act, adc)
+            act = act.dropna(subset=[adc])
+            act["week_start"] = _weekly_start(act[adc])
+            act_cols = {_norm(c): c for c in act.columns}
+            by_person_col = act_cols.get("non_wip_by_person") or act_cols.get("non-wip_by_person") or act_cols.get("nonwip_by_person")
+            if by_person_col:
+                for _, r in act.iterrows():
+                    wk = pd.to_datetime(r["week_start"])
+                    wips = set(wip_workers_by_week.get(wk, []))
+                    if not wips:
+                        continue
+                    dct = _loads_json_maybe(r[by_person_col])
+                    if not isinstance(dct, dict):
+                        continue
+                    s = 0.0
+                    for name, hrs in dct.items():
+                        if str(name).strip() in wips:
+                            try:
+                                s += float(hrs)
+                            except Exception:
+                                pass
+                    nonwip_wipworkers_by_week[wk] = nonwip_wipworkers_by_week.get(wk, 0.0) + s
+    wk = m_wk.merge(n_wk, on="week_start", how="inner").sort_values("week_start")
+    if wk.empty:
+        return (None, None, None, None, None, None, None, None)
+    if denom_mode == "Total HC on team":
+        wk["denom_hc"] = wk["people_count"]
+        wk["ooo_use"] = wk["ooo_total"]
+        wk["nonwip_use"] = wk["nonwip_total"]
+    else:
+        wk["denom_hc"] = wk["wip_workers_count"]
+        wk["ooo_use"] = wk["wip_workers_ooo"]
+        wk["nonwip_use"] = wk["week_start"].map(lambda x: nonwip_wipworkers_by_week.get(pd.to_datetime(x), float("nan")))
+        wk["nonwip_use"] = wk["nonwip_use"].where(wk["nonwip_use"].notna(), wk["nonwip_total"])
+    wk.loc[wk["denom_hc"] <= 0, "denom_hc"] = pd.NA
+    wk["wip_daily_pp"] = wk["completed"] / (wk["denom_hc"] * float(wd))
+    wk["nonwip_daily_pp"] = wk["nonwip_use"] / (wk["denom_hc"] * float(wd))
+    wk["capacity_weekly"] = wk["denom_hc"] * float(wd) * 8.0
+    wk["unacct_weekly"] = wk["capacity_weekly"] - wk["ooo_use"] - wk["completed"] - wk["nonwip_use"]
+    wk["pct_wip"] = 100.0 * (wk["wip_daily_pp"] / 8.0)
+    wk["pct_nonwip"] = 100.0 * (wk["nonwip_daily_pp"] / 8.0)
+    wk["pct_ooo"] = 100.0 * (wk["ooo_use"] / wk["capacity_weekly"])
+    wk["pct_unacct"] = 100.0 - (wk["pct_wip"] + wk["pct_nonwip"] + wk["pct_ooo"])
+    avg_wip_daily_pp = float(wk["wip_daily_pp"].dropna().mean()) if wk["wip_daily_pp"].notna().any() else None
+    avg_nonwip_daily_pp = float(wk["nonwip_daily_pp"].dropna().mean()) if wk["nonwip_daily_pp"].notna().any() else None
+    avg_ooo_weekly = float(wk["ooo_use"].dropna().mean()) if wk["ooo_use"].notna().any() else None
+    avg_unacct_weekly = float(wk["unacct_weekly"].dropna().mean()) if wk["unacct_weekly"].notna().any() else None
+    pct_wip = float(wk["pct_wip"].dropna().mean()) if wk["pct_wip"].notna().any() else None
+    pct_nonwip = float(wk["pct_nonwip"].dropna().mean()) if wk["pct_nonwip"].notna().any() else None
+    pct_ooo = float(wk["pct_ooo"].dropna().mean()) if wk["pct_ooo"].notna().any() else None
+    pct_unacct = float(wk["pct_unacct"].dropna().mean()) if wk["pct_unacct"].notna().any() else None
+    return (
+        avg_wip_daily_pp, avg_nonwip_daily_pp, avg_ooo_weekly, avg_unacct_weekly,
+        pct_wip, pct_nonwip, pct_ooo, pct_unacct
+    )
 with tabs[0]:
     dfm_raw = _get_metrics_df()
     dfnw_raw = _get_nonwip_df()
@@ -445,6 +571,9 @@ with tabs[0]:
     ov_start, ov_end = section_date_range("Overview date range", bounds_df, key="dr_overview")
     dfm = filter_by_date_range(dfm_raw, ov_start, ov_end) if dfm_raw is not None else None
     dfnw = filter_by_date_range(dfnw_raw, ov_start, ov_end) if dfnw_raw is not None else None
+    people_by_week: Dict[pd.Timestamp, float] = {}
+    if dfnw is not None and not dfnw.empty:
+        people_by_week = _people_lookup_by_week(dfnw)
     wd = _workdays_per_week_assumption()
     st.subheader("Summary")
     denom_mode = st.radio(
@@ -454,104 +583,41 @@ with tabs[0]:
         horizontal=True,
         help="Team-total daily WIP = Completed Hours/5. Per-person daily WIP divides by headcount too.",
     )
-    avg_daily_wip_team = None
-    avg_daily_wip_per_person = None
-    avg_daily_nonwip_team = None
-    avg_daily_nonwip_per_person = None
-    pct_wip = None
-    pct_nonwip = None
-    people_by_week: Dict[pd.Timestamp, float] = {}
-    if dfnw is not None and not dfnw.empty:
-        people_by_week = _people_lookup_by_week(dfnw)
-    hc_used_value: Optional[float] = None
-    if dfm is not None:
-        mc0 = _metrics_cols(dfm)
-        if mc0["date"] and mc0["hc_used"] and mc0["hc_used"] in dfm.columns:
-            tmp_hc = dfm.copy()
-            tmp_hc[mc0["date"]] = _safe_to_datetime(tmp_hc, mc0["date"])
-            tmp_hc = tmp_hc.dropna(subset=[mc0["date"]]).sort_values(mc0["date"])
-            tmp_hc["hc_used"] = _to_num(tmp_hc[mc0["hc_used"]])
-            if tmp_hc["hc_used"].notna().any():
-                hc_used_value = float(tmp_hc["hc_used"].dropna().mean())
-    if dfm is not None:
-        mc = _metrics_cols(dfm)
-        if mc["date"] and mc["wip_hours"]:
-            temp = dfm.copy()
-            temp[mc["date"]] = _safe_to_datetime(temp, mc["date"])
-            temp = temp.dropna(subset=[mc["date"]]).sort_values(mc["date"])
-            temp["wip_hours"] = _to_num(temp[mc["wip_hours"]]).fillna(0.0)
-            temp["daily_wip_team"] = temp["wip_hours"] / float(wd)
-            avg_daily_wip_team = float(temp["daily_wip_team"].mean())
-            if denom_mode == "Total HC on team" and people_by_week:
-                temp["people_count"] = temp[mc["date"]].map(people_by_week)
-                temp["daily_wip_per_person"] = temp["wip_hours"] / (float(wd) * temp["people_count"])
-                temp.loc[temp["people_count"].fillna(0) <= 0, "daily_wip_per_person"] = pd.NA
-                if temp["daily_wip_per_person"].notna().any():
-                    avg_daily_wip_per_person = float(temp["daily_wip_per_person"].dropna().mean())
-            else:
-                if mc["hc_in_wip"] and mc["hc_in_wip"] in temp.columns:
-                    temp["hc_in_wip"] = _to_num(temp[mc["hc_in_wip"]]).fillna(0.0)
-                    temp["daily_wip_per_person"] = temp["wip_hours"] / (float(wd) * temp["hc_in_wip"])
-                    temp.loc[temp["hc_in_wip"] <= 0, "daily_wip_per_person"] = pd.NA
-                    if temp["daily_wip_per_person"].notna().any():
-                        avg_daily_wip_per_person = float(temp["daily_wip_per_person"].dropna().mean())
-        else:
-            st.info("Metrics data is missing a date column (Week/period_date) and/or Completed Hours.")
-    if dfnw is not None:
-        nwc = _nonwip_cols(dfnw)
-        if nwc["date"] and nwc["total_nonwip"]:
-            tempn = dfnw.copy()
-            tempn[nwc["date"]] = _safe_to_datetime(tempn, nwc["date"])
-            tempn = tempn.dropna(subset=[nwc["date"]]).sort_values(nwc["date"])
-            tempn["nonwip_hours"] = _to_num(tempn[nwc["total_nonwip"]]).fillna(0.0)
-            tempn["daily_nonwip_team"] = tempn["nonwip_hours"] / float(wd)
-            avg_daily_nonwip_team = float(tempn["daily_nonwip_team"].mean())
-            if nwc["people_count"]:
-                tempn["people_count"] = _to_num(tempn[nwc["people_count"]]).fillna(0.0)
-                tempn["daily_nonwip_per_person"] = tempn["nonwip_hours"] / (float(wd) * tempn["people_count"])
-                tempn.loc[tempn["people_count"] <= 0, "daily_nonwip_per_person"] = pd.NA
-                if tempn["daily_nonwip_per_person"].notna().any():
-                    avg_daily_nonwip_per_person = float(tempn["daily_nonwip_per_person"].dropna().mean())
-    total_avg = None
-    if avg_daily_wip_team is not None and avg_daily_nonwip_team is not None:
-        total_avg = avg_daily_wip_team + avg_daily_nonwip_team
-    elif avg_daily_wip_per_person is not None and avg_daily_nonwip_per_person is not None:
-        total_avg = avg_daily_wip_per_person + avg_daily_nonwip_per_person
-    if total_avg is not None and total_avg > 0:
-        if avg_daily_wip_team is not None and avg_daily_nonwip_team is not None:
-            pct_wip = 100.0 * avg_daily_wip_team / total_avg
-            pct_nonwip = 100.0 * avg_daily_nonwip_team / total_avg
-        else:
-            pct_wip = 100.0 * avg_daily_wip_per_person / total_avg
-            pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
+    dfnw_act_raw = filter_by_team(data["non_wip_activities"]) if "non_wip_activities" in data else None
+    dfnw_act = filter_by_date_range(dfnw_act_raw, ov_start, ov_end) if dfnw_act_raw is not None else None
+    (
+        avg_daily_wip_per_person,
+        avg_daily_nonwip_per_person,
+        avg_weekly_ooo_hours,
+        avg_weekly_unacct_hours,
+        pct_wip,
+        pct_nonwip,
+        pct_ooo,
+        pct_unacct,
+    ) = _weekly_rollup_summary(dfm, dfnw, dfnw_act, denom_mode=denom_mode, wd=wd)
     st.markdown("""
     <style>
-    div[data-testid="stMetric"]{
-    text-align: center;
-    }
-    label[data-testid="stMetricLabel"]{
-    display: block;          /* or display:flex; */
-    width: 100%;
-    text-align: center;
-    margin: 0;
-    }
-    label[data-testid="stMetricLabel"] p{
-    text-align: center !important;
-    margin: 0 !important;
-    }
-    div[data-testid="stMetricValue"]{
-    text-align: center !important;
-    width: 100%;
-    }
+    div[data-testid="stMetric"]{ text-align: center; }
+    label[data-testid="stMetricLabel"]{ display: block; width: 100%; text-align: center; margin: 0; }
+    label[data-testid="stMetricLabel"] p{ text-align: center !important; margin: 0 !important; }
+    div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
-    _, r1c2, r1c3, _ = st.columns([1, 1.5, 1.5, 1])
-    r1c2.metric("Avg Per Person **WIP** Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    r1c3.metric("Avg Per Person **Non-WIP** Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    _, r2c2, r2c3, _ = st.columns([1, 1.5, 1.5, 1])
-    r2c2.metric("**WIP** Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    r2c3.metric("**Non-WIP** Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
-    st.caption("Daily averages assume **5 workdays/week**. Per-person uses headcount where available.")
+    _, c1, c2, c3, c4, _ = st.columns([0.5, 1.2, 1.2, 1.2, 1.4, 0.5])
+    c1.metric("Avg Per Person **WIP** Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
+    c2.metric("Avg Per Person **Non-WIP** Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
+    c3.metric("Avg **OOO** Weekly Hours", f"{avg_weekly_ooo_hours:.2f}" if avg_weekly_ooo_hours is not None else "—")
+    c4.metric("Avg **Unaccounted** Weekly Hours", f"{avg_weekly_unacct_hours:.2f}" if avg_weekly_unacct_hours is not None else "—")
+    _, p1, p2, p3, p4, _ = st.columns([0.5, 1.2, 1.2, 1.2, 1.4, 0.5])
+    p1.metric("**WIP** % of day", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    p2.metric("**Non-WIP** % of day", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
+    p3.metric("**OOO** % of week", f"{pct_ooo:.1f}%" if pct_ooo is not None else "—")
+    p4.metric("**Unaccounted** % remaining", f"{pct_unacct:.1f}%" if pct_unacct is not None else "—")
+    st.caption(
+        "Assumptions: **5 workdays/week**, **8 hours/day**. "
+        "WIP/Non-WIP % = (avg per-person daily hours)/8. "
+        "OOO % uses weekly capacity. Unaccounted % is the remainder to 100%."
+    )
     st.divider()
     st.subheader("Trend: avg daily WIP hours (week over week)")
     if dfm is not None:
