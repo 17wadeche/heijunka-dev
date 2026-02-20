@@ -4,6 +4,7 @@ import os
 from datetime import datetime, date
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
+from openpyxl.utils import column_index_from_string
 HEADERS = [
     "team",
     "period_date",
@@ -72,15 +73,22 @@ def parse_sheet_date(sheet_name: str) -> str:
         return dt.isoformat()
     except Exception:
         return name
+import re
+from datetime import datetime, date
 def parse_sheet_date_scs_missing_year(sheet_name: str) -> str:
-    name = sheet_name.strip()
-    if any(k in name.lower() for k in ["template", "heijunka"]):
+    raw = (sheet_name or "").strip()
+    low = raw.lower()
+    if any(k in low for k in ["template", "agenda", "work instruction", "instructions"]):
         return ""
-    fmts = ["%b %d", "%B %d", "%b %d,", "%B %d,"]
+    m = re.search(r"\b([A-Za-z]{3,9})\s+(\d{1,2})\b", raw)
+    if not m:
+        return ""
+    mon_txt = m.group(1)
+    day_txt = m.group(2)
     mm = dd = None
-    for fmt in fmts:
+    for fmt in ("%b %d", "%B %d"):
         try:
-            dt = datetime.strptime(name.replace(",", ""), fmt)
+            dt = datetime.strptime(f"{mon_txt} {day_txt}", fmt)
             mm, dd = dt.month, dt.day
             break
         except ValueError:
@@ -96,8 +104,8 @@ def parse_sheet_date_scs_missing_year(sheet_name: str) -> str:
             return d.isoformat()
     return ""
 def col_range(start_col_letter: str, end_col_letter: str) -> range:
-    start = ord(start_col_letter.upper()) - ord("A") + 1
-    end = ord(end_col_letter.upper()) - ord("A") + 1
+    start = column_index_from_string(start_col_letter.upper())
+    end = column_index_from_string(end_col_letter.upper())
     return range(start, end + 1)
 def sum_rows(ws, rows: list[int], col: int) -> float:
     return sum(safe_float(ws.cell(row=r, column=col).value) for r in rows)
@@ -130,8 +138,24 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         period_date = date_parser(ws.title)
         if not period_date:
             continue
-        total_available_hours = safe_float(ws[cfg["cells"]["total_available_hours"]].value)
-        completed_hours = safe_float(ws[cfg["cells"]["completed_hours"]].value)
+        taa_spec = cfg["cells"]["total_available_hours"]
+        if isinstance(taa_spec, str):
+            total_available_hours = safe_float(ws[taa_spec].value)
+        else:
+            if taa_spec.get("type") == "sum_range":
+                rng = taa_spec["range"]
+                total_available_hours = sum(safe_float(cell.value) for row in ws[rng] for cell in row)
+            else:
+                total_available_hours = 0.0
+        completed_spec = cfg["cells"]["completed_hours"]
+        if isinstance(completed_spec, str):
+            completed_hours = safe_float(ws[completed_spec].value)
+        else:
+            if completed_spec.get("type") == "sum_range":
+                rng = completed_spec["range"]  # e.g. "B60:V60"
+                completed_hours = sum(safe_float(cell.value) for row in ws[rng] for cell in row)
+            else:
+                completed_hours = 0.0
         wp1_out = safe_float(ws[cfg["cells"]["wp1_output"]].value)
         wp2_out = safe_float(ws[cfg["cells"]["wp2_output"]].value)
         wp1_tgt = safe_float(ws[cfg["cells"]["wp1_target"]].value)
@@ -278,6 +302,7 @@ def main():
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
+    scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -379,10 +404,50 @@ def main():
         },
         "outputs_by_person_output": {"type": "row", "row": 73},
     }
+    SCS_SUPER_CFG = {
+        "team": "SCS Super Cell",
+        "person_cols": ("B", "V"),
+        "date_parser": parse_sheet_date_scs_missing_year,  # missing-year Monday logic
+        "cells": {
+            "total_available_hours": {"type": "sum_range", "range": "B60:V60"},
+            "completed_hours": {"type": "sum_range", "range": "B60:V60"},
+            "wp1_output": "AE2",
+            "wp1_target": "AE7",
+            "wp2_output": "AG2",
+            "wp2_target": "AG7",
+            "uplh_wp1": "AE5",
+            "uplh_wp2": "AG5",
+            "wp1_hours": "AE4",
+            "wp2_hours": "AG4",
+        },
+        "rows": {
+            "hc_row": 25,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 60,  # available from row 60
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
     rows = []
     rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
     rows.extend(scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
+    scs_super_rows = scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_CFG)
+    print("SCS Super Cell rows scraped:", len(scs_super_rows))
+    cutoff_super = date.fromisoformat("2025-06-30")
+    scs_super_rows = [
+        r for r in scs_super_rows
+        if safe_str(r.get("period_date")) >= cutoff_super.isoformat()
+    ]
+    rows.extend(scs_super_rows)
     cutoff = date.fromisoformat("2025-09-01")
     meic_rows = [
         r for r in meic_rows
@@ -391,8 +456,20 @@ def main():
         )
     ]
     rows.extend(meic_rows)
-    rows = [r for r in rows if safe_float(r.get("Total Available Hours")) != 0.0]
+    rows = [
+        r for r in rows
+        if (r.get("team") == "SCS Super Cell") or (safe_float(r.get("Total Available Hours")) != 0.0)
+    ]
     rows = [r for r in rows if safe_str(r.get("period_date")) != "2023-11-06"]
+    def sort_key(r: dict) -> tuple:
+        team = safe_str(r.get("team")).lower()
+        d = safe_str(r.get("period_date"))
+        if len(d) == 10 and d[4] == "-" and d[7] == "-":
+            date_key = d
+        else:
+            date_key = "9999-12-31"
+        return (team, date_key)
+    rows.sort(key=sort_key)
     write_csv(rows, out_file)
     print(f"Wrote {len(rows)} rows to {out_file}")
 if __name__ == "__main__":
