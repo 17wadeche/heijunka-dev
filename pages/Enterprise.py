@@ -532,6 +532,14 @@ with tabs[0]:
     [data-testid="stMetricValue"] {
         justify-content: center;
     }
+    [data-testid="stMetricLabel"] {
+        width: 100%;
+        text-align: center;
+    }
+    [data-testid="stMetricLabel"] > div {
+        width: 100%;
+        text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
     _, r1c2, r1c3, _ = st.columns([1, 1.5, 1.5, 1])
