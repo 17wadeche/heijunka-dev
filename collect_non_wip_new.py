@@ -384,6 +384,9 @@ def build_non_wip_rows(config_path: str,
                 per_person_nonwip[person] = round(max(0.0, effective_person_hours - actual), 2)
             total_non_wip_hours = round(sum(per_person_nonwip.values()), 2)
             ooo_hours_total = float(bucket.get("ooo_hours", 0.0))
+            wip_workers_ooo_hours = round(
+                sum(float(ooo_by_person.get(p, 0.0)) for p in wk_wip_workers), 2
+            )
             denom = completed + total_non_wip_hours
             pct_in_wIP = round((completed / denom * 100.0), 2) if denom > 0 else None
             activities = bucket.get("non_wip_activities", [])
@@ -398,6 +401,7 @@ def build_non_wip_rows(config_path: str,
                 "Non-WIP Activities": json.dumps(activities, ensure_ascii=False),
                 "WIP Workers": json.dumps(sorted(wk_wip_workers), ensure_ascii=False),
                 "WIP Workers Count": len(wk_wip_workers),
+                "WIP Workers OOO Hours": wip_workers_ooo_hours,
             })
         names = sorted(wip_workers_all[team])
         print(f"[{team}] Unique people who worked in WIP (actual > 0): {len(names)}")
@@ -435,6 +439,7 @@ def main():
         "Non-WIP Activities",
         "WIP Workers",
         "WIP Workers Count",
+        "WIP Workers OOO Hours",
     ]
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
