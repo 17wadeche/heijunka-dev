@@ -385,7 +385,18 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
     wb = None
     rows_out: list[dict] = []
     try:
-        wb = _com_call(lambda: excel.Workbooks.Open(source_file, ReadOnly=True, UpdateLinks=0))
+        source_file = os.path.abspath(os.path.expandvars(source_file))
+        if not os.path.exists(source_file):
+            raise FileNotFoundError(f"NV file not found on disk: {source_file}")
+        wb = _com_call(lambda: excel.Workbooks.Open(
+            source_file,
+            UpdateLinks=0,
+            ReadOnly=True,
+            IgnoreReadOnlyRecommended=True,
+            Notify=False,
+            AddToMru=False,
+            CorruptLoad=0,   # xlNormalLoad
+        ))
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
         dropdown_values = _get_dropdown_values_from_validation(dd)
@@ -546,6 +557,7 @@ def main():
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
     scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
     cos_source_file = r"C:\Users\wadec8\Medtronic PLC\COS Cell - Documents\Heijunka v1.xlsx"
+    nv_source_file = r"C:\Users\wadec8\Medtronic PLC\RTG Customer Quality Neurovascular - Documents\Cell\NV_Heijunka.xlsm"
     dbs_c13_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm"
     dbs_c14_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm"
     out_file = "NS_metrics.csv"
@@ -724,6 +736,9 @@ def main():
     dbs_c14_rows = scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14")
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
     rows.extend(dbs_c14_rows)
+    nv_rows = scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV")
+    nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
+    rows.extend(nv_rows)
     cos_rows = scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)
     cutoff_cos = date.fromisoformat("2025-01-06")
     cos_rows = [
