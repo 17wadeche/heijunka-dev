@@ -613,11 +613,6 @@ with tabs[0]:
     p2.metric("**Non-WIP** Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
     p3.metric("**OOO** % of week", f"{pct_ooo:.1f}%" if pct_ooo is not None else "—")
     p4.metric("**Unaccounted** % remaining", f"{pct_unacct:.1f}%" if pct_unacct is not None else "—")
-    st.caption(
-        "Assumptions: **5 workdays/week**, **8 hours/day**. "
-        "WIP/Non-WIP % = (avg per-person daily hours)/8. "
-        "OOO % uses weekly capacity. Unaccounted % is the remainder to 100%."
-    )
     st.divider()
     st.subheader("Trend: avg daily WIP hours (week over week)")
     if dfm is not None:
@@ -667,7 +662,6 @@ with tabs[0]:
                     st.info("Per-person trend not available (no People Count / HC in WIP found for selected range).")
                 else:
                     st.line_chart(wk.set_index("week_start")["per_person_up_only"])
-                    st.caption("WoW (weekly) and forced non-decreasing: **cummax(Completed Hours / (5 * headcount))**. Future weeks excluded.")
         else:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
