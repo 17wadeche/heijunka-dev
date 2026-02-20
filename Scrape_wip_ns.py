@@ -2,6 +2,9 @@ import csv
 import json
 import os
 import re
+import shutil
+import tempfile
+import uuid
 from datetime import datetime, date
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
@@ -375,34 +378,70 @@ def _com_call(fn, tries: int = 30, sleep_s: float = 0.25):
                 continue
             raise
     return fn()
+def _open_workbook_via_temp_copy(excel, source_file: str):
+    src = os.path.abspath(os.path.expandvars(source_file))
+    if not os.path.exists(src):
+        raise FileNotFoundError(f"File not found: {src}")
+    tmp_dir = tempfile.gettempdir()
+    base = os.path.splitext(os.path.basename(src))[0]
+    ext = os.path.splitext(src)[1]
+    tmp_path = os.path.join(tmp_dir, f"{base}__{uuid.uuid4().hex}{ext}")
+    shutil.copy2(src, tmp_path)
+    wb = excel.Workbooks.Open(
+        tmp_path,
+        UpdateLinks=0,
+        ReadOnly=True,
+        IgnoreReadOnlyRecommended=True,
+        Notify=False,
+        AddToMru=False,
+        CorruptLoad=0,
+    )
+    return wb, tmp_path
 def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
+    import shutil
+    import tempfile
+    import uuid
     pythoncom.CoInitialize()
     excel = win32com.client.DispatchEx("Excel.Application")  # new isolated Excel instance
     excel.Visible = False
     excel.DisplayAlerts = False
     excel.AskToUpdateLinks = False
     excel.EnableEvents = False
+    excel.AutomationSecurity = 3  
     wb = None
+    tmp_path = None
     rows_out: list[dict] = []
-    try:
-        source_file = os.path.abspath(os.path.expandvars(source_file))
-        if not os.path.exists(source_file):
-            raise FileNotFoundError(f"NV file not found on disk: {source_file}")
-        wb = _com_call(lambda: excel.Workbooks.Open(
-            source_file,
+    def _open_via_temp_copy(src_path: str):
+        nonlocal tmp_path
+        src = os.path.abspath(os.path.expandvars(src_path))
+        if not os.path.exists(src):
+            raise FileNotFoundError(f"File not found on disk: {src}")
+        base = os.path.splitext(os.path.basename(src))[0]
+        ext = os.path.splitext(src)[1]
+        tmp_path = os.path.join(tempfile.gettempdir(), f"{base}__{uuid.uuid4().hex}{ext}")
+        shutil.copy2(src, tmp_path)
+        return _com_call(lambda: excel.Workbooks.Open(
+            tmp_path,
             UpdateLinks=0,
             ReadOnly=True,
             IgnoreReadOnlyRecommended=True,
             Notify=False,
             AddToMru=False,
-            CorruptLoad=0,   # xlNormalLoad
+            CorruptLoad=0,  # xlNormalLoad
         ))
+    try:
+        wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
         dropdown_values = _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "M")
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
+        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
+        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
+        closures_lu, closures_err = read_lookup_csv(closures_path)
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
             _com_call(lambda: excel.Calculate())
@@ -439,7 +478,10 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
                 name = safe_str(_com_call(lambda c=c: ws.Cells(13, c).Value))
                 if not name:
                     continue
-                out_val = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in range(14, 28))
+                out_val = sum(
+                    safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value))
+                    for r in range(14, 28)
+                )
                 tgt_val = safe_float(_com_call(lambda c=c: ws.Cells(28, c).Value))
                 if out_val != 0.0 or tgt_val != 0.0:
                     outputs_by_person[name] = {"output": out_val, "target": tgt_val}
@@ -482,11 +524,6 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            excel_dir = os.path.dirname(os.path.abspath(source_file))
-            timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-            closures_path = os.path.join(excel_dir, "closures.csv")
-            timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-            closures_lu, closures_err = read_lookup_csv(closures_path)
             key = (team, period_date)
             open_complaint_timeliness = ""
             closures = ""
@@ -510,7 +547,7 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
             rows_out.append({
                 "team": team,
                 "period_date": period_date,
-                "source_file": source_file,
+                "source_file": os.path.abspath(os.path.expandvars(source_file)),
                 "Total Available Hours": total_available_hours,
                 "Completed Hours": completed_hours,
                 "Target Output": target_output,
@@ -547,6 +584,11 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
             pass
         try:
             pythoncom.CoUninitialize()
+        except Exception:
+            pass
+        try:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
         except Exception:
             pass
 def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
