@@ -524,12 +524,12 @@ with tabs[0]:
         else:
             pct_wip = 100.0 * avg_daily_wip_per_person / total_avg
             pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
-    r1c1, r1c2, r1c3, r1c4, r1c5, r1c6 = st.columns(6)
-    r1c3.metric("Avg Per Person WIP Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    r1c4.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    r2c1, r2c2, r2c3, r2c4, r2c5, r2c6 = st.columns(6)
-    r2c3.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    r2c4.metric("Non-WIP Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
+    r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+    r1c2.metric("Avg Per Person WIP Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
+    r1c3.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
+    r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+    r2c2.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    r2c3.metric("Non-WIP Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
     st.caption("Daily averages assume **5 workdays/week**. Per-person uses headcount where available.")
     st.divider()
     st.subheader("Trend: avg daily WIP hours (week over week)")
