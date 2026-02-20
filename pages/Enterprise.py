@@ -459,6 +459,7 @@ with tabs[0]:
     avg_daily_nonwip_team = None
     avg_daily_nonwip_per_person = None
     pct_wip = None
+    pct_nonwip = None
     people_by_week: Dict[pd.Timestamp, float] = {}
     if dfnw is not None and not dfnw.empty:
         people_by_week = _people_lookup_by_week(dfnw)
@@ -511,21 +512,26 @@ with tabs[0]:
                 tempn.loc[tempn["people_count"] <= 0, "daily_nonwip_per_person"] = pd.NA
                 if tempn["daily_nonwip_per_person"].notna().any():
                     avg_daily_nonwip_per_person = float(tempn["daily_nonwip_per_person"].dropna().mean())
-    if avg_daily_wip_team is not None and avg_daily_nonwip_team is not None and (avg_daily_wip_team + avg_daily_nonwip_team) > 0:
-        pct_wip = 100.0 * avg_daily_wip_team / (avg_daily_wip_team + avg_daily_nonwip_team)
-    elif (
-        avg_daily_wip_per_person is not None
-        and avg_daily_nonwip_per_person is not None
-        and (avg_daily_wip_per_person + avg_daily_nonwip_per_person) > 0
-    ):
-        pct_wip = 100.0 * avg_daily_wip_per_person / (avg_daily_wip_per_person + avg_daily_nonwip_per_person)
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("Avg Per Person WIP Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    k2.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    k3.metric("Avg Per Group WIP Daily Hours", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
-    k4.metric("Avg Per Group Non-WIP Daily Hours", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
-    k5.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
-    k6.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    total_avg = None
+    if avg_daily_wip_team is not None and avg_daily_nonwip_team is not None:
+        total_avg = avg_daily_wip_team + avg_daily_nonwip_team
+    elif avg_daily_wip_per_person is not None and avg_daily_nonwip_per_person is not None:
+        total_avg = avg_daily_wip_per_person + avg_daily_nonwip_per_person
+    if total_avg is not None and total_avg > 0:
+        if avg_daily_wip_team is not None and avg_daily_nonwip_team is not None:
+            pct_wip = 100.0 * avg_daily_wip_team / total_avg
+            pct_nonwip = 100.0 * avg_daily_nonwip_team / total_avg
+        else:
+            pct_wip = 100.0 * avg_daily_wip_per_person / total_avg
+            pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
+    r1c1, r1c2, r1c3, r1c4, r1c5, r1c6, r1c7 = st.columns(7)
+    r1c1.metric("Avg Per Person WIP Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
+    r1c2.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    r1c3.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
+    r1c4.metric("Non-WIP Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
+    r1c5.metric("Avg Per Group WIP Daily Hours", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
+    r1c6.metric("Avg Per Group Non-WIP Daily Hours", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
+    r1c7.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
     st.caption("Daily averages assume **5 workdays/week**. Per-person uses headcount where available.")
     st.divider()
     st.subheader("Trend: avg daily WIP hours (week over week)")
@@ -568,7 +574,7 @@ with tabs[0]:
             wk["team_total_up_only"] = wk["team_total"].cummax()
             if wk["per_person"].notna().any():
                 wk["per_person_up_only"] = wk["per_person"].cummax()
-            view = st.selectbox("Trend view", ["Group total", "Per person"], index=0)
+            view = st.selectbox("Trend view", ["Group total", "Per person"], index=1)
             if view == "Group total":
                 st.line_chart(wk.set_index("week_start")["team_total_up_only"])
             else:
