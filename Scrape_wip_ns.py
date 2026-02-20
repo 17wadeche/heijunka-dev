@@ -303,6 +303,7 @@ def main():
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
     scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
+    cos_source_file = r"C:\Users\wadec8\Medtronic PLC\COS Cell - Documents\Heijunka v1.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -436,10 +437,49 @@ def main():
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
+    TDD_COS1_CFG = {
+        "team": "TDD COS 1",
+        "person_cols": ("B", "P"),
+        "date_parser": parse_sheet_date_scs_missing_year,  # missing-year Monday logic (handles hidden tabs too)
+        "cells": {
+            "total_available_hours": "R59",
+            "completed_hours": "Q50",
+            "wp1_output": "X2",
+            "wp1_target": "X7",
+            "wp2_output": "Z2",
+            "wp2_target": "Z7",
+            "uplh_wp1": "X5",
+            "uplh_wp2": "Z5",
+            "wp1_hours": "X4",
+            "wp2_hours": "Z4",
+        },
+        "rows": {
+            "hc_row": 50,  # count non-zero in row 50, B..P
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 59,
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
     rows = []
     rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
     rows.extend(scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
+    cos_rows = scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)
+    cutoff_cos = date.fromisoformat("2025-01-06")
+    cos_rows = [
+        r for r in cos_rows
+        if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()
+    ]
+    rows.extend(cos_rows)
     scs_super_rows = scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_CFG)
     print("SCS Super Cell rows scraped:", len(scs_super_rows))
     cutoff_super = date.fromisoformat("2025-06-30")
