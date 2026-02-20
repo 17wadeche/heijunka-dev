@@ -609,8 +609,8 @@ with tabs[0]:
     c3.metric("Avg **OOO** Weekly Hours", f"{avg_weekly_ooo_hours:.2f}" if avg_weekly_ooo_hours is not None else "—")
     c4.metric("Avg **Unaccounted** Weekly Hours", f"{avg_weekly_unacct_hours:.2f}" if avg_weekly_unacct_hours is not None else "—")
     _, p1, p2, p3, p4, _ = st.columns([0.5, 1.2, 1.2, 1.2, 1.4, 0.5])
-    p1.metric("**WIP** % of day", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    p2.metric("**Non-WIP** % of day", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
+    p1.metric("**WIP** Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    p2.metric("**Non-WIP** Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
     p3.metric("**OOO** % of week", f"{pct_ooo:.1f}%" if pct_ooo is not None else "—")
     p4.metric("**Unaccounted** % remaining", f"{pct_unacct:.1f}%" if pct_unacct is not None else "—")
     st.caption(
