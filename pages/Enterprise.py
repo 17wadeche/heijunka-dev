@@ -526,31 +526,33 @@ with tabs[0]:
             pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
     st.markdown("""
         <style>
-        [data-testid="stMetricLabel"] {
-            justify-content: center;
-            width: 100%;
+        /* Center everything inside each st.metric block */
+        div[data-testid="stMetric"]{
+        text-align: center;
         }
-        [data-testid="stMetricLabel"] > div {
-            display: flex;
-            justify-content: center;
-            width: 100%;
+
+        /* Make the label span full width + center its contents */
+        label[data-testid="stMetricLabel"]{
+        display: block;          /* or display:flex; */
+        width: 100%;
+        text-align: center;
+        margin: 0;
         }
-        [data-testid="stMetricLabel"] [data-testid="stMarkdownContainer"] {
-            display: flex;
-            justify-content: center;
-            width: 100%;
+
+        /* Sometimes the label text is inside markdown */
+        label[data-testid="stMetricLabel"] p{
+        text-align: center !important;
+        margin: 0 !important;
         }
-        [data-testid="stMetricLabel"] p {
-            text-align: center;
-            width: 100%;
-            margin: 0;
-        }
-        [data-testid="stMetricValue"] {
-            text-align: center;
-            width: 100%;
+
+        /* Center the value too */
+        div[data-testid="stMetricValue"]{
+        text-align: center !important;
+        width: 100%;
         }
         </style>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
     _, r1c2, r1c3, _ = st.columns([1, 1.5, 1.5, 1])
     r1c2.metric("Avg Per Person **WIP** Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
     r1c3.metric("Avg Per Person **Non-WIP** Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
