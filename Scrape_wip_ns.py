@@ -1,10 +1,15 @@
 import csv
 import json
 import os
+import re
 from datetime import datetime, date
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
+import win32com.client
+import time
+import pythoncom
+import pywintypes
 HEADERS = [
     "team",
     "period_date",
@@ -298,12 +303,251 @@ def write_csv(rows: list, out_path: str) -> None:
         w.writeheader()
         for r in rows:
             w.writerow({h: r.get(h, "") for h in HEADERS})
+def _excel_col_range(start_col: str, end_col: str) -> list[int]:
+    s = column_index_from_string(start_col)
+    e = column_index_from_string(end_col)
+    return list(range(s, e + 1))
+def _as_iso_date(v: Any) -> str:
+    if isinstance(v, datetime):
+        return v.date().isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
+    s = safe_str(v)
+    if not s:
+        return ""
+    return parse_sheet_date(s)
+def _get_dropdown_values_from_validation(cell) -> list[Any]:
+    try:
+        formula1 = cell.Validation.Formula1
+    except Exception:
+        return []
+    if not formula1:
+        return []
+    f = str(formula1).strip()
+    if not f.startswith("="):
+        vals = [x.strip() for x in f.split(",")]
+        return [v for v in vals if v]
+    try:
+        rng = cell.Parent.Range(f.lstrip("="))
+        vals = []
+        v = rng.Value
+        if isinstance(v, tuple):
+            for row in v:
+                if isinstance(row, tuple):
+                    for item in row:
+                        if safe_str(item):
+                            vals.append(item)
+                else:
+                    if safe_str(row):
+                        vals.append(row)
+        else:
+            if safe_str(v):
+                vals.append(v)
+        return vals
+    except Exception:
+        try:
+            app = cell.Application
+            rng = app.Range(f.lstrip("="))
+            v = rng.Value
+            vals = []
+            if isinstance(v, tuple):
+                for row in v:
+                    if isinstance(row, tuple):
+                        for item in row:
+                            if safe_str(item):
+                                vals.append(item)
+                    else:
+                        if safe_str(row):
+                            vals.append(row)
+            else:
+                if safe_str(v):
+                    vals.append(v)
+            return vals
+        except Exception:
+            return []
+def _com_call(fn, tries: int = 30, sleep_s: float = 0.25):
+    for i in range(tries):
+        try:
+            return fn()
+        except pywintypes.com_error as e:
+            if e.args and e.args[0] == -2147418111:
+                time.sleep(sleep_s)
+                continue
+            raise
+    return fn()
+def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
+    pythoncom.CoInitialize()
+    excel = win32com.client.DispatchEx("Excel.Application")  # new isolated Excel instance
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    excel.AskToUpdateLinks = False
+    excel.EnableEvents = False
+    wb = None
+    rows_out: list[dict] = []
+    try:
+        wb = _com_call(lambda: excel.Workbooks.Open(source_file, ReadOnly=True, UpdateLinks=0))
+        ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+        dd = _com_call(lambda: ws.Range("A2"))
+        dropdown_values = _get_dropdown_values_from_validation(dd)
+        seen = set()
+        dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
+        cols = _excel_col_range("B", "M")
+        for choice in dropdown_values:
+            _com_call(lambda: setattr(dd, "Value", choice))
+            _com_call(lambda: excel.Calculate())
+            period_date = _as_iso_date(_com_call(lambda: dd.Value))
+            if not period_date:
+                continue
+            total_available_hours = safe_float(_com_call(lambda: ws.Range("O69").Value))
+            completed_hours = safe_float(_com_call(lambda: ws.Range("O59").Value))
+            wp1_tgt = safe_float(_com_call(lambda: ws.Range("T10").Value))
+            wp2_tgt = safe_float(_com_call(lambda: ws.Range("V10").Value))
+            wp1_out = safe_float(_com_call(lambda: ws.Range("T5").Value))
+            wp2_out = safe_float(_com_call(lambda: ws.Range("V5").Value))
+            target_output = wp1_tgt + wp2_tgt
+            actual_output = wp1_out + wp2_out
+            target_uplh = safe_div(target_output, completed_hours)
+            actual_uplh = safe_div(actual_output, completed_hours)
+            uplh_wp1 = safe_float(_com_call(lambda: ws.Range("T8").Value))
+            uplh_wp2 = safe_float(_com_call(lambda: ws.Range("V8").Value))
+            hc_in_wip = 0
+            for c in cols:
+                if safe_float(_com_call(lambda c=c: ws.Cells(59, c).Value)) != 0.0:
+                    hc_in_wip += 1
+            actual_hc_used = safe_div(completed_hours, 32.5)
+            person_hours: Dict[str, Dict[str, float]] = {}
+            for c in cols:
+                name = safe_str(_com_call(lambda c=c: ws.Cells(33, c).Value))
+                if not name:
+                    continue
+                actual = safe_float(_com_call(lambda c=c: ws.Cells(59, c).Value))
+                available = safe_float(_com_call(lambda c=c: ws.Cells(69, c).Value))
+                person_hours[name] = {"actual": actual, "available": available}
+            outputs_by_person: Dict[str, Dict[str, float]] = {}
+            for c in cols:
+                name = safe_str(_com_call(lambda c=c: ws.Cells(13, c).Value))
+                if not name:
+                    continue
+                out_val = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in range(14, 28))
+                tgt_val = safe_float(_com_call(lambda c=c: ws.Cells(28, c).Value))
+                if out_val != 0.0 or tgt_val != 0.0:
+                    outputs_by_person[name] = {"output": out_val, "target": tgt_val}
+            outputs_by_cell = {
+                "WP1": {"output": wp1_out, "target": wp1_tgt},
+                "WP2": {"output": wp2_out, "target": wp2_tgt},
+            }
+            cell_station_hours = {
+                "WP1": safe_float(_com_call(lambda: ws.Range("T7").Value)),
+                "WP2": safe_float(_com_call(lambda: ws.Range("V7").Value)),
+            }
+            hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+            wp1_hour_rows = [34, 39, 44, 49, 54]
+            wp2_hour_rows = [35, 40, 45, 50, 55]
+            for c in cols:
+                name = safe_str(_com_call(lambda c=c: ws.Cells(33, c).Value))
+                if not name:
+                    continue
+                wp1_hrs = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in wp1_hour_rows)
+                wp2_hrs = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in wp2_hour_rows)
+                if wp1_hrs != 0.0:
+                    hours_by_cell_by_person["WP1"][name] = wp1_hrs
+                if wp2_hrs != 0.0:
+                    hours_by_cell_by_person["WP2"][name] = wp2_hrs
+            output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+            wp1_out_rows = [14, 17, 20, 23, 26]
+            wp2_out_rows = [15, 18, 21, 24, 27]
+            for c in cols:
+                name = safe_str(_com_call(lambda c=c: ws.Cells(13, c).Value))
+                if not name:
+                    continue
+                wp1_o = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in wp1_out_rows)
+                wp2_o = sum(safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value)) for r in wp2_out_rows)
+                if wp1_o != 0.0:
+                    output_by_cell_by_person["WP1"][name] = wp1_o
+                if wp2_o != 0.0:
+                    output_by_cell_by_person["WP2"][name] = wp2_o
+            uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+            for wp in ("WP1", "WP2"):
+                for person, out_val in output_by_cell_by_person[wp].items():
+                    hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
+                    uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
+            excel_dir = os.path.dirname(os.path.abspath(source_file))
+            timeliness_path = os.path.join(excel_dir, "timeliness.csv")
+            closures_path = os.path.join(excel_dir, "closures.csv")
+            timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
+            closures_lu, closures_err = read_lookup_csv(closures_path)
+            key = (team, period_date)
+            open_complaint_timeliness = ""
+            closures = ""
+            opened = ""
+            trow = timeliness_lu.get(key)
+            if trow is not None:
+                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
+            crow = closures_lu.get(key)
+            if crow is not None:
+                closures = safe_str(crow.get("Closures"))
+                opened = safe_str(crow.get("Opened"))
+            errs = []
+            if timeliness_err:
+                errs.append(timeliness_err)
+            if closures_err:
+                errs.append(closures_err)
+            if not trow and not timeliness_err:
+                errs.append(f"No timeliness match for {team} {period_date}")
+            if not crow and not closures_err:
+                errs.append(f"No closures match for {team} {period_date}")
+            rows_out.append({
+                "team": team,
+                "period_date": period_date,
+                "source_file": source_file,
+                "Total Available Hours": total_available_hours,
+                "Completed Hours": completed_hours,
+                "Target Output": target_output,
+                "Actual Output": actual_output,
+                "Target UPLH": target_uplh,
+                "Actual UPLH": actual_uplh,
+                "UPLH WP1": uplh_wp1,
+                "UPLH WP2": uplh_wp2,
+                "HC in WIP": hc_in_wip,
+                "Actual HC Used": actual_hc_used,
+                "People in WIP": "",
+                "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+                "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+                "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+                "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+                "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+                "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+                "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+                "Open Complaint Timeliness": open_complaint_timeliness,
+                "error": " | ".join(errs) if errs else "",
+                "Closures": closures,
+                "Opened": opened,
+            })
+        return rows_out
+    finally:
+        try:
+            if wb is not None:
+                _com_call(lambda: wb.Close(SaveChanges=False), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
+        try:
+            _com_call(lambda: excel.Quit(), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
+    return [r for r in rows if safe_str(r.get("period_date")) >= cutoff_iso]
 def main():
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
     scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
     cos_source_file = r"C:\Users\wadec8\Medtronic PLC\COS Cell - Documents\Heijunka v1.xlsx"
+    dbs_c13_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm"
+    dbs_c14_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -473,6 +717,13 @@ def main():
     rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
     rows.extend(scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
+    cutoff_dbs = "2025-07-07"
+    dbs_c13_rows = scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13")
+    dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
+    rows.extend(dbs_c13_rows)
+    dbs_c14_rows = scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14")
+    dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
+    rows.extend(dbs_c14_rows)
     cos_rows = scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)
     cutoff_cos = date.fromisoformat("2025-01-06")
     cos_rows = [
