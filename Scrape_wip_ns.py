@@ -461,6 +461,7 @@ def main():
         if (r.get("team") == "SCS Super Cell") or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
     rows = [r for r in rows if safe_str(r.get("period_date")) != "2023-11-06"]
+    rows = [r for r in rows if safe_str(r.get("period_date")) != "2026-09-07"]
     def sort_key(r: dict) -> tuple:
         team = safe_str(r.get("team")).lower()
         d = safe_str(r.get("period_date"))
