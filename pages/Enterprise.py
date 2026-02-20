@@ -524,14 +524,15 @@ with tabs[0]:
         else:
             pct_wip = 100.0 * avg_daily_wip_per_person / total_avg
             pct_nonwip = 100.0 * avg_daily_nonwip_per_person / total_avg
-    r1c1, r1c2, r1c3, r1c4, r1c5, r1c6, r1c7 = st.columns(7)
+    r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns(5)
     r1c1.metric("Avg Per Person WIP Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    r1c2.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    r1c3.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    r1c4.metric("Non-WIP Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
-    r1c5.metric("Avg Per Group WIP Daily Hours", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
-    r1c6.metric("Avg Per Group Non-WIP Daily Hours", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
-    r1c7.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
+    r1c2.metric("Avg Per Person Non-WIP Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
+    r1c3.metric("Avg Per Group WIP Daily Hours", f"{avg_daily_wip_team:.2f}" if avg_daily_wip_team is not None else "—")
+    r1c4.metric("Avg Per Group Non-WIP Daily Hours", f"{avg_daily_nonwip_team:.2f}" if avg_daily_nonwip_team is not None else "—")
+    r1c5.metric("Actual HC Used (6 hrs/day target)", f"{hc_used_value:.2f}" if hc_used_value is not None else "—")
+    r2c1, r2c2, r2c3, r2c4, r2c5 = st.columns(5)
+    r2c1.metric("WIP Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
+    r2c2.metric("Non-WIP Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
     st.caption("Daily averages assume **5 workdays/week**. Per-person uses headcount where available.")
     st.divider()
     st.subheader("Trend: avg daily WIP hours (week over week)")
