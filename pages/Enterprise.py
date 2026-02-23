@@ -606,7 +606,7 @@ with tabs[0]:
     _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
     c1.metric("Avg Per Person **WIP** Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
     c2.metric("Avg Per Person **Non-WIP** Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    _, p1, p2, p3, p4, _ = st.columns([1.2, 1.2, 1.2, 1.2])
+    _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
     p1.metric("**WIP** Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
     p2.metric("**Non-WIP** Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
     _, _, c3, c4, _, _ = st.columns([0.5, 1.2, 1.2, 1.2, 1.4, 0.5])
