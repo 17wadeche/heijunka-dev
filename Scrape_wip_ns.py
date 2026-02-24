@@ -5,7 +5,7 @@ import re
 import shutil
 import tempfile
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
@@ -1213,19 +1213,10 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 os.remove(tmp_path)
         except Exception:
             pass
-# ============================================================
-# ADD: Mazor + CSF + PSS (SAME FILTERS AS NAV)
-#   Filters:
-#     - period_date >= 2025-06-02
-#     - period_date <= today
-#     - target_output >= 0
-# ============================================================
-
 def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any]) -> list[dict]:
     import shutil
     import tempfile
     import uuid
-
     pythoncom.CoInitialize()
     excel = win32com.client.DispatchEx("Excel.Application")
     excel.Visible = False
@@ -1233,11 +1224,9 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
     excel.AskToUpdateLinks = False
     excel.EnableEvents = False
     excel.AutomationSecurity = 3  # disable macros
-
     wb = None
     tmp_path = None
     rows_out: list[dict] = []
-
     def _open_via_temp_copy(src_path: str):
         nonlocal tmp_path
         src = os.path.abspath(os.path.expandvars(src_path))
@@ -1258,70 +1247,49 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 CorruptLoad=0,
             )
         )
-
     try:
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-
         dropdown_values = _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
-
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
-
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(excel_dir, "timeliness.csv")
         closures_path = os.path.join(excel_dir, "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
-
         today_iso = date.today().isoformat()
-
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
             _com_call(lambda: excel.Calculate())
-
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
             if not period_date:
                 continue
-
-            # ---- SAME FILTERS AS NAV ----
             if period_date < "2025-06-02":
                 continue
             if period_date > today_iso:
                 continue
-
             total_available_hours = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["completed_hours"]).Value))
-
             wp1_tgt = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_target"]).Value))
             wp2_tgt = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_target"]).Value))
             wp1_out = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_output"]).Value))
             wp2_out = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_output"]).Value))
-
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
-
-            # ---- SAME FILTER AS NAV ----
             if target_output < 0:
                 continue
-
             target_uplh = safe_div(target_output, completed_hours)
             actual_uplh = safe_div(actual_output, completed_hours)
-
             uplh_wp1 = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["uplh_wp1"]).Value))
             uplh_wp2 = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["uplh_wp2"]).Value))
-
-            # HC in WIP: row 28, count non-zero across configured cols
             hc_in_wip = 0
             for c in cols:
                 if safe_float(_com_call(lambda c=c: ws.Cells(28, c).Value)) != 0.0:
                     hc_in_wip += 1
-
             actual_hc_used = safe_div(completed_hours, 32.5)
-
-            # Person Hours
             person_hours: Dict[str, Dict[str, float]] = {}
             name_row_ph = cfg["rows"]["person_name_row_for_person_hours"]
             actual_row_ph = cfg["rows"]["person_actual_row_for_person_hours"]
@@ -1333,8 +1301,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 actual = safe_float(_com_call(lambda c=c: ws.Cells(actual_row_ph, c).Value))
                 available = safe_float(_com_call(lambda c=c: ws.Cells(avail_row_ph, c).Value))
                 person_hours[name] = {"actual": actual, "available": available}
-
-            # Outputs by Person
             outputs_by_person: Dict[str, Dict[str, float]] = {}
             name_row_op = cfg["rows"]["person_name_row_for_outputs_by_person"]
             target_row_op = cfg["rows"]["person_target_row_for_outputs_by_person"]
@@ -1349,18 +1315,14 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 tgt_val = safe_float(_com_call(lambda c=c: ws.Cells(target_row_op, c).Value))
                 if out_val != 0.0 or tgt_val != 0.0:
                     outputs_by_person[name] = {"output": out_val, "target": tgt_val}
-
             outputs_by_cell = {
                 "WP1": {"output": wp1_out, "target": wp1_tgt},
                 "WP2": {"output": wp2_out, "target": wp2_tgt},
             }
-
             cell_station_hours = {
                 "WP1": safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_hours"]).Value)),
                 "WP2": safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_hours"]).Value)),
             }
-
-            # Hours by Cell/Station - by person
             hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
             name_row_hc = cfg["rows"]["person_name_row_for_hours_by_cell_by_person"]
             wp1_hour_rows = cfg["rows"]["wp1_hour_rows"]
@@ -1375,8 +1337,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     hours_by_cell_by_person["WP1"][name] = wp1_hrs
                 if wp2_hrs != 0.0:
                     hours_by_cell_by_person["WP2"][name] = wp2_hrs
-
-            # Output by Cell/Station - by person
             output_by_cell_by_person = {"WP1": {}, "WP2": {}}
             name_row_oc = cfg["rows"]["person_name_row_for_output_by_cell_by_person"]
             wp1_out_rows = cfg["rows"]["wp1_output_rows_by_person"]
@@ -1391,27 +1351,22 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     output_by_cell_by_person["WP1"][name] = wp1_o
                 if wp2_o != 0.0:
                     output_by_cell_by_person["WP2"][name] = wp2_o
-
             uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
             for wp in ("WP1", "WP2"):
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-
             key = (team, period_date)
             open_complaint_timeliness = ""
             closures = ""
             opened = ""
-
             trow = timeliness_lu.get(key)
             if trow is not None:
                 open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-
             crow = closures_lu.get(key)
             if crow is not None:
                 closures = safe_str(crow.get("Closures"))
                 opened = safe_str(crow.get("Opened"))
-
             errs = []
             if timeliness_err:
                 errs.append(timeliness_err)
@@ -1421,7 +1376,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 errs.append(f"No timeliness match for {team} {period_date}")
             if not crow and not closures_err:
                 errs.append(f"No closures match for {team} {period_date}")
-
             rows_out.append(
                 {
                     "team": team,
@@ -1451,9 +1405,7 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     "Opened": opened,
                 }
             )
-
         return rows_out
-
     finally:
         try:
             if wb is not None:
@@ -1473,6 +1425,212 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 os.remove(tmp_path)
         except Exception:
             pass
+def week_monday_iso(d: date) -> str:
+    monday = d - timedelta(days=d.weekday())
+    return monday.isoformat()
+def _parse_any_date_to_date(v: Any) -> Optional[date]:
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    s = safe_str(v)
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            pass
+    try:
+        iso = parse_sheet_date(s)
+        return date.fromisoformat(iso)
+    except Exception:
+        return None
+def read_ent_team_tenure_mapping(
+    xlsx_path: str,
+    sheet_name: str = "Next Week Forecast",
+    start_row: int = 2,
+    end_row: int = 30,
+    start_col_letter: str = "D",
+    end_col_letter: str = "J",
+    name_col_letter: str = "A",
+) -> Tuple[float, Dict[str, float]]:
+    wb = load_workbook(xlsx_path, data_only=True)
+    if sheet_name not in wb.sheetnames:
+        ws = wb.active
+    else:
+        ws = wb[sheet_name]
+    sc = column_index_from_string(start_col_letter)
+    ec = column_index_from_string(end_col_letter)
+    name_c = column_index_from_string(name_col_letter)
+    total = 0.0
+    per_person: Dict[str, float] = {}
+    for r in range(start_row, end_row + 1):
+        row_sum = 0.0
+        for c in range(sc, ec + 1):
+            row_sum += safe_float(ws.cell(row=r, column=c).value)
+        total += row_sum
+        nm = safe_str(ws.cell(row=r, column=name_c).value)
+        if nm:
+            per_person[nm] = row_sum
+    return total, per_person
+def _ent_cache_path(base_dir: str) -> str:
+    return os.path.join(base_dir, "ent_total_available_cache.json")
+def get_ent_total_available_for_week(
+    mapping_xlsx: str,
+    week_monday: str,
+    today: Optional[date] = None,
+) -> Tuple[float, Dict[str, float], str]:
+    if today is None:
+        today = date.today()
+    base_dir = os.path.dirname(os.path.abspath(os.path.expandvars(mapping_xlsx)))
+    cache_file = _ent_cache_path(base_dir)
+    cache: Dict[str, Any] = {}
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                cache = json.load(f) or {}
+        except Exception:
+            cache = {}
+    is_monday = (today.weekday() == 0)
+    if is_monday:
+        total, per_person = read_ent_team_tenure_mapping(mapping_xlsx)
+        cache[week_monday] = {"total": total, "per_person": per_person, "refreshed_on": today.isoformat()}
+        try:
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(cache, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        return total, per_person, f"ENT mapping refreshed (Monday) and cached in {os.path.basename(cache_file)}"
+    wk = cache.get(week_monday)
+    if isinstance(wk, dict) and ("total" in wk) and ("per_person" in wk):
+        return safe_float(wk.get("total")), (wk.get("per_person") or {}), f"ENT mapping loaded from cache {os.path.basename(cache_file)}"
+    total, per_person = read_ent_team_tenure_mapping(mapping_xlsx)
+    cache[week_monday] = {"total": total, "per_person": per_person, "refreshed_on": today.isoformat(), "note": "cache-miss fallback"}
+    try:
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+    return total, per_person, f"ENT mapping cache miss; read mapping and cached in {os.path.basename(cache_file)}"
+def scrape_ent_from_csv(
+    ent_csv_path: str,
+    mapping_xlsx_path: str,
+    team: str = "ENT",
+) -> list[dict]:
+    if not os.path.exists(ent_csv_path):
+        return [{
+            "team": team,
+            "period_date": "",
+            "source_file": ent_csv_path,
+            "error": f"Missing file: {os.path.basename(ent_csv_path)}",
+        }]
+    weekly: Dict[str, Dict[str, Any]] = {}
+    with open(ent_csv_path, "r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        headers = next(reader, None)  # skip header row
+        for row in reader:
+            if not row or len(row) < 6:
+                continue
+            name = safe_str(row[0])
+            d_raw = row[1]
+            d_parsed = _parse_any_date_to_date(d_raw)
+            if not d_parsed:
+                continue
+            wk = week_monday_iso(d_parsed)
+            wp1_out = safe_float(row[2])
+            wp2_out = safe_float(row[3])
+            wp1_hrs = safe_float(row[4])
+            wp2_hrs = safe_float(row[5])
+            rec = weekly.setdefault(wk, {
+                "wp1_out": 0.0, "wp2_out": 0.0,
+                "wp1_hrs": 0.0, "wp2_hrs": 0.0,
+                "by_person": {},  # name -> accumulators
+            })
+            rec["wp1_out"] += wp1_out
+            rec["wp2_out"] += wp2_out
+            rec["wp1_hrs"] += wp1_hrs
+            rec["wp2_hrs"] += wp2_hrs
+            if name:
+                p = rec["by_person"].setdefault(name, {"wp1_out": 0.0, "wp2_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0})
+                p["wp1_out"] += wp1_out
+                p["wp2_out"] += wp2_out
+                p["wp1_hrs"] += wp1_hrs
+                p["wp2_hrs"] += wp2_hrs
+    rows_out: list[dict] = []
+    for period_date in sorted(weekly.keys()):
+        agg = weekly[period_date]
+        completed_hours = agg["wp1_hrs"] + agg["wp2_hrs"]
+        actual_output = agg["wp1_out"] + agg["wp2_out"]
+        taa, per_person_avail, taa_note = get_ent_total_available_for_week(mapping_xlsx_path, period_date)
+        actual_uplh = safe_div(actual_output, completed_hours)
+        uplh_wp1 = safe_div(agg["wp1_out"], agg["wp1_hrs"])
+        uplh_wp2 = safe_div(agg["wp2_out"], agg["wp2_hrs"])
+        hc_in_wip = 0
+        for nm, pdata in (agg["by_person"] or {}).items():
+            if (pdata["wp1_out"] + pdata["wp2_out"]) > 0:
+                hc_in_wip += 1
+        actual_hc_used = safe_div(completed_hours, 32.5)
+        person_hours: Dict[str, Dict[str, float]] = {}
+        for nm, pdata in (agg["by_person"] or {}).items():
+            actual_person = pdata["wp1_hrs"] + pdata["wp2_hrs"]
+            available_person = safe_float(per_person_avail.get(nm, 0.0))
+            person_hours[nm] = {"actual": actual_person, "available": available_person}
+        outputs_by_person: Dict[str, Dict[str, float]] = {}
+        for nm, pdata in (agg["by_person"] or {}).items():
+            out_person = pdata["wp1_out"] + pdata["wp2_out"]
+            outputs_by_person[nm] = {"output": out_person, "target": 0.0}
+        outputs_by_cell = {
+            "WP1": {"output": agg["wp1_out"], "target": 0.0},
+            "WP2": {"output": agg["wp2_out"], "target": 0.0},
+        }
+        cell_station_hours = {
+            "WP1": agg["wp1_hrs"],
+            "WP2": agg["wp2_hrs"],
+        }
+        hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        for nm, pdata in (agg["by_person"] or {}).items():
+            hours_by_cell_by_person["WP1"][nm] = pdata["wp1_hrs"]
+            hours_by_cell_by_person["WP2"][nm] = pdata["wp2_hrs"]
+        output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        for nm, pdata in (agg["by_person"] or {}).items():
+            output_by_cell_by_person["WP1"][nm] = pdata["wp1_out"]
+            output_by_cell_by_person["WP2"][nm] = pdata["wp2_out"]
+        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+        for nm in (agg["by_person"] or {}).keys():
+            uplh_by_cell_by_person["WP1"][nm] = safe_div(output_by_cell_by_person["WP1"][nm], hours_by_cell_by_person["WP1"][nm])
+            uplh_by_cell_by_person["WP2"][nm] = safe_div(output_by_cell_by_person["WP2"][nm], hours_by_cell_by_person["WP2"][nm])
+        errs = []
+        if taa_note:
+            errs.append(taa_note)
+        rows_out.append({
+            "team": team,
+            "period_date": period_date,  # ALWAYS Monday
+            "source_file": f"{os.path.abspath(os.path.expandvars(ent_csv_path))} | {os.path.abspath(os.path.expandvars(mapping_xlsx_path))}",
+            "Total Available Hours": taa,
+            "Completed Hours": completed_hours,
+            "Target Output": "",  # blank per spec
+            "Actual Output": actual_output,
+            "Target UPLH": "",    # blank per spec
+            "Actual UPLH": actual_uplh,
+            "UPLH WP1": uplh_wp1,
+            "UPLH WP2": uplh_wp2,
+            "HC in WIP": hc_in_wip,
+            "Actual HC Used": actual_hc_used,
+            "People in WIP": "",  # blank per spec
+            "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+            "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+            "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+            "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+            "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+            "Open Complaint Timeliness": "",
+            "error": " | ".join(errs) if errs else "",
+            "Closures": "",
+            "Opened": "",
+        })
+    return rows_out
 def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
     return [r for r in rows if safe_str(r.get("period_date")) >= cutoff_iso]
 def main():
@@ -1490,6 +1648,8 @@ def main():
     mazor_source_file = r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Caesarea Team\CAE - Heijunka_v2.xlsm"
     csf_source_file   = r"C:\Users\wadec8\Medtronic PLC\CQ CSF Management - Documents\CSF_Heijunka.xlsm"
     pss_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"
+    ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
+    ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -1760,8 +1920,8 @@ def main():
     rows.extend(scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG))
     rows.extend(scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG))
     rows.extend(scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG))
+    rows.extend(scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     cos_rows = scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)
-
     cutoff_cos = date.fromisoformat("2025-01-06")
     cos_rows = [
         r for r in cos_rows
