@@ -638,11 +638,16 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav") -> list[
         closures_path = os.path.join(excel_dir, "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
+        today_iso = date.today().isoformat() 
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
             _com_call(lambda: excel.Calculate())
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
             if not period_date:
+                continue
+            if period_date < "2025-06-02":
+                continue
+            if period_date > today_iso:
                 continue
             total_available_hours = safe_float(_com_call(lambda: ws.Range("X64").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("X54").Value))
@@ -652,6 +657,8 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav") -> list[
             wp2_out = safe_float(_com_call(lambda: ws.Range("AF5").Value))
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
+            if target_output < 0:
+                continue
             target_uplh = safe_div(target_output, completed_hours)
             actual_uplh = safe_div(actual_output, completed_hours)
             uplh_wp1 = safe_float(_com_call(lambda: ws.Range("AD8").Value))
