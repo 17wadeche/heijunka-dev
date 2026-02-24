@@ -404,9 +404,6 @@ def build_non_wip_rows(config_path: str,
                 "WIP Workers OOO Hours": wip_workers_ooo_hours,
             })
         names = sorted(wip_workers_all[team])
-        print(f"[{team}] Unique people who worked in WIP (actual > 0): {len(names)}")
-        for n in names:
-            print("  -", n)
     return out_rows
 def main():
     ap = argparse.ArgumentParser(description="Collect Non-WIP/OOO metrics into a new CSV.")
