@@ -2270,7 +2270,7 @@ def main():
     extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     extend_team("ENT",   lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     cos_rows = run_team(logger, "TDD COS 1", lambda: scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG))
-    cutoff_cos = date.fromisoformat("2025-01-06")
+    cutoff_cos = date.fromisoformat("2025-06-02")
     before = len(cos_rows)
     cos_rows = [r for r in cos_rows if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()]
     logger.info(f"[TDD COS 1] filter >= {cutoff_cos.isoformat()}: {before} -> {len(cos_rows)}")
@@ -2312,6 +2312,55 @@ def main():
     timeliness_path = os.path.join(excel_dir, "timeliness.csv")
     closures_path = os.path.join(excel_dir, "closures.csv")
     append_missing_placeholders_from_wip(
+        wip_csv_path=wip_out_file,
+        closures_csv_path=closures_path,
+        timeliness_csv_path=timeliness_path,
+        logger=logger,
+    )
+    def apply_closures_timeliness_to_wip(
+        wip_csv_path: str,
+        closures_csv_path: str,
+        timeliness_csv_path: str,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        closures_rows = read_csv_rows(closures_csv_path)
+        timeliness_rows = read_csv_rows(timeliness_csv_path)
+        closures_lu: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        for r in closures_rows:
+            team = safe_str(r.get("team"))
+            pd = safe_str(r.get("period_date"))
+            if team and pd:
+                closures_lu[(team, pd)] = r
+        timeliness_lu: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        for r in timeliness_rows:
+            team = safe_str(r.get("team"))
+            pd = safe_str(r.get("period_date"))
+            if team and pd:
+                timeliness_lu[(team, pd)] = r
+        wip_rows = read_csv_rows(wip_csv_path)
+        updated = 0
+        for r in wip_rows:
+            team = safe_str(r.get("team"))
+            pd = safe_str(r.get("period_date"))
+            if not team or not pd:
+                continue
+            c = closures_lu.get((team, pd))
+            t = timeliness_lu.get((team, pd))
+            if c is not None:
+                r["Closures"] = safe_str(c.get("Closures"))
+                r["Opened"] = safe_str(c.get("Opened"))
+            if t is not None:
+                r["Open Complaint Timeliness"] = safe_str(t.get("Open Complaint Timeliness"))
+            if (safe_str(r.get("Closures")) or safe_str(r.get("Opened")) or safe_str(r.get("Open Complaint Timeliness"))):
+                updated += 1
+        with open(wip_csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=WIP_HEADERS)
+            w.writeheader()
+            for r in wip_rows:
+                w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
+        if logger:
+            logger.info(f"[POST] NS_WIP.csv updated with closures/timeliness for {updated} rows")
+    apply_closures_timeliness_to_wip(
         wip_csv_path=wip_out_file,
         closures_csv_path=closures_path,
         timeliness_csv_path=timeliness_path,
