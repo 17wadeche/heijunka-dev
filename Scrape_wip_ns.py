@@ -2285,7 +2285,15 @@ def main():
     wip_out_file = "NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
     logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
-    
+    excel_dir = os.path.dirname(os.path.abspath(wip_out_file))
+    timeliness_path = os.path.join(excel_dir, "timeliness.csv")
+    closures_path = os.path.join(excel_dir, "closures.csv")
+    append_missing_placeholders_from_wip(
+        wip_csv_path=wip_out_file,
+        closures_csv_path=closures_path,
+        timeliness_csv_path=timeliness_path,
+        logger=logger,
+    )
     logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
