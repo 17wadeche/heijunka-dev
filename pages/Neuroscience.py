@@ -50,7 +50,6 @@ def load_non_wip(
             r = requests.get(nw_url, timeout=20, allow_redirects=True)
             r.raise_for_status()
             raw = r.content or b""
-                return empty_df
             text = raw.decode("utf-8-sig", errors="replace")
             head = text.lstrip()[:200].lower()
             if head.startswith("<!doctype html") or head.startswith("<html") or "access denied" in head:
