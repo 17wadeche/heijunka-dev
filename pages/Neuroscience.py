@@ -31,24 +31,51 @@ def _fmt_hours_minutes(x) -> str:
         return f"{h}h"
     return f"{m}m"
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
+def load_non_wip(
+    nw_path: str | None = None,
+    nw_url: str | None = NON_WIP_DATA_URL
+) -> pd.DataFrame:
+    empty_df = pd.DataFrame(columns=[
+        "team","period_date","source_file","people_count",
+        "total_non_wip_hours","% in WIP","non_wip_by_person"
+    ])
+    def _read_csv_text(text: str) -> pd.DataFrame:
+        import io
+        if not text or not text.strip():
+            return empty_df
+        return pd.read_csv(io.StringIO(text), dtype=str, keep_default_na=False)
     if nw_url:
+        import requests
         try:
-            df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
-        except Exception:
-            import io, requests
-            r = requests.get(nw_url, timeout=20)
+            r = requests.get(nw_url, timeout=20, allow_redirects=True)
+            st.caption(f"Non-WIP fetch: {r.status_code} • {r.headers.get('content-type','?')}")
             r.raise_for_status()
-            df = pd.read_csv(io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
-                             dtype=str, keep_default_na=False)
+            raw = r.content or b""
+            if not raw.strip():
+                st.warning("Non-WIP CSV URL returned an empty response.")
+                return empty_df
+            text = raw.decode("utf-8-sig", errors="replace")
+            head = text.lstrip()[:200].lower()
+            if head.startswith("<!doctype html") or head.startswith("<html") or "access denied" in head:
+                st.error("Non-WIP URL did not return a CSV (looks like an HTML/error page).")
+                return empty_df
+            try:
+                df = _read_csv_text(text)
+            except pd.errors.EmptyDataError:
+                st.warning("Non-WIP CSV contained no columns (EmptyDataError).")
+                return empty_df
+        except Exception as e:
+            st.error(f"Failed to fetch/parse NS_NON_WIP_DATA_URL: {e}")
+            return empty_df
     else:
         p = Path(nw_path or NON_WIP_DEFAULT_PATH)
         if not p.exists():
-            return pd.DataFrame(columns=[
-                "team","period_date","source_file","people_count",
-                "total_non_wip_hours","% in WIP","non_wip_by_person"
-            ])
-        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            return empty_df
+        try:
+            df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        except pd.errors.EmptyDataError:
+            st.warning("Local Non-WIP CSV file exists but is empty.")
+            return empty_df
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
@@ -57,10 +84,7 @@ def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_U
     if "% in WIP" in df.columns and "% Non-WIP" not in df.columns:
         s = pd.to_numeric(df["% in WIP"], errors="coerce")
         if pd.notna(s.max()):
-            if float(s.max()) <= 1.5:
-                pct_wip_0_100 = s * 100.0
-            else:
-                pct_wip_0_100 = s
+            pct_wip_0_100 = (s * 100.0) if float(s.max()) <= 1.5 else s
             df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
