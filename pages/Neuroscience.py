@@ -1323,15 +1323,21 @@ tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.colum
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
 target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
 actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
-def build_person_station_outputs_over_time(df, team_name, person):
+def build_person_station_outputs_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
     import json
     rows = []
     col = "Output by Cell/Station - by person"
     if col not in df.columns:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=["period_date", "person", "cell_station", "Actual", "Target"])
+    def _norm(s: str) -> str:
+        return " ".join(str(s or "").strip().split()).lower()
+    person_norm = _norm(person_name)
     sub = df.loc[df["team"] == team_name, ["period_date", col]].dropna(subset=[col]).copy()
     for _, r in sub.iterrows():
-        pdte = pd.to_datetime(r["period_date"]).normalize()
+        wk = pd.to_datetime(r["period_date"], errors="coerce")
+        if pd.isna(wk):
+            continue
+        wk = wk.normalize()
         payload = r[col]
         try:
             data = json.loads(payload) if isinstance(payload, str) else payload
@@ -1342,17 +1348,34 @@ def build_person_station_outputs_over_time(df, team_name, person):
         for station, person_map in data.items():
             if not isinstance(person_map, dict):
                 continue
-            if person in person_map and isinstance(person_map[person], dict):
-                outv = pd.to_numeric(person_map[person].get("output"), errors="coerce")
-                tgtv = pd.to_numeric(person_map[person].get("target"), errors="coerce")
-                rows.append({
-                    "period_date": pdte,
-                    "person": person,
-                    "cell_station": station,
-                    "Actual": outv,
-                    "Target": tgtv,
-                })
-    return pd.DataFrame(rows)
+            matched_key = None
+            for k in person_map.keys():
+                if _norm(k) == person_norm:
+                    matched_key = k
+                    break
+            if matched_key is None:
+                continue
+            v = person_map.get(matched_key)
+            actual = target = np.nan
+            if isinstance(v, dict):
+                actual = pd.to_numeric(v.get("output", v.get("actual", v.get("Actual"))), errors="coerce")
+                target = pd.to_numeric(v.get("target", v.get("Target")), errors="coerce")
+            else:
+                actual = pd.to_numeric(v, errors="coerce")
+                target = np.nan  # typically not present in your current writer
+            if pd.isna(actual) and pd.isna(target):
+                continue
+            rows.append({
+                "period_date": wk,
+                "person": person_name,  # keep the label the user picked
+                "cell_station": str(station).strip(),
+                "Actual": actual,
+                "Target": target,
+            })
+    out = pd.DataFrame(rows, columns=["period_date", "person", "cell_station", "Actual", "Target"])
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
 def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
     def _first_col(cands):
         for c in cands:

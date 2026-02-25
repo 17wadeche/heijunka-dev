@@ -443,3 +443,40 @@
 2026-02-25 17:46:36,042 | INFO | [DBS C13] DONE | rows=39 | elapsed=0:00:48.741897
 2026-02-25 17:46:36,042 | INFO | [DBS C13] filter >= 2025-07-07: 39 -> 34
 2026-02-25 17:46:36,043 | INFO | [DBS C14] START
+2026-02-25 17:47:51,438 | INFO | [DBS C14] DONE | rows=39 | elapsed=0:01:15.395005
+2026-02-25 17:47:51,438 | INFO | [DBS C14] filter >= 2025-07-07: 39 -> 34
+2026-02-25 17:47:51,438 | INFO | [NV] START
+2026-02-25 17:48:46,396 | INFO | [NV] DONE | rows=39 | elapsed=0:00:54.957751
+2026-02-25 17:48:46,396 | INFO | [NV] filter >= 2025-07-07: 39 -> 34
+2026-02-25 17:48:46,396 | INFO | [Nav] START
+2026-02-25 17:50:48,857 | INFO | [Nav] DONE | rows=36 | elapsed=0:02:02.461006
+2026-02-25 17:50:48,857 | INFO | [AE MEIC] START
+2026-02-25 17:52:14,298 | INFO | [AE MEIC] DONE | rows=36 | elapsed=0:01:25.440880
+2026-02-25 17:52:14,298 | INFO | [O-Arm MEIC] START
+2026-02-25 17:53:51,044 | INFO | [O-Arm MEIC] DONE | rows=36 | elapsed=0:01:36.745760
+2026-02-25 17:53:51,044 | INFO | [Mazor] START
+2026-02-25 17:55:13,368 | INFO | [Mazor] DONE | rows=38 | elapsed=0:01:22.324585
+2026-02-25 17:55:13,368 | INFO | [CSF] START
+2026-02-25 17:55:56,789 | INFO | [CSF] DONE | rows=38 | elapsed=0:00:43.420587
+2026-02-25 17:55:56,789 | INFO | [PSS] START
+2026-02-25 17:57:43,227 | INFO | [PSS] DONE | rows=38 | elapsed=0:01:46.438597
+2026-02-25 17:57:43,227 | INFO | [ENT] START
+2026-02-25 17:57:43,457 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.230092
+2026-02-25 17:57:43,457 | INFO | [TDD COS 1] START
+2026-02-25 17:58:06,689 | INFO | [TDD COS 1] DONE | rows=195 | elapsed=0:00:23.231912
+2026-02-25 17:58:06,690 | INFO | [TDD COS 1] filter >= 2025-06-02: 195 -> 38
+2026-02-25 17:58:06,690 | INFO | [SCS Super Cell] START
+2026-02-25 17:58:29,768 | INFO | [SCS Super Cell] DONE | rows=194 | elapsed=0:00:23.077516
+2026-02-25 17:58:29,768 | INFO | [SCS Super Cell] rows scraped (pre-filter): 194
+2026-02-25 17:58:29,777 | INFO | [SCS Super Cell] filter >= 2025-06-30: 194 -> 34
+2026-02-25 17:58:29,777 | INFO | [MEIC PH] filter >= 2025-09-01: 82 -> 27
+2026-02-25 17:58:29,779 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1100 -> 519
+2026-02-25 17:58:29,781 | INFO | [ALL] drop period_date == 2023-11-06: 519 -> 518
+2026-02-25 17:58:29,782 | INFO | [ALL] drop period_date == 2026-09-07: 518 -> 517
+2026-02-25 17:58:29,850 | INFO | Wrote 517 rows to NS_metrics.csv
+2026-02-25 17:58:30,002 | INFO | Wrote 284 rows to NS_WIP.csv
+2026-02-25 17:58:30,045 | INFO | [POST] WIP weekly keys=284
+2026-02-25 17:58:30,045 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-02-25 17:58:30,046 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-02-25 17:58:30,150 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 284 rows
+2026-02-25 17:58:30,152 | INFO | === NS Metrics Run END ===
