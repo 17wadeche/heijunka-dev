@@ -648,7 +648,7 @@ def _open_workbook_via_temp_copy(excel, source_file: str):
         CorruptLoad=0,
     )
     return wb, tmp_path
-def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
+def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
     import uuid
@@ -684,7 +684,7 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-        dropdown_values = _get_dropdown_values_from_validation(dd)
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "M")
@@ -842,7 +842,7 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
                 os.remove(tmp_path)
         except Exception:
             pass
-def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav") -> list[dict]:
+def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
     import uuid
@@ -880,7 +880,7 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav") -> list[
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-        dropdown_values = _get_dropdown_values_from_validation(dd)
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "V")
@@ -1047,7 +1047,7 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav") -> list[
                 os.remove(tmp_path)
         except Exception:
             pass
-def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str) -> list[dict]:
+def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
     import uuid
@@ -1085,7 +1085,7 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str) -> list
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-        dropdown_values = _get_dropdown_values_from_validation(dd)
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "P") 
@@ -1252,7 +1252,7 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str) -> list
                 os.remove(tmp_path)
         except Exception:
             pass
-def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any]) -> list[dict]:
+def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any], dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
     import uuid
@@ -1290,7 +1290,7 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-        dropdown_values = _get_dropdown_values_from_validation(dd)
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
@@ -1464,7 +1464,7 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 os.remove(tmp_path)
         except Exception:
             pass
-def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any]) -> list[dict]:
+def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any], dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
     import uuid
@@ -1502,7 +1502,7 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
         dd = _com_call(lambda: ws.Range("A2"))
-        dropdown_values = _get_dropdown_values_from_validation(dd)
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
@@ -2220,31 +2220,54 @@ def main():
         out = run_team(logger, team_name, fn)   # logs START/DONE/FAIL + rows + elapsed
         rows.extend(out)
         return out
+    def mondays_since(start_iso: str, end_d: date) -> list[str]:
+        start = date.fromisoformat(start_iso)
+        start = start - timedelta(days=start.weekday())  # ensure Monday
+        out: list[str] = []
+        d = start
+        while d <= end_d:
+            out.append(d.isoformat())
+            d += timedelta(days=7)
+        return out
+    ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
     extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
     extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
-    dbs_c13_rows = run_team(logger, "DBS C13", lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13"))
+    dbs_c13_rows = run_team(
+        logger,
+        "DBS C13",
+        lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13", ALL_MONDAYS_SINCE_2025_06_02),
+    )
     before = len(dbs_c13_rows)
     dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
     logger.info(f"[DBS C13] filter >= {cutoff_dbs}: {before} -> {len(dbs_c13_rows)}")
     rows.extend(dbs_c13_rows)
-    dbs_c14_rows = run_team(logger, "DBS C14", lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14"))
+
+    dbs_c14_rows = run_team(
+        logger,
+        "DBS C14",
+        lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14", ALL_MONDAYS_SINCE_2025_06_02),
+    )
     before = len(dbs_c14_rows)
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
     logger.info(f"[DBS C14] filter >= {cutoff_dbs}: {before} -> {len(dbs_c14_rows)}")
     rows.extend(dbs_c14_rows)
-    nv_rows = run_team(logger, "NV", lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV"))
+    nv_rows = run_team(
+        logger,
+        "NV",
+        lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV", ALL_MONDAYS_SINCE_2025_06_02),
+    )
     before = len(nv_rows)
     nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
     logger.info(f"[NV] filter >= {cutoff_dbs}: {before} -> {len(nv_rows)}")
     rows.extend(nv_rows)
-    extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav"))
-    extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC"))
-    extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC"))
-    extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG))
-    extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG))
-    extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG))
+    extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
+    extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+    extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+    extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+    extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     extend_team("ENT",   lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     cos_rows = run_team(logger, "TDD COS 1", lambda: scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG))
     cutoff_cos = date.fromisoformat("2025-01-06")
