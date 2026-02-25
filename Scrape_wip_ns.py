@@ -19,6 +19,210 @@ import sys
 import traceback
 from contextlib import contextmanager
 from threading import Thread, Event
+import math
+WIP_HEADERS = [
+    "team",
+    "period_date",
+    "Total Available Hours",
+    "Completed Hours",
+    "Target Output",
+    "Actual Output",
+    "Target UPLH",
+    "Actual UPLH",
+    "UPLH WP1",
+    "UPLH WP2",
+    "HC in WIP",
+    "Actual HC Used",
+    "People in WIP",
+    "Person Hours",
+    "Outputs by Person",
+    "Outputs by Cell/Station",
+    "Cell/Station Hours",
+    "Hours by Cell/Station - by person",
+    "Output by Cell/Station - by person",
+    "UPLH by Cell/Station - by person",
+    "Open Complaint Timeliness",
+    "error",
+    "Closures",
+    "Opened",
+]
+def json_load_safe(s: Any) -> dict:
+    if s is None:
+        return {}
+    if isinstance(s, dict):
+        return s
+    txt = safe_str(s)
+    if not txt:
+        return {}
+    try:
+        return json.loads(txt)
+    except Exception:
+        return {}
+def _sum_nested_person_map(dst: dict, src: dict, keys=("actual", "available")) -> None:
+    for name, rec in (src or {}).items():
+        if not isinstance(rec, dict):
+            continue
+        drec = dst.setdefault(name, {k: 0.0 for k in keys})
+        for k in keys:
+            drec[k] = safe_float(drec.get(k)) + safe_float(rec.get(k))
+def _sum_nested_output_target_map(dst: dict, src: dict) -> None:
+    for name, rec in (src or {}).items():
+        if not isinstance(rec, dict):
+            continue
+        drec = dst.setdefault(name, {"output": 0.0, "target": 0.0})
+        drec["output"] = safe_float(drec.get("output")) + safe_float(rec.get("output"))
+        drec["target"] = safe_float(drec.get("target")) + safe_float(rec.get("target"))
+def _sum_cell_map(dst: dict, src: dict) -> None:
+    for cell, rec in (src or {}).items():
+        if not isinstance(rec, dict):
+            continue
+        drec = dst.setdefault(cell, {"output": 0.0, "target": 0.0})
+        drec["output"] = safe_float(drec.get("output")) + safe_float(rec.get("output"))
+        drec["target"] = safe_float(drec.get("target")) + safe_float(rec.get("target"))
+def _sum_simple_map(dst: dict, src: dict) -> None:
+    for k, v in (src or {}).items():
+        dst[k] = safe_float(dst.get(k)) + safe_float(v)
+def _sum_cell_person_map(dst: dict, src: dict) -> None:
+    for cell, people in (src or {}).items():
+        if not isinstance(people, dict):
+            continue
+        dcell = dst.setdefault(cell, {})
+        for person, val in people.items():
+            dcell[person] = safe_float(dcell.get(person)) + safe_float(val)
+def _recalc_uplh_by_cell_person(hours_by_cell_person: dict, out_by_cell_person: dict) -> dict:
+    uplh = {}
+    for cell in ("WP1", "WP2"):
+        uplh[cell] = {}
+        hmap = (hours_by_cell_person or {}).get(cell, {}) or {}
+        omap = (out_by_cell_person or {}).get(cell, {}) or {}
+        for person in set(list(hmap.keys()) + list(omap.keys())):
+            hrs = safe_float(hmap.get(person))
+            outv = safe_float(omap.get(person))
+            uplh[cell][person] = safe_div(outv, hrs)
+    return uplh
+def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
+    et_combine_teams = {"O-Arm MEIC", "Nav", "Mazor", "AE MEIC", "CSF"}
+    et_label = "Enabling Technologies"
+    rollups = [
+        ({"DBS C13", "DBS C14"}, "DBS"),
+        ({"MEIC PH", "PH"}, "PH"),
+        ({"SCS Cell 1", "SCS Super Cell"}, "SCS"),
+        (et_combine_teams, et_label),
+    ]
+    rename_map = {"TDD COS 1": "TDD"}
+    buckets_by_label: Dict[str, Dict[str, list[dict]]] = {label: {} for _, label in rollups}
+    passthrough: list[dict] = []
+    for r in all_rows:
+        team = safe_str(r.get("team"))
+        if team in rename_map:
+            r = dict(r)
+            r["team"] = rename_map[team]
+            team = r["team"]
+        placed = False
+        pd = safe_str(r.get("period_date"))
+        for team_set, label in rollups:
+            if team in team_set and pd:
+                buckets_by_label[label].setdefault(pd, []).append(r)
+                placed = True
+                break
+        if not placed:
+            passthrough.append(r)
+    out_rows: list[dict] = []
+    out_rows.extend(passthrough)
+    def _emit_rollup(label: str, period_date: str, rows: list[dict]) -> None:
+        taa = 0.0
+        ch = 0.0
+        tgt_out = 0.0
+        act_out = 0.0
+        hc_wip = 0.0
+        wp1_out_total = 0.0
+        wp2_out_total = 0.0
+        wp1_uplh_weighted_sum = 0.0
+        wp2_uplh_weighted_sum = 0.0
+        person_hours = {}
+        outputs_by_person = {}
+        outputs_by_cell = {}
+        cell_station_hours = {}
+        hours_by_cell_person = {}
+        out_by_cell_person = {}
+        open_timeliness = ""
+        closures = ""
+        opened = ""
+        errs = []
+        for r in rows:
+            taa += safe_float(r.get("Total Available Hours"))
+            ch += safe_float(r.get("Completed Hours"))
+            tgt_out += safe_float(r.get("Target Output"))
+            act_out += safe_float(r.get("Actual Output"))
+            hc_wip += int(safe_float(r.get("HC in WIP")))
+            cell_json = json_load_safe(r.get("Outputs by Cell/Station"))
+            wp1_out = safe_float(((cell_json.get("WP1") or {}).get("output")))
+            wp2_out = safe_float(((cell_json.get("WP2") or {}).get("output")))
+            wp1_u = r.get("UPLH WP1")
+            wp2_u = r.get("UPLH WP2")
+            if wp1_out > 0:
+                wp1_out_total += wp1_out
+                wp1_uplh_weighted_sum += safe_float(wp1_u) * wp1_out
+            if wp2_out > 0:
+                wp2_out_total += wp2_out
+                wp2_uplh_weighted_sum += safe_float(wp2_u) * wp2_out
+            _sum_nested_person_map(person_hours, json_load_safe(r.get("Person Hours")), keys=("actual", "available"))
+            _sum_nested_output_target_map(outputs_by_person, json_load_safe(r.get("Outputs by Person")))
+            _sum_cell_map(outputs_by_cell, cell_json)
+            _sum_simple_map(cell_station_hours, json_load_safe(r.get("Cell/Station Hours")))
+            _sum_cell_person_map(hours_by_cell_person, json_load_safe(r.get("Hours by Cell/Station - by person")))
+            _sum_cell_person_map(out_by_cell_person, json_load_safe(r.get("Output by Cell/Station - by person")))
+            er = safe_str(r.get("error"))
+            if er:
+                errs.append(er)
+        target_uplh = safe_div(tgt_out, ch)
+        actual_uplh = safe_div(act_out, ch)
+        uplh_wp1 = safe_div(wp1_uplh_weighted_sum, wp1_out_total)  # weighted avg
+        uplh_wp2 = safe_div(wp2_uplh_weighted_sum, wp2_out_total)  # weighted avg
+        actual_hc_used = safe_div(ch, 32.5)
+        uplh_by_cell_person = _recalc_uplh_by_cell_person(hours_by_cell_person, out_by_cell_person)
+        out_rows.append({
+            "team": label,
+            "period_date": period_date,
+            "Total Available Hours": taa,
+            "Completed Hours": ch,
+            "Target Output": tgt_out,
+            "Actual Output": act_out,
+            "Target UPLH": target_uplh,
+            "Actual UPLH": actual_uplh,
+            "UPLH WP1": uplh_wp1,
+            "UPLH WP2": uplh_wp2,
+            "HC in WIP": hc_wip,
+            "Actual HC Used": actual_hc_used,
+            "People in WIP": "",
+            "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+            "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+            "Hours by Cell/Station - by person": json.dumps(hours_by_cell_person, ensure_ascii=False),
+            "Output by Cell/Station - by person": json.dumps(out_by_cell_person, ensure_ascii=False),
+            "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_person, ensure_ascii=False),
+            "Open Complaint Timeliness": open_timeliness,
+            "error": " | ".join(errs) if errs else "",
+            "Closures": closures,
+            "Opened": opened,
+        })
+    for _, label in rollups:
+        for period_date in sorted(buckets_by_label[label].keys()):
+            _emit_rollup(label, period_date, buckets_by_label[label][period_date])
+    def sort_key_wip(r: dict) -> tuple:
+        team = safe_str(r.get("team")).lower()
+        d = safe_str(r.get("period_date"))
+        date_key = d if (len(d) == 10 and d[4] == "-" and d[7] == "-") else "9999-12-31"
+        return (team, date_key)
+    out_rows.sort(key=sort_key_wip)
+    return out_rows
+def write_csv_wip(rows: list[dict], out_path: str) -> None:
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=WIP_HEADERS)
+        w.writeheader()
+        for r in rows:
+            w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
 def setup_logging(log_path: str = "NS_metrics.log") -> logging.Logger:
     logger = logging.getLogger("ns_metrics")
     logger.setLevel(logging.INFO)
@@ -2019,6 +2223,10 @@ def main():
     rows.sort(key=sort_key)
     write_csv(rows, out_file)
     logger.info(f"Wrote {len(rows)} rows to {out_file}")
+    wip_rows = build_ns_wip_rows(rows)
+    wip_out_file = "NS_WIP.csv"
+    write_csv_wip(wip_rows, wip_out_file)
+    logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
     logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
