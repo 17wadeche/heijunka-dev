@@ -1884,6 +1884,64 @@ def scrape_ent_from_csv(
     return rows_out
 def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
     return [r for r in rows if safe_str(r.get("period_date")) >= cutoff_iso]
+def _looks_like_iso_date(s: str) -> bool:
+    s = safe_str(s)
+    return (len(s) == 10 and s[4] == "-" and s[7] == "-")
+def _is_monday_iso(s: str) -> bool:
+    s = safe_str(s)
+    if not _looks_like_iso_date(s):
+        return False
+    try:
+        d = date.fromisoformat(s)
+        return d.weekday() == 0
+    except Exception:
+        return False
+def read_csv_rows(path: str) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", newline="", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+def append_missing_placeholders_from_wip(
+    wip_csv_path: str,
+    closures_csv_path: str,
+    timeliness_csv_path: str,
+    logger: Optional[logging.Logger] = None,
+) -> None:
+    wip_rows = read_csv_rows(wip_csv_path)
+    wip_keys: set[tuple[str, str]] = set()
+    for r in wip_rows:
+        team = safe_str(r.get("team"))
+        pd = safe_str(r.get("period_date"))
+        if not team or not pd:
+            continue
+        if _is_monday_iso(pd):
+            wip_keys.add((team, pd))
+    closures_rows = read_csv_rows(closures_csv_path)
+    timeliness_rows = read_csv_rows(timeliness_csv_path)
+    closures_keys = {(safe_str(r.get("team")), safe_str(r.get("period_date"))) for r in closures_rows if safe_str(r.get("team")) and safe_str(r.get("period_date"))}
+    timeliness_keys = {(safe_str(r.get("team")), safe_str(r.get("period_date"))) for r in timeliness_rows if safe_str(r.get("team")) and safe_str(r.get("period_date"))}
+    missing_closures = sorted([k for k in wip_keys if k not in closures_keys])
+    missing_timeliness = sorted([k for k in wip_keys if k not in timeliness_keys])
+    if missing_closures:
+        file_exists = os.path.exists(closures_csv_path)
+        with open(closures_csv_path, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["team", "period_date", "Closures", "Opened"])
+            if (not file_exists) or (os.path.getsize(closures_csv_path) == 0):
+                w.writeheader()
+            for team, pd in missing_closures:
+                w.writerow({"team": team, "period_date": pd, "Closures": "", "Opened": ""})
+    if missing_timeliness:
+        file_exists = os.path.exists(timeliness_csv_path)
+        with open(timeliness_csv_path, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=["team", "period_date", "Open Complaint Timeliness"])
+            if (not file_exists) or (os.path.getsize(timeliness_csv_path) == 0):
+                w.writeheader()
+            for team, pd in missing_timeliness:
+                w.writerow({"team": team, "period_date": pd, "Open Complaint Timeliness": ""})
+    if logger:
+        logger.info(f"[POST] WIP weekly keys={len(wip_keys)}")
+        logger.info(f"[POST] closures placeholders appended={len(missing_closures)} -> {os.path.basename(closures_csv_path)}")
+        logger.info(f"[POST] timeliness placeholders appended={len(missing_timeliness)} -> {os.path.basename(timeliness_csv_path)}")
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
@@ -2227,6 +2285,7 @@ def main():
     wip_out_file = "NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
     logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
+    
     logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
