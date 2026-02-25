@@ -13,6 +13,53 @@ import win32com.client
 import time
 import pythoncom
 import pywintypes
+import argparse
+import logging
+import sys
+import traceback
+from contextlib import contextmanager
+from threading import Thread, Event
+def setup_logging(log_path: str = "NS_metrics.log") -> logging.Logger:
+    logger = logging.getLogger("ns_metrics")
+    logger.setLevel(logging.INFO)
+    fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setFormatter(fmt)
+    fh.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(fmt)
+    ch.setLevel(logging.INFO)
+    if not logger.handlers:
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+    return logger
+@contextmanager
+def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
+    stop = Event()
+    def _run():
+        while not stop.wait(every_seconds):
+            logger.info(f"[{label}] still running...")
+    t = Thread(target=_run, daemon=True)
+    t.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        t.join(timeout=1)
+def run_team(logger: logging.Logger, team_name: str, fn):
+    start = datetime.now()
+    logger.info(f"[{team_name}] START")
+    try:
+        with heartbeat(logger, team_name, every_seconds=180):  # adjust heartbeat
+            rows = fn()
+        elapsed = datetime.now() - start
+        logger.info(f"[{team_name}] DONE | rows={len(rows)} | elapsed={elapsed}")
+        return rows
+    except Exception as e:
+        elapsed = datetime.now() - start
+        logger.error(f"[{team_name}] FAIL | elapsed={elapsed} | error={e}")
+        logger.error(traceback.format_exc())
+        return []
 HEADERS = [
     "team",
     "period_date",
@@ -1634,6 +1681,13 @@ def scrape_ent_from_csv(
 def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
     return [r for r in rows if safe_str(r.get("period_date")) >= cutoff_iso]
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
+    parser.add_argument("--log", default="NS_metrics.log", help="Log file path")
+    args = parser.parse_args()
+    logger = setup_logging(args.log)
+    logger.info("=== NS Metrics Run START ===")
+    logger.info(f"Selected team: {args.team}")
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
@@ -1899,67 +1953,72 @@ def main():
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
-    rows = []
-    rows.extend(scrape_workbook_with_config(ph_source_file, PH_CFG))
-    rows.extend(scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
-    meic_rows = scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG)
+    rows: list[dict] = []
+    def extend_team(team_name: str, fn):
+        out = run_team(logger, team_name, fn)   # logs START/DONE/FAIL + rows + elapsed
+        rows.extend(out)
+        return out
+    extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
+    extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
+    meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
-    dbs_c13_rows = scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13")
+    dbs_c13_rows = run_team(logger, "DBS C13", lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13"))
+    before = len(dbs_c13_rows)
     dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
+    logger.info(f"[DBS C13] filter >= {cutoff_dbs}: {before} -> {len(dbs_c13_rows)}")
     rows.extend(dbs_c13_rows)
-    dbs_c14_rows = scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14")
+    dbs_c14_rows = run_team(logger, "DBS C14", lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14"))
+    before = len(dbs_c14_rows)
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
+    logger.info(f"[DBS C14] filter >= {cutoff_dbs}: {before} -> {len(dbs_c14_rows)}")
     rows.extend(dbs_c14_rows)
-    nv_rows = scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV")
+    nv_rows = run_team(logger, "NV", lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV"))
+    before = len(nv_rows)
     nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
+    logger.info(f"[NV] filter >= {cutoff_dbs}: {before} -> {len(nv_rows)}")
     rows.extend(nv_rows)
-    nav_rows = scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav")
-    rows.extend(nav_rows)
-    rows.extend(scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC"))
-    rows.extend(scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC"))
-    rows.extend(scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG))
-    rows.extend(scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG))
-    rows.extend(scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG))
-    rows.extend(scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
-    cos_rows = scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)
+    extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav"))
+    extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC"))
+    extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC"))
+    extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG))
+    extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG))
+    extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG))
+    extend_team("ENT",   lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
+    cos_rows = run_team(logger, "TDD COS 1", lambda: scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG))
     cutoff_cos = date.fromisoformat("2025-01-06")
-    cos_rows = [
-        r for r in cos_rows
-        if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()
-    ]
+    before = len(cos_rows)
+    cos_rows = [r for r in cos_rows if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()]
+    logger.info(f"[TDD COS 1] filter >= {cutoff_cos.isoformat()}: {before} -> {len(cos_rows)}")
     rows.extend(cos_rows)
-    scs_super_rows = scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_CFG)
-    print("SCS Super Cell rows scraped:", len(scs_super_rows))
+    scs_super_rows = run_team(logger, "SCS Super Cell", lambda: scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_CFG))
+    logger.info(f"[SCS Super Cell] rows scraped (pre-filter): {len(scs_super_rows)}")
     cutoff_super = date.fromisoformat("2025-06-30")
-    scs_super_rows = [
-        r for r in scs_super_rows
-        if safe_str(r.get("period_date")) >= cutoff_super.isoformat()
-    ]
+    before = len(scs_super_rows)
+    scs_super_rows = [r for r in scs_super_rows if safe_str(r.get("period_date")) >= cutoff_super.isoformat()]
+    logger.info(f"[SCS Super Cell] filter >= {cutoff_super.isoformat()}: {before} -> {len(scs_super_rows)}")
     rows.extend(scs_super_rows)
-    cutoff = date.fromisoformat("2025-09-01")
-    meic_rows = [
-        r for r in meic_rows
-        if (
-            safe_str(r.get("period_date")) >= "2025-09-01"
-        )
-    ]
+    before = len(meic_rows)
+    meic_rows = [r for r in meic_rows if safe_str(r.get("period_date")) >= "2025-09-01"]
+    logger.info(f"[MEIC PH] filter >= 2025-09-01: {before} -> {len(meic_rows)}")
     rows.extend(meic_rows)
+    before = len(rows)
     rows = [
         r for r in rows
         if (r.get("team") == "SCS Super Cell") or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
-    rows = [r for r in rows if safe_str(r.get("period_date")) != "2023-11-06"]
-    rows = [r for r in rows if safe_str(r.get("period_date")) != "2026-09-07"]
+    logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell): {before} -> {len(rows)}")
+    for bad in ("2023-11-06", "2026-09-07"):
+        before = len(rows)
+        rows = [r for r in rows if safe_str(r.get("period_date")) != bad]
+        logger.info(f"[ALL] drop period_date == {bad}: {before} -> {len(rows)}")
     def sort_key(r: dict) -> tuple:
         team = safe_str(r.get("team")).lower()
         d = safe_str(r.get("period_date"))
-        if len(d) == 10 and d[4] == "-" and d[7] == "-":
-            date_key = d
-        else:
-            date_key = "9999-12-31"
+        date_key = d if (len(d) == 10 and d[4] == "-" and d[7] == "-") else "9999-12-31"
         return (team, date_key)
     rows.sort(key=sort_key)
     write_csv(rows, out_file)
-    print(f"Wrote {len(rows)} rows to {out_file}")
+    logger.info(f"Wrote {len(rows)} rows to {out_file}")
+    logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
