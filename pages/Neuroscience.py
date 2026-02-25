@@ -48,11 +48,8 @@ def load_non_wip(
         import requests
         try:
             r = requests.get(nw_url, timeout=20, allow_redirects=True)
-            st.caption(f"Non-WIP fetch: {r.status_code} • {r.headers.get('content-type','?')}")
             r.raise_for_status()
             raw = r.content or b""
-            if not raw.strip():
-                st.warning("Non-WIP CSV URL returned an empty response.")
                 return empty_df
             text = raw.decode("utf-8-sig", errors="replace")
             head = text.lstrip()[:200].lower()
