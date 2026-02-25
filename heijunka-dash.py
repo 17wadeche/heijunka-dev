@@ -10,5 +10,6 @@ apply_global_styles()
 pg = st.navigation([
     st.Page("pages/Enterprise.py", title="Enterprise"),
     st.Page("pages/Interventional_Vascular.py", title="Interventional Vascular"),
+    st.Page("pages/Neuroscience.py", title="Neuroscience"),
 ])
 pg.run()
