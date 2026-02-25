@@ -370,8 +370,6 @@ def sum_rows(ws, rows: list[int], col: int) -> float:
     return sum(safe_float(ws.cell(row=r, column=col).value) for r in rows)
 def read_lookup_csv(path: str) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], str]:
     lookup: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    if not os.path.exists(path):
-        return lookup, f"Missing file: {os.path.basename(path)}"
     try:
         with open(path, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
@@ -1774,7 +1772,6 @@ def scrape_ent_from_csv(
             "team": team,
             "period_date": "",
             "source_file": ent_csv_path,
-            "error": f"Missing file: {os.path.basename(ent_csv_path)}",
         }]
     weekly: Dict[str, Dict[str, Any]] = {}
     with open(ent_csv_path, "r", newline="", encoding="utf-8-sig") as f:
