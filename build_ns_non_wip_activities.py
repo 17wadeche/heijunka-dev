@@ -77,13 +77,16 @@ def extract_totals(ws: pd.DataFrame) -> tuple[float, float]:
     ooo = c18
     return total_nonwip, ooo
 def build_nonwip_by_person(people_rows: list[dict]) -> dict[str, float]:
-    out = {}
+    out: dict[str, float] = {}
     for r in people_rows:
         b = r.get("B", 0.0)
         c = r.get("C", 0.0)
         if pd.isna(b): b = 0.0
         if pd.isna(c): c = 0.0
-        out[r["name"]] = float(round(float(b) - float(c), 2))
+        v = float(round(float(b) - float(c), 2))
+        if v == 0.0:
+            continue
+        out[r["name"]] = v
     return out
 def build_nonwip_activities(ws: pd.DataFrame, people_rows: list[dict]) -> list[dict]:
     header_i = 2
