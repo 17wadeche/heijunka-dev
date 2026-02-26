@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 DEFAULTS = {
     "ns_wip": Path(r"C:\heijunka-dev\NS_WIP.csv"),
-    "ns_metrics": Path(r"C:\heijunka-dev\NS_metrics.csv"),
     "out": Path(r"C:\heijunka-dev\ns_non_wip_activities.csv"),
 }
 TEAM_SOURCES = {
@@ -215,7 +214,7 @@ def main():
     wip_df = pd.read_csv(DEFAULTS["ns_wip"], dtype=str, keep_default_na=False)
     wip_df.columns = [" ".join(str(c).split()) for c in wip_df.columns]
     wip_df["period_date"] = pd.to_datetime(wip_df.get("period_date"), errors="coerce").dt.normalize()
-    metrics_df = load_completed_hours(DEFAULTS["ns_metrics"])
+    metrics_df = load_completed_hours(DEFAULTS["ns_wip"])
     built = []
     for team, info in TEAM_SOURCES.items():
         df_team = build_for_team(team, info["xlsx"], info["layout"], wip_df, metrics_df)
