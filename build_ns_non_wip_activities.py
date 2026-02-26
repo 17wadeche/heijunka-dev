@@ -13,6 +13,7 @@ BAD_NAMES = {
     "n/a", "N/A", "na", "NA", "null", "NULL",
     "none", "None", "tm", "TM", "Totals", "TOTALS",
     "Team Hours Available", "TEAM HOURS AVAILABLE",
+    "Mazor Hours Available", "MAZOR HOURS AVAILABLE",
 }
 def norm_name(x) -> str:
     return " ".join(str(x or "").strip().split())
@@ -144,6 +145,12 @@ def week_from_sheetname_date(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.T
     if pd.notna(dt):
         return dt.normalize()
     return None
+DEFAULT_YEAR_IF_MISSING = 2026
+def _is_real_year(dt: pd.Timestamp, min_year: int = 2000) -> bool:
+    try:
+        return pd.notna(dt) and int(dt.year) >= min_year
+    except Exception:
+        return False
 def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name)
     if not s.lower().startswith("capacity mgmt"):
@@ -151,7 +158,7 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
     try:
         b1 = ws.iat[0, 1]  # row 1 col B (0-indexed)
         dt = pd.to_datetime(b1, errors="coerce")
-        if pd.notna(dt):
+        if _is_real_year(dt):
             return dt.normalize()
     except Exception:
         pass
@@ -167,10 +174,9 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
             except Exception:
                 continue
             dt = pd.to_datetime(v, errors="coerce")
-            if pd.notna(dt):
+            if _is_real_year(dt):
                 return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
-    now_year = pd.Timestamp.today().year
-    return pd.Timestamp(year=now_year, month=mm, day=dd).normalize()
+    return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
 def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
     PEOPLE_END = 18
@@ -228,6 +234,129 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
+def _col_letter_to_idx(letter: str) -> int:
+    s = str(letter).strip().upper()
+    n = 0
+    for ch in s:
+        if not ("A" <= ch <= "Z"):
+            continue
+        n = n * 26 + (ord(ch) - ord("A") + 1)
+    return n - 1
+def build_capacity_fixed_row(
+    team: str,
+    ws: pd.DataFrame,
+    *,
+    people_start_row: int,
+    people_end_row: int,
+    expected_col_letter: str,    # column with "Expected Number of WIP Hours Per Week" (B)
+    ooo_col_letter: str,         # OOO column (Q or Z)
+    deduct_cell: str,            # e.g. "B8", "B11", "B10"
+    ooo_sum_start_row: int,      # inclusive, 0-indexed row
+    ooo_sum_end_row: int,        # inclusive, 0-indexed row
+    total_ooo_end_row: int,      # inclusive, used for Total Non-WIP formula (sometimes differs)
+    activity_header_row: int,    # row 1 => index 0, row 2 => index 1, etc
+    activity_start_col_letter: str,
+    activity_end_col_letter: str,
+) -> Dict:
+    col_b = _col_letter_to_idx(expected_col_letter)
+    col_ooo = _col_letter_to_idx(ooo_col_letter)
+    act_start = _col_letter_to_idx(activity_start_col_letter)
+    act_end   = _col_letter_to_idx(activity_end_col_letter)
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)", deduct_cell.strip())
+    if not m:
+        raise ValueError(f"Bad deduct_cell: {deduct_cell}")
+    deduct_col = _col_letter_to_idx(m.group(1))
+    deduct_row = int(m.group(2)) - 1  # Excel -> 0-indexed
+    people_rows: List[dict] = []
+    for i in range(people_start_row, people_end_row + 1):
+        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+        if not name:
+            continue
+        if not is_real_person(name):
+            continue
+        b = safe_float(ws.iat[i, col_b] if ws.shape[1] > col_b else np.nan)
+        ooo = safe_float(ws.iat[i, col_ooo] if ws.shape[1] > col_ooo else np.nan)
+        if pd.isna(b): b = 0.0
+        if pd.isna(ooo): ooo = 0.0
+        people_rows.append({"row_i": i, "name": name, "B": float(b), "OOO": float(ooo)})
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = 0.0
+    for r in range(ooo_sum_start_row, ooo_sum_end_row + 1):
+        ooo_hours += safe_float(ws.iat[r, col_ooo] if ws.shape[1] > col_ooo and ws.shape[0] > r else 0.0) or 0.0
+    ooo_hours = float(round(ooo_hours, 2))
+    deduct_val = safe_float(ws.iat[deduct_row, deduct_col] if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0)
+    if pd.isna(deduct_val):
+        deduct_val = 0.0
+    total_ooo = 0.0
+    for r in range(ooo_sum_start_row, total_ooo_end_row + 1):
+        total_ooo += safe_float(ws.iat[r, col_ooo] if ws.shape[1] > col_ooo and ws.shape[0] > r else 0.0) or 0.0
+    total_ooo = float(total_ooo)
+    total_nonwip_hours = float(round((people_count * 40.0) - float(deduct_val) - float(total_ooo), 2))
+    nonwip_by_person: Dict[str, float] = {}
+    for r in people_rows:
+        v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
+        if v != 0.0:
+            nonwip_by_person[r["name"]] = v
+    activities: List[dict] = []
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        for c in range(act_start, min(act_end, ws.shape[1] - 1) + 1):
+            label = norm_name(ws.iat[activity_header_row, c] if ws.shape[0] > activity_header_row and ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+    }
+def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return build_capacity_fixed_row(
+        team, ws,
+        people_start_row=1, people_end_row=5,
+        expected_col_letter="B",
+        ooo_col_letter="Q",
+        deduct_cell="B8",
+        ooo_sum_start_row=1, ooo_sum_end_row=5,     # Q2:Q6
+        total_ooo_end_row=5,                        # Total uses Q2:Q6
+        activity_header_row=0,                      # row 1
+        activity_start_col_letter="C",
+        activity_end_col_letter="P",
+    )
+def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return build_capacity_fixed_row(
+        team, ws,
+        people_start_row=1, people_end_row=8,
+        expected_col_letter="B",
+        ooo_col_letter="Q",
+        deduct_cell="B11",
+        ooo_sum_start_row=1, ooo_sum_end_row=8,     # Q2:Q9
+        total_ooo_end_row=8,                        # Total uses Q2:Q9
+        activity_header_row=0,
+        activity_start_col_letter="C",
+        activity_end_col_letter="P",
+    )
+def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return build_capacity_fixed_row(
+        team, ws,
+        people_start_row=1, people_end_row=7,
+        expected_col_letter="B",
+        ooo_col_letter="Z",
+        deduct_cell="B10",
+        ooo_sum_start_row=1, ooo_sum_end_row=8,     # Z2:Z9 (OOO)
+        total_ooo_end_row=7,                        # Z2:Z8 (Total Non-WIP)
+        activity_header_row=0,
+        activity_start_col_letter="C",
+        activity_end_col_letter="Y",
+    )
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "DBS": TeamSource(
         team="DBS",
@@ -270,6 +399,30 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Navigation Work Reports\Heijunka_MNAV_Ranges_May2025.xlsm"),
         week_from_sheet=week_from_mnav_capacity_tab,
         custom_builder=build_mnav_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "AE MEIC": TeamSource(
+        team="AE MEIC",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\AE_MEIC_Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_ae_meic_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "O-Arm MEIC": TeamSource(
+        team="O-Arm MEIC",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\OARM_MEIC_Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_oarm_meic_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "Mazor": TeamSource(
+        team="Mazor",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Caesarea Team\CAE - Heijunka_v2.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_mazor_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
