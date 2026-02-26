@@ -1214,18 +1214,32 @@ if nonwip_mode:
             )
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
-    show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
-    tbl = (
-        team_hist[show_cols]
-        .rename(columns={
-            "team": "Team",
-            "period_date": "Date",
-            "people_count": "People Count",
-            "total_non_wip_hours": "Non-WIP Hours",
-            "% Non-WIP": "% Non-WIP",
-        })
-        .sort_values("Date", ascending=False)
-    )
+    team_hist = team_hist.copy()
+    if "% Non-WIP" not in team_hist.columns:
+        if "% in WIP" in team_hist.columns:
+            s = pd.to_numeric(team_hist["% in WIP"], errors="coerce")
+            if pd.notna(s.max()):
+                pct_wip_0_100 = (s * 100.0) if float(s.max()) <= 1.5 else s
+                team_hist["% Non-WIP"] = 100.0 - pct_wip_0_100
+    show_cols = ["team", "period_date", "people_count", "total_non_wip_hours", "% Non-WIP"]
+    show_cols = [c for c in show_cols if c in team_hist.columns]
+    tbl = team_hist[show_cols].rename(columns={
+        "team": "Team",
+        "period_date": "Date",
+        "people_count": "People Count",
+        "total_non_wip_hours": "Non-WIP Hours",
+        "% Non-WIP": "% Non-WIP",
+    }).sort_values("Date", ascending=False)
+    if "Date" in tbl.columns:
+        tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
+    fmt = {}
+    if "People Count" in tbl.columns:
+        fmt["People Count"] = "{:,.0f}"
+    if "Non-WIP Hours" in tbl.columns:
+        fmt["Non-WIP Hours"] = "{:,.1f}"
+    if "% Non-WIP" in tbl.columns:
+        fmt["% Non-WIP"] = "{:.2f}%"
+    st.dataframe(tbl.style.format(fmt), use_container_width=True, hide_index=True)
     if "Date" in tbl.columns:
         tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
     st.dataframe(
