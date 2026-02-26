@@ -132,7 +132,8 @@ class TeamSource:
     layout: Optional[StandardLayout] = None
     week_from_sheet: Optional[Callable[[str, pd.DataFrame], Optional[pd.Timestamp]]] = None
     custom_builder: Optional[Callable[..., Dict]] = None
-    wip_workers_from: str = "NS_WIP"   # or "NS_metrics"
+    wip_workers_from: str = "NS_WIP"          # where Person Hours comes from
+    completed_hours_from: str = "NS_WIP"
 def week_from_sheetname_date(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     dt = pd.to_datetime(s, errors="coerce")
@@ -170,11 +171,13 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
                 return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
     now_year = pd.Timestamp.today().year
     return pd.Timestamp(year=now_year, month=mm, day=dd).normalize()
-def build_mnav_row(team: str, ws: pd.DataFrame) -> Dict:
+def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
     PEOPLE_END = 18
     COL_B = 1
+    COL_AA = 26
     COL_AF = 31
+    ooo_col = COL_AA if (week is not None and week.month == 2 and week.day == 16) else COL_AF
     COL_C = 2
     COL_AE = 30
     HEADER_ROW = 1
@@ -186,8 +189,10 @@ def build_mnav_row(team: str, ws: pd.DataFrame) -> Dict:
             continue
         if not is_real_person(name):
             continue
+
         b = safe_float(ws.iat[i, COL_B] if ws.shape[1] > COL_B else np.nan)
-        ooo = safe_float(ws.iat[i, COL_AF] if ws.shape[1] > COL_AF else np.nan)
+        ooo = safe_float(ws.iat[i, ooo_col] if ws.shape[1] > ooo_col else np.nan)
+
         if pd.isna(b): b = 0.0
         if pd.isna(ooo): ooo = 0.0
         people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
@@ -234,6 +239,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         ),
         week_from_sheet=week_from_sheetname_date,
         wip_workers_from="NS_WIP",
+        completed_hours_from="NS_WIP",
     ),
     "SCS": TeamSource(
         team="SCS",
@@ -245,13 +251,27 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         ),
         week_from_sheet=week_from_sheetname_date,
         wip_workers_from="NS_WIP",
+        completed_hours_from="NS_WIP",
+    ),
+    "PH": TeamSource(
+        team="PH",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\Non-D2D WIP Tracker.xlsx"),
+        layout=StandardLayout(
+            people_start_row=2, totals_row=18,
+            activity_header_row=1, activity_start_col=3, activity_end_col=34,
+            min_rows=17, min_cols=3,
+        ),
+        week_from_sheet=week_from_sheetname_date,
+        wip_workers_from="NS_WIP",
+        completed_hours_from="NS_WIP",
     ),
     "Nav": TeamSource(
         team="Nav",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Navigation Work Reports\Heijunka_MNAV_Ranges_May2025.xlsm"),
         week_from_sheet=week_from_mnav_capacity_tab,
         custom_builder=build_mnav_row,
-        wip_workers_from="NS_metrics",  # per your requirement for MNAV
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
     ),
 }
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
@@ -268,7 +288,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         if week is None or pd.isna(week):
             continue
         if team_src.custom_builder is not None:
-            built = team_src.custom_builder(team_src.team, ws)
+            built = team_src.custom_builder(team_src.team, ws, week)
             people_count = built["people_count"]
             total_nonwip_hours = built["total_nonwip_hours"]
             ooo_hours = built["ooo_hours"]
@@ -295,12 +315,22 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 end_col_i=cfg.activity_end_col,
             )
             ooo_map = {r["name"]: float(r.get("C", 0.0)) for r in people_rows}
-        metrics_match = metrics_df[(metrics_df.get("team") == team_src.team) & (metrics_df["period_date"] == week)]
-        metrics_completed = pd.to_numeric(metrics_match.iloc[0].get("Completed Hours"), errors="coerce") if not metrics_match.empty else np.nan
+        if team_src.completed_hours_from == "NS_metrics":
+            completed_src_df = metrics_df
+        else:
+            completed_src_df = wip_df
+        completed_match = completed_src_df[
+            (completed_src_df.get("team") == team_src.team) &
+            (completed_src_df["period_date"] == week)
+        ]
+        completed_hours = (
+            pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
+            if not completed_match.empty else np.nan
+        )
         pct_in_wip = np.nan
-        if pd.notna(metrics_completed) and pd.notna(total_nonwip_hours):
-            denom = float(metrics_completed) + float(total_nonwip_hours)
-            pct_in_wip = float(metrics_completed) / denom if denom != 0 else np.nan
+        if pd.notna(completed_hours) and pd.notna(total_nonwip_hours):
+            denom = float(completed_hours) + float(total_nonwip_hours)
+            pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
         if team_src.wip_workers_from == "NS_metrics":
             wip_source_df = metrics_df
         else:
