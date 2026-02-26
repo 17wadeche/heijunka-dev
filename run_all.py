@@ -26,6 +26,7 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-02-16"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-02-23"],
     [PYTHON_BIN, "Scrape_wip_ns.py"],
+    [PYTHON_BIN, "build_ns_non_wip_activities.py"],
 ]
 def run(cmd, *, cwd=None):
     print(f"Running: {' '.join(cmd)}")
