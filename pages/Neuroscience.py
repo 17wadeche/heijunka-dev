@@ -1607,11 +1607,33 @@ kpi(
 )
 st.markdown("---")
 if has_dates and min_date and max_date:
+    if "start_date" not in st.session_state or st.session_state["start_date"] is None:
+        st.session_state["start_date"] = min_date
+    if "end_date" not in st.session_state or st.session_state["end_date"] is None:
+        st.session_state["end_date"] = max_date
+    def _to_date(x):
+        try:
+            return pd.to_datetime(x).date()
+        except Exception:
+            return None
+    s = _to_date(st.session_state.get("start_date"))
+    e = _to_date(st.session_state.get("end_date"))
+    if s is None: s = min_date
+    if e is None: e = max_date
+    if s < min_date: s = min_date
+    if s > max_date: s = max_date
+    if e < min_date: e = min_date
+    if e > max_date: e = max_date
+    if s > e:
+        s, e = min_date, max_date
+    st.session_state["start_date"] = s
+    st.session_state["end_date"] = e
     st.markdown("#### Date Range")
     date_col1, date_col2 = st.columns(2)
     with date_col1:
         st.date_input(
             "Start",
+            value=st.session_state["start_date"],   # <-- explicit value
             min_value=min_date,
             max_value=max_date,
             key="start_date",
@@ -1619,6 +1641,7 @@ if has_dates and min_date and max_date:
     with date_col2:
         st.date_input(
             "End",
+            value=st.session_state["end_date"],     # <-- explicit value
             min_value=min_date,
             max_value=max_date,
             key="end_date",
