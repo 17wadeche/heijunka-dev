@@ -9,7 +9,9 @@ SHEET_NAME = "Open Complaint Timeliness"
 METRIC_NAME = "Open Complaint Timeliness"
 TEAM_COLUMN_NAME = "Product Group"
 TEAM_MAP = {
-    "Coronary":"CRDN"
+    "Coronary":"CRDN",
+    "Infusion":"TDD",
+    "Pain Stim": "SCS"
 }
 MONTHREL_ALLOWED = {0, -1}
 OUT_DIR = r"C:\Users\wadec8\OneDrive - Medtronic PLC"
