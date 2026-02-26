@@ -1377,14 +1377,46 @@ def build_person_station_outputs_over_time(df: pd.DataFrame, team_name: str, per
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
+    import json
     def _first_col(cands):
         for c in cands:
             if c in df.columns:
                 return c
         return None
-    col_uplh_pers   = _first_col(["UPLH by Cell/Station - by person"])  # nested {station:{person:{actual,target}}}
-    col_out_pers    = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])  # {station:{person:{output,target}}}
-    col_hrs_pers    = _first_col(["Hours by Cell/Station - by person"])  # {station:{person:{actual,target}}}
+    def _norm(s: str) -> str:
+        return " ".join(str(s or "").strip().split()).lower()
+    def _parse_json_cell(value):
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return {}
+        if isinstance(value, (dict, list)):
+            return value
+        try:
+            return json.loads(value)
+        except Exception:
+            return {}
+    def _find_person_key(per_map: dict, person: str) -> str | None:
+        if not isinstance(per_map, dict):
+            return None
+        want = _norm(person)
+        for k in per_map.keys():
+            if _norm(k) == want:
+                return k
+        return None
+    def _get_number_or_dict_field(v, *keys):
+        if isinstance(v, dict):
+            for k in keys:
+                if k in v:
+                    return v.get(k)
+            return None
+        return v
+    def _as_float(x):
+        try:
+            return float(x)
+        except Exception:
+            return np.nan
+    col_uplh_pers = _first_col(["UPLH by Cell/Station - by person"])
+    col_out_pers  = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])
+    col_hrs_pers  = _first_col(["Hours by Cell/Station - by person"])
     d = df.loc[df["team"] == team_name].copy()
     if d.empty:
         return pd.DataFrame()
@@ -1394,61 +1426,61 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
         wk = r.get("period_date", pd.NaT)
         if pd.isna(wk):
             continue
-        def _parse_json_cell(value):
-            if pd.isna(value):
-                return {}
-            if isinstance(value, (dict, list)):
-                return value
-            try:
-                return json.loads(value)
-            except Exception:
-                return {}
-        uplh_blob  = _parse_json_cell(r.get(col_uplh_pers))  if col_uplh_pers else {}
-        out_blob   = _parse_json_cell(r.get(col_out_pers))   if col_out_pers  else {}
-        hrs_blob   = _parse_json_cell(r.get(col_hrs_pers))   if col_hrs_pers  else {}
+        uplh_blob = _parse_json_cell(r.get(col_uplh_pers)) if col_uplh_pers else {}
+        out_blob  = _parse_json_cell(r.get(col_out_pers))  if col_out_pers  else {}
+        hrs_blob  = _parse_json_cell(r.get(col_hrs_pers))  if col_hrs_pers  else {}
         stations = set()
         for blob in (uplh_blob, out_blob, hrs_blob):
             if isinstance(blob, dict):
                 stations.update(blob.keys())
         for stn in sorted(stations):
-            stn_key = str(stn)
-            actual_uplh = target_uplh = np.nan
+            stn_key = str(stn).strip()
             actual_out = target_out = np.nan
             actual_hrs = target_hrs = np.nan
-            if isinstance(uplh_blob.get(stn), dict):
-                per_map = uplh_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_uplh = pd.to_numeric(rec.get("actual"), errors="coerce")
-                    target_uplh = pd.to_numeric(rec.get("target"), errors="coerce")
-            if isinstance(out_blob.get(stn), dict):
-                per_map = out_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_out = pd.to_numeric(rec.get("output"), errors="coerce")
-                    target_out = pd.to_numeric(rec.get("target"), errors="coerce")
-            if isinstance(hrs_blob.get(stn), dict):
-                per_map = hrs_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_hrs = pd.to_numeric(rec.get("actual"), errors="coerce")
-                    target_hrs = pd.to_numeric(rec.get("target"), errors="coerce")
+            actual_uplh = target_uplh = np.nan
+            if isinstance(uplh_blob, dict) and isinstance(uplh_blob.get(stn), dict):
+                per_map = uplh_blob.get(stn) or {}
+                k = _find_person_key(per_map, person_name)
+                if k is not None:
+                    v = per_map.get(k)
+                    if isinstance(v, dict):
+                        actual_uplh = _as_float(v.get("actual", v.get("output", v.get("Actual"))))
+                        target_uplh = _as_float(v.get("target", v.get("Target")))
+                    else:
+                        actual_uplh = _as_float(v)
+            if isinstance(out_blob, dict) and isinstance(out_blob.get(stn), dict):
+                per_map = out_blob.get(stn) or {}
+                k = _find_person_key(per_map, person_name)
+                if k is not None:
+                    v = per_map.get(k)
+                    if isinstance(v, dict):
+                        actual_out = _as_float(v.get("output", v.get("actual", v.get("Actual"))))
+                        target_out = _as_float(v.get("target", v.get("Target")))
+                    else:
+                        actual_out = _as_float(v)   # numeric output
+                        target_out = np.nan         # usually not present
+            if isinstance(hrs_blob, dict) and isinstance(hrs_blob.get(stn), dict):
+                per_map = hrs_blob.get(stn) or {}
+                k = _find_person_key(per_map, person_name)
+                if k is not None:
+                    v = per_map.get(k)
+                    if isinstance(v, dict):
+                        actual_hrs = _as_float(v.get("actual", v.get("hours", v.get("Actual"))))
+                        target_hrs = _as_float(v.get("available", v.get("target", v.get("Target"))))
+                    else:
+                        actual_hrs = _as_float(v)   # numeric hours
+                        target_hrs = np.nan
             if pd.isna(actual_uplh):
                 if pd.notna(actual_out) and pd.notna(actual_hrs) and actual_hrs not in (0, 0.0):
                     actual_uplh = actual_out / actual_hrs
             if pd.isna(target_uplh):
                 if pd.notna(target_out) and pd.notna(target_hrs) and target_hrs not in (0, 0.0):
                     target_uplh = target_out / target_hrs
-            if (pd.isna(actual_out) or actual_out == 0) and (pd.isna(actual_hrs) or actual_hrs == 0) and pd.isna(actual_uplh):
+            if (
+                (pd.isna(actual_out) or actual_out == 0)
+                and (pd.isna(actual_hrs) or actual_hrs == 0)
+                and pd.isna(actual_uplh)
+            ):
                 continue
             delta = np.nan
             if pd.notna(actual_uplh) and pd.notna(target_uplh):
@@ -1472,8 +1504,7 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
     num_cols = ["Actual", "Target", "Actual Hours", "Target Hours", "Actual UPLH", "Target UPLH", "Delta"]
     for c in num_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
-    out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
-    return out
+    return out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
