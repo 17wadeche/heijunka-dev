@@ -14,6 +14,7 @@ BAD_NAMES = {
     "none", "None", "tm", "TM", "Totals", "TOTALS",
     "Team Hours Available", "TEAM HOURS AVAILABLE",
     "Mazor Hours Available", "MAZOR HOURS AVAILABLE",
+    "Team 1 Hours Available", "Team Member"
 }
 def norm_name(x) -> str:
     return " ".join(str(x or "").strip().split())
@@ -155,11 +156,12 @@ def _is_real_year(dt: pd.Timestamp, min_year: int = 2000) -> bool:
     except Exception:
         return False
 def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
-    s = str(sheet_name)
-    if not s.lower().startswith("capacity mgmt"):
+    s = str(sheet_name).strip()
+    s_lower = s.lower()
+    if "capacity mgmt" not in s_lower:
         return None
     try:
-        b1 = ws.iat[0, 1]  # row 1 col B (0-indexed)
+        b1 = ws.iat[0, 1]  # B1
         dt = pd.to_datetime(b1, errors="coerce")
         if _is_real_year(dt):
             return dt.normalize()
@@ -360,6 +362,19 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         activity_start_col_letter="C",
         activity_end_col_letter="Y",
     )
+def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return build_capacity_fixed_row(
+        team, ws,
+        people_start_row=1, people_end_row=5,        # A2..A6
+        expected_col_letter="B",
+        ooo_col_letter="AC",
+        deduct_cell="B7",
+        ooo_sum_start_row=1, ooo_sum_end_row=5,      # AC2:AC6
+        total_ooo_end_row=5,                         # Total uses AC2:AC6
+        activity_header_row=1,                       # row 2
+        activity_start_col_letter="C",
+        activity_end_col_letter="AB",
+    )
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "DBS": TeamSource(
         team="DBS",
@@ -426,6 +441,14 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Caesarea Team\CAE - Heijunka_v2.xlsm"),
         week_from_sheet=week_from_mnav_capacity_tab,
         custom_builder=build_mazor_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "CSF": TeamSource(
+        team="CSF",
+        xlsx=Path(r"c:\Users\wadec8\Medtronic PLC\CQ CSF Management - Documents\CSF_Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_csf_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
