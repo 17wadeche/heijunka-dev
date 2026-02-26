@@ -65,6 +65,8 @@ def read_people_block(ws: pd.DataFrame) -> list[dict]:
             continue
         b = safe_float(ws.iat[i, 1] if 1 < ws.shape[1] else np.nan)  # col B
         c = safe_float(ws.iat[i, 2] if 2 < ws.shape[1] else np.nan)  # col C
+        if pd.isna(b): b = 0.0
+        if pd.isna(c): c = 0.0
         rows.append({"row_i": i, "name": name, "B": b, "C": c})
     return rows
 def extract_totals(ws: pd.DataFrame) -> tuple[float, float]:
