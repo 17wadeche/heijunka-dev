@@ -32,6 +32,18 @@ TEAM_SOURCES = {
             "min_cols": 3,
         },
     },
+    "PH": {
+        "xlsx": Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\Non-D2D WIP Tracker.xlsx"),
+        "layout": {
+            "people_start_row": 2,      # A3
+            "totals_row": 16,           # row 26
+            "activity_header_row": 1,   # row 2
+            "activity_start_col": 3,    # D
+            "activity_end_col": 34,     # AI
+            "min_rows": 17,
+            "min_cols": 3,
+        },
+    },
 }
 BAD_NAMES = {
     "", "-", "–", "—", "nan", "NaN", "NAN",
