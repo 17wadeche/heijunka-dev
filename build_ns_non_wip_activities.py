@@ -45,6 +45,9 @@ def safe_float(x) -> float:
         return float(m.group(0))
     except Exception:
         return np.nan
+def safe_float0(x) -> float:
+    v = safe_float(x)
+    return 0.0 if pd.isna(v) else float(v)
 def load_csv(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     df.columns = [" ".join(str(c).split()) for c in df.columns]
@@ -195,10 +198,8 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
             continue
         if not is_real_person(name):
             continue
-
         b = safe_float(ws.iat[i, COL_B] if ws.shape[1] > COL_B else np.nan)
         ooo = safe_float(ws.iat[i, ooo_col] if ws.shape[1] > ooo_col else np.nan)
-
         if pd.isna(b): b = 0.0
         if pd.isna(ooo): ooo = 0.0
         people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
@@ -282,15 +283,17 @@ def build_capacity_fixed_row(
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = 0.0
     for r in range(ooo_sum_start_row, ooo_sum_end_row + 1):
-        ooo_hours += safe_float(ws.iat[r, col_ooo] if ws.shape[1] > col_ooo and ws.shape[0] > r else 0.0) or 0.0
+        val = ws.iat[r, col_ooo] if (ws.shape[0] > r and ws.shape[1] > col_ooo) else 0.0
+        ooo_hours += safe_float0(val)
     ooo_hours = float(round(ooo_hours, 2))
     deduct_val = safe_float(ws.iat[deduct_row, deduct_col] if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0)
     if pd.isna(deduct_val):
         deduct_val = 0.0
     total_ooo = 0.0
     for r in range(ooo_sum_start_row, total_ooo_end_row + 1):
-        total_ooo += safe_float(ws.iat[r, col_ooo] if ws.shape[1] > col_ooo and ws.shape[0] > r else 0.0) or 0.0
-    total_ooo = float(total_ooo)
+        val = ws.iat[r, col_ooo] if (ws.shape[0] > r and ws.shape[1] > col_ooo) else 0.0
+        total_ooo += safe_float0(val)
+    total_ooo = float(round(total_ooo, 2))
     total_nonwip_hours = float(round((people_count * 40.0) - float(deduct_val) - float(total_ooo), 2))
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
@@ -491,7 +494,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         wip_match = wip_source_df[(wip_source_df.get("team") == team_src.team) & (wip_source_df["period_date"] == week)]
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
-        wip_workers_ooo_hours = float(round(sum(float(ooo_map.get(n, 0.0) or 0.0) for n in wip_workers), 2))
+        wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
         out_rows.append({
             "team": team_src.team,
             "period_date": week.date().isoformat(),
