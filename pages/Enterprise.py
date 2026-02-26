@@ -468,17 +468,14 @@ def _weekly_rollup_summary(
     n[nwc["date"]] = _safe_to_datetime(n, nwc["date"])
     n = n.dropna(subset=[nwc["date"]])
     n["week_start"] = _weekly_start(n[nwc["date"]])
-
     if nwc["people_count"] and nwc["people_count"] in n.columns:
         n["people_count"] = _to_num(n[nwc["people_count"]]).fillna(0.0)
     else:
         n["people_count"] = 0.0
-
     if nwc["total_nonwip"] and nwc["total_nonwip"] in n.columns:
         n["nonwip_total"] = _to_num(n[nwc["total_nonwip"]]).fillna(0.0)
     else:
         n["nonwip_total"] = 0.0
-
     if nwc["ooohours"] and nwc["ooohours"] in n.columns:
         n["ooo_total"] = _to_num(n[nwc["ooohours"]]).fillna(0.0)
     else:
