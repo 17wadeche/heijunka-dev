@@ -399,6 +399,10 @@ def _get_metrics_df() -> Optional[pd.DataFrame]:
             return d
     return None
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
+    if "ns_non_wip_activities" in data:
+        d = filter_by_team(data["ns_non_wip_activities"])
+        if not d.empty:
+            return d
     if "non_wip" in data:
         d = filter_by_team(data["non_wip"])
         if not d.empty:
@@ -674,6 +678,10 @@ with tabs[1]:
         st.stop()
     st.markdown("### Non-WIP activities")
     source_raw = None
+    if "ns_non_wip_activities" in data:
+        cand = filter_by_team(data["ns_non_wip_activities"])
+        if not cand.empty:
+            source_raw = cand
     if "non_wip" in data:
         cand = filter_by_team(data["non_wip"])
         if not cand.empty:
