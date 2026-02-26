@@ -105,7 +105,7 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
     et_label = "Enabling Technologies"
     rollups = [
         ({"DBS C13", "DBS C14"}, "DBS"),
-        ({"MEIC PH", "PH"}, "PH"),
+        ({"MEIC PH", "PH", "PH Cell 17"}, "PH"),
         ({"SCS Cell 1", "SCS Super Cell"}, "SCS"),
         (et_combine_teams, et_label),
     ]
@@ -1963,6 +1963,7 @@ def main():
     pss_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"
     ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
+    ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 Heijunka.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -2075,6 +2076,38 @@ def main():
             "person_actual_row_for_person_hours": 50,
             "person_available_row_for_person_hours": 59,
             "person_name_row_for_outputs_by_person": 53,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
+    PH_CELL17_CFG = {
+        "team": "PH Cell 17",
+        "person_cols": ("B", "J"),
+        "cells": {
+            # Totals
+            "total_available_hours": "L59",  # Total Available Hours
+            "completed_hours": "L50",        # Completed Hours
+            "wp1_output": "R2",
+            "wp1_target": "R7",
+            "wp2_output": "T2",
+            "wp2_target": "T7",
+            "uplh_wp1": "R5",
+            "uplh_wp2": "T5",
+            "wp1_hours": "R4",
+            "wp2_hours": "T4",
+        },
+        "rows": {
+            "hc_row": 25,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 59,
+            "person_name_row_for_outputs_by_person": 10,
             "person_target_row_for_outputs_by_person": 25,
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 35, 39, 43, 47],
@@ -2228,6 +2261,7 @@ def main():
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
     extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
+    extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
     extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
