@@ -421,6 +421,10 @@ def _get_metrics_df() -> Optional[pd.DataFrame]:
         d = filter_by_team(data["metrics_aggregate_dev"])
         if not d.empty:
             return d
+    if "NS_WIP" in data:
+        d = filter_by_team(data["NS_WIP"])
+        if not d.empty:
+            return d
     return None
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
     if "ns_non_wip_activities" in data:
