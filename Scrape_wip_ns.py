@@ -62,9 +62,13 @@ def parse_sheet_date_requires_year(sheet_name: str) -> str:
     raw = (sheet_name or "").strip()
     if not re.search(r"\b\d{4}\b", raw):
         return ""
+    raw = raw.replace("\u00a0", " ")
+    raw = re.sub(r"\s+", " ", raw).strip()
     fmts = [
         "%b %d, %Y",   # Jun 02, 2025
         "%B %d, %Y",   # June 02, 2025
+        "%b %d,%Y",    # Jun 02,2025
+        "%B %d,%Y",    # June 02,2025
         "%b %d %Y",    # Jun 02 2025
         "%B %d %Y",    # June 02 2025
         "%Y-%m-%d",    # 2025-06-02
@@ -72,10 +76,9 @@ def parse_sheet_date_requires_year(sheet_name: str) -> str:
     ]
     for fmt in fmts:
         try:
-            dt = datetime.strptime(raw, fmt).date()
-            return dt.isoformat()
+            return datetime.strptime(raw, fmt).date().isoformat()
         except ValueError:
-            pass
+            continue
     return ""
 def _sum_nested_person_map(dst: dict, src: dict, keys=("actual", "available")) -> None:
     for name, rec in (src or {}).items():
@@ -525,6 +528,11 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
         team = cfg["team"]
         key = (team, period_date)
+        period_date = date_parser(ws.title)
+        if not period_date:
+            if safe_str(cfg.get("team")) == "PH Cell 17":
+                print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
+            continue
         open_complaint_timeliness = ""
         closures = ""
         opened = ""
@@ -540,10 +548,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
             errs.append(timeliness_err)
         if closures_err:
             errs.append(closures_err)
-        if not trow and not timeliness_err:
-            errs.append(f"No timeliness match for {team} {period_date}")
-        if not crow and not closures_err:
-            errs.append(f"No closures match for {team} {period_date}")
         rows_out.append(
             {
                 "team": team,
