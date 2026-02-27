@@ -318,9 +318,14 @@ def section_date_range(
     min_d = mn.date()
     max_d = mx.date()
     today_d = datetime.date.today()
-    anchor_end = min(max(today_d, min_d), max_d)
     max_selectable = min(max_d, today_d)
-    anchor_end = max(min_d, max_selectable)
+    if max_selectable < min_d:
+        max_selectable = min_d
+        st.warning(
+            f"{label}: all available data starts after today ({min_d}). "
+            "Date range has been clamped to the first available date."
+        )
+    anchor_end = max_selectable
     presets = [
         "Custom",
         "Past week",
@@ -359,6 +364,23 @@ def section_date_range(
         st.session_state[dates_key] = (start_default, end_default)
         st.session_state[last_preset_key] = preset
         st.rerun()
+    if dates_key in st.session_state:
+        v = st.session_state[dates_key]
+        if isinstance(v, tuple) and len(v) == 2:
+            s, e = v
+            if hasattr(s, "date"):
+                s = s.date()
+            if hasattr(e, "date"):
+                e = e.date()
+            s = min(max(s, min_d), max_selectable)
+            e = min(max(e, min_d), max_selectable)
+            if e < s:
+                e = s
+            st.session_state[dates_key] = (s, e)
+        else:
+            d = v.date() if hasattr(v, "date") else v
+            d = min(max(d, min_d), max_selectable)
+            st.session_state[dates_key] = d
     dr = st.date_input(
         label,
         min_value=min_d,
