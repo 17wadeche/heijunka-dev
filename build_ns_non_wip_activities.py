@@ -182,6 +182,74 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
             if _is_real_year(dt):
                 return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
     return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
+def week_from_nv_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
+    s = str(sheet_name).strip()
+    m = re.fullmatch(r"(\d{2})([A-Za-z]{3})(\d{4})", s)
+    if m:
+        dt = pd.to_datetime(s, format="%d%b%Y", errors="coerce")
+        if pd.notna(dt):
+            return dt.normalize()
+    dt = pd.to_datetime(s, errors="coerce")
+    if pd.notna(dt):
+        return dt.normalize()
+    return None
+def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    PEOPLE_START = 1   # A2 (0-indexed)
+    PEOPLE_END   = 12  # A13
+    COL_EXPECTED = _col_letter_to_idx("B")   # expected WIP hrs
+    COL_OOO      = _col_letter_to_idx("W")   # OOO hours
+    COL_NONWIP   = _col_letter_to_idx("X")   # total non-d2d hours per person
+    DEDUCT_CELL  = "B19"
+    ACT_HEADER_ROW = 1  # row 2 (0-indexed)
+    ACT_START_COL  = _col_letter_to_idx("C")
+    ACT_END_COL    = _col_letter_to_idx("V")
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)", DEDUCT_CELL.strip())
+    deduct_col = _col_letter_to_idx(m.group(1))
+    deduct_row = int(m.group(2)) - 1
+    people_rows: List[dict] = []
+    for i in range(PEOPLE_START, PEOPLE_END + 1):
+        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+        if not name:
+            continue
+        if not is_real_person(name):
+            continue
+        expected = safe_float0(ws.iat[i, COL_EXPECTED] if ws.shape[1] > COL_EXPECTED else 0.0)
+        ooo      = safe_float0(ws.iat[i, COL_OOO]      if ws.shape[1] > COL_OOO      else 0.0)
+        nonwip   = safe_float0(ws.iat[i, COL_NONWIP]   if ws.shape[1] > COL_NONWIP   else 0.0)
+        people_rows.append(
+            {"row_i": i, "name": name, "B": float(expected), "OOO": float(ooo), "NONWIP": float(nonwip)}
+        )
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    deduct_val = safe_float0(ws.iat[deduct_row, deduct_col] if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0)
+    total_nonwip_hours = float(round((people_count * 40.0) - float(deduct_val) - float(ooo_hours), 2))
+    nonwip_by_person: Dict[str, float] = {}
+    for r in people_rows:
+        v = float(round(r["NONWIP"], 2))
+        if v != 0.0:
+            nonwip_by_person[r["name"]] = v
+    activities: List[dict] = []
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        for c in range(ACT_START_COL, min(ACT_END_COL, ws.shape[1] - 1) + 1):
+            label = norm_name(ws.iat[ACT_HEADER_ROW, c] if ws.shape[0] > ACT_HEADER_ROW and ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            activities.append({"name": name, "activity": label, "hours": float(round(float(hrs), 2))})
+
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},  # for WIP Workers OOO sum
+    }
 def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
     PEOPLE_END = 18
@@ -412,6 +480,14 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         wip_workers_from="NS_WIP",
         completed_hours_from="NS_WIP",
     ),
+    "NV": TeamSource(
+        team="NV",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\RTG Customer Quality Neurovascular - Documents\Cell\NV_Heijunka.xlsm"),
+        week_from_sheet=week_from_nv_tab,
+        custom_builder=build_nv_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
     "Nav": TeamSource(
         team="Nav",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Navigation Work Reports\Heijunka_MNAV_Ranges_May2025.xlsm"),
@@ -458,7 +534,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
         return pd.DataFrame()
-    sheets = pd.read_excel(xlsx_path, sheet_name=None, header=None)
+    sheets = pd.read_excel(xlsx_path, sheet_name=None, header=None, engine="openpyxl")
     out_rows: List[dict] = []
     for sheet_name, ws in sheets.items():
         if team_src.week_from_sheet is None:

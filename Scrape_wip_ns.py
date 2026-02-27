@@ -2257,7 +2257,7 @@ def main():
         "team": "PH Cell 17",
         "person_cols": ("B", "J"),
         "date_parser": parse_sheet_date_requires_year,
-        "min_period_date": "2025-06-02",
+        "min_period_date": "2025-09-01",
         "cells": {
             "total_available_hours": "L59",
             "completed_hours": "L50",
