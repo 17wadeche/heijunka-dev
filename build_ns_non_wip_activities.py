@@ -305,6 +305,103 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
+ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
+ENABLE_TEAM_NAME = "Enabling Technologies"
+def _parse_json_dict(cell) -> dict:
+    if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+        return {}
+    if isinstance(cell, dict):
+        return cell
+    s = str(cell).strip()
+    if not s:
+        return {}
+    try:
+        obj = json.loads(s)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+def _parse_json_list(cell) -> list:
+    if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+        return []
+    if isinstance(cell, list):
+        return cell
+    s = str(cell).strip()
+    if not s:
+        return []
+    try:
+        obj = json.loads(s)
+        return obj if isinstance(obj, list) else []
+    except Exception:
+        return []
+def _parse_json_str_list(cell) -> list:
+    lst = _parse_json_list(cell)
+    out = []
+    for x in lst:
+        n = norm_name(x)
+        if n:
+            out.append(n)
+    return out
+def _merge_person_hours_dicts(dict_cells: List) -> dict:
+    merged: Dict[str, float] = {}
+    for cell in dict_cells:
+        d = _parse_json_dict(cell)
+        for k, v in d.items():
+            name = norm_name(k)
+            if not name:
+                continue
+            hrs = safe_float0(v)
+            merged[name] = float(round(merged.get(name, 0.0) + hrs, 2))
+    merged = {k: v for k, v in merged.items() if v != 0.0}
+    return merged
+def _merge_activities_lists(list_cells: List) -> list:
+    merged = []
+    for cell in list_cells:
+        merged.extend(_parse_json_list(cell))
+    return merged
+def _merge_workers_union(list_cells: List) -> list:
+    s = set()
+    for cell in list_cells:
+        for name in _parse_json_str_list(cell):
+            if is_real_person(name):
+                s.add(name)
+    return sorted(s)
+def combine_enabling_technologies(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "team" not in df.columns or "period_date" not in df.columns:
+        return df
+    df = df.copy()
+    df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    subset = df[df["team"].isin(ENABLE_TEAMS)].copy()
+    rest = df[~df["team"].isin(ENABLE_TEAMS)].copy()
+    if subset.empty:
+        if "source_file" in rest.columns:
+            rest = rest.drop(columns=["source_file"])
+        return rest
+    out_rows = []
+    for period_date, g in subset.groupby("period_date", dropna=False):
+        nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
+        nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
+        wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+        out_rows.append({
+            "team": ENABLE_TEAM_NAME,
+            "period_date": period_date,
+            "people_count": int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+            "total_non_wip_hours": float(pd.to_numeric(g.get("total_non_wip_hours"), errors="coerce").fillna(0).sum()),
+            "OOO Hours": float(pd.to_numeric(g.get("OOO Hours"), errors="coerce").fillna(0).sum()),
+            "% in WIP": float(pd.to_numeric(g.get("% in WIP"), errors="coerce").mean()),
+            "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
+            "non_wip_activities": json.dumps(nonwip_activities, ensure_ascii=False),
+            "wip_workers": json.dumps(wip_workers_union, ensure_ascii=False),
+            "wip_workers_count": int(pd.to_numeric(g.get("wip_workers_count"), errors="coerce").fillna(0).sum()),
+            "wip_workers_ooo_hours": float(pd.to_numeric(g.get("wip_workers_ooo_hours"), errors="coerce").fillna(0).sum()),
+        })
+    enabling_df = pd.DataFrame(out_rows)
+    for dfx in (rest, enabling_df):
+        if "source_file" in dfx.columns:
+            dfx.drop(columns=["source_file"], inplace=True)
+    combined = pd.concat([rest, enabling_df], ignore_index=True)
+    combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+    combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return combined
 def _col_letter_to_idx(letter: str) -> int:
     s = str(letter).strip().upper()
     n = 0
@@ -634,6 +731,7 @@ def main():
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     else:
         combined = new_df
+    combined = combine_enabling_technologies(combined)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
 if __name__ == "__main__":
