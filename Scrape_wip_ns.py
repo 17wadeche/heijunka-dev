@@ -58,6 +58,25 @@ def json_load_safe(s: Any) -> dict:
         return json.loads(txt)
     except Exception:
         return {}
+def parse_sheet_date_requires_year(sheet_name: str) -> str:
+    raw = (sheet_name or "").strip()
+    if not re.search(r"\b\d{4}\b", raw):
+        return ""
+    fmts = [
+        "%b %d, %Y",   # Jun 02, 2025
+        "%B %d, %Y",   # June 02, 2025
+        "%b %d %Y",    # Jun 02 2025
+        "%B %d %Y",    # June 02 2025
+        "%Y-%m-%d",    # 2025-06-02
+        "%m/%d/%Y",    # 06/02/2025
+    ]
+    for fmt in fmts:
+        try:
+            dt = datetime.strptime(raw, fmt).date()
+            return dt.isoformat()
+        except ValueError:
+            pass
+    return ""
 def _sum_nested_person_map(dst: dict, src: dict, keys=("actual", "available")) -> None:
     for name, rec in (src or {}).items():
         if not isinstance(rec, dict):
@@ -394,6 +413,12 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
         if not period_date:
+            continue
+        min_pd = safe_str(cfg.get("min_period_date"))
+        if min_pd and period_date < min_pd:
+            continue
+        max_pd = safe_str(cfg.get("max_period_date"))
+        if max_pd and period_date > max_pd:
             continue
         taa_spec = cfg["cells"]["total_available_hours"]
         if isinstance(taa_spec, str):
@@ -2089,10 +2114,11 @@ def main():
     PH_CELL17_CFG = {
         "team": "PH Cell 17",
         "person_cols": ("B", "J"),
+        "date_parser": parse_sheet_date_requires_year,
+        "min_period_date": "2025-06-02",
         "cells": {
-            # Totals
-            "total_available_hours": "L59",  # Total Available Hours
-            "completed_hours": "L50",        # Completed Hours
+            "total_available_hours": "L59",
+            "completed_hours": "L50",
             "wp1_output": "R2",
             "wp1_target": "R7",
             "wp2_output": "T2",
