@@ -319,6 +319,8 @@ def section_date_range(
     max_d = mx.date()
     today_d = datetime.date.today()
     anchor_end = min(max(today_d, min_d), max_d)
+    max_selectable = min(max_d, today_d)
+    anchor_end = max(min_d, max_selectable)
     presets = [
         "Custom",
         "Past week",
@@ -351,7 +353,7 @@ def section_date_range(
         end_default = anchor_end
     else:
         start_default = min_d
-        end_default = max_d
+        end_default = anchor_end
     prev = st.session_state.get(last_preset_key)
     if prev != preset:
         st.session_state[dates_key] = (start_default, end_default)
@@ -360,7 +362,7 @@ def section_date_range(
     dr = st.date_input(
         label,
         min_value=min_d,
-        max_value=max_d,
+        max_value=max_selectable,
         key=dates_key,
         help="Filters only this section.",
     )
