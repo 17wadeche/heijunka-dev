@@ -856,3 +856,10 @@
 2026-02-27 09:55:43,367 | INFO | [POST] timeliness placeholders appended=338 -> timeliness.csv
 2026-02-27 09:55:43,590 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 286 rows
 2026-02-27 09:55:43,592 | INFO | === NS Metrics Run END ===
+2026-02-27 10:04:31,817 | INFO | === NS Metrics Run START ===
+2026-02-27 10:04:31,817 | INFO | Selected team: all
+2026-02-27 10:04:31,820 | INFO | [PH] START
+2026-02-27 10:04:52,992 | INFO | [PH] DONE | rows=350 | elapsed=0:00:21.172257
+2026-02-27 10:04:52,993 | INFO | [PH Cell 17] START
+2026-02-27 10:05:11,404 | INFO | [PH Cell 17] DONE | rows=33 | elapsed=0:00:18.409646
+2026-02-27 10:05:11,404 | INFO | [SCS Cell 1] START
