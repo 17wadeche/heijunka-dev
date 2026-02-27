@@ -416,6 +416,8 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
         if not period_date:
+            if cfg.get("team") == "PH Cell 17":
+                print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
             continue
         min_pd = safe_str(cfg.get("min_period_date"))
         if min_pd and period_date < min_pd:
@@ -529,10 +531,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         team = cfg["team"]
         key = (team, period_date)
         period_date = date_parser(ws.title)
-        if not period_date:
-            if safe_str(cfg.get("team")) == "PH Cell 17":
-                print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
-            continue
         open_complaint_timeliness = ""
         closures = ""
         opened = ""
@@ -1791,6 +1789,144 @@ def get_ent_total_available_for_week(
     except Exception:
         pass
     return total, per_person, f"ENT mapping cache miss; read mapping and cached in {os.path.basename(cache_file)}"
+def scrape_csv_team_fixed_availability(
+    csv_path: str,
+    team: str,
+    hours_per_person: float = 20.0,
+) -> list[dict]:
+    if not os.path.exists(csv_path):
+        return [{
+            "team": team,
+            "period_date": "",
+            "source_file": csv_path,
+            "Total Available Hours": "",
+            "Completed Hours": "",
+            "Target Output": "",
+            "Actual Output": "",
+            "Target UPLH": "",
+            "Actual UPLH": "",
+            "UPLH WP1": "",
+            "UPLH WP2": "",
+            "HC in WIP": "",
+            "Actual HC Used": "",
+            "People in WIP": "",
+            "Person Hours": "",
+            "Outputs by Person": "",
+            "Outputs by Cell/Station": "",
+            "Cell/Station Hours": "",
+            "Hours by Cell/Station - by person": "",
+            "Output by Cell/Station - by person": "",
+            "UPLH by Cell/Station - by person": "",
+            "Open Complaint Timeliness": "",
+            "error": f"Missing file: {os.path.basename(csv_path)}",
+            "Closures": "",
+            "Opened": "",
+        }]
+    weekly: Dict[str, Dict[str, Any]] = {}
+    with open(csv_path, "r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        _ = next(reader, None)  # header
+        for row in reader:
+            if not row or len(row) < 6:
+                continue
+            name = safe_str(row[0])
+            d_parsed = _parse_any_date_to_date(row[1])
+            if not d_parsed:
+                continue
+            period_date = week_monday_iso(d_parsed)
+            wp1_out = safe_float(row[2])
+            wp2_out = safe_float(row[3])
+            wp1_hrs = safe_float(row[4])
+            wp2_hrs = safe_float(row[5])
+            rec = weekly.setdefault(period_date, {
+                "wp1_out": 0.0, "wp2_out": 0.0,
+                "wp1_hrs": 0.0, "wp2_hrs": 0.0,
+                "by_person": {},  # name -> accumulators
+            })
+            rec["wp1_out"] += wp1_out
+            rec["wp2_out"] += wp2_out
+            rec["wp1_hrs"] += wp1_hrs
+            rec["wp2_hrs"] += wp2_hrs
+            if name:
+                p = rec["by_person"].setdefault(
+                    name, {"wp1_out": 0.0, "wp2_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0}
+                )
+                p["wp1_out"] += wp1_out
+                p["wp2_out"] += wp2_out
+                p["wp1_hrs"] += wp1_hrs
+                p["wp2_hrs"] += wp2_hrs
+    rows_out: list[dict] = []
+    for period_date in sorted(weekly.keys()):
+        agg = weekly[period_date]
+        completed_hours = agg["wp1_hrs"] + agg["wp2_hrs"]
+        actual_output = agg["wp1_out"] + agg["wp2_out"]
+        active_people = []
+        for nm, pdata in (agg["by_person"] or {}).items():
+            if (pdata["wp1_out"] + pdata["wp2_out"]) > 0:
+                active_people.append(nm)
+        hc_in_wip = len(set(active_people))
+        total_available_hours = hc_in_wip * float(hours_per_person)
+        actual_uplh = safe_div(actual_output, completed_hours)
+        uplh_wp1 = safe_div(agg["wp1_out"], agg["wp1_hrs"])
+        uplh_wp2 = safe_div(agg["wp2_out"], agg["wp2_hrs"])
+        actual_hc_used = safe_div(completed_hours, 32.5)
+        person_hours: Dict[str, Dict[str, float]] = {}
+        for nm in set(active_people):
+            pdata = agg["by_person"][nm]
+            actual_person = pdata["wp1_hrs"] + pdata["wp2_hrs"]
+            person_hours[nm] = {"actual": actual_person, "available": float(hours_per_person)}
+        outputs_by_person: Dict[str, Dict[str, float]] = {}
+        for nm in set(active_people):
+            pdata = agg["by_person"][nm]
+            out_person = pdata["wp1_out"] + pdata["wp2_out"]
+            outputs_by_person[nm] = {"output": out_person, "target": 0.0}
+        outputs_by_cell = {
+            "WP1": {"output": agg["wp1_out"], "target": 0.0},
+            "WP2": {"output": agg["wp2_out"], "target": 0.0},
+        }
+        cell_station_hours = {"WP1": agg["wp1_hrs"], "WP2": agg["wp2_hrs"]}
+        hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        for nm in set(active_people):
+            pdata = agg["by_person"][nm]
+            hours_by_cell_by_person["WP1"][nm] = pdata["wp1_hrs"]
+            hours_by_cell_by_person["WP2"][nm] = pdata["wp2_hrs"]
+        output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        for nm in set(active_people):
+            pdata = agg["by_person"][nm]
+            output_by_cell_by_person["WP1"][nm] = pdata["wp1_out"]
+            output_by_cell_by_person["WP2"][nm] = pdata["wp2_out"]
+        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+        for nm in set(active_people):
+            uplh_by_cell_by_person["WP1"][nm] = safe_div(output_by_cell_by_person["WP1"][nm], hours_by_cell_by_person["WP1"][nm])
+            uplh_by_cell_by_person["WP2"][nm] = safe_div(output_by_cell_by_person["WP2"][nm], hours_by_cell_by_person["WP2"][nm])
+        rows_out.append({
+            "team": team,
+            "period_date": period_date,
+            "source_file": os.path.abspath(os.path.expandvars(csv_path)),
+            "Total Available Hours": total_available_hours,
+            "Completed Hours": completed_hours,
+            "Target Output": "",
+            "Actual Output": actual_output,
+            "Target UPLH": "",
+            "Actual UPLH": actual_uplh,
+            "UPLH WP1": uplh_wp1,
+            "UPLH WP2": uplh_wp2,
+            "HC in WIP": hc_in_wip,
+            "Actual HC Used": actual_hc_used,
+            "People in WIP": "",
+            "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+            "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+            "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+            "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+            "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+            "Open Complaint Timeliness": "",
+            "error": "",
+            "Closures": "",
+            "Opened": "",
+        })
+    return rows_out
 def scrape_ent_from_csv(
     ent_csv_path: str,
     mapping_xlsx_path: str,
@@ -1992,6 +2128,8 @@ def main():
     pss_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"
     ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
+    dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
+    scs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\SCS\SCS_Data.csv"
     ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 Heijunka.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
@@ -2330,6 +2468,8 @@ def main():
     extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     extend_team("ENT",   lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
+    extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
+    extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
     cos_rows = run_team(logger, "TDD COS 1", lambda: scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG))
     cutoff_cos = date.fromisoformat("2025-06-02")
     before = len(cos_rows)
@@ -2347,11 +2487,17 @@ def main():
     meic_rows = [r for r in meic_rows if safe_str(r.get("period_date")) >= "2025-09-01"]
     logger.info(f"[MEIC PH] filter >= 2025-09-01: {before} -> {len(meic_rows)}")
     rows.extend(meic_rows)
+    ph17_before = sum(1 for r in rows if r.get("team") == "PH Cell 17")
+    logger.info(f"[PH Cell 17] rows before TAA filter = {ph17_before}")
     before = len(rows)
     rows = [
         r for r in rows
-        if (r.get("team") == "SCS Super Cell") or (safe_float(r.get("Total Available Hours")) != 0.0)
+        if (r.get("team") in ("SCS Super Cell", "PH Cell 17"))
+        or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
+    logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")
+    ph17_after = sum(1 for r in rows if r.get("team") == "PH Cell 17")
+    logger.info(f"[PH Cell 17] rows after TAA filter = {ph17_after}")
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell): {before} -> {len(rows)}")
     for bad in ("2023-11-06", "2026-09-07"):
         before = len(rows)
