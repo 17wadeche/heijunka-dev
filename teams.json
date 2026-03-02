@@ -125,7 +125,7 @@
         }
     },
     "RPA Lab": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka (1)\\GWY RPA Lab WIP+Non-WIP Heijunka  2025.xlsm",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka (1)\\GWY RPA Lab WIP+Non-WIP Heijunka  2025-2026.xlsm",
         "prod_sheet": "GWY RPA Lab Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
