@@ -636,6 +636,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "srcum": "Scrum & Action",
             "rpa meeting": "RPA Meeting/Action",
             "rpa meeting and action": "RPA Meeting/Action",
+            "rpa meeting/action": "RPA Meeting/Action",
             "pmpa questions/update":"PMPA",
             "precedent event/rd conflict": "RD Conflict",
             "Rd Conflict": "RD Conflict",
