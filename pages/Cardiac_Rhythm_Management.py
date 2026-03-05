@@ -1303,27 +1303,6 @@ if has_dates and min_date and max_date:
     end   = st.session_state[END_KEY]
 else:
     start, end = None, None
-if has_dates and min_date and max_date:
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            value=st.session_state[START_KEY],   # explicitly provide value
-            min_value=min_date,
-            max_value=max_date,
-            key=START_KEY,
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            value=st.session_state[END_KEY],     # explicitly provide value
-            min_value=min_date,
-            max_value=max_date,
-            key=END_KEY,
-        )
-else:
-    start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
@@ -1587,16 +1566,18 @@ if has_dates and min_date and max_date:
     with date_col1:
         st.date_input(
             "Start",
+            value=st.session_state[START_KEY],   # explicitly provide value
             min_value=min_date,
             max_value=max_date,
-            key="start_date",
+            key=START_KEY,
         )
     with date_col2:
         st.date_input(
             "End",
+            value=st.session_state[END_KEY],     # explicitly provide value
             min_value=min_date,
             max_value=max_date,
-            key="end_date",
+            key=END_KEY,
         )
 st.markdown("---")
 left, mid, right = st.columns(3)
