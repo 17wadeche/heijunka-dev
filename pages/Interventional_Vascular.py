@@ -433,6 +433,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "Reg Inquirie": "RI",
             "training with natalie": "Training",
             "training w/ natalie": "Training",
+            "independent training": "Training",
             "pmq query":"PMQ Meeting",
             "scrum 30": "Scrum & Action",
             "scum": "Scrum & Action",
