@@ -1261,7 +1261,6 @@ with tabs[1]:
         cat_norm = split_nonwip_activity_minutes(cat)
         cat_norm["week_start"] = wk_val
         normalised_chunks.append(cat_norm)
-
     if normalised_chunks:
         weekly_by_activity = (
             pd.concat(normalised_chunks, ignore_index=True)
