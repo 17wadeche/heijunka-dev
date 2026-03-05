@@ -1273,36 +1273,67 @@ with tabs[1]:
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(avg_weekly_hours=("hours", "mean"))
         .sort_values("avg_weekly_hours", ascending=False)
-        .head(12)
+        .head(15)
     )
-    st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
-    st.caption("Top activities by **average weekly hours** (top 12).")
-    last_week = weekly_by_activity["week_start"].max()
-    last = weekly_by_activity[weekly_by_activity["week_start"] == last_week].copy()
-    last = last.sort_values("hours", ascending=False)
-    st.write(f"Most recent week starting: **{pd.to_datetime(last_week).date()}**")
-    if len(last) > 9:
-        top = last.head(8)
-        other = pd.DataFrame(
-            [
-                {
-                    "week_start": last_week,
-                    "activity": "Other",
-                    "hours": float(last["hours"].iloc[8:].sum()),
-                }
-            ]
+    avg_weekly_sorted = avg_weekly.sort_values("avg_weekly_hours", ascending=True)
+    st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=True)
+    st.caption("Top 15 activities by **average weekly hours** (highest → lowest).")
+    st.divider()
+    st.markdown("#### Activity breakdown — pie chart")
+    pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
+    pie_source_df = filter_by_date_range(source_raw, pie_start, pie_end)
+    if pie_source_df.empty:
+        st.info("No Non-WIP activity data in the selected pie chart date range.")
+        st.stop()
+    pie_dc = _get_date_col(pie_source_df)
+    pie_json_col = None
+    for c in pie_source_df.columns:
+        if _norm(c) in {"non-wip_activities", "non_wip_activities"}:
+            pie_json_col = c
+            break
+    pie_rows: List[Dict[str, Any]] = []
+    if pie_dc and pie_json_col:
+        pie_tmp = pie_source_df.copy()
+        pie_tmp[pie_dc] = _safe_to_datetime(pie_tmp, pie_dc)
+        pie_tmp = pie_tmp.dropna(subset=[pie_dc]).sort_values(pie_dc)
+        for _, r in pie_tmp.iterrows():
+            payload = _loads_json_maybe(r[pie_json_col])
+            if not payload:
+                continue
+            if isinstance(payload, list):
+                for item in payload:
+                    if not isinstance(item, dict):
+                        continue
+                    act = item.get("activity") or item.get("Activity") or item.get("type")
+                    hrs = item.get("hours") or item.get("Hours")
+                    if act is None or hrs is None:
+                        continue
+                    pie_rows.append({"activity": str(act).strip(), "hours": float(hrs) if str(hrs) != "" else 0.0})
+    if pie_rows:
+        pie_act_df = pd.DataFrame(pie_rows)
+        pie_cat = pie_act_df.rename(columns={"activity": "Activity", "hours": "Hours"})
+        pie_cat_norm = split_nonwip_activity_minutes(pie_cat)
+        pie_rolled = pie_cat_norm.rename(columns={"Activity": "activity", "Hours": "hours"})
+        pie_rolled = pie_rolled.groupby("activity", as_index=False).agg(hours=("hours", "sum"))
+        pie_rolled = pie_rolled.sort_values("hours", ascending=False)
+        if len(pie_rolled) > 14:
+            top_pie = pie_rolled.head(14)
+            other_pie = pd.DataFrame([{
+                "activity": "Other",
+                "hours": float(pie_rolled["hours"].iloc[14:].sum()),
+            }])
+            pie_df = pd.concat([top_pie, other_pie], ignore_index=True)
+        else:
+            pie_df = pie_rolled
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.pie(
+            pie_df["hours"],
+            labels=pie_df["activity"],
+            autopct="%1.0f%%",
+            startangle=90,
         )
-        pie_df = pd.concat([top, other], ignore_index=True)
+        ax.axis("equal")
+        st.pyplot(fig)
     else:
-        pie_df = last
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    ax.pie(
-        pie_df["hours"],
-        labels=pie_df["activity"],
-        autopct="%1.0f%%",
-        startangle=90,
-    )
-    ax.axis("equal")
-    st.pyplot(fig)
-    
+        st.info("No parsable activity rows found for the selected pie chart date range.")
