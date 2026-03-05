@@ -197,12 +197,12 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
     PEOPLE_START = 1   # A2 (0-indexed)
     PEOPLE_END   = 12  # A13
     COL_EXPECTED = _col_letter_to_idx("B")   # expected WIP hrs
-    COL_OOO      = _col_letter_to_idx("W")   # OOO hours
-    COL_NONWIP   = _col_letter_to_idx("X")   # total non-d2d hours per person
+    COL_OOO      = _col_letter_to_idx("V")   # OOO hours
+    COL_NONWIP   = _col_letter_to_idx("W")   # total non-d2d hours per person
     DEDUCT_CELL  = "B19"
-    ACT_HEADER_ROW = 1  # row 2 (0-indexed)
+    ACT_HEADER_ROW = 0  # row 2 (0-indexed)
     ACT_START_COL  = _col_letter_to_idx("C")
-    ACT_END_COL    = _col_letter_to_idx("V")
+    ACT_END_COL    = _col_letter_to_idx("U")
     m = re.fullmatch(r"([A-Za-z]+)(\d+)", DEDUCT_CELL.strip())
     deduct_col = _col_letter_to_idx(m.group(1))
     deduct_row = int(m.group(2)) - 1
@@ -240,7 +240,6 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
             if pd.isna(hrs) or hrs <= 0:
                 continue
             activities.append({"name": name, "activity": label, "hours": float(round(float(hrs), 2))})
-
     return {
         "people_rows": people_rows,
         "people_count": people_count,
