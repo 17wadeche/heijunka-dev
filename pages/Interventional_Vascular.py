@@ -416,6 +416,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "rpa action": "RPA Meeting/Action",
             "email": "Email & IM",
             "team lead meeting & action": "Meeting",
+            "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",
         }
         if key in explicit_map:
             return explicit_map[key]
