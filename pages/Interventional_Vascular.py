@@ -457,7 +457,10 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "pmpa questions/update":"PMPA",
             "pmpa request":"PMPA",
             "rpa action": "RPA Meeting/Action",
+            "complex events consult": "Complex Event Consult",
             "email": "Email & IM",
+            "lsh bridge issue":"LSH Bridge",
+            "restore lsh bridge review":"LSH Bridge",
             "team lead meeting & action": "Meeting",
             "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",
         }
