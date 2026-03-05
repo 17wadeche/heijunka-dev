@@ -413,8 +413,6 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         }
         if key in explicit_map:
             return explicit_map[key]
-        if key in {"email", "emails"}:
-            return "Email & IM"
         acronym_tokens = {
             "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
             "ri", "capa",
