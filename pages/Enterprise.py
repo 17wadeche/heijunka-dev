@@ -1,6 +1,7 @@
 # pages/Enterprise.py
 from __future__ import annotations
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -204,6 +205,479 @@ def _loads_json_maybe(v: Any) -> Any:
     return None
 def _workdays_per_week_assumption() -> int:
     return 5
+def _canon_activity(label: str) -> str:
+    s_orig = str(label or "").strip()
+    if not s_orig:
+        return s_orig
+    s = re.sub(r"\s+", " ", s_orig).strip()
+    s = re.sub(r"^[\.\,\;\:\-\–\—\s]+", "", s).strip()
+    s = re.sub(r"[:\-\–\—]\s*\d+\s*$", "", s).strip()
+    if not s:
+        return s
+    lower = s.lower()
+    explicit_map = {
+        "email etc.": "Email & IM",
+        "emails etc.": "Email & IM",
+        "emails misc": "Email & IM",
+        "capa": "CAPA",
+        "em/etc": "Em Etc",
+        "capa meeting": "CAPA",
+        "scrum/checkin": "Scrum",
+        "capa call": "CAPA",
+        "capa working session": "CAPA",
+        "capa update call": "CAPA",
+        "pmpa weekly meeting": "Pmpa Meeting",
+        "finish scheduling": "Scheduling",
+        "audit checkin": "Audit",
+        "heijunka review/update": "Heijunka",
+        "scrumb": "Scrum",
+        "brian meeting, scrum, collaboration": "Meeting",
+        "training/letter shadowing, locating trainee work, email": "Training",
+        "shadowing": "Training",
+        "response to emails for product analysis, studies and literature processing question": "Email & IM",
+        "reviewing letters, meeting": "Meeting",
+        "responding to emails and team collaboration": "Email & IM",
+        "mtg": "Meeting",
+        "ng, coding, email/admin": "Next Gen",
+        "ng, risk management, meetings, lates/event review, collab, gb, email/admin": "Meeting",
+        "lates/event review, collab, ng, gb, email/admin": "Email & IM",
+        "meetings, collaboration, coding, gb, emails, collab, event review": "Meeting",
+        "scheduling/heijunka update": "Scheduling",
+        "ng, collaboration, coding, meetings, event reviews, emails/admin": "Next Gen",
+        "ng, collaboration, coding, meetings, lates/event reviews, emails/admin": "Meeting",
+        "ng, gb, coding, meetings, event reviews, emails/admin": "Email & IM",
+        "ng, gb, collaboration, meetings, event reviews, emails/admin": "Collaboration",
+        "ng, collaboration, event reviews, emails/admin": "Green Belt",
+        "gb, collaboration, coding, meetings, event reviews, emails/admin": "Event Reviews",
+        "late": "Late Review",
+        "brian meeting": "Meeting",
+        "comm, task , rr practice": "Training",
+        "training review/questions": "Training",
+        "e-mail": "Email & IM",
+        "scrum/checking": "Scrum",
+        "heijunka population": "Heijunka",
+        "clinical task training": "Clinical Task",
+        "training meeting": "Training",
+        "problem solving meeting": "Problem Solving",
+        "training (shadowing, scheduling, meeting, etc.)": "Training",
+        "scrim": "Scrum",
+        "review feedback": "Feedback",
+        "rpa lab meeting": "Rpa Meeting",
+        "rpa meeing": "Rpa Meeting",
+        "meet": "Meeting",
+        "email catch up": "Email & IM",
+        "ri response": "RI",
+        "pmq cr pre-meeting q's review": "PMQ pre-meeting review Q's",
+        "other queurie": "Querie",
+        "cqxm querie": "Querie",
+        "jumped to another meeting) global quality meeting": "Global Quality Meeting",
+        "it support/restart": "It Support",
+        "capa remediation review": "CAPA",
+        "ri": "RI",
+        "ri aortic meeting": "RI",
+        "scrum&action": "Scrum & Action",
+        "scrum & action": "Scrum & Action",
+        "scrum and action": "Scrum & Action",
+        "scrum& action": "Scrum & Action",
+        "aged file review": "Aging WIP Review",
+        "scrum &action": "Scrum & Action",
+        "call": "Meeting",
+        "investigation meeting": "Meeting",
+        "meeting": "Meeting",
+        "meeeting": "Meeting",
+        ". meeting": "Meeting",
+        "qa review": "QA Review",
+        "qa review/correction": "QA Review",
+        "qa review/update": "QA Review",
+        "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
+        "risk mangement knowledge sharing call": "Risk Management Knowledge Sharing Call",
+        "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
+        "film meeting": "Meeting",
+        "coding/risk mgmt meeting": "Meeting",
+        "coding meeting": "Meeting",
+        "literature meeting": "Meeting",
+        "literature/readcube meeting": "Meeting",
+        "aging wip": "Aged WIP Review",
+        "aging file review": "Aged WIP Review",
+        "report request/call": "Meeting",
+        "town hall": "Meeting",
+        "aem": "Meeting",
+        "aem cqs meting": "Meeting",
+        "scrum &call": "Scrum & Action",
+        "it ticket/call": "IT Issue/Update",
+        "loa catchup, it issues, meetings, email/admin, ng": "IT Issue/Update",
+        "email & iml": "Email & IM",
+        "crdn call": "Meeting",
+        "audit meeting": "Audit",
+        "scrum": "Scrum & Action",
+        "biohazrd kit approval": "Biohazard Kits Approval",
+        "cas report": "Team Report",
+        "knowledge sharing meeting/prep": "Meeting",
+        "aged file/gemba review": "Gemba",
+        "it issue": "IT Issue/Update",
+        "pmq cr pre-meeting q's review & pre-meeting call": "PMQ Meeting",
+        "pmq querie": "PMQ Meeting",
+        "rrtt report update": "rrtt",
+        "pmpa questions/updat": "PMPA",
+        "pvh call": "Meeting",
+        "aging file": "Aging WIP Review",
+        "is tool": "IS Tool Review",
+        "srcum": "Scrum & Action",
+        "readcube meeting": "Meeting",
+        "readcube training": "Training",
+        "vig training call": "Training",
+        "meetings & action": "Meeting",
+        "bsi audit report": "Audit",
+        "aging": "Aging WIP Review",
+        "pmq cr meeting & action": "PMQ Meeting",
+        "pmq coding query": "PMQ Meeting",
+        "one to one": "Meeting",
+        "inv summ review": "Investigation Summary",
+        "scrum, cornerstone": "Scrum & Action",
+        "scrum, emails, meeting": "Scrum & Action",
+        "knowledge sharing call": "Meeting",
+        "aged wip review": "Aging WIP Review",
+        "file review": "Aging WIP Review",
+        "rpa meeting": "RPA Meeting/Action",
+        "rpa meeting and action": "RPA Meeting/Action",
+        "rpa meeting/action": "RPA Meeting/Action",
+        "rpa meeting & action": "RPA Meeting/Action",
+        "vig training": "Training",
+        "laptop update": "IT Issue/Update",
+        "laptop setup": "IT Issue/Update",
+        "pmpa questions/update": "PMPA",
+        "precedent event/rd conflict": "RD Conflict",
+        "rd conflict": "RD Conflict",
+        "pmpa request": "PMPA",
+        "pmpa update": "PMPA",
+        "pmpa/questions/update": "PMPA",
+        "email; meeting": "Email & IM",
+        "email; training": "Email & IM",
+        "emails/amin": "Email & IM",
+        "email; article reivew for svt": "Email & IM",
+        "email admin": "Email & IM",
+        "rpa action": "RPA Meeting/Action",
+        "complex events consult": "Complex Event Consult",
+        "email": "Email & IM",
+        "lsh bridge issue": "LSH Bridge",
+        "restore lsh bridge review": "LSH Bridge",
+        "team lead meeting & action": "Meeting",
+        "pmq cr pre-meeting q's review & pre-meeting call": "PMQ Meeting",
+        "pvh aged file review": "Aged WIP Review",
+        "pmq cr post-meeting q's review": "PMQ Meeting",
+        "it issues over im and phone": "IT Issue/Update",
+        "imdrf code call": "Meeting",
+        "calls+": "Meeting",
+        "aged file": "Aged WIP Review",
+        "intake meeting": "Meeting",
+        "scrum & after scrum meeting": "Scrum & Action",
+        "interruptions/question": "Question",
+        "emails other": "Email & IM",
+        "im's/email": "Email & IM",
+        "it/admin": "IT Issue/Update",
+        "mentoring": "Training",
+        "mentoring/interruption": "Training",
+        "traing": "Training",
+        "complex/consult training": "Training",
+        "meeting with tm": "Meeting",
+        "training, scrum": "Training",
+        "team communication": "Meeting",
+        "respond to engineer email": "Email & IM",
+        "training q": "Training",
+        "training, practice, cornerstone": "Training",
+        "ri meeting": "RI",
+        "ri work": "RI",
+        "questions, death event rr/notification": "Question",
+        "training letter burdown": "Letter Burndown",
+        "team collaboration repsonded to": "Collaboration",
+        "issues with laptop": "IT Issue/Update",
+        "meeting on file": "Meeting",
+        "tm meeting": "Meeting",
+        "gch crashing": "IT Issue/Update",
+        "software update": "IT Issue/Update",
+        "gch crashe": "IT Issue/Update",
+        "pc restart": "IT Issue/Update",
+        "gch slow and crashing": "IT Issue/Update",
+        "call with tl on file": "Meeting",
+        "tl call on file": "Meeting",
+        "it issues/restart": "IT Issue/Update",
+        "pc restart/update": "IT Issue/Update",
+        "training louise": "Training",
+        "cornerstone scrum": "Cornerstone",
+        "louise training": "Training",
+        "audit prep": "Audit",
+        "audit support fda ri review": "Audit",
+        "teams meeting": "Meeting",
+        "it/computer issue": "IT Issue/Update",
+        "lab meeting": "Meeting",
+        "grad project work": "Project Work",
+        "lab shadowing": "Training",
+        "shadowing aortic pa": "Training",
+        "fire marshall training": "Training",
+        "it issue/update": "IT Issue/Update",
+        "workday career development": "career development",
+        "rfai call": "Meeting",
+        "morning admin": "Admin",
+        "lab monthly meeting project work": "Project Work",
+        "meetings voyager transfer": "Meeting",
+        "reading previous investigation write ups/consulting documentation": "Documentation",
+        "admin and catheter tracking for nellcor": "Admin",
+        "lab monthly meeting": "Meeting",
+        "aortic meeting": "Meeting",
+        "it": "IT Issue/Update",
+        "aortic report": "Team Report",
+        "sh report": "Team Report",
+        "pvh report": "Team Report",
+        "pmpa": "PMPA",
+        "pmq meeting": "PMQ Meeting",
+        "infolding response meeting": "Meeting",
+        "ti meeting": "Meeting",
+        "tl meeting": "Meeting",
+        "email/admin": "Email & IM",
+        "emails admin": "Email & IM",
+        "emails/admin": "Email & IM",
+        "enails/admin": "Email & IM",
+        "ms meeting": "Meeting",
+        "aem + townhall": "Meeting",
+        "team meeting": "Meeting",
+        "townhall": "Meeting",
+        "meeting prep": "Meeting",
+        "training/meeting": "Training",
+        "reg inquirie": "RI",
+        "training with natalie": "Training",
+        "training w/ natalie": "Training",
+        "independent training": "Training",
+        "idenpendent training": "Training",
+        "cross functional meeting": "Meeting",
+        "weekly ttvr/tmvr meeting": "Meeting",
+        "staff meeting": "Meeting",
+        "aems + townhall": "Meeting",
+        "aem +town hall": "Meeting",
+        "aems +town hall": "Meeting",
+        "email; training; computer repair": "Email & IM",
+        "team meetin": "Meeting",
+        "proformas x": "proforma",
+        "aems +townhall": "Meeting",
+        "ccrum/meeting": "Meeting",
+        "crossfunctional meeting": "Meeting",
+        "cross funtional meeting": "Meeting",
+        "scrumber": "Scrum & Action",
+        "aem+townhall": "Meeting",
+        "aems+townhall": "Meeting",
+        "training qa": "Training",
+        "ooo/appt": "OOO",
+        "pmpa requests/update": "PMPA",
+        "pmpa questions/request": "PMPA",
+        "pmp questions/update": "PMPA",
+        "pmpa question": "PMPA",
+        "scrume": "Scrum & Action",
+        "gfe fax": "GFE",
+        "gfe e-mail": "GFE",
+        "questions/update": "Questions",
+        "scurm": "Scrum & Action",
+        "independednt cos": "COS",
+        "meeting other": "Meeting",
+        "pmq query": "PMQ Meeting",
+        "reliant training": "Training",
+        "lab meetig": "Meeting",
+        "sh&a meeting": "Meeting",
+        "tier 2 pvh": "Meeting",
+        "tier 2 meeting crdn": "Meeting",
+        "sha meeting": "Meeting",
+        "rpa lab monthly meeting": "Meeting",
+        "nellcor meeting with julio - decision?": "Meeting",
+        "monthly lab meeting": "Meeting",
+        "tier 2 meeting;": "Meeting",
+        "tier 2 meeting": "Meeting",
+        "grad project meeting": "Meeting",
+        "meeting majella aurelie": "Meeting",
+        "quality aem": "Meeting",
+        "emails ft": "Email & IM",
+        "email to cell, setup": "Email & IM",
+        "cornerstone training": "Training",
+        "pmpa/r&d meeting": "PMPA",
+        "scrum 30": "Scrum & Action",
+        "scrum/meeting": "Scrum & Action",
+        "scum": "Scrum & Action",
+        "it update": "IT Issue/Update",
+        "documentation reading": "Documentation",
+        "sha meeting": "Meeting",
+        "email to cell": "Email & IM",
+        "gch issue": "IT Issue/Update",
+        "escalated call": "Meeting",
+        "set-up": "Set Up",
+        "setup": "Set Up",
+        "clinical safety plan review": "Clinical Safety Plan",
+        "tl call on complex file": "Meeting",
+        "qs": "Question",
+        "extra ftq meeting": "Meeting",
+        "practice letters": "Training",
+        "letter training": "Training",
+        "training, collaboration": "Training",
+        "training related activities": "Training",
+        "training related activities (meet, review, questions, updates, finish inbox)": "Training",
+        "scrum/metrics/schedule": "Metrics & Schedule",
+        "metrics/schedule/scrum": "Metrics & Schedule",
+        "rpa emails, ftq meeting": "Email & IM",
+        "practice letters, collaboration": "Collaboration",
+        "rpa email": "Email & IM",
+        "rpa call": "Meeting",
+        "collaboration/question": "Collaboration",
+        "team collaboration": "Collaboration",
+        "extra ftq meeting, rpa request": "Meeting",
+        "1 hour training meeting": "Training",
+        "affera training, rpa email request": "Training",
+        "affera training, rpa email": "Training",
+        "90 minutes training call": "Training",
+        "affera training for sean & golden": "Training",
+        "training related activity": "Training",
+        "training questions. comm/task/rr practice review": "Training",
+        "affera training": "Training",
+        "training + scrum": "Training",
+        "questions, grading rr/comm/task practice": "Training",
+        "1 hour training call": "Training",
+        "1 hour training": "Training",
+        "training prep": "Training",
+        "35 mins reverse-shadowing": "Training",
+        "cornerstone, scrum": "Cornerstone",
+        "training and staff meeting": "Training",
+        "60 minute training meeting": "Training",
+        "training and meeting": "Training",
+        "affera training, rpa collaboration": "Training",
+        "trainings, practice rr": "Training",
+        "training and question": "Training",
+        "training reviews, explanation": "Training",
+        "training, keytext for letters, collaboration": "Training",
+        "training meeting and staff meeting": "Training",
+        "affera training prep": "Training",
+        "training/question": "Training",
+        "training and collaboration": "Training",
+        "1 hr 15 mins training": "Training",
+        "scrum, email": "Email & IM",
+        "oem integer meeting": "Meeting",
+        "affera meeting": "Meeting",
+        "affera ftq meeting": "Meeting",
+        "affera mpxr meeting": "Meeting",
+        "admin/email": "Email & IM",
+        "emails, collaboration with lab": "Email & IM",
+        "practice": "Training",
+        "comm, task practce": "Training",
+        "prism 2 training": "Training",
+        "ris": "RI",
+        "meetings; email": "Meeting",
+        "training independent": "Training",
+        "ad hoc ri data request from pmpa": "PMPA",
+        "emails/adming": "Email & IM",
+        "meetings other": "Meetings",
+        "tm trainer": "Training",
+        "emails qa scrumb": "Email & IM",
+        "pmpa question/update": "PMPA",
+        "cos1 training": "Training",
+        "ooo for appt": "OOO",
+        "emails/question": "Question",
+        "questions/discussion": "Question",
+        "training product training team meeting cross functional meeting aems + townhall": "Training",
+        "lit scrum metric": "Scrum & Action",
+        "it issues over im and phone": "IT Issue/Update",
+        "calls+": "Meeting",
+        "scrum & after scrum meeting": "Scrum & Action",
+        "interruptions/question": "Question",
+        "emails other": "Email & IM",
+        "im's/email": "Email & IM",
+        "it/admin": "IT Issue/Update",
+        "aged file": "Aged WIP Review",
+        "intake meeting": "Meeting",
+        "rpa emails, ftq meeting": "Email & IM",
+        "scrum, email": "Email & IM",
+    }
+
+    if lower in explicit_map:
+        return explicit_map[lower]
+
+    acronym_tokens = {
+        "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
+        "ri", "capa",
+    }
+    words = lower.split(" ")
+    if len(words) == 1:
+        w = words[0]
+        if w.endswith("s") and not w.endswith("ss") and len(w) > 3:
+            w = w[:-1]
+        if w in acronym_tokens:
+            return w.upper()
+        return w.capitalize()
+    last = words[-1]
+    if last.endswith("s") and not last.endswith("ss") and len(last) > 3:
+        words[-1] = last[:-1]
+    pretty = []
+    for w in words:
+        if not w:
+            continue
+        if w in acronym_tokens:
+            pretty.append(w.upper())
+        else:
+            pretty.append(w.capitalize())
+    return " ".join(pretty)
+def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
+    import numpy as np
+    if cat.empty:
+        return cat
+    rows: list[dict] = []
+    for _, r in cat.iterrows():
+        activity_text = str(r["Activity"])
+        total_hours_raw = pd.to_numeric(r["Hours"], errors="coerce")
+        total_hours = float(total_hours_raw) if pd.notna(total_hours_raw) else 0.0
+        s = activity_text.replace(";", " ").replace(",", " ").replace(":", " ")
+        s = re.sub(r"\s+", " ", s).strip()
+        if not s:
+            rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+            continue
+
+        pattern = re.compile(
+            r"(?P<num>\d+)\s*(?P<unit>h|hr|hrs|hour|hours|m|min|mins|minute|minutes)?\b",
+            re.IGNORECASE,
+        )
+        sub_acts: list[tuple[str, int]] = []
+        prev_end = 0
+        for m in pattern.finditer(s):
+            num = int(m.group("num"))
+            unit = (m.group("unit") or "").lower()
+            mins = num * 60 if unit in ("h", "hr", "hrs", "hour", "hours") else num
+            label = s[prev_end:m.start()]
+            prev_end = m.end()
+            label = label.strip()
+            if not label:
+                continue
+            label = re.sub(r"\([^)]*$", "", label)
+            label = re.sub(r"\(.*?\)", "", label)
+            label = re.sub(r"[:\-–—]+$", "", label)
+            label = label.strip(" ,;:()[]-–—")
+            label = re.sub(r"\s+", " ", label).strip()
+            label = _canon_activity(label)
+            if label and mins > 0:
+                sub_acts.append((label, mins))
+        if sub_acts:
+            has_delims = bool(re.search(r"[;,]", activity_text))
+            if len(sub_acts) == 1 and not has_delims:
+                rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+                continue
+            total_minutes = sum(m for _, m in sub_acts)
+            if total_hours <= 0 and total_minutes > 0:
+                total_hours = total_minutes / 60.0
+            if total_hours > 0 and total_minutes > 0:
+                for label, mins in sub_acts:
+                    h_sub = total_hours * (mins / total_minutes)
+                    rows.append({"Activity": label, "Hours": h_sub})
+            else:
+                rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+        else:
+            rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+    import numpy as np
+    out = pd.DataFrame(rows)
+    if out.empty:
+        return cat
+    out["Activity"] = out["Activity"].map(_canon_activity)
+    return out.groupby("Activity", as_index=False)["Hours"].sum()
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 _maybe_apply_styles()
 st.title("Enterprise Dashboard")
@@ -493,8 +967,8 @@ def _weekly_rollup_summary(
     denom_mode: str,
     wd: int,
 ) -> Tuple[
-    Optional[float], Optional[float], Optional[float], Optional[float],  # avg daily wip pp, avg daily nonwip pp, avg weekly ooo, avg weekly unacct
-    Optional[float], Optional[float], Optional[float], Optional[float],  # pct_wip, pct_nonwip, pct_ooo, pct_unacct
+    Optional[float], Optional[float], Optional[float], Optional[float],
+    Optional[float], Optional[float], Optional[float], Optional[float],
 ]:
     if dfm is None or dfm.empty or dfnw is None or dfnw.empty:
         return (None, None, None, None, None, None, None, None)
@@ -776,11 +1250,25 @@ with tabs[1]:
     act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
     act_df = act_df.dropna(subset=["week"])
     act_df["week_start"] = _weekly_start(act_df["week"])
-    weekly_by_activity = (
+    weekly_raw = (
         act_df.groupby(["week_start", "activity"], as_index=False)
         .agg(hours=("hours", "sum"))
-        .sort_values(["week_start", "hours"], ascending=[True, False])
     )
+    normalised_chunks: List[pd.DataFrame] = []
+    for wk_val, grp in weekly_raw.groupby("week_start"):
+        cat = grp[["activity", "hours"]].rename(columns={"activity": "Activity", "hours": "Hours"})
+        cat_norm = split_nonwip_activity_minutes(cat)
+        cat_norm["week_start"] = wk_val
+        normalised_chunks.append(cat_norm)
+
+    if normalised_chunks:
+        weekly_by_activity = (
+            pd.concat(normalised_chunks, ignore_index=True)
+            .rename(columns={"Activity": "activity", "Hours": "hours"})
+            .sort_values(["week_start", "hours"], ascending=[True, False])
+        )
+    else:
+        weekly_by_activity = weekly_raw.copy()
     avg_weekly = (
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(avg_weekly_hours=("hours", "mean"))
@@ -817,3 +1305,4 @@ with tabs[1]:
     )
     ax.axis("equal")
     st.pyplot(fig)
+    
