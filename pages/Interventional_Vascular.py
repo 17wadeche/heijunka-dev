@@ -568,7 +568,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "emails/question": "Question",
             "questions/discussion": "Question",
             "training product training team meeting cross functional meeting aems + townhall":"Training",
-            "lit scrum metric":"Scrum & Action"
+            "lit scrum metric":"Scrum & Action",
             "interruptions/question": "Question",
             "emails other": "Email & IM",
             "im's/email": "Email & IM",
