@@ -438,6 +438,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "idenpendent training": "Training",
             "cross functional meeting": "Meeting",
             "weekly ttvr/tmvr meeting": "Meeting",
+            "aems + townhall": "Meeting",
             "team meetin": "Meeting",
             "meeting other": "Meeting",
             "pmq query":"PMQ Meeting",
