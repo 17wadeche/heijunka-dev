@@ -391,6 +391,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
             "email": "Email & IM",
             "film meeting": "Meeting",
+            "coding/risk mgmt meeting": "Meeting",
+            "film meeting": "Meeting",
             "audit meeting": "Audit",
             "scrum": "Scrum & Action",
             "cas report": "Team Report",
