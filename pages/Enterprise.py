@@ -1276,7 +1276,7 @@ with tabs[1]:
         .head(12)
     )
     st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
-    st.caption("Top activities by **average weekly hours** (top 14).")
+    st.caption("Top activities by **average weekly hours** (top 12).")
     last_week = weekly_by_activity["week_start"].max()
     last = weekly_by_activity[weekly_by_activity["week_start"] == last_week].copy()
     last = last.sort_values("hours", ascending=False)
