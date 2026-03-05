@@ -679,6 +679,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "global quality meeting":"Meeting",
             "meetings & action":"Meeting",
             "proforma meeting":"Meeting",
+            "email/meeting action": "Email & IM",
+            "dhr meeting":"Meeting",
             "sh proforma training":"Training",
             "bsi audit report": "Audit",
             "aging": "Aging WIP Review",
