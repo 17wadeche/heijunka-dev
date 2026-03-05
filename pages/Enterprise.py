@@ -1276,7 +1276,7 @@ with tabs[1]:
         .head(15)
     )
     avg_weekly_sorted = avg_weekly.sort_values("avg_weekly_hours", ascending=True)
-    st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=True)
+    st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=False)
     st.caption("Top 15 activities by **average weekly hours** (highest → lowest).")
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
