@@ -395,6 +395,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "coding meeting": "Meeting",
             "film meeting": "Meeting",
             "literature meeting": "Meeting",
+            "literature/readcube meeting": "Meeting",
+            "aging wip":"Aged WIP Review",
             "report request/call": "Meeting",
             "audit meeting": "Audit",
             "scrum": "Scrum & Action",
