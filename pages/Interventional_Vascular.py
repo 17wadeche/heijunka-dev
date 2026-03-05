@@ -640,6 +640,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "aging file": "Aging WIP Review",
             "is tool": "IS Tool Review",
             "srcum": "Scrum & Action",
+            "readcube meeting":"Meeting",
+            "readcube training": "Training",
             "meetings & action":"Meeting",
             "bsi audit report": "Audit",
             "aging": "Aging WIP Review",
