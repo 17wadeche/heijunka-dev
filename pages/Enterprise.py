@@ -1273,7 +1273,7 @@ with tabs[1]:
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(avg_weekly_hours=("hours", "mean"))
         .sort_values("avg_weekly_hours", ascending=False)
-        .head(14)
+        .head(12)
     )
     st.bar_chart(avg_weekly.set_index("activity")["avg_weekly_hours"])
     st.caption("Top activities by **average weekly hours** (top 14).")
