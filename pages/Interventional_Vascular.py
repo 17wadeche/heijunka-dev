@@ -405,6 +405,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "pmq cr meeting":"PMQ Meeting",
             "pmq cr fu email":"Email",
             "pmq meeting":"PMQ Meeting",
+            "infolding response meeting": "Meeting",
             "pmq query":"PMQ Meeting",
             "it update": "IT Issue/Update",
             "aortic report": "Team Report",
