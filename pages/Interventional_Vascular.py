@@ -516,7 +516,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "team collaboration": "Collaboration",
             "extra ftq meeting, rpa request":"Meeting",
             "1 hour training meeting":"Training",
-            "affera Training, Rpa Email Request":"Training",
+            "affera training, rpa email request":"Training",
             "affera training, rpa email":"Training",
             "90 minutes training call":"Training",
             "affera training, rpa collaboration":"Training",
