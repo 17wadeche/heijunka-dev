@@ -1298,19 +1298,22 @@ default_teams = [teams[0]] if teams else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
+import datetime as _dt
 has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min(), errors="coerce").date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max(), errors="coerce").date() if has_dates else None
-START_KEY = "crm_start_date"
-END_KEY   = "crm_end_date"
+today = _dt.date.today()
 if has_dates and min_date and max_date:
+    max_allowed = min(max_date, today)
+    START_KEY = "crm_start_date"
+    END_KEY   = "crm_end_date"
     st.session_state[START_KEY] = _coerce_single_date(st.session_state.get(START_KEY), min_date)
-    st.session_state[END_KEY]   = _coerce_single_date(st.session_state.get(END_KEY),   max_date)
-    st.session_state[START_KEY] = _clamp_date(st.session_state[START_KEY], min_date, max_date)
-    st.session_state[END_KEY]   = _clamp_date(st.session_state[END_KEY],   min_date, max_date)
+    st.session_state[END_KEY]   = _coerce_single_date(st.session_state.get(END_KEY),   max_allowed)
+    st.session_state[START_KEY] = _clamp_date(st.session_state[START_KEY], min_date, max_allowed)
+    st.session_state[END_KEY]   = _clamp_date(st.session_state[END_KEY],   min_date, max_allowed)
     if st.session_state[START_KEY] > st.session_state[END_KEY]:
         st.session_state[START_KEY] = min_date
-        st.session_state[END_KEY]   = max_date
+        st.session_state[END_KEY]   = max_allowed
     start = st.session_state[START_KEY]
     end   = st.session_state[END_KEY]
 else:
@@ -1325,6 +1328,7 @@ f = df.copy()
 if st.session_state.teams_sel:
     f = f[f["team"].isin(st.session_state.teams_sel)]
 if start and end:
+    end = min(end, _dt.date.today())
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
 if f.empty:
     st.info("No rows match your filters.")
@@ -1580,7 +1584,7 @@ if has_dates and min_date and max_date:
             "Start",
             value=st.session_state[START_KEY],   # explicitly provide value
             min_value=min_date,
-            max_value=max_date,
+            max_value=max_allowed, 
             key=START_KEY,
         )
     with date_col2:
@@ -1588,7 +1592,7 @@ if has_dates and min_date and max_date:
             "End",
             value=st.session_state[END_KEY],     # explicitly provide value
             min_value=min_date,
-            max_value=max_date,
+            max_value=max_allowed, 
             key=END_KEY,
         )
 st.markdown("---")
