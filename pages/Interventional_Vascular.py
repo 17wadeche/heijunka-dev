@@ -560,6 +560,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "team communication":"Meeting",
             "questions, death event rr/notification":"Question",
             "training letter burdown": "Letter Burndown",
+            "team collaboration repsonded to": "Collaboration",
             "issues with laptop": "IT Issue/Update",
             "meeting on file":"Meeting",
             "tm meeting":"Meeting",
