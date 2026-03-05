@@ -359,6 +359,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "scheduling/heijunka update": "Scheduling",
             "late" : "Late Review",
             "brian meeting": "Meeting",
+            "comm, task , rr practice": "Training",
             "training review/questions": "Training",
             "e-mail": "Email & IM",
             "scrum/checking": "Scrum",
