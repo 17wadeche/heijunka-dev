@@ -391,6 +391,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "jumped to another meeting) global quality meeting": "Global Quality Meeting",
             "it support/restart": "It Support",
             "capa remediation review": "CAPA",
+            "ect letter training": "Training",
             "ri": "RI",
             "ri aortic meeting": "RI",
             "scrum&action": "Scrum & Action",
