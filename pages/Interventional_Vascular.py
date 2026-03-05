@@ -409,7 +409,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "it update": "IT Issue/Update",
             "aortic report": "Team Report",
             "pvh report": "Team Report",
-            "email": "Email & IM"
+            "email": "Email & IM",
+            "team lead meeting & action": "Meeting",
         }
         if key in explicit_map:
             return explicit_map[key]
