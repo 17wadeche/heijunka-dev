@@ -31,7 +31,13 @@ def _fmt_hours_minutes(x) -> str:
         return f"{h}h"
     return f"{m}m"
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
+def load_non_wip(
+    nw_path: str | None = None,
+    nw_url: str | None = None,
+    cache_tag: str = "CRM", 
+) -> pd.DataFrame:
+    if nw_url is None:
+        nw_url = NON_WIP_DATA_URL
     if nw_url:
         try:
             df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
@@ -39,8 +45,10 @@ def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_U
             import io, requests
             r = requests.get(nw_url, timeout=20)
             r.raise_for_status()
-            df = pd.read_csv(io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
-                             dtype=str, keep_default_na=False)
+            df = pd.read_csv(
+                io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
+                dtype=str, keep_default_na=False
+            )
     else:
         p = Path(nw_path or NON_WIP_DEFAULT_PATH)
         if not p.exists():
@@ -932,11 +940,15 @@ label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show
 nonwip_mode = st.toggle(
     label,
     value=st.session_state.get("nonwip_mode", False),
-    key="nonwip_mode",
+    key="crm_nonwip_mode",
     help="Switch between WIP and Non-WIP metrics"
 )
 if nonwip_mode:
-    nw = load_non_wip()
+    nw = load_non_wip(
+        nw_path=str(NON_WIP_DEFAULT_PATH),
+        nw_url=NON_WIP_DATA_URL,
+        cache_tag="CRM",
+    )
     if nw.empty:
         st.info("No Non-WIP data found yet. Make sure non_wip_activities.csv exists.")
         st.stop()
@@ -944,7 +956,7 @@ if nonwip_mode:
     teams_nw = sorted([t for t in nw["team"].dropna().unique()])
     c_team, c_week = st.columns(2)
     with c_team:
-        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="crm_nw_team")
     weeks_nw = sorted(
         pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
         reverse=True
@@ -958,7 +970,7 @@ if nonwip_mode:
             options=weeks_nw,
             index=0,
             format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-            key="nw_week",
+            key="crm_nw_week",
         )
     week_nw = pd.to_datetime(week_nw).normalize()
     sel = nw[(nw["team"] == team_nw) & (nw["period_date"] == week_nw)]
