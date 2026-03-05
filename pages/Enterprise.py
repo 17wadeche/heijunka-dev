@@ -155,6 +155,8 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         "Timeliness": repo_root / "Timeliness.csv",
         "NS_WIP": repo_root / "NS_WIP.csv",
         "ns_non_wip_activities": repo_root / "ns_non_wip_activities.csv",
+        "CRM_WIP": repo_root / "CRM_WIP.csv",
+        "crm_non_wip_activities": repo_root / "crm_non_wip_activities.csv",
     }
     out: Dict[str, pd.DataFrame] = {}
     for key, p in candidates.items():
