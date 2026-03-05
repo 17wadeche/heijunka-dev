@@ -77,6 +77,8 @@ def _cell_number(v: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+def is_excluded_person(person: str) -> bool:
+    return person.strip().lower() == "do not use"
 def sum_range(ws: Worksheet, cell1: str, cell2: str) -> float:
     total = 0.0
     for row in ws[cell1:cell2]:
@@ -137,7 +139,7 @@ def compute_completed_hours(ws_prod: Worksheet) -> Tuple[float, Dict[str, float]
         is_promoted = (cell_station == "Promoted PE - Initial MDR")
         h = 4.0 if is_promoted else 1.0
         total += h
-        if person:
+        if person and not is_excluded_person(person):
             by_person[person] = by_person.get(person, 0.0) + h
     return total, by_person
 def compute_target_actual_output(ws_prod: Worksheet) -> Tuple[float, float]:
@@ -155,13 +157,18 @@ def unique_people_in_wip(ws_prod: Worksheet) -> List[str]:
     for r, person, cell_station, target, output in iter_prod_rows(ws_prod, start_row=7):
         if output is None:
             continue
-        if person:
-            seen.add(person)
+        if not person:
+            continue
+        if is_excluded_person(person):
+            continue
+        seen.add(person)
     return sorted(seen)
 def compute_outputs_by_person(ws_prod: Worksheet) -> Dict[str, Dict[str, float]]:
     out: Dict[str, Dict[str, float]] = {}
     for r, person, cell_station, target, output in iter_prod_rows(ws_prod, start_row=7):
         if output is None or not person:
+            continue
+        if is_excluded_person(person):
             continue
         if person not in out:
             out[person] = {"output": 0.0, "target": 0.0}
@@ -238,6 +245,8 @@ def compute_person_available_hours(ws_av: Worksheet) -> Dict[str, float]:
         name = read_merged_value(ws_av, name_cell)
         if not name:
             continue
+        if is_excluded_person(name):
+            continue
         avail = sum_range(ws_av, c1, c2)
         out[name] = out.get(name, 0.0) + avail
     return out
@@ -245,6 +254,8 @@ def build_person_hours_json(available_by_person: Dict[str, float], actual_by_per
     all_people = sorted(set(available_by_person.keys()) | set(actual_by_person.keys()))
     payload = {}
     for p in all_people:
+        if is_excluded_person(p):
+            continue
         payload[p] = {
             "actual": float(actual_by_person.get(p, 0.0)),
             "available": float(available_by_person.get(p, 0.0)),
