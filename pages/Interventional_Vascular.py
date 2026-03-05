@@ -389,7 +389,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
             "risk mangement knowledge sharing call": "Risk Management Knowledge Sharing Call",
             "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
-            "Email": "Email & IM",
+            "email": "Email & IM",
         }
         if key in explicit_map:
             return explicit_map[key]
