@@ -652,6 +652,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "pmq coding query":"PMQ Meeting",
             "one to one": "Meeting",
             "inv summ review": "Investigation Summary",
+            "knowledge sharing call": "Meeting",
             "aged wip review": "Aging WIP Review",
             "file review": "Aging WIP Review",
             "rpa meeting": "RPA Meeting/Action",
