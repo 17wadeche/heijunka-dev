@@ -399,7 +399,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "aging wip":"Aged WIP Review",
             "aging file review":"Aged WIP Review",
             "report request/call": "Meeting",
-            "town hall": "Townhall",
+            "town hall": "Meeting",
             "audit meeting": "Audit",
             "scrum": "Scrum & Action",
             "biohazrd kit approval": "Biohazard Kits Approval",
