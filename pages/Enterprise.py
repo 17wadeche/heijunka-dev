@@ -425,10 +425,18 @@ def _get_metrics_df() -> Optional[pd.DataFrame]:
         d = filter_by_team(data["NS_WIP"])
         if not d.empty:
             return d
+    if "CRM_WIP" in data:
+        d = filter_by_team(data["CRM_WIP"])
+        if not d.empty:
+            return d
     return None
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
     if "ns_non_wip_activities" in data:
         d = filter_by_team(data["ns_non_wip_activities"])
+        if not d.empty:
+            return d
+    if "crm_non_wip_activities" in data:
+        d = filter_by_team(data["crm_non_wip_activities"])
         if not d.empty:
             return d
     if "non_wip" in data:
