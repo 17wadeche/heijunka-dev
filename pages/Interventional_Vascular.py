@@ -382,6 +382,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "review feedback": "Feedback",
             "rpa lab meeting": "Rpa Meeting",
             "rpa meeing": "Rpa Meeting",
+            "film review meeting": "Meeting",
             "meet": "Meeting",
             "weekly meeting": "Meeting",
             "email catch up": "Email & IM",
