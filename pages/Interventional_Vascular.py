@@ -424,6 +424,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "email/admin": "Email & IM",
             "emails admin": "Email & IM",
             "emails/admin": "Email & IM",
+            "enails/admin": "Email & IM",
             "ms meeting": "Meeting",
             "aem + townhall":"Meeting",
             "team meeting":"Meeting",
