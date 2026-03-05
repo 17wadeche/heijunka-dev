@@ -527,6 +527,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "questions, grading rr/comm/task practice":"Training",
             "1 hour training call":"Training",
             "1 hour training":"Training",
+            "training prep":"Training",
+            "35 mins reverse-shadowing":"Training",
             "cornerstone, scrum":"Cornerstone",
             "affera training, rpa collaboration":"Training",
             "trainings, practice rr":"Training",
