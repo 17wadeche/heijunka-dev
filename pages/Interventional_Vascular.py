@@ -379,6 +379,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "scrum& action": "Scrum & Action",
             "aged file review": "Aging WIP Review",
             "scrum &action": "Scrum & Action",
+            "Call": "Meeting",
             "meeting": "Meeting",
             "meeeting": "Meeting",
             ". meeting": "Meeting",  # extra safety; usually cleaned earlier
