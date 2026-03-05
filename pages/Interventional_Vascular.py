@@ -401,6 +401,9 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "knowledge sharing meeting/prep": "Meeting",
             "aged file/gemba review": "Gemba",
             "it issue": "IT Issue/Update",
+            "pmq pre-meeting review q's":"PMQ Meeting",
+            "pmq cr meeting":"PMQ Meeting",
+            "pmq cr fu email":"Email",
             "it update": "IT Issue/Update",
             "aortic report": "Team Report",
             "pvh report": "Team Report"
