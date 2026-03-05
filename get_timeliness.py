@@ -11,7 +11,8 @@ TEAM_COLUMN_NAME = "Product Group"
 TEAM_MAP = {
     "Coronary":"CRDN",
     "Infusion":"TDD",
-    "Pain Stim": "SCS"
+    "Pain Stim": "SCS",
+    "Pelvic Health": "PH"
 }
 MONTHREL_ALLOWED = {0, -1}
 OUT_DIR = r"C:\Users\wadec8\OneDrive - Medtronic PLC"
