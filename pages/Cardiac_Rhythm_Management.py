@@ -1253,26 +1253,75 @@ def _set_qp_teams(values: list[str]) -> None:
         st.experimental_set_query_params(teams=values)
 def _sets_equal(a, b) -> bool:
     return set(a) == set(b)
+import datetime as _dt
+def _coerce_single_date(x, fallback: _dt.date | None) -> _dt.date | None:
+    if x is None or (isinstance(x, float) and np.isnan(x)):
+        return fallback
+    if isinstance(x, (list, tuple)) and len(x) > 0:
+        x = x[0]
+    try:
+        if isinstance(x, pd.Timestamp):
+            x = x.to_pydatetime()
+    except Exception:
+        pass
+    if isinstance(x, _dt.datetime):
+        return x.date()
+    if isinstance(x, _dt.date):
+        return x
+    if isinstance(x, str):
+        d = pd.to_datetime(x, errors="coerce")
+        if pd.notna(d):
+            return d.date()
+    return fallback
+def _clamp_date(d: _dt.date | None, lo: _dt.date, hi: _dt.date) -> _dt.date:
+    if d is None:
+        return lo
+    if d < lo:
+        return lo
+    if d > hi:
+        return hi
+    return d
 teams = sorted([t for t in df["team"].dropna().unique()])
 default_teams = [teams[0]] if teams else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
 has_dates = df["period_date"].notna().any()
-min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
-max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
+min_date = pd.to_datetime(df["period_date"].min(), errors="coerce").date() if has_dates else None
+max_date = pd.to_datetime(df["period_date"].max(), errors="coerce").date() if has_dates else None
+START_KEY = "crm_start_date"
+END_KEY   = "crm_end_date"
 if has_dates and min_date and max_date:
-    if "start_date" not in st.session_state:
-        st.session_state["start_date"] = min_date
-    if "end_date" not in st.session_state:
-        st.session_state["end_date"] = max_date
-    start = st.session_state["start_date"]
-    end = st.session_state["end_date"]
-    if start > end:
-        st.error("Start date cannot be after end date!")
-        start, end = min_date, max_date
-        st.session_state["start_date"] = start
-        st.session_state["end_date"] = end
+    st.session_state[START_KEY] = _coerce_single_date(st.session_state.get(START_KEY), min_date)
+    st.session_state[END_KEY]   = _coerce_single_date(st.session_state.get(END_KEY),   max_date)
+    st.session_state[START_KEY] = _clamp_date(st.session_state[START_KEY], min_date, max_date)
+    st.session_state[END_KEY]   = _clamp_date(st.session_state[END_KEY],   min_date, max_date)
+    if st.session_state[START_KEY] > st.session_state[END_KEY]:
+        st.session_state[START_KEY] = min_date
+        st.session_state[END_KEY]   = max_date
+    start = st.session_state[START_KEY]
+    end   = st.session_state[END_KEY]
+else:
+    start, end = None, None
+if has_dates and min_date and max_date:
+    st.markdown("#### Date Range")
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        st.date_input(
+            "Start",
+            value=st.session_state[START_KEY],   # explicitly provide value
+            min_value=min_date,
+            max_value=max_date,
+            key=START_KEY,
+        )
+    with date_col2:
+        st.date_input(
+            "End",
+            value=st.session_state[END_KEY],     # explicitly provide value
+            min_value=min_date,
+            max_value=max_date,
+            key=END_KEY,
+        )
 else:
     start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
