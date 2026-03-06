@@ -687,7 +687,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "pmq cr meeting & action":"PMQ Meeting",
             "pmq coding query":"PMQ Meeting",
             "aortic call":"Meeting",
-            "gemba&prep": "Gemba"
+            "gemba&prep": "Gemba",
             "one to one": "Meeting",
             "inv summ review": "Investigation Summary",
             "scrum, cornerstone":"Scrum & Action",
