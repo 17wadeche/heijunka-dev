@@ -741,6 +741,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "on a call":"Meeting",
             "tier 2 pvh meeting":"Meeting",
             "crdn weekly call":"Meeting",
+            "rdn emails for generator return":"Email & IM",
+            "call on file":"Meeting",
             "prep for meeting": "Admin",
             "on call":"Meeting",
             "rpa meeting": "RPA Meeting/Action",

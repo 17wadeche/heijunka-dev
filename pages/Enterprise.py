@@ -816,6 +816,8 @@ def _canon_activity(label: str) -> str:
         "aortic cross functional call":"Meeting",
         "shiperp go/no go call":"Meeting",
         "shiperp pro-forma vs commercial invoice call":"Meeting",
+        "rdn emails for generator return":"Email & IM",
+        "call on file":"Meeting",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
         "career development review":"Career Development",
