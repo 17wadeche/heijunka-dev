@@ -757,6 +757,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "career dev review":"Career Development",
             "next gen call recording": "Next Gen",
             "acrum":"Scrum & Action",
+            "sh letter querie":"Question",
             "call after scrum":"Scrum & Action",
             "global town hall":"Meeting",
             "restore lsh bridge review":"LSH Bridge",
