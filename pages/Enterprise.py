@@ -1719,12 +1719,21 @@ with tabs[1]:
     chart_df = total_hours.copy()
     chart_df["label"] = chart_df["activity"].map(lambda x: _short_label(x, 22))
     fig, ax = plt.subplots(figsize=(14, 5.5))
-    ax.bar(chart_df["label"], chart_df["total_hours"])
+    bars = ax.bar(chart_df["label"], chart_df["total_hours"])
     ax.set_ylabel("Total Hours")
     ax.set_xlabel("Non-WIP Activity")
     ax.set_title("Top 15 Non-WIP Activities by Total Hours")
     ax.tick_params(axis="x", rotation=45, labelsize=9)
     plt.setp(ax.get_xticklabels(), ha="right")
+    for bar, val in zip(bars, chart_df["total_hours"]):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.1f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
     fig.tight_layout()
     st.pyplot(fig)
     st.caption("Top 15 activities by total hours for the selected period, sorted highest to lowest from left to right.")
