@@ -635,6 +635,7 @@ def _canon_activity(label: str) -> str:
         "ri call": "RI",
         "audit, building a community/potluck & costume party":"Audit",
         "internal audit backroom support":"Audit",
+        "internal audit backroom":"Audit",
         "ri repsonse":"RI",
         "rrt":"Rrtt",
         "parkmore townhall":"Meeting",
