@@ -713,6 +713,8 @@ def _canon_activity(label: str) -> str:
         "ia backroom audit meeting":"Audit",
         "scrum: 30.":"Scrum & Action",
         "qms training":"Training",
+        "srum,parklife":"Scrum & Action",
+        "scrum 20":"Scrum & Action",
         "ste up":"Set Up",
         "training review":"Training",
         "escalated call&prep":"Meeting",
