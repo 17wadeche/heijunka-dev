@@ -1722,11 +1722,11 @@ with tabs[1]:
         pie_rolled = pie_cat_norm.rename(columns={"Activity": "activity", "Hours": "hours"})
         pie_rolled = pie_rolled.groupby("activity", as_index=False).agg(hours=("hours", "sum"))
         pie_rolled = pie_rolled.sort_values("hours", ascending=False)
-        if len(pie_rolled) > 14:
-            top_pie = pie_rolled.head(14)
+        if len(pie_rolled) > 19:
+            top_pie = pie_rolled.head(19)
             other_pie = pd.DataFrame([{
                 "activity": "Other",
-                "hours": float(pie_rolled["hours"].iloc[14:].sum()),
+                "hours": float(pie_rolled["hours"].iloc[19:].sum()),
             }])
             pie_df = pd.concat([top_pie, other_pie], ignore_index=True)
         else:
