@@ -1713,7 +1713,7 @@ with tabs[1]:
         st.stop()
     avg_weekly_sorted = avg_weekly.sort_values("avg_weekly_hours", ascending=True)
     st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=False)
-    st.caption('Top 15 activities by **average weekly hours** (excluding "OOO" and "Non-WIP").')
+    st.caption('Top 15 activities by average weekly hours.')
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
     pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
