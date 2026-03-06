@@ -494,6 +494,8 @@ def _canon_activity(label: str) -> str:
         "it issues over im and phone": "IT Issue/Update",
         "imdrf code call": "Meeting",
         "calls+": "Meeting",
+        "cornerstone training / gap report / peb correction":"Cornerstone",
+        "capa (owner & support)":"CAPA",
         "aged file":"Aged WIP Review",
         "intake meeting": "Meeting",
         "scrum & after scrum meeting":"Scrum & Action",
