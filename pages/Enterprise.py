@@ -807,6 +807,7 @@ def _canon_activity(label: str) -> str:
         "tier 2 pvh meeting":"Meeting",
         "(fw 15) (emails 15) (looking at aged files 30) (cf files additional testing 30)": "Aging WIP Review",
         "meetings, ng/coding": "Next Gen",
+        "crdn weekly call":"Meeting",
         "(meetings 60) looking at aged files to see if any of them are workable (60)":"Meeting",
         "parkmore townhall":"Meeting",
         "on call":"Meeting",
