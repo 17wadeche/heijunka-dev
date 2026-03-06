@@ -848,7 +848,7 @@ def _canon_activity(label: str) -> str:
         "remediation activities 10 events reprocessed":"Remediation",
         "flexcathcross breach meeting":"Meeting",
         "monitoring audit backroom":"Audit",
-        "email/teams - affera, rpa, mappers, collaboration":"Email & IM",
+        "email/teams - affera,rpa,mappers,collaboration":"Email & IM",
         "christmas burndown meeting 60 minute":"Meeting",
         "emails/rpa request/teams request":"Email & IM",
         "metrics, meetings, schedule":"Admin",
