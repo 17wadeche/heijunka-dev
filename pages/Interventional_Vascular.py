@@ -798,6 +798,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "scrum metrics, schedule for friday":"Scrum & Action",
             "scrum metrics, schedule for monday":"Scrum & Action",
             "delivery) practice1 letter":"Training",
+            "nextgen": "Next Gen",
             "benefit enrollment":"Admin",
             "rpa request":"RPA Meeting/Action",
             "project":"Project Work",

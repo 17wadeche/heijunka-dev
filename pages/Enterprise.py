@@ -880,6 +880,7 @@ def _canon_activity(label: str) -> str:
         "emails/teams - affera, rpa, audit, hypercare":"Email & IM",
         "collaboration (including rpa lab,)":"Collaboration",
         "training side work":"Training",
+        "nextgen": "Next Gen",
         "flexcathcross breach meeting":"Meeting",
         "meetings, collaboration, troublehooting, training, email/admin":"Meeting",
         "monitoring audit backroom":"Audit",
