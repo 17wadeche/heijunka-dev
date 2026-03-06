@@ -841,6 +841,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "agile co":"Agile Change Order",
             "slow gch": "IT Issue/Update",
             "mir training meeting":"Training",
+            "meeting on clinical study":"Meeting",
+            "restart": "IT Issue/Update",
             "wip mgmt.":"WIP Mgmt",
             "redline doc":"Redline",
             "ia backroom support scrum":"Audit",
