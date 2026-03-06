@@ -776,7 +776,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "remediation activities 10 events reprocessed":"Remediation",
             "flexcathcross breach meeting":"Meeting",
             "monitoring audit backroom":"Audit",
-            "email/teams - affera,rpa,mappers,collaboration":"Email & IM",
+            "email/teams - affera,rpa,mappers; collaboration":"Email & IM",
             "christmas burndown meeting 60 minute":"Meeting",
             "emails/rpa request/teams request":"Email & IM",
             "metrics, meetings, schedule":"Admin",
