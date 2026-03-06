@@ -722,6 +722,7 @@ def _canon_activity(label: str) -> str:
         "call with monica":"Meeting",
         "audit, meeting":"Audit",
         "new desk set up":"Desk",
+        "emails etc": "Email & IM",
         "misc/desk":"Desk",
         "misc/email": "Email & IM",
         "ris/south africa final rr request":"RI",
