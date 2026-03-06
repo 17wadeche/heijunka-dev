@@ -853,6 +853,7 @@ def _canon_activity(label: str) -> str:
         "rpa emails, affera meeting/team": "RPA Meeting/Action",
         "rpa requests - email, team": "RPA Meeting/Action",
         "meeting w/ reliability":"Meeting",
+        "training, meetings, ng, collab":"Training",
         "metrics, scrum, scheudle, ri, batchman, townhall":"Scrum & Action",
         "ri, metrics/scrum/schedule":"Scrum & Action",
         "team collaboration & email":"Collaboration",
