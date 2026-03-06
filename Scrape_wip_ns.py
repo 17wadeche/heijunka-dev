@@ -329,6 +329,42 @@ def safe_float(v: Any) -> float:
     return 0.0
 def safe_str(v: Any) -> str:
     return "" if v is None else str(v).strip()
+ENT_NAME_REPLACEMENTS = {
+    "AG, Girish": "Girish AG",
+    "Sharma, Anurag": "Anurag Sharma",
+    "Badugu, Aravind Kumar": "Aravind Kumar Badugu",
+    "Boya, Kranthi Kumar": "Kranthi Kumar Boya",
+    "Kumari, Taruna": "Taruna Kumari",
+    "Raju, Surekha": "Surekha Raju Anantarapu",
+    "S, Selvarasu": "Selvarasu Sampathu",
+    "Uppari, Pavani": "Uppari Pavani",
+}
+def normalize_ent_name(name: Any) -> str:
+    s = safe_str(name)
+    return ENT_NAME_REPLACEMENTS.get(s, s)
+def apply_ent_name_replacements_to_sheet(
+    xlsx_path: str,
+    sheet_name: str = "Next Week Forecast",
+    start_row: int = 2,
+    end_row: int = 30,
+    name_col_letter: str = "A",
+) -> str:
+    wb = load_workbook(xlsx_path)
+    if sheet_name not in wb.sheetnames:
+        ws = wb.active
+    else:
+        ws = wb[sheet_name]
+    name_col = column_index_from_string(name_col_letter)
+    changes = 0
+    for r in range(start_row, end_row + 1):
+        cell = ws.cell(row=r, column=name_col)
+        old_val = safe_str(cell.value)
+        new_val = normalize_ent_name(old_val)
+        if old_val and new_val != old_val:
+            cell.value = new_val
+            changes += 1
+    wb.save(xlsx_path)
+    return f"ENT name replacements applied in {os.path.basename(xlsx_path)} ({changes} changes)"
 def safe_div(n: float, d: float) -> Optional[float]:
     return None if d == 0 else (n / d)
 def parse_sheet_date(sheet_name: str) -> str:
@@ -1746,7 +1782,7 @@ def read_ent_team_tenure_mapping(
         for c in range(sc, ec + 1):
             row_sum += safe_float(ws.cell(row=r, column=c).value)
         total += row_sum
-        nm = safe_str(ws.cell(row=r, column=name_c).value)
+        nm = normalize_ent_name(ws.cell(row=r, column=name_c).value)
         if nm:
             per_person[nm] = row_sum
     return total, per_person
@@ -1945,7 +1981,7 @@ def scrape_ent_from_csv(
         for row in reader:
             if not row or len(row) < 6:
                 continue
-            name = safe_str(row[0])
+            name = normalize_ent_name(row[0])
             d_raw = row[1]
             d_parsed = _parse_any_date_to_date(d_raw)
             if not d_parsed:
@@ -1958,14 +1994,17 @@ def scrape_ent_from_csv(
             rec = weekly.setdefault(wk, {
                 "wp1_out": 0.0, "wp2_out": 0.0,
                 "wp1_hrs": 0.0, "wp2_hrs": 0.0,
-                "by_person": {},  # name -> accumulators
+                "by_person": {},
             })
             rec["wp1_out"] += wp1_out
             rec["wp2_out"] += wp2_out
             rec["wp1_hrs"] += wp1_hrs
             rec["wp2_hrs"] += wp2_hrs
             if name:
-                p = rec["by_person"].setdefault(name, {"wp1_out": 0.0, "wp2_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0})
+                p = rec["by_person"].setdefault(
+                    name,
+                    {"wp1_out": 0.0, "wp2_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0}
+                )
                 p["wp1_out"] += wp1_out
                 p["wp2_out"] += wp2_out
                 p["wp1_hrs"] += wp1_hrs
@@ -2448,6 +2487,9 @@ def main():
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
     rows: list[dict] = []
+    selected_team = safe_str(args.team).lower()
+    def should_run(team_name: str) -> bool:
+        return selected_team in ("all", "", team_name.lower())
     def extend_team(team_name: str, fn):
         out = run_team(logger, team_name, fn)   # logs START/DONE/FAIL + rows + elapsed
         rows.extend(out)
@@ -2462,9 +2504,12 @@ def main():
             d += timedelta(days=7)
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
-    extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
-    extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
-    extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
+    if should_run("PH"):
+        extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
+    if should_run("PH Cell 17"):
+        extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
+    if should_run("SCS Cell 1"):
+        extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
     meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
     dbs_c13_rows = run_team(
@@ -2476,7 +2521,6 @@ def main():
     dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
     logger.info(f"[DBS C13] filter >= {cutoff_dbs}: {before} -> {len(dbs_c13_rows)}")
     rows.extend(dbs_c13_rows)
-
     dbs_c14_rows = run_team(
         logger,
         "DBS C14",
@@ -2495,15 +2539,35 @@ def main():
     nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
     logger.info(f"[NV] filter >= {cutoff_dbs}: {before} -> {len(nv_rows)}")
     rows.extend(nv_rows)
-    extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
-    extend_team("ENT",   lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
-    extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
-    extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
+    if should_run("Nav"):
+        extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("AE MEIC"):
+        extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("O-Arm MEIC"):
+        extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("Mazor"):
+        extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("CSF"):
+        extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("PSS"):
+        extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("ENT"):
+        try:
+            ent_name_note = apply_ent_name_replacements_to_sheet(
+                ent_mapping_xlsx,
+                sheet_name="Next Week Forecast",
+                start_row=2,
+                end_row=30,
+                name_col_letter="A",
+            )
+            logger.info(f"[ENT] {ent_name_note}")
+        except Exception as e:
+            logger.error(f"[ENT] Failed applying name replacements to mapping sheet: {e}")
+        extend_team("ENT", lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
+    if should_run("DBS MEIC"):
+        extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
+    if should_run("SCS MEIC"):
+        extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
     cos_rows = run_team(
         logger,
         "TDD COS 1",
