@@ -724,7 +724,7 @@ def _canon_activity(label: str) -> str:
         "pvh next gen meeting":"Next Gen",
         "scheduling/wip mgmt":"Schedule",
         "inbox/email": "Email & IM",
-        "coordinating With pmpa":"PMPA",
+        "coordinating with pmpa":"PMPA",
         "emails wip etc": "Email & IM",
         "stragety meeting":"Meeting",
         "escalated call excel":"Meeting",
