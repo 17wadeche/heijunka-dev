@@ -1004,6 +1004,7 @@ def _canon_activity(label: str) -> str:
         "call after scrum":"Scrum & Action",
         "global town hall":"Meeting",
         "restore lsh bridge review":"LSH Bridge",
+        "rs inbox":"Inbox Maintenance",
         "next gen call":"Next Gen",
         "meeting & action": "Meeting",
         "cornerston":"Cornerstone",
