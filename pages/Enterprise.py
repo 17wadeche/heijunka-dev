@@ -644,6 +644,7 @@ def _canon_activity(label: str) -> str:
         "rrt":"Rrtt",
         "ng workshop, email/admin/collab": "Next Gen",
         "ng workshop, lates, email/admin": "Next Gen",
+        "meetings, ng/coding": "Next Gen",
         "parkmore townhall":"Meeting",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
