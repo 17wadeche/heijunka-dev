@@ -861,6 +861,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "eu vig training":"Training",
             "training kirsty":"Training",
             "meeting with lab":"Meeting",
+            "rpa":"RPA Meeting/Action",
             "questions/emails/inbox": "Email & IM",
             "emails/etc": "Email & IM",
             "gemba & prep":"Gemba",
