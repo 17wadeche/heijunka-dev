@@ -864,7 +864,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "emails/etc": "Email & IM",
             "gemba & prep":"Gemba",
             "yellow belt cornerstone":"Yellow Belt",
-            "yellow belt cornerstone question":"Yellow Belt",
+            "yellow belt cornerstone, question":"Yellow Belt",
             "training qs":"Question",
             "ran batchman for fers/fac":"Batchman",
             "email wip etc.": "Email & IM",
