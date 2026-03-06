@@ -677,6 +677,8 @@ def _canon_activity(label: str) -> str:
         "impromptu discussion":"Collaboration",
         "skills lab vlt":"Skills Lab",
         "tvtr discussion":"Collaboration",
+        "ris/internal audit questions about ris":"Audit",
+        "em/technology etc":"Em Etc",
         "late rr discussion":"Collaboration",
         "ng workshop, emails/admin, ms review": "Next Gen",
         "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training",
