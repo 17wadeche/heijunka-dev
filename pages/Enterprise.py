@@ -810,6 +810,7 @@ def _canon_activity(label: str) -> str:
         "crdn weekly call":"Meeting",
         "(meetings 60) looking at aged files to see if any of them are workable (60)":"Meeting",
         "parkmore townhall":"Meeting",
+        "prep for meeting": "Admin",
         "on call":"Meeting",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
