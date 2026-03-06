@@ -718,6 +718,7 @@ def _canon_activity(label: str) -> str:
         "call with monica":"Meeting",
         "crdn strategy meeting":"Meeting",
         "providing kirsty vig training":"Training",
+        "pvh next gen meeting":"Next Gen",
         "stragety meeting":"Meeting",
         "escalated call excel":"Meeting",
         "meeting with rep":"Meeting",
