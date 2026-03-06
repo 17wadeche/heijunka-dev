@@ -812,6 +812,7 @@ def _canon_activity(label: str) -> str:
         "parkmore townhall":"Meeting",
         "prep for meeting": "Admin",
         "on call":"Meeting",
+        "shiperp pro-forma vs commercial invoice call":"Meeting",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
         "career development review":"Career Development",
