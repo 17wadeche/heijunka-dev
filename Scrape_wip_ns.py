@@ -2146,6 +2146,7 @@ def append_missing_placeholders_from_wip(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
+    parser.add_argument("--log", default="NS_metrics.log", help="Log file path")
     args = parser.parse_args()
     logger = setup_logging(args.log)
     logger.info("=== NS Metrics Run START ===")
