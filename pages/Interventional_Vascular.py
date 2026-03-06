@@ -812,6 +812,18 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "mtgs 2 hrs": "Meeting",
             "sales rep training": "Training",
             "mir training": "Training",
+            "rs pxm sh inbox":"RS Inbox",
+            "rs sh inbox":"RS Inbox",
+            "cornerstone/it ticket": "IT Issue/Update",
+            "it ticket/tech issue": "IT Issue/Update",
+            "ad hoc request from pmpa":"PMPA",
+            "cornerstone + it ticket": "IT Issue/Update",
+            "emails/other":"Email & IM",
+            "catch up on email":"Email & IM",
+            "weekly tmvr clinical event investigation meeting": "Meeting",
+            "on clinical. it tickets and cornerstone": "IT Issue/Update",
+            "restore/mpxr issue/discussion": "IT Issue/Update",
+            "weekly ttvr clinical event investigation meeting": "Meeting",
             "catching up on email from being ooo for":"Email & IM",
         }
         if key in explicit_map:
