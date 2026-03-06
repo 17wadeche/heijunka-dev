@@ -872,7 +872,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "leading indicators action/meeting":"Meeting",
             "weekly tvr meeting":"Meeting",
             "training/mentor review":"Training",
-            "clinical training;":"Training",
+            "clinical training":"Training",
             "collaboration sh/crm":"Collaboration",
             "call with monica":"Meeting",
             "scheduling/wip mgmt":"Schedule",

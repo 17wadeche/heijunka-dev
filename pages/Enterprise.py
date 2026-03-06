@@ -737,7 +737,7 @@ def _canon_activity(label: str) -> str:
         "emails/inbox/it issue": "Email & IM",
         "email misc": "Email & IM",
         "training/mentor review":"Training",
-        "clinical training;":"Training",
+        "clinical training":"Training",
         "harmony meeting":"Meeting",
         "weekly tmvr meeting":"Meeting",
         "emails/it issue": "Email & IM",
