@@ -806,6 +806,13 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "cornerston":"Cornerstone",
             "team lead meeting & action": "Meeting",
             "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",
+            "processing question":"Question",
+            "meetings; pe review for pmpa":"PMPA",
+            "emails/discussion":"Email & IM",
+            "mtgs 2 hrs": "Meeting",
+            "sales rep training": "Training",
+            "mir training": "Training",
+            "catching up on email from being ooo for":"Email & IM",
         }
         if key in explicit_map:
             return explicit_map[key]
