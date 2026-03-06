@@ -564,6 +564,22 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         wip_workers_from="NS_WIP",
         completed_hours_from="NS_WIP",
     ),
+    "TDD": TeamSource(
+        team="TDD",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\RTG Customer Quality - Infusion - Documents\Non-D2D WIP Tracker TDD.xlsx"),
+        layout=StandardLayout(
+            people_start_row=2,      # Excel row 3
+            totals_row=20,           # Excel row 21
+            activity_header_row=1,   # Excel row 2
+            activity_start_col=3,    # D
+            activity_end_col=34,     # AI
+            min_rows=21,
+            min_cols=35,
+        ),
+        week_from_sheet=week_from_sheetname_date,
+        wip_workers_from="NS_WIP",
+        completed_hours_from="NS_WIP",
+    ),
     "PH": TeamSource(
         team="PH",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\Non-D2D WIP Tracker.xlsx"),
