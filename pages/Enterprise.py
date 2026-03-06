@@ -1599,7 +1599,7 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
-EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip"}
+EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 with tabs[1]:
