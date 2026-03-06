@@ -843,6 +843,7 @@ def _canon_activity(label: str) -> str:
         "computer issues, collaboration, training plan update": "IT Issue/Update",
         "meetings, metrics/schedule":"Meeting",
         "meetings, collaboration, admin/email, cornerstone":"Meeting",
+        "audit support - monitor backroom pull pesrs/reg reports =":"Audit",
         "emails, collaboration, rpa request":"Email & IM",
         "remediation activities 10 events reprocessed":"Remediation",
         "flexcathcross breach meeting":"Meeting",

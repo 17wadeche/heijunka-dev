@@ -784,7 +784,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "burndown meeting":"Meeting",
             "emails, collaboration, rpa":"Email & IM",
             "practice letter": "Training",
-            "audit support - monitor backroom pull pesrs/reg reports":"Audit",
+            "audit support - monitor backroom pull pesrs/reg reports =":"Audit",
             "audit support - pe search, pull pesrs, monitor backroom":"Audit",
             "completed pe (ftq) for audit":"Audit",
             "kick-off meeting for capa 605686 remediation activitie":"CAPA",
