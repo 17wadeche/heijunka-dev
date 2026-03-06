@@ -818,6 +818,7 @@ def _canon_activity(label: str) -> str:
         "shiperp pro-forma vs commercial invoice call":"Meeting",
         "rdn emails for generator return":"Email & IM",
         "call on file":"Meeting",
+        "collaboration, problem statement for yellow belt training":"Yellow Belt",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
         "review affera materials with ruth for ftq/mpxr":"Meeting",
