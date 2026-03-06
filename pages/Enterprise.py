@@ -629,6 +629,8 @@ def _canon_activity(label: str) -> str:
         "audit support":"Audit",
         "aortic meeting & post meeting call":"Meeting",
         "adn career development workshop":"Career Development",
+        "ng workshop, lates, wmail/admin": "Next Gen",
+        "a whole lot of collaboration, meet and greets, meetings, troubleshooting, and training": "Collaboration",
         "scrum and call":"Scrum & Action",
         "ri follow-up":"RI",
         "ri completion":"RI",
