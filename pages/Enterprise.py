@@ -703,6 +703,7 @@ def _canon_activity(label: str) -> str:
         "mir training meeting":"Training",
         "redline doc":"Redline",
         "extra time on inbox":"RS Inbox",
+        "tm suppor":"Tm Support",
         "ia backroom support scrum":"Audit",
         "ia backroom support scrum audit meeting":"Audit",
         "weekly team meeting":"Meeting",
