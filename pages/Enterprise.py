@@ -1591,8 +1591,15 @@ with tabs[0]:
             st.info("Need Week/period_date + Completed Hours to show trend.")
     else:
         st.info("No metrics data loaded for selected teams.")
+EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip"}
+def _norm_activity_name(val: Any) -> str:
+    return str(val).strip().lower().replace("_", "-")
 with tabs[1]:
-    if "non_wip" not in data and "non_wip_activities" not in data:
+    if (
+        "non_wip" not in data
+        and "non_wip_activities" not in data
+        and "ns_non_wip_activities" not in data
+    ):
         st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
         st.stop()
     st.markdown("### Non-WIP activities")
@@ -1601,7 +1608,7 @@ with tabs[1]:
         cand = filter_by_team(data["ns_non_wip_activities"])
         if not cand.empty:
             source_raw = cand
-    if "non_wip" in data:
+    if source_raw is None and "non_wip" in data:
         cand = filter_by_team(data["non_wip"])
         if not cand.empty:
             source_raw = cand
@@ -1663,7 +1670,9 @@ with tabs[1]:
     )
     normalised_chunks: List[pd.DataFrame] = []
     for wk_val, grp in weekly_raw.groupby("week_start"):
-        cat = grp[["activity", "hours"]].rename(columns={"activity": "Activity", "hours": "Hours"})
+        cat = grp[["activity", "hours"]].rename(
+            columns={"activity": "Activity", "hours": "Hours"}
+        )
         cat_norm = split_nonwip_activity_minutes(cat)
         cat_norm["week_start"] = wk_val
         normalised_chunks.append(cat_norm)
@@ -1675,15 +1684,24 @@ with tabs[1]:
         )
     else:
         weekly_by_activity = weekly_raw.copy()
+    weekly_by_activity = weekly_by_activity[
+        ~weekly_by_activity["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
+    ]
+    if weekly_by_activity.empty:
+        st.info("No Non-WIP activity data available after excluding OOO and Non-WIP.")
+        st.stop()
     avg_weekly = (
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(avg_weekly_hours=("hours", "mean"))
         .sort_values("avg_weekly_hours", ascending=False)
         .head(15)
     )
+    if avg_weekly.empty:
+        st.info("No chartable Non-WIP activity data available after exclusions.")
+        st.stop()
     avg_weekly_sorted = avg_weekly.sort_values("avg_weekly_hours", ascending=True)
     st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=False)
-    st.caption("Top 15 activities by **average weekly hours** (highest → lowest).")
+    st.caption('Top 15 activities by **average weekly hours** (excluding "OOO" and "Non-WIP").')
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
     pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
@@ -1714,20 +1732,33 @@ with tabs[1]:
                     hrs = item.get("hours") or item.get("Hours")
                     if act is None or hrs is None:
                         continue
-                    pie_rows.append({"activity": str(act).strip(), "hours": float(hrs) if str(hrs) != "" else 0.0})
+                    pie_rows.append(
+                        {
+                            "activity": str(act).strip(),
+                            "hours": float(hrs) if str(hrs) != "" else 0.0,
+                        }
+                    )
     if pie_rows:
         pie_act_df = pd.DataFrame(pie_rows)
         pie_cat = pie_act_df.rename(columns={"activity": "Activity", "hours": "Hours"})
         pie_cat_norm = split_nonwip_activity_minutes(pie_cat)
         pie_rolled = pie_cat_norm.rename(columns={"Activity": "activity", "Hours": "hours"})
         pie_rolled = pie_rolled.groupby("activity", as_index=False).agg(hours=("hours", "sum"))
+        pie_rolled = pie_rolled[
+            ~pie_rolled["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
+        ]
         pie_rolled = pie_rolled.sort_values("hours", ascending=False)
+        if pie_rolled.empty:
+            st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
+            st.stop()
         if len(pie_rolled) > 19:
             top_pie = pie_rolled.head(19)
-            other_pie = pd.DataFrame([{
-                "activity": "Other",
-                "hours": float(pie_rolled["hours"].iloc[19:].sum()),
-            }])
+            other_pie = pd.DataFrame(
+                [{
+                    "activity": "Other",
+                    "hours": float(pie_rolled["hours"].iloc[19:].sum()),
+                }]
+            )
             pie_df = pd.concat([top_pie, other_pie], ignore_index=True)
         else:
             pie_df = pie_rolled
