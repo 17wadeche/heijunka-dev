@@ -739,6 +739,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "rpa meeting": "RPA Meeting/Action",
             "rpa meeting and action": "RPA Meeting/Action",
             "fer capa report/review": "CAPA",
+            "cornerstone and admin":"Admin",
             "rpa meeting/action": "RPA Meeting/Action",
             "rpa meeting & action": "RPA Meeting/Action",
             "vig training": "Training",
