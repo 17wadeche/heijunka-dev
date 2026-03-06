@@ -771,6 +771,7 @@ def _canon_activity(label: str) -> str:
         "eu vig training":"Training",
         "training kirsty":"Training",
         "meeting with lab":"Meeting",
+        "training + ri completion + chey wade email":"Training",
         "sr email": "Email & IM",
         "meeting on clinical study":"Meeting",
         "restart": "IT Issue/Update",
