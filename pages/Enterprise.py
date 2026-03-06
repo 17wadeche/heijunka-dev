@@ -1011,10 +1011,8 @@ def _canon_activity(label: str) -> str:
         "team lead meeting & action": "Meeting",
         "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",        
     }
-
     if lower in explicit_map:
         return explicit_map[lower]
-
     acronym_tokens = {
         "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
         "ri", "capa",
@@ -1765,12 +1763,12 @@ with tabs[1]:
         if pie_rolled.empty:
             st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
             st.stop()
-        if len(pie_rolled) > 20:
-            top_pie = pie_rolled.head(20)
+        if len(pie_rolled) > 30:
+            top_pie = pie_rolled.head(30)
             other_pie = pd.DataFrame(
                 [{
                     "activity": "Other",
-                    "hours": float(pie_rolled["hours"].iloc[20:].sum()),
+                    "hours": float(pie_rolled["hours"].iloc[30:].sum()),
                 }]
             )
             pie_df = pd.concat([top_pie, other_pie], ignore_index=True)
