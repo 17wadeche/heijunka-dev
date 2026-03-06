@@ -635,6 +635,7 @@ def _canon_activity(label: str) -> str:
         "ri follow-up":"RI",
         "ri completion":"RI",
         "ri call": "RI",
+        "steam pop review, cas coding":"Coding",
         "audit, building a community/potluck & costume party":"Audit",
         "internal audit backroom support":"Audit",
         "internal audit backroom":"Audit",

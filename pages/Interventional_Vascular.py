@@ -365,6 +365,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "a whole lot of collaboration, meet and greets, meetings, troubleshooting, and training": "Collaboration",
             "ng workshop, email/admin/collab": "Next Gen",
             "ng workshop, lates, email/admin": "Next Gen",
+            "steam pop review, cas coding":"Coding",
             "meetings, ng/coding": "Next Gen",
             "responding to emails and team collaboration": "Email & IM",
             "mtg" : "Meeting",
