@@ -869,6 +869,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "training qs":"Question",
             "ran batchman for fers/fac":"Batchman",
             "1s":"Meeting",
+            "(meetings 60) looking at aged files to see if any of them are workable (60)":"Meeting",
             "email wip etc.": "Email & IM",
             "proformas x2":"Proforma",
             "emails/teams message": "Email & IM",
