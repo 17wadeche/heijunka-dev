@@ -1710,7 +1710,7 @@ with tabs[1]:
     )
     if total_hours.empty:
         st.info("No chartable Non-WIP activity data available after exclusions.")
-        st.stop()f
+        st.stop()
     st.bar_chart(
         total_hours.set_index("activity")["total_hours"],
         horizontal=False,
