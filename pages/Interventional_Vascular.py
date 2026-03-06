@@ -816,6 +816,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "rs pxm sh inbox":"RS Inbox",
             "rs sh inbox":"RS Inbox",
             "cornerstone/it ticket": "IT Issue/Update",
+            "skills lab + consult w/corie":"Nurse Consult",
             "it ticket/tech issue": "IT Issue/Update",
             "ad hoc request from pmpa":"PMPA",
             "cornerstone + it ticket": "IT Issue/Update",
