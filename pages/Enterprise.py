@@ -695,6 +695,11 @@ def _canon_activity(label: str) -> str:
         "emails/misc/technology": "IT Issue/Update",
         "teams question": "Email & IM",
         "ms teams Chats/interruption": "Email & IM",
+        "emails/in-person discussion": "Email & IM",
+        "cq problem solving monthly meeting":"Problem Solving"
+        "leading indicators meeting":"Meeting",
+        "jar lid particulate discussion":"Jar Lid Discussion",
+        "emails/action": "Email & IM",
         "extra time on inbox":"RS Inbox",
         "it/tech issue": "IT Issue/Update",
         "pmpa discussion":"PMPA",
