@@ -511,6 +511,7 @@ def _canon_activity(label: str) -> str:
         "sme improvement projects/ problem solving":"Problem Solving",
         "training, scrum":"Training",
         "team communication":"Meeting",
+        "aem (justin for all brian, chris, geoff for ftes)": "Team Meetings Aems Team Building",
         "respond to engineer email": "Email & IM",
         "training q":"Training",
         "training, practice, cornerstone":"Training",
