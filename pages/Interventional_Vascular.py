@@ -700,6 +700,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "sh call": "Meeting",
             "sh vig meeting": "Meeting",
             "other emails & im":"Email & IM",
+            "pmq mfg assessment call": "PMQ Meeting",
             "sh vig review/querie": "Question",
             "aged wip review": "Aging WIP Review",
             "file review": "Aging WIP Review",
