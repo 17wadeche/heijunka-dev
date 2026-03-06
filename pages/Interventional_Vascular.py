@@ -360,6 +360,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "shadowing": "Training",
             "response to emails for product analysis, studies and literature processing question": "Email & IM",
             "reviewing letters, meeting" : "Meeting",
+            "ng, meetings, event review": "Next Gen",
             "responding to emails and team collaboration": "Email & IM",
             "mtg" : "Meeting",
             "ng, coding, email/admin":"Next Gen",

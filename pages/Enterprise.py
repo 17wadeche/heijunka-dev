@@ -642,6 +642,7 @@ def _canon_activity(label: str) -> str:
         "rrt":"Rrtt",
         "parkmore townhall":"Meeting",
         "career development plan":"Career Development",
+        "ng, meetings, event review": "Next Gen",
         "career development review":"Career Development",
         "career developemnt plan":"Career Development",
         "ng, ms, event review, emails, colloboration, filling out pa board": "Next Gen",
