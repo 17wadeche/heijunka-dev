@@ -884,6 +884,7 @@ def _canon_activity(label: str) -> str:
         "monitoring audit backroom":"Audit",
         "email/teams - affera,rpa,mappers; collaboration":"Email & IM",
         "meetings, training, emails/admin":"Admin",
+        "meetings, training, collaboration, emails/admin":"Admin",
         "collaboration, meetings, ps coding remediation, email/admin":"Meeting",
         "meetings, emails, schedule":"Email & IM",
         "emails/teams - rpa, collaboration":"Email & IM",
