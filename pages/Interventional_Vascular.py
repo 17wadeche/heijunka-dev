@@ -751,7 +751,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "training - event create, review, meet, question": "Training",
             "metrics, tl meeting, event request, meetings, ri":"Meeting",
             "training, scrum, collab":"Scrum & Action",
-            "ng, collaboration, ps requests":"Next Gen",
+            "ng, collaboration, ps requests, meeting":"Next Gen",
             "collaboration, meetings, lates update":"Collaboration",
             "collaboration, holiday presentation":"Collaboration",
             "holiday program activitie":"Meeting",

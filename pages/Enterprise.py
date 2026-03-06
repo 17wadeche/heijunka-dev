@@ -844,7 +844,7 @@ def _canon_activity(label: str) -> str:
         "consulting/email":"Email & IM",
         "getting training plans established, meetings scheduled, etc.":"Admin",
         "training, collaboration, emails/admin":"Admin",
-        "ng, collaboration, ps requests":"Next Gen",
+        "ng, collaboration, ps requests, meeting":"Next Gen",
         "collaboration, meetings, lates update":"Collaboration",
         "collaboration, holiday presentation":"Collaboration",
         "holiday program activitie":"Meeting",
