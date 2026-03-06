@@ -649,6 +649,7 @@ def _canon_activity(label: str) -> str:
         "reviewed the training from liam for the new mir": "Training",
         "nh training": "Training",
         "training nhs": "Training",
+        "email/im":"Email & IM",
         "ri temp handoff mtg":"RI",
         "career dev review":"Career Development",
         "next gen call recording": "Next Gen",
