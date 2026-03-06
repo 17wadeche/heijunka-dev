@@ -832,7 +832,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "it/tech issue": "IT Issue/Update",
             "call with rep":"Meeting",
             "emails/in-person discussion": "Email & IM",
-            "cq problem solving monthly meeting":"Problem Solving"
+            "cq problem solving monthly meeting":"Problem Solving",
             "leading indicators meeting":"Meeting",
             "jar lid particulate discussion":"Jar Lid Discussion",
             "emails/action": "Email & IM",
