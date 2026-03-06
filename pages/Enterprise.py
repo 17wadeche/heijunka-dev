@@ -710,6 +710,7 @@ def _canon_activity(label: str) -> str:
         "qms training":"Training",
         "ste up":"Set Up",
         "training review":"Training",
+        "escalated call prep":"Meeting",
         "safety meeting":"Meeting",
         "computer reboot": "IT Issue/Update",
         "bsi audit meeting":"Audit",

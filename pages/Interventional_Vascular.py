@@ -842,6 +842,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "redline doc":"Redline",
             "ia backroom support scrum":"Audit",
             "ia backroom support scrum audit meeting":"Audit",
+            "escalated call prep":"Meeting",
             "weekly team meeting":"Meeting",
             "ia backroom audit meeting":"Audit",
             "qms training":"Training",
