@@ -701,6 +701,7 @@ def _canon_activity(label: str) -> str:
         "jar lid particulate discussion":"Jar Lid Discussion",
         "emails/action": "Email & IM",
         "mir training meeting":"Training",
+        "redline doc":"Redline",
         "extra time on inbox":"RS Inbox",
         "ia backroom support scrum":"Audit",
         "ia backroom support scrum audit meeting":"Audit",
