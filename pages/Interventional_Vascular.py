@@ -761,6 +761,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "global town hall":"Meeting",
             "restore lsh bridge review":"LSH Bridge",
             "next gen call":"Next Gen",
+            "meeting & action": "Meeting",
+            "cornerston":"Cornerstone",
             "team lead meeting & action": "Meeting",
             "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",
         }
