@@ -637,6 +637,7 @@ def _canon_activity(label: str) -> str:
         "internal audit backroom support":"Audit",
         "internal audit backroom":"Audit",
         "ng workshop, emails/admin, ms review": "Next Gen",
+        "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training",
         "ri repsonse":"RI",
         "rrt":"Rrtt",
         "parkmore townhall":"Meeting",

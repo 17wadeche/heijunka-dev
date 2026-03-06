@@ -352,6 +352,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "internal audit backroom support":"Audit",
             "internal audit backroom":"Audit",
             "audit checkin" : "Audit",
+            "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training",
             "heijunka review/update" : "Heijunka",
             "scrumb": "Scrum",
             "brian meeting, scrum, collaboration": "Meeting",
