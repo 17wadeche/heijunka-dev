@@ -643,6 +643,7 @@ def _canon_activity(label: str) -> str:
         "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training",
         "ri repsonse":"RI",
         "rrt":"Rrtt",
+        "dmaic":"Problem Solving",
         "ng workshop, email/admin/collab": "Next Gen",
         "ng workshop, lates, email/admin": "Next Gen",
         "meetings, ng/coding": "Next Gen",
