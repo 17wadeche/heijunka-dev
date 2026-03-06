@@ -508,6 +508,7 @@ def _canon_activity(label: str) -> str:
         "traing":"Training",
         "complex/consult training":"Training",
         "meeting with tm":"Meeting",
+        "sme improvement projects/ problem solving":"Problem Solving",
         "training, scrum":"Training",
         "team communication":"Meeting",
         "respond to engineer email": "Email & IM",
