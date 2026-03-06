@@ -763,6 +763,7 @@ def _canon_activity(label: str) -> str:
         "pvh next gen meeting":"Next Gen",
         "gemba & prep":"Gemba",
         "proformas x2":"Proforma",
+        "ls":"Meeting",
         "yellow belt cornerstone":"Yellow Belt",
         "yellow belt cornerstone, question":"Yellow Belt",
         "training qs":"Question",
