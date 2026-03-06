@@ -964,6 +964,7 @@ def _canon_activity(label: str) -> str:
         "rpa/reliability email/phone call": "RPA Meeting/Action",
         "pulling metrics and reviewing what was required to be done, collobartion":"Admin",
         "metrics, d2d, planning, schedule":"Admin",
+        "time to enter in cap mgmt tracker":"Fill Out Capacity Management Tools (heijunka, Non-wip Chart)",
         "affera ftq work":"Project Work",
         "meetings - affera ftq & affera data file":"Meeting",
         "training, scrum, collab":"Scrum & Action",
