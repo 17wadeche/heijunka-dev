@@ -735,6 +735,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "aged wip review": "Aging WIP Review",
             "(fw 15) (emails 15) (looking At aged files 30) (cf files additional testing 30)": "Aging WIP Review",
             "file review": "Aging WIP Review",
+            "on call":"Meeting",
             "rpa meeting": "RPA Meeting/Action",
             "rpa meeting and action": "RPA Meeting/Action",
             "fer capa report/review": "CAPA",

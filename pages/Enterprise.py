@@ -806,6 +806,7 @@ def _canon_activity(label: str) -> str:
         "meetings, ng/coding": "Next Gen",
         "(meetings 60) looking at aged files to see if any of them are workable (60)":"Meeting",
         "parkmore townhall":"Meeting",
+        "on call":"Meeting",
         "career development plan":"Career Development",
         "ng, meetings, event review": "Next Gen",
         "career development review":"Career Development",
