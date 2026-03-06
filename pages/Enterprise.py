@@ -711,6 +711,7 @@ def _canon_activity(label: str) -> str:
         "agile co":"Agile Change Order",
         "slow gch": "IT Issue/Update",
         "ia backroom audit meeting":"Audit",
+        "scrum: 30.":"Scrum & Action",
         "qms training":"Training",
         "ste up":"Set Up",
         "training review":"Training",
