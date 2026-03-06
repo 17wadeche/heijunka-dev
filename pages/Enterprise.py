@@ -1700,20 +1700,22 @@ with tabs[1]:
         ~weekly_by_activity["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
     ]
     if weekly_by_activity.empty:
-        st.info("No Non-WIP activity data available after excluding OOO and Non-WIP.")
+        st.info("No Non-WIP activity data available after exclusions.")
         st.stop()
-    avg_weekly = (
+    total_hours = (
         weekly_by_activity.groupby("activity", as_index=False)
-        .agg(avg_weekly_hours=("hours", "mean"))
-        .sort_values("avg_weekly_hours", ascending=False)
+        .agg(total_hours=("hours", "sum"))
+        .sort_values("total_hours", ascending=False)
         .head(15)
     )
-    if avg_weekly.empty:
+    if total_hours.empty:
         st.info("No chartable Non-WIP activity data available after exclusions.")
-        st.stop()
-    avg_weekly_sorted = avg_weekly.sort_values("avg_weekly_hours", ascending=True)
-    st.bar_chart(avg_weekly_sorted.set_index("activity")["avg_weekly_hours"], horizontal=False)
-    st.caption('Top 15 activities by average weekly hours.')
+        st.stop()f
+    st.bar_chart(
+        total_hours.set_index("activity")["total_hours"],
+        horizontal=False,
+    )
+    st.caption("Top 15 activities by total hours for the selected period (highest on the left).")
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
     pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
