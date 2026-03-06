@@ -1707,15 +1707,27 @@ with tabs[1]:
         .agg(total_hours=("hours", "sum"))
         .sort_values("total_hours", ascending=False)
         .head(15)
+        .reset_index(drop=True)
     )
     if total_hours.empty:
         st.info("No chartable Non-WIP activity data available after exclusions.")
         st.stop()
-    st.bar_chart(
-        total_hours.set_index("activity")["total_hours"],
-        horizontal=False,
-    )
-    st.caption("Top 15 activities by total hours for the selected period (highest on the left).")
+    import matplotlib.pyplot as plt
+    def _short_label(s: Any, max_len: int = 22) -> str:
+        s = str(s).strip()
+        return s if len(s) <= max_len else s[: max_len - 3] + "..."
+    chart_df = total_hours.copy()
+    chart_df["label"] = chart_df["activity"].map(lambda x: _short_label(x, 22))
+    fig, ax = plt.subplots(figsize=(14, 5.5))
+    ax.bar(chart_df["label"], chart_df["total_hours"])
+    ax.set_ylabel("Total hours")
+    ax.set_xlabel("")
+    ax.set_title("Top 15 Non-WIP activities by total hours")
+    ax.tick_params(axis="x", rotation=45, labelsize=9)
+    plt.setp(ax.get_xticklabels(), ha="right")
+    fig.tight_layout()
+    st.pyplot(fig)
+    st.caption("Top 15 activities by total hours for the selected period, sorted highest to lowest from left to right.")
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
     pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
