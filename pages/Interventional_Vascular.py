@@ -809,6 +809,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "processing question":"Question",
             "meetings; pe review for pmpa":"PMPA",
             "emails/discussion":"Email & IM",
+            "meetings; pe review for pmpa.":"PMPA",
             "mtgs 2 hrs": "Meeting",
             "sales rep training": "Training",
             "mir training": "Training",

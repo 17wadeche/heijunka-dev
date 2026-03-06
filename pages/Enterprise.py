@@ -663,6 +663,7 @@ def _canon_activity(label: str) -> str:
         "discussions/im": "Email & IM",
         "computer updates/rebooting/comp problem": "IT Issue/Update",
         "weekly cqxm/pmpa meeting":"PMPA",
+        "meetings; pe review for pmpa.":"PMPA",
         "ri discussion":"RI",
         "pmpa requests & qa":"PMPA",
         "pacemaker complaint meeting":"Meeting",
