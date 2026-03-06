@@ -752,6 +752,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "rrt":"Rrtt",
             "parkmore townhall":"Meeting",
             "career development plan":"Career Development",
+            "career development review":"Career Development",
             "career developemnt plan":"Career Development",
             "career dev review":"Career Development",
             "next gen call recording": "Next Gen",
