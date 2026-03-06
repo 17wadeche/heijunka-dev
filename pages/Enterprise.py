@@ -399,6 +399,8 @@ def _canon_activity(label: str) -> str:
         "pmpa/r&d meeting":"PMPA",
         "scrum 30": "Scrum & Action",
         "scrum/meeting": "Scrum & Action",
+        "training (on-boarding, product training, etc)":"Training",
+        "blockers (it issues, gch issues, computer updates)": "IT Issue/Update",
         "scum": "Scrum & Action",
         "it update": "IT Issue/Update",
         "documentation reading": "Documentation",

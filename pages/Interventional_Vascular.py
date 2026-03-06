@@ -809,6 +809,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "collaboration (i.e. file discussion)":"Collaboration",
             "flex team support": "Other Team WIP",
             "shadow":"Training",
+            "training (on-boarding, product training, etc)":"Training",
+            "blockers (it issues, gch issues, computer updates)": "IT Issue/Update",
             "meetings, training, collaboration, emails/admin":"Admin",
             "meetings, collaboration, troublehooting, training, email/admin":"Meeting",
             "trending team request":"Project Work",
