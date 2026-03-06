@@ -839,7 +839,7 @@ def _canon_activity(label: str) -> str:
         "personal development plan":"Career Development",
         "career development review":"Career Development",
         "career developemnt plan":"Career Development",
-        "activity: training - event create, review, meet, question": "Training",
+        "training - event create, review, meet, question": "Training",
         "metrics, tl meeting, event request, meetings, ri":"Meeting",
         "affera ftq work":"Project Work",
         "meetings - affera ftq & affera data file":"Meeting",

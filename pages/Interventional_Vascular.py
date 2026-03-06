@@ -748,7 +748,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "affera rpa - emails/phone call": "RPA Meeting/Action",
             "metrics/scrum/schedule":"Scrum & Action",
             "affera rpa email": "RPA Meeting/Action",
-            "activity: training - event create, review, meet, question": "Training",
+            "training - event create, review, meet, question": "Training",
             "metrics, tl meeting, event request, meetings, ri":"Meeting",
             "affera ftq work":"Project Work",
             "meetings - affera ftq & affera data file":"Meeting",
