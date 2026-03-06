@@ -1721,7 +1721,7 @@ with tabs[1]:
     fig, ax = plt.subplots(figsize=(14, 5.5))
     ax.bar(chart_df["label"], chart_df["total_hours"])
     ax.set_ylabel("Total Hours")
-    ax.set_xlabel("")
+    ax.set_xlabel("Non-WIP Activity")
     ax.set_title("Top 15 Non-WIP Activities by Total Hours")
     ax.tick_params(axis="x", rotation=45, labelsize=9)
     plt.setp(ax.get_xticklabels(), ha="right")
