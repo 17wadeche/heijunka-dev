@@ -803,6 +803,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "project":"Project Work",
             "shadow":"Training",
             "meetings, training, collaboration, emails/admin":"Admin",
+            "meetings, collaboration, troublehooting, training, email/admin":"Meeting",
             "trending team request":"Project Work",
             "training, collaboration, emails/admin":"Training",
             "meetings, collaboration, troubleshooting, training, email/admin":"Meeting",
