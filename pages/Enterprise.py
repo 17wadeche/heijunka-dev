@@ -1763,12 +1763,12 @@ with tabs[1]:
         if pie_rolled.empty:
             st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
             st.stop()
-        if len(pie_rolled) > 17:
-            top_pie = pie_rolled.head(17)
+        if len(pie_rolled) > 14:
+            top_pie = pie_rolled.head(14)
             other_pie = pd.DataFrame(
                 [{
                     "activity": "Other",
-                    "hours": float(pie_rolled["hours"].iloc[17:].sum()),
+                    "hours": float(pie_rolled["hours"].iloc[14:].sum()),
                 }]
             )
             pie_df = pd.concat([top_pie, other_pie], ignore_index=True)
