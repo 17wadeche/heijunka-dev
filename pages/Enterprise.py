@@ -461,7 +461,7 @@ def _canon_activity(label: str) -> str:
         "audit report":"Audit",
         "aging review": "Aging WIP Review",
         "querie":"Question",
-        "activity: started compiling details to prepare email for clinical team" :"Email & IM",
+        "started compiling details to prepare email for clinical team" :"Email & IM",
         "training and question":"Training/Mentoring",
         "training reviews, explanation":"Training/Mentoring",
         "training, keytext for letters, collaboration":"Training/Mentoring",
