@@ -863,7 +863,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "mns cornerstone":"Cornerstone",
             "qa observation":"QA",
             "qa finding":"QA",
-            "ai ipskilling":"Training/Mentoring",
+            "ai upskilling":"Training/Mentoring",
             "qa assessment":"QA",
             "contego meeting": "Meeting",
             "coding call": "Meeting",
