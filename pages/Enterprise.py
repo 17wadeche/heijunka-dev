@@ -456,6 +456,7 @@ def _canon_activity(label: str) -> str:
         "training and staff meeting":"Training/Mentoring",
         "60 minute training meeting":"Training/Mentoring",
         "training and meeting":"Training/Mentoring",
+        "1to": "Meeting",
         "affera training, rpa collaboration":"Training/Mentoring",
         "trainings, practice rr":"Training/Mentoring",
         "audit report":"Audit",

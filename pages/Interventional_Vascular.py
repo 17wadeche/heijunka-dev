@@ -387,6 +387,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "rpa meeing": "RPA Meeting/Action",
             "rpa minutes and action": "RPA Meeting/Action",
             "aortil call": "Meeting",
+            "1to": "Meeting",
             "audit report":"Audit",
             "open file review": "WIP Review",
             "aging review": "Aging WIP Review",
