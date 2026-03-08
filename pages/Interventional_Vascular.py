@@ -347,6 +347,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "capa working session": "CAPA",
             "capa update call": "CAPA",
             "pmpa weekly meeting": "PMPA",
+            "misc/in-office interruption":"Collaboration",
             "finish scheduling": "Metrics & Schedule",
             "scheduling": "Metrics & Schedule",
             "wip mgmt": "Metrics & Schedule",
