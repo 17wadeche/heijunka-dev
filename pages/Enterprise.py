@@ -340,6 +340,7 @@ def _canon_activity(label: str) -> str:
         "tl meeting": "Meeting",
         "email/admin": "Email & IM",
         "emails admin": "Email & IM",
+        "on":"Meeting",
         "emails/admin": "Email & IM",
         "enails/admin": "Email & IM",
         "ms meeting": "Meeting",
