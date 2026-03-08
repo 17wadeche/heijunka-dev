@@ -455,6 +455,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "email tier": "Email & IM",
             "grad dmaic training": "DMAIC",
             "deco training": "Training/Mentoring",
+            "conerstone":"Cornerstone",
             "mentoring/prep": "Training/Mentoring",
             "misc":"Admin",
             "1s meetings complex event consult emails/admin": "Meeting",
