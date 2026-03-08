@@ -460,6 +460,7 @@ def _canon_activity(label: str) -> str:
         "trainings, practice rr":"Training/Mentoring",
         "audit report":"Audit",
         "aging review": "Aging WIP Review",
+        "open file review": "WIP Review",
         "querie":"Question",
         "started compiling details to prepare email for clinical team" :"Email & IM",
         "training and question":"Training/Mentoring",
