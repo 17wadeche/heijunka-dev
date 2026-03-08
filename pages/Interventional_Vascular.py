@@ -390,6 +390,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "audit report":"Audit",
             "aging review": "Aging WIP Review",
             "querie":"Question",
+            "activity: started compiling details to prepare email for clinical team" :"Email & IM",
             "cornerstone, email":"Cornerstone",
             "film review meeting": "Meeting",
             "other querie": "Question",
