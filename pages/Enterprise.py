@@ -452,6 +452,7 @@ def _canon_activity(label: str) -> str:
         "training prep":"Training/Mentoring",
         "35 mins reverse-shadowing":"Training/Mentoring",
         "cornerstone, scrum":"Cornerstone",
+        "cornerstone, email":"Cornerstone",
         "training and staff meeting":"Training/Mentoring",
         "60 minute training meeting":"Training/Mentoring",
         "training and meeting":"Training/Mentoring",
