@@ -438,6 +438,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "coding/risk mgmt meeting": "Meeting",
             "coding meeting": "Meeting",
             "film meeting": "Meeting",
+            "med safety call": "Meeting",
+            "corner stone": "Cornerstone",
             "next gen support": "Next Gen",
             "literature meeting": "Meeting",
             "laptop turning on": "Set Up",
