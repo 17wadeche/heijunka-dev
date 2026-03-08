@@ -296,6 +296,7 @@ def _canon_activity(label: str) -> str:
         "call": "Meeting",
         "metrics/schedule/scrum, code gov, malf matrix update": "Scrum & Action",
         "investigation meeting": "Meeting",
+        "training":"Training/Mentoring",
         "meeting": "Meeting",
         "meeeting": "Meeting",
         ". meeting": "Meeting",  # extra safety; usually cleaned earlier
