@@ -382,6 +382,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "e-mail": "Email & IM",
             "scrum/checking": "Scrum & Action",
             "heijunka population": "Metrics & Schedule",
+            "french reimbursement query":"Question",
             "clinical query":"Question",
             "fywt/heijunka population": "Metrics & Schedule",
             "heijunka": "Metrics & Schedule",
