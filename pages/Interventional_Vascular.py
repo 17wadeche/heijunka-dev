@@ -385,6 +385,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "clinical query":"Question",
             "fywt/heijunka population": "Metrics & Schedule",
             "heijunka": "Metrics & Schedule",
+            "aging wip review":"Aged WIP Review",
             "clinical task training" : "Clinical Task",
             "training meeting": "Training/Mentoring",
             "problem solving meeting":"Problem Solving",
