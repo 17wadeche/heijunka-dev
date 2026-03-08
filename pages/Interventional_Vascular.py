@@ -760,6 +760,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "pmpa request":"PMPA",
             "pmpa update":"PMPA",
             "pmpa/questions/update":"PMPA",
+            "intrepid ?'s":"Question",
             "email; meeting": "Email & IM",
             "email; training": "Email & IM",
             "emails/amin": "Email & IM",
