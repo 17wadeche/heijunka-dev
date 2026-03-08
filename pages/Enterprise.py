@@ -348,6 +348,7 @@ def _canon_activity(label: str) -> str:
         "townhall":"Meeting",
         "meeting prep":"Meeting",
         "training/meeting": "Training/Mentoring",
+        "training/mentoring": "Training/Mentoring",
         "reg inquirie": "RI",
         "training with natalie": "Training/Mentoring",
         "training w/ natalie": "Training/Mentoring",
