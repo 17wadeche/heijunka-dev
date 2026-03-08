@@ -228,6 +228,8 @@ def _canon_activity(label: str) -> str:
         "capa update call": "CAPA",
         "pmpa weekly meeting": "Pmpa Meeting",
         "finish scheduling": "Scheduling",
+        "rpa minutes and action": "RPA Meeting/Action",
+        "aortil call": "Meeting",
         "audit checkin" : "Audit",
         "heijunka review/update" : "Heijunka",
         "scrumb": "Scrum",
