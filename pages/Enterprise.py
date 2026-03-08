@@ -345,6 +345,7 @@ def _canon_activity(label: str) -> str:
         "enails/admin": "Email & IM",
         "ms meeting": "Meeting",
         "aem + townhall":"Meeting",
+        
         "team meeting":"Meeting",
         "townhall":"Meeting",
         "meeting prep":"Meeting",
@@ -434,6 +435,9 @@ def _canon_activity(label: str) -> str:
         "training related activities":"Training/Mentoring",
         "training related activities (meet, review, questions, updates, finish inbox)":"Training/Mentoring",
         "scrum/metrics/schedule": "Metrics & Schedule",
+        "schedule": "Metrics & Schedule",
+        "metric": "Metrics & Schedule",
+        "wip schedule, setting up metrics table": "Metrics & Schedule",
         "metrics/schedule/scrum": "Metrics & Schedule",
         "rpa emails, ftq meeting": "RPA Meeting/Action",
         "practice letters, collaboration": "Collaboration",
