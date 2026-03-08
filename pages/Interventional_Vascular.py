@@ -339,6 +339,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "emails misc": "Email& IM",
             "capa": "CAPA",
             "em/etc": "Em Etc",
+            "unplanned audit support":"Audit",
             "meetings/mentoring": "Training/Mentoring",
             "procesing question":"Question",
             "admin/pack up desk":"Admin",
