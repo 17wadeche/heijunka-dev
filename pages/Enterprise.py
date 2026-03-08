@@ -287,6 +287,7 @@ def _canon_activity(label: str) -> str:
         "ri": "RI",
         "ri aortic meeting": "RI",
         "scrum&action": "Scrum & Action",
+        "rpa lab": "RPA Meeting/Action",
         "scrum & action": "Scrum & Action",
         "scrum and action": "Scrum & Action",
         "scrum& action": "Scrum & Action",
