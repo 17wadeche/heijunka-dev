@@ -294,6 +294,7 @@ def _canon_activity(label: str) -> str:
         "aged file review": "Aged WIP Review",
         "scrum &action": "Scrum & Action",
         "call": "Meeting",
+        "metrics/schedule/scrum, code gov, malf matrix update": "Scrum & Action",
         "investigation meeting": "Meeting",
         "meeting": "Meeting",
         "meeeting": "Meeting",
