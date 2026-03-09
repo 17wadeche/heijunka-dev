@@ -490,6 +490,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "1to": "Meeting",
             "audit report":"Audit",
             "open file review": "WIP Review",
+            "corrections/review file": "WIP Review",
             "tl support":"Collaboration",
             "tm support":"Collaboration",
             "review file": "WIP Review",
