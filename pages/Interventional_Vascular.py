@@ -874,6 +874,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "change order querie":"Question",
             "helping colleague":"Collaboration",
             "training videos, live case video":"Reviewing Documents & Case Video",
+            "watching live video":"Reviewing Documents & Case Video",
+            "end of week admin":"Admin",
             "vaccine, live case video":"Reviewing Documents & Case Video",
             "emails, finding work tool, reading agile document": "Email & IM",
             "shipping valves, training":"Training/Mentoring",
