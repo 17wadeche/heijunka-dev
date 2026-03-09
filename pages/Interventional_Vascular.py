@@ -392,6 +392,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "computer failure requiring replacement": "IT Issue/Update",
             "in-person discussion":"Collaboration",
             "internet issue": "IT Issue/Update",
+            "requesting proforma/creating evnts for ppm event":"Proforma",
+            "sending emails to pmpa for ous request of data/corrections with ms":"PMPA",
             "wip report": "Metrics & Schedule",
             "capa working session": "CAPA",
             "capa update call": "CAPA",
