@@ -60,3 +60,64 @@
 2026-03-08 15:20:33,043 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-08 15:20:33,114 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 292 rows
 2026-03-08 15:20:33,116 | INFO | === NS Metrics Run END ===
+2026-03-09 09:25:17,004 | INFO | === NS Metrics Run START ===
+2026-03-09 09:25:17,008 | INFO | Selected team: all
+2026-03-09 09:25:17,008 | INFO | [PH] START
+2026-03-09 09:25:50,032 | INFO | [PH] DONE | rows=352 | elapsed=0:00:33.023141
+2026-03-09 09:25:50,032 | INFO | [PH Cell 17] START
+2026-03-09 09:26:24,605 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:34.573518
+2026-03-09 09:26:24,607 | INFO | [SCS Cell 1] START
+2026-03-09 09:26:55,098 | INFO | [SCS Cell 1] DONE | rows=281 | elapsed=0:00:30.491112
+2026-03-09 09:26:55,099 | INFO | [MEIC PH] START
+2026-03-09 09:27:03,654 | INFO | [MEIC PH] DONE | rows=84 | elapsed=0:00:08.554456
+2026-03-09 09:27:03,654 | INFO | [DBS C13] START
+2026-03-09 09:28:31,936 | INFO | [DBS C13] DONE | rows=41 | elapsed=0:01:28.282421
+2026-03-09 09:28:31,938 | INFO | [DBS C13] filter >= 2025-07-07: 41 -> 36
+2026-03-09 09:28:31,938 | INFO | [DBS C14] START
+2026-03-09 09:30:16,601 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:01:44.662231
+2026-03-09 09:30:16,602 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
+2026-03-09 09:30:16,602 | INFO | [NV] START
+2026-03-09 09:32:41,153 | INFO | [NV] DONE | rows=41 | elapsed=0:02:24.551058
+2026-03-09 09:32:41,153 | INFO | [NV] filter >= 2025-07-07: 41 -> 36
+2026-03-09 09:32:41,154 | INFO | [Nav] START
+2026-03-09 09:35:41,161 | INFO | [Nav] still running...
+2026-03-09 09:38:35,161 | INFO | [Nav] DONE | rows=38 | elapsed=0:05:54.007254
+2026-03-09 09:38:35,162 | INFO | [AE MEIC] START
+2026-03-09 09:41:35,180 | INFO | [AE MEIC] still running...
+2026-03-09 09:43:37,998 | INFO | [AE MEIC] DONE | rows=38 | elapsed=0:05:02.837073
+2026-03-09 09:43:37,999 | INFO | [O-Arm MEIC] START
+2026-03-09 09:46:21,126 | INFO | [O-Arm MEIC] DONE | rows=38 | elapsed=0:02:43.125857
+2026-03-09 09:46:21,128 | INFO | [Mazor] START
+2026-03-09 09:48:30,163 | INFO | [Mazor] DONE | rows=39 | elapsed=0:02:09.034950
+2026-03-09 09:48:30,163 | INFO | [CSF] START
+2026-03-09 09:49:38,656 | INFO | [CSF] DONE | rows=39 | elapsed=0:01:08.493314
+2026-03-09 09:49:38,656 | INFO | [PSS] START
+2026-03-09 09:51:59,058 | INFO | [PSS] DONE | rows=39 | elapsed=0:02:20.402054
+2026-03-09 09:51:59,196 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-09 09:51:59,196 | INFO | [ENT] START
+2026-03-09 09:52:00,704 | INFO | [ENT] DONE | rows=47 | elapsed=0:00:01.508180
+2026-03-09 09:52:00,705 | INFO | [DBS MEIC] START
+2026-03-09 09:52:00,707 | INFO | [DBS MEIC] DONE | rows=30 | elapsed=0:00:00.001912
+2026-03-09 09:52:00,723 | INFO | [SCS MEIC] START
+2026-03-09 09:52:00,738 | INFO | [SCS MEIC] DONE | rows=30 | elapsed=0:00:00.014584
+2026-03-09 09:52:00,738 | INFO | [TDD COS 1] START
+2026-03-09 09:52:35,066 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:00:34.327363
+2026-03-09 09:52:35,066 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-09 09:52:35,066 | INFO | [SCS Super Cell] START
+2026-03-09 09:52:55,422 | INFO | [SCS Super Cell] DONE | rows=196 | elapsed=0:00:20.356854
+2026-03-09 09:52:55,422 | INFO | [SCS Super Cell] rows scraped (pre-filter): 196
+2026-03-09 09:52:55,422 | INFO | [SCS Super Cell] filter >= 2025-06-30: 196 -> 36
+2026-03-09 09:52:55,422 | INFO | [MEIC PH] filter >= 2025-09-01: 84 -> 29
+2026-03-09 09:52:55,428 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-09 09:52:55,432 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1204 -> 597
+2026-03-09 09:52:55,432 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-09 09:52:55,432 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1204 -> 597
+2026-03-09 09:52:55,433 | INFO | [ALL] drop period_date == 2023-11-06: 597 -> 596
+2026-03-09 09:52:55,433 | INFO | [ALL] drop period_date == 2026-09-07: 596 -> 595
+2026-03-09 09:52:55,480 | INFO | Wrote 595 rows to NS_metrics.csv
+2026-03-09 09:52:55,579 | INFO | Wrote 298 rows to NS_WIP.csv
+2026-03-09 09:52:55,614 | INFO | [POST] WIP weekly keys=298
+2026-03-09 09:52:55,614 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-03-09 09:52:55,614 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-03-09 09:52:55,679 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 298 rows
+2026-03-09 09:52:55,679 | INFO | === NS Metrics Run END ===
