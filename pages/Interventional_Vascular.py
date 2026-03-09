@@ -483,6 +483,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "mvp ftq question": "Question",
             "1-1 with manager": "Meeting",
             "fywt/heijunka": "Metrics & Schedule",
+            "Sl":"Sick Leave",
             "parklief":"Parklife",
             "rpa meeing": "RPA Meeting/Action",
             "rpa minutes and action": "RPA Meeting/Action",
