@@ -364,6 +364,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "imdrf":"Coding",
             "capa meeting": "CAPA",
             "id&e meeting":"Meeting",
+            "revise rfr codes for trending & analytic":"Coding",
             "mentoring/hypercare": "Training/Mentoring",
             "delivery) practicel letter": "Training/Mentoring",
             "meeting/training": "Training/Mentoring",
