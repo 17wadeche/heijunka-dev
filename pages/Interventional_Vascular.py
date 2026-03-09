@@ -351,6 +351,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "correction of hypercare event":"Hypercare",
             "trainng": "Training/Mentoring",
             "weekly ttvr meeting": "Meeting",
+            "lab call/capa meeting":"CAPA",
+            "weekly scheudle": "Metrics & Schedule",
             "wip pull etc": "Metrics & Schedule",
             "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
             "metrics, tuesday schedule": "Metrics & Schedule",
