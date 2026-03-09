@@ -493,6 +493,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "corrections/review file": "WIP Review",
             "tl support":"Collaboration",
             "tm support":"Collaboration",
+            "'tm support":"Collaboration",
             "review file": "WIP Review",
             "aging review": "Aged WIP Review",
             "querie":"Question",
