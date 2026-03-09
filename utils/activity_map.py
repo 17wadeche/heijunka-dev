@@ -24,6 +24,7 @@ ACTIVITY_MAP = {
     "lab call/capa meeting":"CAPA",
     "weekly scheudle": "Metrics & Schedule",
     "meterics, scrum, schedule": "Metrics & Schedule",
+    "fyw tool": "Metrics & Schedule",
     "weekly schedule": "Metrics & Schedule",
     "career fair launch event cic building":"Career Development",
     "scrum & ri meeting for update":"Scrum & Action",
