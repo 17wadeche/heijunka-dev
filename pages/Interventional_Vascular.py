@@ -894,6 +894,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "training docs sign off'":"Training/Mentoring",
             "bcu meeting prep":"Admin",
             "laptop not right, keeps crashing on word": "IT Issue/Update",
+            "cm clinic + gch issue": "IT Issue/Update",
             "observing harmony analysi":"Documentation",
             "erp capa office hourse":"CAPA",
             "dt catheter search for dt meeting next week.":"Meeting",
