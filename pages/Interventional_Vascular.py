@@ -360,6 +360,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "weekly scheudle": "Metrics & Schedule",
             "weekly schedule": "Metrics & Schedule",
             "career fair launch event cic building":"Career Development",
+            "pmpa date request":"PMPA",
+            "pmpa & lab meeting":"PMPA",
             "adn career fair planning meeting":"Career Development",
             "wip pull etc": "Metrics & Schedule",
             "monthly precedent event meeting":"Meeting",
