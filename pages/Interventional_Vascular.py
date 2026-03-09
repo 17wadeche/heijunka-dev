@@ -866,7 +866,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "live case videos, reading agile document":"Admin",
             "finding work tool, emails, training":"Admin",
             "cleaning after deco, emails, list of devices, ehs":"Admin",
-            "cleaning aftr deco":"Admin","
+            "cleaning aftr deco":"Admin",
             "training videos, live case video":"Reviewing Documents & Case Video",
             "vaccine, live case video":"Reviewing Documents & Case Video",
             "emails, finding work tool, reading agile document": "Email & IM",
