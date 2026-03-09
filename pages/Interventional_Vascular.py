@@ -496,6 +496,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "teams calls/im":"Email & IM",
             "aortil call": "Meeting",
             "clinical meeting": "Meeting",
+            "Clinical investigation meeting": "Meeting",
             "team support":"Collaboration",
             "1to": "Meeting",
             "audit report":"Audit",
