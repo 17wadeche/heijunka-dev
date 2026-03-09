@@ -380,6 +380,11 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "shoebox appeal 12pm - 2pm": "Meeting",
             "pmpa meeting & lab meeting":"PMPA",
             "ri meeting & monthly problem solving":"RI",
+            "scrum & problem solving":"Problem Solving",
+            "safety notices & merge meeting": "Meeting",
+            "ri, pmpa & lab meeting":"RI",
+            "capa 726178 meeting":"CAPA",
+            "proforma training"
             "ri meeting & safety communication":"RI",
             "q":"Question",
             "1 to 1":"Meeting",
