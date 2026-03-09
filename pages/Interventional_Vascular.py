@@ -485,6 +485,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "fywt/heijunka": "Metrics & Schedule",
             "parklief":"Parklife",
             "rpa meeing": "RPA Meeting/Action",
+            "tm help":"Collaboration",
             "rpa minutes and action": "RPA Meeting/Action",
             "med safety meeting": "Meeting",
             "actions from meeting": "Meeting",
