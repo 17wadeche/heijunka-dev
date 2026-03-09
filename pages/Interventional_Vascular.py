@@ -336,7 +336,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         explicit_map = {
             "email etc.":"Email & IM",
             "emails etc.":"Email & IM",
-            "emails misc": "Email& IM",
+            "emails misc": "Email & IM",
             "capa": "CAPA",
             "em/etc": "Em Etc",
             "unplanned audit support":"Audit",
@@ -353,6 +353,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "wip pull etc": "Metrics & Schedule",
             "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
             "metrics, tuesday schedule": "Metrics & Schedule",
+            "reviewed and processed emails from when i was out of office (does not include emails from engineers)": "Email & IM",
             "pulled work": "Metrics & Schedule",
             "metrics & monday's schedule": "Metrics & Schedule",
             "admin/pack up desk":"Admin",
