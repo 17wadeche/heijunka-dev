@@ -646,6 +646,7 @@ ACTIVITY_MAP = {
     "flex team support": "Other Team WIP",
     "qs":"Question",
     "extra ftq meeting":"Meeting",
+    "performing qa, ml review":"QA",
     "practice letters":"Training/Mentoring",
     "letter training":"Training/Mentoring",
     "training, collaboration":"Training/Mentoring",
