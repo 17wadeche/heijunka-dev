@@ -355,6 +355,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "metrics, tuesday schedule": "Metrics & Schedule",
             "reviewed and processed emails from when i was out of office (does not include emails from engineers)": "Email & IM",
             "pulled work": "Metrics & Schedule",
+            "pulled work tool, yellow belt training": "Metrics & Schedule",
             "metrics & monday's schedule": "Metrics & Schedule",
             "admin/pack up desk":"Admin",
             "imdrf":"Coding",
