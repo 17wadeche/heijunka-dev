@@ -857,6 +857,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "sh/a meeting, prepping archive pallet":"Meeting",
             "reviewing files from training, meeting,":"Training/Mentoring",
             "reading catheter work instruction":"Documentation",
+            "meeting, ellipsys dhr completing and uploading.":"Meeting",
+            "file rework for cell and pvh meeting":"Meeting",
             "meeting, fire alarm":"Meeting",
             "fedex shipment enquiry":"Question",
             "emails, creating dec heijunka, change order,": "Email & IM",
