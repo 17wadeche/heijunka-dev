@@ -355,6 +355,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "fywt assigning/gfe ageing meeeting": "Meeting",
             "new schedule template review & ri meeting":"RI",
             "weekly ttvr meeting": "Meeting",
+            "ri meeting & 1":"RI",
             "lab call/capa meeting":"CAPA",
             "weekly scheudle": "Metrics & Schedule",
             "weekly schedule": "Metrics & Schedule",
