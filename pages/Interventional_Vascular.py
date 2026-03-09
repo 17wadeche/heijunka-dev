@@ -831,6 +831,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "training prep":"Training/Mentoring",
             "35 mins reverse-shadowing":"Training/Mentoring",
             "cornerstone, scrum":"Cornerstone",
+            "cornerstone,":"Cornerstone",
             "training and staff meeting":"Training/Mentoring",
             "60 minute training meeting":"Training/Mentoring",
             "training and meeting":"Training/Mentoring",
