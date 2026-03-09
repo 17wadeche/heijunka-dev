@@ -410,6 +410,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "emails, etc":"Email & IM",
             "emails and cornerstone":"Email & IM",
             "emails/purchasing":"Email & IM",
+            "tier 2 crdn meeting": "Meeting",
             "liberant launch meeting": "Meeting",
             "reviewing helifx document update redline":"Redline",
             "admin and training correction":"Admin",
