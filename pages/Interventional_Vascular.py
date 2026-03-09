@@ -384,7 +384,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "safety notices & merge meeting": "Meeting",
             "ri, pmpa & lab meeting":"RI",
             "capa 726178 meeting":"CAPA",
-            "proforma training"
+            "proforma training":"Proforma",
             "ri meeting & safety communication":"RI",
             "q":"Question",
             "1 to 1":"Meeting",
