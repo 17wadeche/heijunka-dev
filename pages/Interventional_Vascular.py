@@ -889,6 +889,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "looking over aortic device diagram":"Documentation",
             "ms office downtime, raised ticket": "IT Issue/Update",
             "shipping valve":"shipment",
+            "shipment":"shipment",
             "reading aortic document":"Documentation",
             "training eugene on dcb":"Training/Mentoring",
             "training docs sign off'":"Training/Mentoring",
