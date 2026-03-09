@@ -422,6 +422,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "scheduling": "Metrics & Schedule",
             "wip mgmt": "Metrics & Schedule",
             "wip management": "Metrics & Schedule",
+            "tl heijunka": "Metrics & Schedule",
             "schedule": "Metrics & Schedule",
             "metric": "Metrics & Schedule",
             "wip schedule, setting up metrics table": "Metrics & Schedule",
