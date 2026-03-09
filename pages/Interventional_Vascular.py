@@ -407,6 +407,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             "tier meeting": "Meeting",
             "meeting with aurelie (ifu-closurefast)": "Meeting",
             "e-mails about manufacturing assessment":"Email & IM",
+            "shipping":"shipment",
             "emails, etc":"Email & IM",
             "emails and cornerstone":"Email & IM",
             "emails/purchasing":"Email & IM",
