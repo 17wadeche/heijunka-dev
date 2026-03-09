@@ -1081,6 +1081,7 @@ ACTIVITY_MAP = {
     "questions, death event rr/notification":"Question",
     "training letter burdown": "Letter Burndown",
     "team collaboration repsonded to": "Collaboration",
+    "collaboration with other groups (i.e. s&r, regions, pats)": "Collaboration",
     "issues with laptop": "IT Issue/Update",
     "meeting on file":"Meeting",
     "tm meeting":"Meeting",
