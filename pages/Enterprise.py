@@ -827,23 +827,18 @@ with tabs[1]:
         "non_wip" not in data
         and "non_wip_activities" not in data
         and "ns_non_wip_activities" not in data
+        and "crm_non_wip_activities" not in data
     ):
-        st.info("No non-WIP CSVs found (expected `non_wip.csv` and/or `non_wip_activities.csv`).")
+        st.info("No non-WIP CSVs found.")
         st.stop()
     st.markdown("### Non-WIP activities")
     source_raw = None
-    if "ns_non_wip_activities" in data:
-        cand = filter_by_team(data["ns_non_wip_activities"])
-        if not cand.empty:
-            source_raw = cand
-    if source_raw is None and "non_wip" in data:
-        cand = filter_by_team(data["non_wip"])
-        if not cand.empty:
-            source_raw = cand
-    if source_raw is None and "non_wip_activities" in data:
-        cand = filter_by_team(data["non_wip_activities"])
-        if not cand.empty:
-            source_raw = cand
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+        if key in data:
+            cand = filter_by_team(data[key])
+            if not cand.empty:
+                source_raw = cand
+                break
     if source_raw is None or source_raw.empty:
         st.info("No Non-WIP activity data available after team filtering.")
         st.stop()
