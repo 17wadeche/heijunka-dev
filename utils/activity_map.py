@@ -639,7 +639,7 @@ ACTIVITY_MAP = {
     "clinical safety plan review":"Clinical Safety Plan",
     "tl call on complex file":"Meeting",
     "out of office":"OOO",
-    "2 paid 15 min":"2 paid 15 minute break",
+    "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
     "trainer/ mentor (development and delivery)":"Training/Mentoring",
     "reading training material":"Training/Mentoring",
