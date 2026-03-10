@@ -487,6 +487,145 @@ def build_capacity_fixed_row(
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
+MEIC_XLSX = Path(r"C:\Users\wadec8\Medtronic PLC\MEIC_NMPH - Documents\NPH Tracker.xlsx")
+MEIC_SHEET = "Team Tracker"
+MEIC_DBS = {"Divya", "Reshmita", "Shankar"}
+MEIC_PH  = {"Sathya", "Arun", "Kavya"}
+def _first_name_match(full_name: str, short_set: set) -> bool:
+    first = norm_name(full_name).split()[0].lower() if norm_name(full_name) else ""
+    return first in {s.lower() for s in short_set}
+def build_meic_rows(wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
+    import xlwings as xw
+    if not MEIC_XLSX.exists():
+        print(f"[WARN] Missing MEIC XLSX: {MEIC_XLSX}")
+        return pd.DataFrame()
+    PEOPLE_START = 2
+    PEOPLE_END   = 17
+    HEADER_ROW   = 1
+    COL_OOO      = 2   # C
+    ACT_START    = 3   # D
+    out_rows: List[dict] = []
+    app = xw.App(visible=False, add_book=False)
+    try:
+        wb = app.books.open(str(MEIC_XLSX))
+        ws_xw = wb.sheets[MEIC_SHEET]
+        date_values: List[pd.Timestamp] = []
+        try:
+            log_sheet = wb.sheets["Non-D2D WIP Time Log"]
+            log_last_row = log_sheet.used_range.last_cell.row
+            log_dates = log_sheet.range(f"A2:A{log_last_row}").value
+            if not isinstance(log_dates, list):
+                log_dates = [log_dates]
+            for rd in log_dates:
+                if rd is None:
+                    continue
+                dt = pd.to_datetime(rd, errors="coerce")
+                if _is_real_year(dt):
+                    date_values.append(dt.normalize())
+            date_values = sorted(set(date_values))
+            print(f"[INFO] MEIC: found {len(date_values)} unique dates from log tab")
+        except Exception as e:
+            print(f"[INFO] MEIC: log tab strategy failed ({e}), trying B1 current value")
+        if not date_values:
+            try:
+                cur = ws_xw.range("B1").value
+                dt = pd.to_datetime(cur, errors="coerce")
+                if _is_real_year(dt):
+                    date_values = [dt.normalize()]
+                    print(f"[INFO] MEIC: using single current B1 date: {dt.date()}")
+            except Exception as e:
+                print(f"[WARN] MEIC: could not read B1 value ({e})")
+        if not date_values:
+            print("[WARN] MEIC: no dates found, skipping")
+            wb.close()
+            return pd.DataFrame()
+        for week in date_values:
+            ws_xw.range("B1").value = week.to_pydatetime()
+            wb.app.calculate()
+            last_col = ws_xw.used_range.last_cell.column
+            data = ws_xw.range((1, 1), (19, last_col)).value
+            ws = pd.DataFrame(data)
+            act_end = ACT_START
+            for c in range(ACT_START, ws.shape[1]):
+                lbl = norm_name(ws.iat[HEADER_ROW, c] if c < ws.shape[1] else "")
+                if lbl:
+                    act_end = c
+            people: List[dict] = []
+            for i in range(PEOPLE_START, PEOPLE_END + 1):
+                name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+                if not name or not is_real_person(name):
+                    continue
+                ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+                acts: List[dict] = []
+                for c in range(ACT_START, act_end + 1):
+                    label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[1] > c else "")
+                    if not label:
+                        continue
+                    hrs = safe_float(ws.iat[i, c] if ws.shape[1] > c else np.nan)
+                    if pd.isna(hrs) or hrs <= 0:
+                        continue
+                    acts.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+                person_nonwip = float(round(sum(a["hours"] for a in acts), 2))
+                people.append({"name": name, "ooo": ooo, "activities": acts, "nonwip_total": person_nonwip})
+            sub_teams = {
+                "DBS MEIC": [p for p in people if _first_name_match(p["name"], MEIC_DBS)],
+                "PH MEIC":  [p for p in people if _first_name_match(p["name"], MEIC_PH)],
+                "SCS MEIC": [p for p in people
+                             if not _first_name_match(p["name"], MEIC_DBS)
+                             and not _first_name_match(p["name"], MEIC_PH)],
+            }
+            for team_name, members in sub_teams.items():
+                if not members:
+                    continue
+                people_count  = len(members)
+                ooo_hours     = float(round(sum(m["ooo"] for m in members), 2))
+                all_acts      = [a for m in members for a in m["activities"]]
+                total_nonwip  = float(round(sum(a["hours"] for a in all_acts), 2))
+                nonwip_by_person = {m["name"]: m["nonwip_total"] for m in members if m["nonwip_total"] != 0.0}
+                ooo_map       = {m["name"]: m["ooo"] for m in members}
+                completed_match = metrics_df[
+                    (metrics_df.get("team") == team_name) &
+                    (metrics_df["period_date"] == week)
+                ]
+                completed_hours = (
+                    pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
+                    if not completed_match.empty else np.nan
+                )
+                pct_in_wip = np.nan
+                if pd.notna(completed_hours) and total_nonwip:
+                    denom = float(completed_hours) + float(total_nonwip)
+                    pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
+
+                wip_match = metrics_df[
+                    (metrics_df.get("team") == team_name) &
+                    (metrics_df["period_date"] == week)
+                ]
+                wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
+                wip_workers_ooo_hours = float(round(
+                    sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2
+                ))
+                out_rows.append({
+                    "team": team_name,
+                    "period_date": week.date().isoformat(),
+                    "source_file": str(MEIC_XLSX),
+                    "people_count": people_count,
+                    "total_non_wip_hours": total_nonwip,
+                    "OOO Hours": ooo_hours,
+                    "% in WIP": float(round(pct_in_wip, 6)) if pd.notna(pct_in_wip) else np.nan,
+                    "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
+                    "non_wip_activities": json.dumps(all_acts, ensure_ascii=False),
+                    "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+                    "wip_workers_count": len(wip_workers),
+                    "wip_workers_ooo_hours": wip_workers_ooo_hours,
+                })
+        wb.close()
+    finally:
+        app.quit()
+    df = pd.DataFrame(out_rows)
+    if not df.empty:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+        df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return df
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2       # Excel row 3, 0-indexed
     PEOPLE_END   = 25      # Excel row 26 / Christy Cain, 0-indexed
@@ -792,6 +931,9 @@ def main():
         df_team = build_team_rows(src, wip_df=wip_df, metrics_df=metrics_df)
         if not df_team.empty:
             built.append(df_team)
+    df_meic = build_meic_rows(wip_df=wip_df, metrics_df=metrics_df)
+    if not df_meic.empty:
+        built.append(df_meic)
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
