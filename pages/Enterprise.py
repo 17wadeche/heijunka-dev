@@ -630,13 +630,16 @@ def _weekly_rollup_summary(
         return pd.Series([0.0] * len(n), index=n.index)
     n["wip_workers_count"] = _col_num("wip_workers_count")
     n["wip_workers_ooo"] = _col_num("wip_workers_ooo")
-    wip_workers_by_week: Dict[pd.Timestamp, List[str]] = {}
+    def _norm_person_name(v: Any) -> str:
+        return str(v).strip().lower()
+    wip_workers_by_week: Dict[pd.Timestamp, set[str]] = {}
     if nwc.get("wip_workers_json") and nwc["wip_workers_json"] in n.columns:
         for _, r in n.iterrows():
-            wk = r["week_start"]
+            wk = pd.to_datetime(r["week_start"])
             payload = _loads_json_maybe(r[nwc["wip_workers_json"]])
             if isinstance(payload, list):
-                wip_workers_by_week[pd.to_datetime(wk)] = [str(x).strip() for x in payload if str(x).strip()]
+                vals = {_norm_person_name(x) for x in payload if str(x).strip()}
+                wip_workers_by_week[wk] = wip_workers_by_week.get(wk, set()) | vals
     n_wk = n.groupby("week_start", as_index=False).agg(
         people_count=("people_count", "sum"),
         nonwip_total=("nonwip_total", "sum"),
@@ -657,7 +660,7 @@ def _weekly_rollup_summary(
             if by_person_col:
                 for _, r in act.iterrows():
                     wk = pd.to_datetime(r["week_start"])
-                    wips = set(wip_workers_by_week.get(wk, []))
+                    wips = wip_workers_by_week.get(wk, set())
                     if not wips:
                         continue
                     dct = _loads_json_maybe(r[by_person_col])
@@ -665,7 +668,7 @@ def _weekly_rollup_summary(
                         continue
                     s = 0.0
                     for name, hrs in dct.items():
-                        if str(name).strip() in wips:
+                        if _norm_person_name(name) in wips:
                             try:
                                 s += float(hrs)
                             except Exception:
@@ -723,7 +726,14 @@ with tabs[0]:
         horizontal=True,
         help="Team-total daily WIP = Completed Hours/5. Per-person daily WIP divides by headcount too.",
     )
-    dfnw_act_raw = filter_by_team(data["non_wip_activities"]) if "non_wip_activities" in data else None
+    def _get_nonwip_activity_detail_df() -> Optional[pd.DataFrame]:
+        for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
+            if key in data:
+                d = filter_by_team(data[key])
+                if not d.empty:
+                    return d
+        return None
+    dfnw_act_raw = _get_nonwip_activity_detail_df()
     dfnw_act = filter_by_date_range(dfnw_act_raw, ov_start, ov_end) if dfnw_act_raw is not None else None
     (
         avg_daily_wip_per_person,
