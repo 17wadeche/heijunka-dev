@@ -642,6 +642,7 @@ ACTIVITY_MAP = {
     "2 paid 15 min":"2 paid 15 minute break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
     "trainer/ mentor (development and delivery)":"Training/Mentoring",
+    "read training meeting":"Training/Mentoring",
     "collaboration (i.e. file discussion)":"Collaboration",
     "flex team support": "Other Team WIP",
     "qs":"Question",
