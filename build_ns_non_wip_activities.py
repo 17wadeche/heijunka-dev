@@ -487,6 +487,21 @@ def build_capacity_fixed_row(
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
+def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return build_capacity_fixed_row(
+        team, ws,
+        people_start_row=2,              # Excel row 3 (0-indexed: 2)
+        people_end_row=25,               # Excel row 26 (0-indexed: 25)
+        expected_col_letter="B",
+        ooo_col_letter="AA",              # "Out of Office" column
+        deduct_cell="C29",               # Team Hours Available = 865 (total WIP hours to deduct)
+        ooo_sum_start_row=2,             # Z3 (0-indexed)
+        ooo_sum_end_row=25,              # Z25 (0-indexed)
+        total_ooo_end_row=25,
+        activity_header_row=1,           # Excel row 2 (0-indexed: 1)
+        activity_start_col_letter="C",
+        activity_end_col_letter="AG",
+    )
 def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
@@ -640,6 +655,14 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
+    "ENT": TeamSource(
+        team="ENT",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Capacity Management\ENT_Capacity Management for Non WIP_March 9th.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_ent_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
 }
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
     xlsx_path = team_src.xlsx
@@ -740,6 +763,7 @@ def main():
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
+        old_df = old_df[old_df["team"] != ENABLE_TEAM_NAME].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
