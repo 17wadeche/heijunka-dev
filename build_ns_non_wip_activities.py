@@ -689,7 +689,6 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
 ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
 ENABLE_TEAM_NAME = "Enabling Technologies"
 MEIC_PARENT_MAP = {
-    "PH": {"PH", "PH MEIC"},
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
 }
@@ -1078,8 +1077,8 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         team="PH",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Other\PH Non-D2D WIP.xlsx"),
         layout=StandardLayout(
-            people_start_row=2, totals_row=18,
-            activity_header_row=1, activity_start_col=3, activity_end_col=34,
+            people_start_row=2, totals_row=17,
+            activity_header_row=1, activity_start_col=3, activity_end_col=37,
             min_rows=17, min_cols=3,
         ),
         week_from_sheet=week_from_sheetname_date,
