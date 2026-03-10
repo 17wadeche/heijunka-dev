@@ -693,6 +693,7 @@ ACTIVITY_MAP = {
     "cornerstone, live case video":"Cornerstone",
     "emails, training":"Training/Mentoring",
     "helping catherine ship valves, training":"Training/Mentoring",
+    "grad project report":"Project Work",
     "dmaic research":"Problem Solving",
     "cornerstone, analysis training":"Cornerstone",
     "define of dmaic":"Problem Solving",
