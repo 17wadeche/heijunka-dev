@@ -419,14 +419,14 @@ def section_date_range(
     min_d = mn.date()
     max_d = mx.date()
     today_d = datetime.date.today()
-    max_selectable = min(max_d, today_d)
+    max_selectable = today_d
     if max_selectable < min_d:
         max_selectable = min_d
         st.warning(
             f"{label}: all available data starts after today ({min_d}). "
             "Date range has been clamped to the first available date."
         )
-    anchor_end = max_selectable
+    preset_anchor_end = today_d
     presets = [
         "Custom",
         "Past week",
@@ -455,11 +455,15 @@ def section_date_range(
         help="Choose a preset, or pick Custom to select exact dates.",
     )
     if preset in days_map:
-        start_default = max(min_d, (pd.to_datetime(anchor_end) - pd.Timedelta(days=days_map[preset])).date())
-        end_default = anchor_end
+        end_default = preset_anchor_end
+        start_default = max(
+            min_d,
+            (pd.to_datetime(preset_anchor_end) - pd.Timedelta(days=days_map[preset])).date(),
+        )
     else:
         start_default = min_d
-        end_default = anchor_end
+        end_default = max_selectable
+    anchor_end = max_selectable
     prev = st.session_state.get(last_preset_key)
     if prev != preset:
         st.session_state[dates_key] = (start_default, end_default)
