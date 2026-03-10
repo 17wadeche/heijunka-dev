@@ -16,6 +16,22 @@ warnings.filterwarnings(
 MEIC_TRACKER_PATH = Path(
     r"C:\Users\wadec8\Medtronic PLC\MEIC_NMPH - Documents\NPH Tracker.xlsx"
 )
+from datetime import datetime
+DEBUG_PH = True
+DEBUG_PH_LOG = Path(r"C:\heijunka-dev\ph_people_debug.log")
+def excel_cell(row_i_zero_based: int, col_i_zero_based: int) -> str:
+    n = col_i_zero_based + 1
+    letters = ""
+    while n:
+        n, rem = divmod(n - 1, 26)
+        letters = chr(65 + rem) + letters
+    return f"{letters}{row_i_zero_based + 1}"
+def ph_debug(msg: str) -> None:
+    if not DEBUG_PH:
+        return
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(DEBUG_PH_LOG, "a", encoding="utf-8") as f:
+        f.write(f"{ts} | {msg}\n")
 DBS_MEIC_NAMES = {"Divya", "Reshmita", "Shankar"}
 PH_MEIC_NAMES = {"Sathya", "Arun", "Kavya"}
 TEAM_TRACKER_SHEET = "Team Tracker"
@@ -248,28 +264,57 @@ def extract_wip_workers_from_row(row: pd.Series, person_hours_col: str = "Person
         if pd.notna(actual) and actual > 0:
             workers.append(name)
     return sorted(set(workers))
-def read_people_block(ws: pd.DataFrame, start_row_i: int) -> List[dict]:
+def read_people_block(
+    ws: pd.DataFrame,
+    start_row_i: int,
+    end_row_i: Optional[int] = None,
+    *,
+    team: Optional[str] = None,
+    sheet_name: Optional[str] = None,
+    week: Optional[pd.Timestamp] = None,
+) -> List[dict]:
     rows: List[dict] = []
-    for i in range(start_row_i, len(ws)):
-        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+    last_i = len(ws) - 1 if end_row_i is None else min(end_row_i, len(ws) - 1)
+    is_ph = (team == "PH")
+    if is_ph:
+        ph_debug("=" * 80)
+        ph_debug(
+            f"START team={team} sheet={sheet_name} week={week.date().isoformat() if week is not None and pd.notna(week) else ''} "
+            f"scan_rows={start_row_i + 1}:{last_i + 1}"
+        )
+    for i in range(start_row_i, last_i + 1):
+        raw_name = ws.iat[i, 0] if ws.shape[1] > 0 else ""
+        name = norm_name(raw_name)
+        a_cell = excel_cell(i, 0)
+        b_cell = excel_cell(i, 1)
+        c_cell = excel_cell(i, 2)
         if not name:
-            break
+            if is_ph:
+                ph_debug(f"SKIP blank | {a_cell} raw={raw_name!r}")
+            continue
         if not is_real_person(name):
+            if is_ph:
+                ph_debug(f"SKIP not_real_person | {a_cell} raw={raw_name!r} parsed={name!r}")
             continue
-        b = safe_float(ws.iat[i, 1] if ws.shape[1] > 1 else np.nan)
-        c = safe_float(ws.iat[i, 2] if ws.shape[1] > 2 else np.nan)
-        if pd.isna(b): b = 0.0
-        if pd.isna(c): c = 0.0
+        b_raw = ws.iat[i, 1] if ws.shape[1] > 1 else np.nan
+        c_raw = ws.iat[i, 2] if ws.shape[1] > 2 else np.nan
+        b = safe_float(b_raw)
+        c = safe_float(c_raw)
+        if pd.isna(b):
+            b = 0.0
+        if pd.isna(c):
+            c = 0.0
         rows.append({"row_i": i, "name": name, "B": b, "C": c})
+        if is_ph:
+            ph_debug(
+                f"COUNT | {a_cell}={raw_name!r} -> name={name!r} | "
+                f"{b_cell}={b_raw!r}->{b} | {c_cell}={c_raw!r}->{c}"
+            )
+    if is_ph:
+        ph_debug(f"FINAL COUNT team=PH count={len(set(r['name'] for r in rows))}")
+        ph_debug(f"FINAL PEOPLE team=PH names={json.dumps(sorted(set(r['name'] for r in rows)), ensure_ascii=False)}")
+        ph_debug("=" * 80)
     return rows
-def build_nonwip_by_person_b_minus_c(people_rows: List[dict]) -> Dict[str, float]:
-    out: Dict[str, float] = {}
-    for r in people_rows:
-        v = float(round(float(r.get("B", 0.0)) - float(r.get("C", 0.0)), 2))
-        if v == 0.0:
-            continue
-        out[r["name"]] = v
-    return out
 def build_activities(ws: pd.DataFrame, people_rows: List[dict], header_row_i: int, start_col_i: int, end_col_i: int) -> List[dict]:
     activities: List[dict] = []
     end_col_i = min(end_col_i, ws.shape[1] - 1)
@@ -715,7 +760,7 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
-            if parent_team in {"DBS", "SCS"}:
+            if parent_team in {"DBS", "SCS", "PH"}:
                 people_count_final = fallback_people_count
             else:
                 people_count_final = get_people_count_from_wip(
@@ -1161,6 +1206,14 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         completed_hours_from="NS_metrics",
     ),
 }
+def build_nonwip_by_person_b_minus_c(people_rows: List[dict]) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in people_rows:
+        v = float(round(float(r.get("B", 0.0)) - float(r.get("C", 0.0)), 2))
+        if v == 0.0:
+            continue
+        out[r["name"]] = v
+    return out
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
     if team_src.team in {"DBS MEIC", "SCS MEIC", "PH MEIC"}:
         if team_src.team != "DBS MEIC":
@@ -1192,8 +1245,26 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 continue
             if ws.shape[0] < cfg.min_rows or ws.shape[1] < cfg.min_cols:
                 continue
-            people_rows = read_people_block(ws, start_row_i=cfg.people_start_row)
+            people_rows = read_people_block(
+                ws,
+                start_row_i=cfg.people_start_row,
+                end_row_i=cfg.totals_row - 1,
+                team=team_src.team,
+                sheet_name=sheet_name,
+                week=week,
+            )
             people_count = len(set(r["name"] for r in people_rows))
+            if team_src.team == "PH":
+                ph_debug(
+                    f"SUMMARY team=PH sheet={sheet_name} week={week.date().isoformat()} "
+                    f"people_count={people_count} totals_row_excel={cfg.totals_row + 1}"
+                )
+                for r in people_rows:
+                    ph_debug(
+                        f"PERSON team=PH week={week.date().isoformat()} "
+                        f"row_excel={r['row_i'] + 1} cellA={excel_cell(r['row_i'], 0)} "
+                        f"name={r['name']!r} B={r['B']} C={r['C']}"
+                    )
             b = safe_float(ws.iat[cfg.totals_row, 1] if ws.shape[1] > 1 else np.nan)
             c = safe_float(ws.iat[cfg.totals_row, 2] if ws.shape[1] > 2 else np.nan)
             total_nonwip_hours = (b - c) if pd.notna(b) and pd.notna(c) else np.nan
@@ -1230,7 +1301,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-        use_original_people_count_teams = {"DBS", "SCS", "TDD", "NV"}
+        use_original_people_count_teams = {"DBS", "SCS", "TDD", "NV","PH"}
         if team_src.team in use_original_people_count_teams:
             people_count_final = int(people_count)
         else:
@@ -1239,6 +1310,12 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 team=team_src.team,
                 week=week,
                 fallback=people_count,
+            )
+        if team_src.team == "PH":
+            ph_debug(
+                f"OUTPUT team=PH week={week.date().isoformat()} "
+                f"people_count_raw={people_count} people_count_final={people_count_final} "
+                f"total_non_wip_hours={total_nonwip_hours} ooo_hours={ooo_hours}"
             )
         out_rows.append({
             "team": team_src.team,

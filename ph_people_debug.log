@@ -1,0 +1,148 @@
+2026-03-10 18:01:51 | ================================================================================
+2026-03-10 18:01:51 | START team=PH sheet=Mar 2 2026 week=2026-03-02 scan_rows=3:17
+2026-03-10 18:01:51 | COUNT | A3='MG' -> name='MG' | B3=34.5->34.5 | C3=nan->0.0
+2026-03-10 18:01:51 | COUNT | A4='Jenny' -> name='Jenny' | B4=32.75->32.75 | C4=4->4.0
+2026-03-10 18:01:51 | COUNT | A5='Aneneg' -> name='Aneneg' | B5=16.5->16.5 | C5=nan->0.0
+2026-03-10 18:01:51 | COUNT | A6='Judy' -> name='Judy' | B6=40->40.0 | C6=40->40.0
+2026-03-10 18:01:51 | COUNT | A7='Katie' -> name='Katie' | B7=40->40.0 | C7=nan->0.0
+2026-03-10 18:01:51 | COUNT | A8='Andy' -> name='Andy' | B8=31->31.0 | C8=8->8.0
+2026-03-10 18:01:51 | COUNT | A9='Liz' -> name='Liz' | B9=25.5->25.5 | C9=nan->0.0
+2026-03-10 18:01:51 | COUNT | A10='Maggie' -> name='Maggie' | B10=30.75->30.75 | C10=nan->0.0
+2026-03-10 18:01:51 | COUNT | A11='Tyler' -> name='Tyler' | B11=10.5->10.5 | C11=0.5->0.5
+2026-03-10 18:01:51 | COUNT | A12='Patrick' -> name='Patrick' | B12=8.25->8.25 | C12=nan->0.0
+2026-03-10 18:01:51 | COUNT | A13='Paige' -> name='Paige' | B13=19.25->19.25 | C13=8->8.0
+2026-03-10 18:01:51 | COUNT | A14='Sierra' -> name='Sierra' | B14=19->19.0 | C14=16->16.0
+2026-03-10 18:01:51 | COUNT | A15='Will' -> name='Will' | B15=3.75->3.75 | C15=nan->0.0
+2026-03-10 18:01:51 | COUNT | A16='Hallie' -> name='Hallie' | B16=40->40.0 | C16=nan->0.0
+2026-03-10 18:01:51 | COUNT | A17='Mari' -> name='Mari' | B17=3->3.0 | C17=nan->0.0
+2026-03-10 18:01:51 | FINAL COUNT team=PH count=15
+2026-03-10 18:01:51 | FINAL PEOPLE team=PH names=["Andy", "Aneneg", "Hallie", "Jenny", "Judy", "Katie", "Liz", "MG", "Maggie", "Mari", "Paige", "Patrick", "Sierra", "Tyler", "Will"]
+2026-03-10 18:01:51 | ================================================================================
+2026-03-10 18:01:51 | SUMMARY team=PH sheet=Mar 2 2026 week=2026-03-02 people_count=15 totals_row_excel=18
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=3 cellA=A3 name='MG' B=34.5 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=4 cellA=A4 name='Jenny' B=32.75 C=4.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=5 cellA=A5 name='Aneneg' B=16.5 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=6 cellA=A6 name='Judy' B=40.0 C=40.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=7 cellA=A7 name='Katie' B=40.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=8 cellA=A8 name='Andy' B=31.0 C=8.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=9 cellA=A9 name='Liz' B=25.5 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=10 cellA=A10 name='Maggie' B=30.75 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=11 cellA=A11 name='Tyler' B=10.5 C=0.5
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=12 cellA=A12 name='Patrick' B=8.25 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=13 cellA=A13 name='Paige' B=19.25 C=8.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=14 cellA=A14 name='Sierra' B=19.0 C=16.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=15 cellA=A15 name='Will' B=3.75 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=16 cellA=A16 name='Hallie' B=40.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-02 row_excel=17 cellA=A17 name='Mari' B=3.0 C=0.0
+2026-03-10 18:01:51 | OUTPUT team=PH week=2026-03-02 people_count_raw=15 people_count_final=15 total_non_wip_hours=278.25 ooo_hours=76.5
+2026-03-10 18:01:51 | ================================================================================
+2026-03-10 18:01:51 | START team=PH sheet=Mar 9 2026 week=2026-03-09 scan_rows=3:17
+2026-03-10 18:01:51 | COUNT | A3='MG' -> name='MG' | B3=0->0.0 | C3=nan->0.0
+2026-03-10 18:01:51 | COUNT | A4='Jenny' -> name='Jenny' | B4=40->40.0 | C4=40->40.0
+2026-03-10 18:01:51 | COUNT | A5='Aneneg' -> name='Aneneg' | B5=0->0.0 | C5=nan->0.0
+2026-03-10 18:01:51 | COUNT | A6='Judy' -> name='Judy' | B6=0->0.0 | C6=nan->0.0
+2026-03-10 18:01:51 | COUNT | A7='Katie' -> name='Katie' | B7=0->0.0 | C7=nan->0.0
+2026-03-10 18:01:51 | COUNT | A8='Andy' -> name='Andy' | B8=0->0.0 | C8=nan->0.0
+2026-03-10 18:01:51 | COUNT | A9='Liz' -> name='Liz' | B9=0->0.0 | C9=nan->0.0
+2026-03-10 18:01:51 | COUNT | A10='Maggie' -> name='Maggie' | B10=0->0.0 | C10=nan->0.0
+2026-03-10 18:01:51 | COUNT | A11='Tyler' -> name='Tyler' | B11=0->0.0 | C11=nan->0.0
+2026-03-10 18:01:51 | COUNT | A12='Patrick' -> name='Patrick' | B12=0->0.0 | C12=nan->0.0
+2026-03-10 18:01:51 | COUNT | A13='Paige' -> name='Paige' | B13=40->40.0 | C13=40->40.0
+2026-03-10 18:01:51 | COUNT | A14='Sierra' -> name='Sierra' | B14=0->0.0 | C14=nan->0.0
+2026-03-10 18:01:51 | COUNT | A15='Will' -> name='Will' | B15=0->0.0 | C15=nan->0.0
+2026-03-10 18:01:51 | COUNT | A16='Hallie' -> name='Hallie' | B16=0->0.0 | C16=nan->0.0
+2026-03-10 18:01:51 | COUNT | A17='Mari' -> name='Mari' | B17=0->0.0 | C17=nan->0.0
+2026-03-10 18:01:51 | FINAL COUNT team=PH count=15
+2026-03-10 18:01:51 | FINAL PEOPLE team=PH names=["Andy", "Aneneg", "Hallie", "Jenny", "Judy", "Katie", "Liz", "MG", "Maggie", "Mari", "Paige", "Patrick", "Sierra", "Tyler", "Will"]
+2026-03-10 18:01:51 | ================================================================================
+2026-03-10 18:01:51 | SUMMARY team=PH sheet=Mar 9 2026 week=2026-03-09 people_count=15 totals_row_excel=18
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=3 cellA=A3 name='MG' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=4 cellA=A4 name='Jenny' B=40.0 C=40.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=5 cellA=A5 name='Aneneg' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=6 cellA=A6 name='Judy' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=7 cellA=A7 name='Katie' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=8 cellA=A8 name='Andy' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=9 cellA=A9 name='Liz' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=10 cellA=A10 name='Maggie' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=11 cellA=A11 name='Tyler' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=12 cellA=A12 name='Patrick' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=13 cellA=A13 name='Paige' B=40.0 C=40.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=14 cellA=A14 name='Sierra' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=15 cellA=A15 name='Will' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=16 cellA=A16 name='Hallie' B=0.0 C=0.0
+2026-03-10 18:01:51 | PERSON team=PH week=2026-03-09 row_excel=17 cellA=A17 name='Mari' B=0.0 C=0.0
+2026-03-10 18:01:51 | OUTPUT team=PH week=2026-03-09 people_count_raw=15 people_count_final=15 total_non_wip_hours=0.0 ooo_hours=80.0
+2026-03-10 18:04:58 | ================================================================================
+2026-03-10 18:04:58 | START team=PH sheet=Mar 2 2026 week=2026-03-02 scan_rows=3:17
+2026-03-10 18:04:58 | COUNT | A3='MG' -> name='MG' | B3=34.5->34.5 | C3=nan->0.0
+2026-03-10 18:04:58 | COUNT | A4='Jenny' -> name='Jenny' | B4=32.75->32.75 | C4=4->4.0
+2026-03-10 18:04:58 | COUNT | A5='Aneneg' -> name='Aneneg' | B5=16.5->16.5 | C5=nan->0.0
+2026-03-10 18:04:58 | COUNT | A6='Judy' -> name='Judy' | B6=40->40.0 | C6=40->40.0
+2026-03-10 18:04:58 | COUNT | A7='Katie' -> name='Katie' | B7=40->40.0 | C7=nan->0.0
+2026-03-10 18:04:58 | COUNT | A8='Andy' -> name='Andy' | B8=31->31.0 | C8=8->8.0
+2026-03-10 18:04:58 | COUNT | A9='Liz' -> name='Liz' | B9=25.5->25.5 | C9=nan->0.0
+2026-03-10 18:04:58 | COUNT | A10='Maggie' -> name='Maggie' | B10=30.75->30.75 | C10=nan->0.0
+2026-03-10 18:04:58 | COUNT | A11='Tyler' -> name='Tyler' | B11=10.5->10.5 | C11=0.5->0.5
+2026-03-10 18:04:58 | COUNT | A12='Patrick' -> name='Patrick' | B12=8.25->8.25 | C12=nan->0.0
+2026-03-10 18:04:58 | COUNT | A13='Paige' -> name='Paige' | B13=19.25->19.25 | C13=8->8.0
+2026-03-10 18:04:58 | COUNT | A14='Sierra' -> name='Sierra' | B14=19->19.0 | C14=16->16.0
+2026-03-10 18:04:58 | COUNT | A15='Will' -> name='Will' | B15=3.75->3.75 | C15=nan->0.0
+2026-03-10 18:04:58 | COUNT | A16='Hallie' -> name='Hallie' | B16=40->40.0 | C16=nan->0.0
+2026-03-10 18:04:58 | COUNT | A17='Mari' -> name='Mari' | B17=3->3.0 | C17=nan->0.0
+2026-03-10 18:04:58 | FINAL COUNT team=PH count=15
+2026-03-10 18:04:58 | FINAL PEOPLE team=PH names=["Andy", "Aneneg", "Hallie", "Jenny", "Judy", "Katie", "Liz", "MG", "Maggie", "Mari", "Paige", "Patrick", "Sierra", "Tyler", "Will"]
+2026-03-10 18:04:58 | ================================================================================
+2026-03-10 18:04:58 | SUMMARY team=PH sheet=Mar 2 2026 week=2026-03-02 people_count=15 totals_row_excel=18
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=3 cellA=A3 name='MG' B=34.5 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=4 cellA=A4 name='Jenny' B=32.75 C=4.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=5 cellA=A5 name='Aneneg' B=16.5 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=6 cellA=A6 name='Judy' B=40.0 C=40.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=7 cellA=A7 name='Katie' B=40.0 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=8 cellA=A8 name='Andy' B=31.0 C=8.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=9 cellA=A9 name='Liz' B=25.5 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=10 cellA=A10 name='Maggie' B=30.75 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=11 cellA=A11 name='Tyler' B=10.5 C=0.5
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=12 cellA=A12 name='Patrick' B=8.25 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=13 cellA=A13 name='Paige' B=19.25 C=8.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=14 cellA=A14 name='Sierra' B=19.0 C=16.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=15 cellA=A15 name='Will' B=3.75 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=16 cellA=A16 name='Hallie' B=40.0 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-02 row_excel=17 cellA=A17 name='Mari' B=3.0 C=0.0
+2026-03-10 18:04:58 | OUTPUT team=PH week=2026-03-02 people_count_raw=15 people_count_final=15 total_non_wip_hours=278.25 ooo_hours=76.5
+2026-03-10 18:04:58 | ================================================================================
+2026-03-10 18:04:58 | START team=PH sheet=Mar 9 2026 week=2026-03-09 scan_rows=3:17
+2026-03-10 18:04:58 | COUNT | A3='MG' -> name='MG' | B3=0->0.0 | C3=nan->0.0
+2026-03-10 18:04:58 | COUNT | A4='Jenny' -> name='Jenny' | B4=40->40.0 | C4=40->40.0
+2026-03-10 18:04:58 | COUNT | A5='Aneneg' -> name='Aneneg' | B5=0->0.0 | C5=nan->0.0
+2026-03-10 18:04:58 | COUNT | A6='Judy' -> name='Judy' | B6=0->0.0 | C6=nan->0.0
+2026-03-10 18:04:58 | COUNT | A7='Katie' -> name='Katie' | B7=0->0.0 | C7=nan->0.0
+2026-03-10 18:04:58 | COUNT | A8='Andy' -> name='Andy' | B8=0->0.0 | C8=nan->0.0
+2026-03-10 18:04:58 | COUNT | A9='Liz' -> name='Liz' | B9=0->0.0 | C9=nan->0.0
+2026-03-10 18:04:58 | COUNT | A10='Maggie' -> name='Maggie' | B10=0->0.0 | C10=nan->0.0
+2026-03-10 18:04:58 | COUNT | A11='Tyler' -> name='Tyler' | B11=0->0.0 | C11=nan->0.0
+2026-03-10 18:04:58 | COUNT | A12='Patrick' -> name='Patrick' | B12=0->0.0 | C12=nan->0.0
+2026-03-10 18:04:58 | COUNT | A13='Paige' -> name='Paige' | B13=40->40.0 | C13=40->40.0
+2026-03-10 18:04:58 | COUNT | A14='Sierra' -> name='Sierra' | B14=0->0.0 | C14=nan->0.0
+2026-03-10 18:04:58 | COUNT | A15='Will' -> name='Will' | B15=0->0.0 | C15=nan->0.0
+2026-03-10 18:04:58 | COUNT | A16='Hallie' -> name='Hallie' | B16=0->0.0 | C16=nan->0.0
+2026-03-10 18:04:58 | COUNT | A17='Mari' -> name='Mari' | B17=0->0.0 | C17=nan->0.0
+2026-03-10 18:04:58 | FINAL COUNT team=PH count=15
+2026-03-10 18:04:58 | FINAL PEOPLE team=PH names=["Andy", "Aneneg", "Hallie", "Jenny", "Judy", "Katie", "Liz", "MG", "Maggie", "Mari", "Paige", "Patrick", "Sierra", "Tyler", "Will"]
+2026-03-10 18:04:58 | ================================================================================
+2026-03-10 18:04:58 | SUMMARY team=PH sheet=Mar 9 2026 week=2026-03-09 people_count=15 totals_row_excel=18
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-09 row_excel=3 cellA=A3 name='MG' B=0.0 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-09 row_excel=4 cellA=A4 name='Jenny' B=40.0 C=40.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-09 row_excel=5 cellA=A5 name='Aneneg' B=0.0 C=0.0
+2026-03-10 18:04:58 | PERSON team=PH week=2026-03-09 row_excel=6 cellA=A6 name='Judy' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=7 cellA=A7 name='Katie' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=8 cellA=A8 name='Andy' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=9 cellA=A9 name='Liz' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=10 cellA=A10 name='Maggie' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=11 cellA=A11 name='Tyler' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=12 cellA=A12 name='Patrick' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=13 cellA=A13 name='Paige' B=40.0 C=40.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=14 cellA=A14 name='Sierra' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=15 cellA=A15 name='Will' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=16 cellA=A16 name='Hallie' B=0.0 C=0.0
+2026-03-10 18:04:59 | PERSON team=PH week=2026-03-09 row_excel=17 cellA=A17 name='Mari' B=0.0 C=0.0
+2026-03-10 18:04:59 | OUTPUT team=PH week=2026-03-09 people_count_raw=15 people_count_final=15 total_non_wip_hours=0.0 ooo_hours=80.0
