@@ -53,6 +53,13 @@ def team_for_source(path: str) -> str:
     return TEAM_BY_BASENAME.get(base, "")
 def _norm_text(x: str) -> str:
     return re.sub(r"\s+", " ", (x or "").strip()).lower()
+def _collapse_ws(x: str) -> str:
+    return re.sub(r"\s+", " ", (x or "").strip())
+def normalize_person_name(name: str) -> str:
+    s = _collapse_ws(name)
+    if not s:
+        return ""
+    return s.title()
 def is_excluded_person(name: str) -> bool:
     n = _norm_text(name)
     return n in {"", "do not use", "team member(s)"}
@@ -140,7 +147,10 @@ def wip_workers_from_prod(ws_prod: Worksheet) -> List[str]:
             continue
         if is_excluded_person(person):
             continue
-        seen.add(person)
+        norm_person = normalize_person_name(person)
+        if not norm_person:
+            continue
+        seen.add(norm_person)
     return sorted(seen)
 NON_WIP_SPECS = [
     ("A13", ("B18", "F21"), "A", ("B17", "F17")),  # top-left block (often Do Not Use)
@@ -167,16 +177,22 @@ def compute_total_ooo_hours(ws_av: Worksheet) -> float:
 def compute_non_wip_by_person(ws_av: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for name_cell, (c1, c2), _, _ in NON_WIP_SPECS:
-        name = read_merged_value(ws_av, name_cell)
-        if not name or is_excluded_person(name):
+        raw_name = read_merged_value(ws_av, name_cell)
+        if not raw_name or is_excluded_person(raw_name):
+            continue
+        name = normalize_person_name(raw_name)
+        if not name:
             continue
         out[name] = out.get(name, 0.0) + sum_range(ws_av, c1, c2)
     return out
 def compute_non_wip_activities(ws_av: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for name_cell, (c1, c2), label_col, _ in NON_WIP_SPECS:
-        name = read_merged_value(ws_av, name_cell)
-        if not name or is_excluded_person(name):
+        raw_name = read_merged_value(ws_av, name_cell)
+        if not raw_name or is_excluded_person(raw_name):
+            continue
+        name = normalize_person_name(raw_name)
+        if not name:
             continue
         min_row = ws_av[c1].row
         max_row = ws_av[c2].row
@@ -205,8 +221,11 @@ def compute_non_wip_activities(ws_av: Worksheet) -> List[Dict[str, Any]]:
 def compute_ooo_by_person(ws_av: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for name_cell, _, _, (c1, c2) in NON_WIP_SPECS:
-        name = read_merged_value(ws_av, name_cell)
-        if not name or is_excluded_person(name):
+        raw_name = read_merged_value(ws_av, name_cell)
+        if not raw_name or is_excluded_person(raw_name):
+            continue
+        name = normalize_person_name(raw_name)
+        if not name:
             continue
         out[name] = out.get(name, 0.0) + sum_range(ws_av, c1, c2)
     return out
