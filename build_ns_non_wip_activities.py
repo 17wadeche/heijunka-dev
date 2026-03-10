@@ -63,36 +63,44 @@ def safe_float(x) -> float:
 def safe_float0(x) -> float:
     v = safe_float(x)
     return 0.0 if pd.isna(v) else float(v)
+from datetime import datetime, date
 def _excel_date_to_timestamp(v) -> Optional[pd.Timestamp]:
     if v is None:
         return None
     if isinstance(v, pd.Timestamp):
-        dt = v
-    else:
-        s = str(v).strip()
-        if not s or s.lower() in {"nan", "nat", "none"}:
-            return None
-        if re.fullmatch(r"[-+]?\d+(\.0+)?", s):
-            try:
-                num = float(s)
-                if -1000 <= num <= 1000:
-                    return None
-            except Exception:
-                pass
         try:
-            dt = pd.to_datetime(v, errors="coerce")
+            return pd.Timestamp(v).tz_localize(None).normalize()
+        except Exception:
+            try:
+                return pd.Timestamp(v).normalize()
+            except Exception:
+                return None
+    if isinstance(v, datetime):
+        try:
+            return pd.Timestamp(v.replace(tzinfo=None)).normalize()
         except Exception:
             return None
+    if isinstance(v, date):
+        try:
+            return pd.Timestamp(v).normalize()
+        except Exception:
+            return None
+    s = str(v).strip()
+    if not s or s.lower() in {"nan", "nat", "none"}:
+        return None
+    if re.fullmatch(r"[-+]?\d+(\.0+)?", s):
+        try:
+            num = float(s)
+            if -1000 <= num <= 1000:
+                return None
+        except Exception:
+            pass
+    try:
+        dt = pd.to_datetime(s, errors="coerce")
+    except Exception:
+        return None
     if pd.isna(dt):
         return None
-    try:
-        if getattr(dt, "tzinfo", None) is not None:
-            dt = dt.tz_localize(None)
-    except Exception:
-        try:
-            dt = pd.Timestamp(dt).tz_localize(None)
-        except Exception:
-            return None
     try:
         year = int(dt.year)
         if year < 2024 or year > 2035:
@@ -455,7 +463,6 @@ def build_meic_rows_from_team_tracker(
         ws_com = wb.Worksheets(TEAM_TRACKER_SHEET)
         excel.CalculateFullRebuild()
         all_dates = _resolve_validation_list_values(wb, ws_com, "B1")
-        print("MEIC dates found:", [d.strftime("%Y-%m-%d") for d in all_dates])
         if not all_dates:
             current_dt = _excel_date_to_timestamp(ws_com.Range("B1").Value)
             if current_dt is not None:
