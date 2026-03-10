@@ -655,6 +655,53 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     }
 ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
 ENABLE_TEAM_NAME = "Enabling Technologies"
+MEIC_PARENT_MAP = {
+    "PH": {"PH", "PH MEIC"},
+    "DBS": {"DBS", "DBS MEIC"},
+    "SCS": {"SCS", "SCS MEIC"},
+}
+def combine_meic_parent_teams(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "team" not in df.columns or "period_date" not in df.columns:
+        return df
+    df = df.copy()
+    df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    teams_to_merge = set().union(*MEIC_PARENT_MAP.values())
+    subset = df[df["team"].isin(teams_to_merge)].copy()
+    rest = df[~df["team"].isin(teams_to_merge)].copy()
+    if subset.empty:
+        if "source_file" in rest.columns:
+            rest = rest.drop(columns=["source_file"])
+        return rest
+    out_rows = []
+    for parent_team, member_teams in MEIC_PARENT_MAP.items():
+        g_team = subset[subset["team"].isin(member_teams)].copy()
+        if g_team.empty:
+            continue
+        for period_date, g in g_team.groupby("period_date", dropna=False):
+            nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
+            nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
+            wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+            out_rows.append({
+                "team": parent_team,
+                "period_date": period_date,
+                "people_count": int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+                "total_non_wip_hours": float(pd.to_numeric(g.get("total_non_wip_hours"), errors="coerce").fillna(0).sum()),
+                "OOO Hours": float(pd.to_numeric(g.get("OOO Hours"), errors="coerce").fillna(0).sum()),
+                "% in WIP": float(pd.to_numeric(g.get("% in WIP"), errors="coerce").mean()),
+                "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
+                "non_wip_activities": json.dumps(nonwip_activities, ensure_ascii=False),
+                "wip_workers": json.dumps(wip_workers_union, ensure_ascii=False),
+                "wip_workers_count": int(pd.to_numeric(g.get("wip_workers_count"), errors="coerce").fillna(0).sum()),
+                "wip_workers_ooo_hours": float(pd.to_numeric(g.get("wip_workers_ooo_hours"), errors="coerce").fillna(0).sum()),
+            })
+    merged_df = pd.DataFrame(out_rows)
+    for dfx in (rest, merged_df):
+        if "source_file" in dfx.columns:
+            dfx.drop(columns=["source_file"], inplace=True)
+    combined = pd.concat([rest, merged_df], ignore_index=True)
+    combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+    combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return combined
 def _parse_json_dict(cell) -> dict:
     if cell is None or (isinstance(cell, float) and pd.isna(cell)):
         return {}
@@ -1166,7 +1213,9 @@ def main():
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
-        old_df = old_df[old_df["team"] != ENABLE_TEAM_NAME].copy()
+        old_df = old_df[
+            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS"})
+        ].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
@@ -1174,6 +1223,7 @@ def main():
     else:
         combined = new_df
     combined = combine_enabling_technologies(combined)
+    combined = combine_meic_parent_teams(combined)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
 if __name__ == "__main__":
