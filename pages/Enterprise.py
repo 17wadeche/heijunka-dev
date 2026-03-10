@@ -76,6 +76,29 @@ def _coerce_bool(v: Any, default: bool = True) -> bool:
     if isinstance(v, str):
         return v.strip().lower() in {"1", "true", "yes", "y", "enabled", "on"}
     return default
+def _selected_nonwip_start_floor(df: Optional[pd.DataFrame]) -> Optional[pd.Timestamp]:
+    if df is None or df.empty:
+        return None
+    team_col = _get_team_col(df)
+    date_col = _get_date_col(df)
+    if not team_col or not date_col:
+        return None
+    tmp = df.copy()
+    tmp[date_col] = pd.to_datetime(tmp[date_col], errors="coerce")
+    tmp = tmp.dropna(subset=[team_col, date_col])
+    if tmp.empty:
+        return None
+    tmp = tmp[tmp[team_col].astype(str).isin(set(team_filter))]
+    if tmp.empty:
+        return None
+    per_team_min = (
+        tmp.groupby(team_col)[date_col]
+        .min()
+        .dropna()
+    )
+    if per_team_min.empty:
+        return None
+    return pd.to_datetime(per_team_min.max())
 def parse_org_config(data: Dict[str, Any]) -> OrgConfig:
     org_name = (
         data.get("org_name")
@@ -408,6 +431,7 @@ def section_date_range(
     label: str,
     df: Optional[pd.DataFrame],
     key: str,
+    min_floor_ts: Optional[pd.Timestamp] = None,
 ) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
     if df is None or df.empty:
         return None, None
@@ -417,6 +441,8 @@ def section_date_range(
         return None, None
     import datetime
     min_d = mn.date()
+    if min_floor_ts is not None and pd.notna(min_floor_ts):
+        min_d = max(min_d, pd.to_datetime(min_floor_ts).date())
     max_d = mx.date()
     today_d = datetime.date.today()
     max_selectable = today_d
@@ -537,6 +563,13 @@ st.markdown(f"**Selected teams:** {len(team_filter)}")
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
+selected_nonwip_floor = None
+for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+    if key in data:
+        floor_candidate = _selected_nonwip_start_floor(filter_by_team(data[key]))
+        if floor_candidate is not None:
+            selected_nonwip_floor = floor_candidate
+            break
 tabs = st.tabs(["Overview", "Non-WIP"])
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
@@ -736,7 +769,12 @@ with tabs[0]:
     dfm_raw = _get_metrics_df()
     dfnw_raw = _get_nonwip_df()
     bounds_df = dfm_raw if (dfm_raw is not None and not dfm_raw.empty) else dfnw_raw
-    ov_start, ov_end = section_date_range("Overview date range", bounds_df, key="dr_overview")
+    ov_start, ov_end = section_date_range(
+        "Overview date range",
+        bounds_df,
+        key="dr_overview",
+        min_floor_ts=selected_nonwip_floor,
+    )
     dfm = filter_by_date_range(dfm_raw, ov_start, ov_end) if dfm_raw is not None else None
     dfnw = filter_by_date_range(dfnw_raw, ov_start, ov_end) if dfnw_raw is not None else None
     people_by_week: Dict[pd.Timestamp, float] = {}
@@ -867,7 +905,12 @@ with tabs[1]:
     if source_raw is None or source_raw.empty:
         st.info("No Non-WIP activity data available after team filtering.")
         st.stop()
-    nw_start, nw_end = section_date_range("Non-WIP date range", source_raw, key="dr_nonwip")
+    nw_start, nw_end = section_date_range(
+        "Non-WIP date range",
+        source_raw,
+        key="dr_nonwip",
+        min_floor_ts=selected_nonwip_floor,
+    )
     source_df = filter_by_date_range(source_raw, nw_start, nw_end)
     if source_df.empty:
         st.info("No Non-WIP activity data available in this date range.")
@@ -975,7 +1018,12 @@ with tabs[1]:
     st.caption("Top 15 activities by total hours for the selected period, sorted highest to lowest from left to right.")
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
-    pie_start, pie_end = section_date_range("Pie chart date range", source_raw, key="dr_nonwip_pie")
+    pie_start, pie_end = section_date_range(
+        "Pie chart date range",
+        source_raw,
+        key="dr_nonwip_pie",
+        min_floor_ts=selected_nonwip_floor,
+    )
     pie_source_df = filter_by_date_range(source_raw, pie_start, pie_end)
     if pie_source_df.empty:
         st.info("No Non-WIP activity data in the selected pie chart date range.")
