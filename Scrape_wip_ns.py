@@ -468,6 +468,8 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
             if taa_spec.get("type") == "sum_range":
                 rng = taa_spec["range"]
                 total_available_hours = sum(safe_float(cell.value) for row in ws[rng] for cell in row)
+            elif taa_spec.get("type") == "sum_cells":
+                total_available_hours = sum(safe_float(ws[cell_ref].value) for cell_ref in taa_spec["cells"])
             else:
                 total_available_hours = 0.0
         completed_spec = cfg["cells"]["completed_hours"]
@@ -475,8 +477,10 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
             completed_hours = safe_float(ws[completed_spec].value)
         else:
             if completed_spec.get("type") == "sum_range":
-                rng = completed_spec["range"]  # e.g. "B60:V60"
+                rng = completed_spec["range"]
                 completed_hours = sum(safe_float(cell.value) for row in ws[rng] for cell in row)
+            elif completed_spec.get("type") == "sum_cells":
+                completed_hours = sum(safe_float(ws[cell_ref].value) for cell_ref in completed_spec["cells"])
             else:
                 completed_hours = 0.0
         wp1_out = safe_float(ws[cfg["cells"]["wp1_output"]].value)
@@ -2362,7 +2366,7 @@ def main():
         "date_parser": parse_sheet_date_scs_missing_year,  # <--- key part
         "cells": {
             "total_available_hours": "S111",
-            "completed_hours": "S50",
+            "completed_hours": {"type": "sum_cells", "cells": ["T4", "V4"]},
             "wp1_output": "T2",
             "wp1_target": "T7",
             "wp2_output": "V2",
