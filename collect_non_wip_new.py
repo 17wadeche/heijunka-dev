@@ -368,20 +368,20 @@ def build_non_wip_rows(config_path: str,
             completed = float(completed_index.get((team, iso), 0.0))
             bucket = prod_buckets_merged.get(wk_date, {}) if wk_date else {}
             ooo_by_person = bucket.get("ooo_by_person", {})
-            per_person_nonwip: Dict[str, float] = {}
-            for person in sorted(wk_people):
-                ooo_p = float(ooo_by_person.get(person, 0.0))
-                base_capacity = 39.0 if person in irl_people else 40.0
-                capacity = max(0.0, base_capacity - ooo_p)
-                pm = person_metrics.get((team, iso, person), {"available": None, "actual": 0.0})
-                available = pm.get("available")  # may be None
-                actual = float(pm.get("actual", 0.0))
-                effective_person_hours = (
-                    min(capacity, float(available))
-                    if (available is not None) else
-                    capacity
-                )
-                per_person_nonwip[person] = round(max(0.0, effective_person_hours - actual), 2)
+            activities = bucket.get("non_wip_activities", []) or []
+            per_person_nonwip: Dict[str, float] = defaultdict(float)
+            for item in activities:
+                if not isinstance(item, dict):
+                    continue
+                person = _clean(item.get("name"))
+                hrs = _to_float(item.get("hours")) or 0.0
+                if not person or hrs <= 0:
+                    continue
+                per_person_nonwip[person] += hrs
+            per_person_nonwip = {
+                person: round(float(hours), 2)
+                for person, hours in sorted(per_person_nonwip.items())
+            }
             total_non_wip_hours = round(sum(per_person_nonwip.values()), 2)
             ooo_hours_total = float(bucket.get("ooo_hours", 0.0))
             wip_workers_ooo_hours = round(
