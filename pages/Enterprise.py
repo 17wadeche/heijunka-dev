@@ -471,21 +471,39 @@ def section_date_range(
         st.rerun()
     if dates_key in st.session_state:
         v = st.session_state[dates_key]
-        if isinstance(v, tuple) and len(v) == 2:
-            s, e = v
-            if hasattr(s, "date"):
-                s = s.date()
-            if hasattr(e, "date"):
-                e = e.date()
-            s = min(max(s, min_d), max_selectable)
-            e = min(max(e, min_d), max_selectable)
-            if e < s:
-                e = s
-            st.session_state[dates_key] = (s, e)
+        if isinstance(v, (tuple, list)):
+            vals = list(v)
+            if len(vals) >= 2:
+                s, e = vals[0], vals[1]
+                if hasattr(s, "date"):
+                    s = s.date()
+                if hasattr(e, "date"):
+                    e = e.date()
+                if s is None:
+                    s = min_d
+                if e is None:
+                    e = s
+                s = min(max(s, min_d), max_selectable)
+                e = min(max(e, min_d), max_selectable)
+                if e < s:
+                    e = s
+                st.session_state[dates_key] = (s, e)
+            elif len(vals) == 1:
+                d = vals[0]
+                if hasattr(d, "date"):
+                    d = d.date()
+                if d is None:
+                    d = min_d
+                d = min(max(d, min_d), max_selectable)
+                st.session_state[dates_key] = (d, d)
+            else:
+                st.session_state[dates_key] = (start_default, end_default)
         else:
             d = v.date() if hasattr(v, "date") else v
+            if d is None:
+                d = min_d
             d = min(max(d, min_d), max_selectable)
-            st.session_state[dates_key] = d
+            st.session_state[dates_key] = (d, d)
     dr = st.date_input(
         label,
         min_value=min_d,
