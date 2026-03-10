@@ -649,6 +649,7 @@ ACTIVITY_MAP = {
     "performing qa, ml review":"QA",
     "qa meeting":"QA",
     "email; meetings; dataset comparison": "Email & IM",
+    "emails admin scrumb": "Email & IM",
     "practice letters":"Training/Mentoring",
     "letter training":"Training/Mentoring",
     "training, collaboration":"Training/Mentoring",
