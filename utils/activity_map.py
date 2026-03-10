@@ -1404,6 +1404,8 @@ ACTIVITY_MAP = {
     "leading indicators action/meeting":"Meeting",
     "unplanned nextgen":"Next Gen",
     "nextgen prep":"Next Gen",
+    "team meetings, aems, team building, 1:1s, connect sessions":"Meeting",
+    "clinical safety call":"Meeting",
     "reg inquiries next gen support ooo metrics/schedule/wip mgmt":"RI",
     "collaboration audit support problem solving late mdrs qa clinical pmpa questions/update":"Audit",
     "emails admin etc": "Email & IM",
