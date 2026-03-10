@@ -488,20 +488,52 @@ def build_capacity_fixed_row(
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    return build_capacity_fixed_row(
-        team, ws,
-        people_start_row=2,              # Excel row 3 (0-indexed: 2)
-        people_end_row=25,               # Excel row 26 (0-indexed: 25)
-        expected_col_letter="B",
-        ooo_col_letter="AA",              # "Out of Office" column
-        deduct_cell="C29",               # Team Hours Available = 865 (total WIP hours to deduct)
-        ooo_sum_start_row=2,             # Z3 (0-indexed)
-        ooo_sum_end_row=25,              # Z25 (0-indexed)
-        total_ooo_end_row=25,
-        activity_header_row=1,           # Excel row 2 (0-indexed: 1)
-        activity_start_col_letter="C",
-        activity_end_col_letter="AG",
-    )
+    PEOPLE_START = 2       # Excel row 3, 0-indexed
+    PEOPLE_END   = 25      # Excel row 26 / Christy Cain, 0-indexed
+    COL_B        = _col_letter_to_idx("B")   # Expected WIP hours
+    COL_OOO      = _col_letter_to_idx("AA")  # Out of Office
+    ACT_START    = _col_letter_to_idx("C")
+    ACT_END      = _col_letter_to_idx("AG")
+    HEADER_ROW   = 1       # Excel row 2, 0-indexed
+    people_rows: List[dict] = []
+    for i in range(PEOPLE_START, PEOPLE_END + 1):
+        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+        if not name or not is_real_person(name):
+            continue
+        b   = safe_float0(ws.iat[i, COL_B]   if ws.shape[1] > COL_B   else 0.0)
+        ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+        people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    activities: List[dict] = []
+    nonwip_by_person: Dict[str, float] = {}
+    for pr in people_rows:
+        i    = pr["row_i"]
+        name = pr["name"]
+        person_total = 0.0
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
+            if c == COL_OOO:
+                continue  # skip AA — that's OOO, not a work activity
+            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+            person_total += hrs
+        if person_total != 0.0:
+            nonwip_by_person[name] = float(round(person_total, 2))
+    total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
+    people_count = len(set(r["name"] for r in people_rows))
+    return {
+        "people_rows":      people_rows,
+        "people_count":     people_count,
+        "ooo_hours":        ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map":          {r["name"]: r["OOO"] for r in people_rows},
+    }
 def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
