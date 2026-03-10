@@ -492,18 +492,16 @@ def section_date_range(
                 d = vals[0]
                 if hasattr(d, "date"):
                     d = d.date()
-                if d is None:
-                    d = min_d
-                d = min(max(d, min_d), max_selectable)
-                st.session_state[dates_key] = (d, d)
+                if d is not None:
+                    d = min(max(d, min_d), max_selectable)
+                    st.session_state[dates_key] = (d,)
             else:
                 st.session_state[dates_key] = (start_default, end_default)
         else:
             d = v.date() if hasattr(v, "date") else v
-            if d is None:
-                d = min_d
-            d = min(max(d, min_d), max_selectable)
-            st.session_state[dates_key] = (d, d)
+            if d is not None:
+                d = min(max(d, min_d), max_selectable)
+                st.session_state[dates_key] = d
     dr = st.date_input(
         label,
         min_value=min_d,
@@ -511,10 +509,15 @@ def section_date_range(
         key=dates_key,
         help="Filters only this section.",
     )
-    if isinstance(dr, tuple) and len(dr) == 2:
-        start_d, end_d = dr
+    if isinstance(dr, tuple):
+        if len(dr) == 2:
+            start_d, end_d = dr
+        elif len(dr) == 1:
+            start_d, end_d = dr[0], dr[0]
+        else:
+            start_d, end_d = start_default, end_default
     else:
-        start_d, end_d = start_default, end_default
+        start_d, end_d = dr, dr
     start_ts = pd.to_datetime(start_d)
     end_ts = pd.to_datetime(end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     return start_ts, end_ts
