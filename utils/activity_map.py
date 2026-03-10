@@ -672,6 +672,8 @@ ACTIVITY_MAP = {
     "affera training, rpa email request":"Training/Mentoring",
     "affera training, rpa email":"Training/Mentoring",
     "90 minutes training call":"Training/Mentoring",
+    "r&d meeting":"Meeting",
+    "quality day prep meeting":"Meeting",
     "affera training for sean & golden":"Training/Mentoring",
     "training related activity":"Training/Mentoring",
     "training questions. comm/task/rr practice review":"Training/Mentoring",
