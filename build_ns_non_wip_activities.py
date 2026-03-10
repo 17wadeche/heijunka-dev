@@ -689,6 +689,7 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
 ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
 ENABLE_TEAM_NAME = "Enabling Technologies"
 MEIC_PARENT_MAP = {
+    "PH": {"PH", "PH MEIC"},
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
 }
