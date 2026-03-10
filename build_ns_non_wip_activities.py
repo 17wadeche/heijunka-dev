@@ -446,20 +446,27 @@ def get_people_count_from_wip(
     team: str,
     week: pd.Timestamp,
     fallback: Optional[int] = None,
+    component_teams: Optional[set] = None,
 ) -> int:
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
-    match = wip_df[
-        (wip_df.get("team") == team) &
-        (wip_df["period_date"] == week)
-    ]
-    if match.empty:
+    base = wip_df[wip_df["period_date"] == week].copy()
+    if base.empty:
         return int(fallback or 0)
-    for col in ["HC in WIP", "HC_in_WIP", "hc in wip", "hc_in_wip"]:
-        if col in match.columns:
-            v = pd.to_numeric(match.iloc[0].get(col), errors="coerce")
-            if pd.notna(v):
-                return int(v)
+    direct = base[base.get("team") == team]
+    if not direct.empty:
+        for col in ["HC in WIP", "HC_in_WIP", "hc in wip", "hc_in_wip"]:
+            if col in direct.columns:
+                vals = pd.to_numeric(direct[col], errors="coerce").dropna()
+                if not vals.empty:
+                    return int(vals.iloc[0])
+    if component_teams:
+        subset = base[base.get("team").isin(component_teams)]
+        if not subset.empty:
+            for col in ["HC in WIP", "HC_in_WIP", "hc in wip", "hc_in_wip"]:
+                if col in subset.columns:
+                    vals = pd.to_numeric(subset[col], errors="coerce").fillna(0)
+                    return int(vals.sum())
     return int(fallback or 0)
 def build_meic_rows_from_team_tracker(
     xlsx_path: Path,
@@ -525,12 +532,12 @@ def build_meic_rows_from_team_tracker(
                     ))
                     people_count_final = get_people_count_from_wip(
                         wip_df=wip_df,
-                        team=team_src.team,
+                        team=team_name,
                         week=week,
-                        fallback=people_count,
+                        fallback=team_built["people_count"],
                     )
                     out_rows.append({
-                        "team": team_src.team,
+                        "team": team_name,
                         "period_date": week.date().isoformat(),
                         "source_file": str(xlsx_path),
                         "people_count": int(people_count_final),
@@ -686,7 +693,7 @@ MEIC_PARENT_MAP = {
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
 }
-def combine_meic_parent_teams(df: pd.DataFrame) -> pd.DataFrame:
+def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
         return df
     df = df.copy()
@@ -707,10 +714,17 @@ def combine_meic_parent_teams(df: pd.DataFrame) -> pd.DataFrame:
             nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+            people_count_final = get_people_count_from_wip(
+                wip_df=wip_df,
+                team=parent_team,
+                week=period_date,
+                fallback=int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+                component_teams=member_teams,
+            )
             out_rows.append({
                 "team": parent_team,
                 "period_date": period_date,
-                "people_count": int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+                "people_count": int(people_count_final),
                 "total_non_wip_hours": float(pd.to_numeric(g.get("total_non_wip_hours"), errors="coerce").fillna(0).sum()),
                 "OOO Hours": float(pd.to_numeric(g.get("OOO Hours"), errors="coerce").fillna(0).sum()),
                 "% in WIP": float(pd.to_numeric(g.get("% in WIP"), errors="coerce").mean()),
@@ -786,7 +800,7 @@ def _merge_workers_union(list_cells: List) -> list:
             if is_real_person(name):
                 s.add(name)
     return sorted(s)
-def combine_enabling_technologies(df: pd.DataFrame) -> pd.DataFrame:
+def combine_enabling_technologies(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
         return df
     df = df.copy()
@@ -802,10 +816,17 @@ def combine_enabling_technologies(df: pd.DataFrame) -> pd.DataFrame:
         nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
         nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
         wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+        people_count_final = get_people_count_from_wip(
+            wip_df=wip_df,
+            team=ENABLE_TEAM_NAME,
+            week=period_date,
+            fallback=int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+            component_teams=ENABLE_TEAMS,
+        )
         out_rows.append({
             "team": ENABLE_TEAM_NAME,
             "period_date": period_date,
-            "people_count": int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
+            "people_count": int(people_count_final),
             "total_non_wip_hours": float(pd.to_numeric(g.get("total_non_wip_hours"), errors="coerce").fillna(0).sum()),
             "OOO Hours": float(pd.to_numeric(g.get("OOO Hours"), errors="coerce").fillna(0).sum()),
             "% in WIP": float(pd.to_numeric(g.get("% in WIP"), errors="coerce").mean()),
@@ -1254,8 +1275,8 @@ def main():
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     else:
         combined = new_df
-    combined = combine_enabling_technologies(combined)
-    combined = combine_meic_parent_teams(combined)
+    combined = combine_enabling_technologies(combined, wip_df=wip_df)
+    combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
 if __name__ == "__main__":
