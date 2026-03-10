@@ -638,6 +638,7 @@ ACTIVITY_MAP = {
     "setup":"Set Up",
     "clinical safety plan review":"Clinical Safety Plan",
     "tl call on complex file":"Meeting",
+    "other (please specify)":"Other",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
