@@ -441,6 +441,26 @@ def split_meic_snapshot_into_teams(built: Dict) -> Dict[str, Dict]:
             "ooo_map": {r["name"]: float(r["OOO"]) for r in prs},
         }
     return final
+def get_people_count_from_wip(
+    wip_df: pd.DataFrame,
+    team: str,
+    week: pd.Timestamp,
+    fallback: Optional[int] = None,
+) -> int:
+    if wip_df is None or wip_df.empty:
+        return int(fallback or 0)
+    match = wip_df[
+        (wip_df.get("team") == team) &
+        (wip_df["period_date"] == week)
+    ]
+    if match.empty:
+        return int(fallback or 0)
+    for col in ["HC in WIP", "HC_in_WIP", "hc in wip", "hc_in_wip"]:
+        if col in match.columns:
+            v = pd.to_numeric(match.iloc[0].get(col), errors="coerce")
+            if pd.notna(v):
+                return int(v)
+    return int(fallback or 0)
 def build_meic_rows_from_team_tracker(
     xlsx_path: Path,
     wip_df: pd.DataFrame,
@@ -503,11 +523,17 @@ def build_meic_rows_from_team_tracker(
                     wip_workers_ooo_hours = float(round(
                         sum(safe_float0(team_built["ooo_map"].get(n, 0.0)) for n in wip_workers), 2
                     ))
+                    people_count_final = get_people_count_from_wip(
+                        wip_df=wip_df,
+                        team=team_src.team,
+                        week=week,
+                        fallback=people_count,
+                    )
                     out_rows.append({
-                        "team": team_name,
+                        "team": team_src.team,
                         "period_date": week.date().isoformat(),
                         "source_file": str(xlsx_path),
-                        "people_count": int(team_built["people_count"]),
+                        "people_count": int(people_count_final),
                         "total_non_wip_hours": float(round(team_built["total_nonwip_hours"], 2)),
                         "OOO Hours": float(round(team_built["ooo_hours"], 2)),
                         "% in WIP": float(round(pct_in_wip, 6)) if pd.notna(pct_in_wip) else np.nan,
@@ -1179,11 +1205,17 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
+        people_count_final = get_people_count_from_wip(
+            wip_df=wip_df,
+            team=team_src.team,
+            week=week,
+            fallback=people_count,
+        )
         out_rows.append({
             "team": team_src.team,
             "period_date": week.date().isoformat(),
             "source_file": str(xlsx_path),
-            "people_count": int(people_count),
+            "people_count": int(people_count_final),
             "total_non_wip_hours": float(round(total_nonwip_hours, 2)) if pd.notna(total_nonwip_hours) else np.nan,
             "OOO Hours": float(round(ooo_hours, 2)) if pd.notna(ooo_hours) else np.nan,
             "% in WIP": float(round(pct_in_wip, 6)) if pd.notna(pct_in_wip) else np.nan,
