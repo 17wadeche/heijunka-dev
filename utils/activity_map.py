@@ -648,7 +648,7 @@ ACTIVITY_MAP = {
     "extra ftq meeting":"Meeting",
     "performing qa, ml review":"QA",
     "qa meeting":"QA",
-    "email; meetings; dataset comparision": "Email & IM",
+    "email; meetings; dataset comparison": "Email & IM",
     "practice letters":"Training/Mentoring",
     "letter training":"Training/Mentoring",
     "training, collaboration":"Training/Mentoring",
