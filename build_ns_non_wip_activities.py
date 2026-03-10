@@ -714,13 +714,17 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
-            people_count_final = get_people_count_from_wip(
-                wip_df=wip_df,
-                team=parent_team,
-                week=period_date,
-                fallback=int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
-                component_teams=member_teams,
-            )
+            fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
+            if parent_team in {"DBS", "SCS"}:
+                people_count_final = fallback_people_count
+            else:
+                people_count_final = get_people_count_from_wip(
+                    wip_df=wip_df,
+                    team=parent_team,
+                    week=period_date,
+                    fallback=fallback_people_count,
+                    component_teams=member_teams,
+                )
             out_rows.append({
                 "team": parent_team,
                 "period_date": period_date,
