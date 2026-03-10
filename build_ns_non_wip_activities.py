@@ -1226,12 +1226,16 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-        people_count_final = get_people_count_from_wip(
-            wip_df=wip_df,
-            team=team_src.team,
-            week=week,
-            fallback=people_count,
-        )
+        use_original_people_count_teams = {"DBS", "SCS", "TDD"}
+        if team_src.team in use_original_people_count_teams:
+            people_count_final = int(people_count)
+        else:
+            people_count_final = get_people_count_from_wip(
+                wip_df=wip_df,
+                team=team_src.team,
+                week=week,
+                fallback=people_count,
+            )
         out_rows.append({
             "team": team_src.team,
             "period_date": week.date().isoformat(),
