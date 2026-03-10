@@ -697,6 +697,7 @@ ACTIVITY_MAP = {
     "dmaic research":"Problem Solving",
     "cornerstone, analysis training":"Cornerstone",
     "define of dmaic":"Problem Solving",
+    "ohs survey: 15 min":"Admin",
     "monthly meeting, emails, getting a device fron archive, additional photo":"Meeting",
     "emails, live case video": "Email & IM",
     "reviewing files (training sign off) changin dhr tasks to oem/cm and completing oem/cm form":"WIP Review",
