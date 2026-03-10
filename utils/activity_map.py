@@ -1408,6 +1408,7 @@ ACTIVITY_MAP = {
     "clinical safety call":"Meeting",
     "tier 1 meeting crdn":"Meeting",
     "qd meeting":"Meeting",
+    "admin, setting up dcb hood":"Admin",
     "and cornerstone":"Cornerstone",
     "reg inquiries next gen support ooo metrics/schedule/wip mgmt":"RI",
     "collaboration audit support problem solving late mdrs qa clinical pmpa questions/update":"Audit",
