@@ -662,7 +662,7 @@ ACTIVITY_MAP = {
     "qs":"Question",
     "extra ftq meeting":"Meeting",
     "performing qa, ml review":"QA",
-    "audit, questions, collaboration, scrum, cornerstone, training review":"Audit"
+    "audit, questions, collaboration, scrum, cornerstone, training review":"Audit",
     "qa meeting":"QA",
     "email; meetings; dataset comparison": "Email & IM",
     "emails admin scrumb": "Email & IM",
