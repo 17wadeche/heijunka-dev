@@ -982,7 +982,15 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
-def kpi_card(container, label: str, value, fmt: str | None = None, color: str | None = None, help: str | None = None):
+def kpi_card(
+    container,
+    label: str,
+    value,
+    fmt: str | None = None,
+    color: str | None = None,
+    help: str | None = None,
+    subtext: str | None = None,
+):
     if pd.isna(value):
         val_html = "—"
     else:
@@ -992,6 +1000,7 @@ def kpi_card(container, label: str, value, fmt: str | None = None, color: str | 
             val_html = str(value)
     help_icon = f"""<span title="{help}" style="cursor:help;margin-left:6px;color:#9ca3af;">ⓘ</span>""" if help else ""
     value_color = color or "#111827"
+    subtext_html = f"""<div style="font-size:12px;color:#6b7280;margin-top:4px;">{subtext}</div>""" if subtext else ""
     container.markdown(
         f"""
         <div style="padding:12px 16px;border-radius:10px;border:1px solid #eee;">
@@ -999,6 +1008,7 @@ def kpi_card(container, label: str, value, fmt: str | None = None, color: str | 
             <span>{label}</span>{help_icon}
           </div>
           <div style="font-size:28px;font-weight:700;color:{value_color};">{val_html}</div>
+          {subtext_html}
         </div>
         """,
         unsafe_allow_html=True,
