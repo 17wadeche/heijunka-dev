@@ -1026,7 +1026,6 @@ if nonwip_mode:
         nw_frame=nw,
         week_hours=40.0,
     )
-
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
     else:
