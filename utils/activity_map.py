@@ -1186,6 +1186,7 @@ ACTIVITY_MAP = {
     "next gen meeting":"Next Gen",
     "new ri":"RI",
     "it support": "IT Issue/Update",
+    "issues from deco + shipment":"shipment",
     "it sorting issue": "IT Issue/Update",
     "rrtt report update": "RRTT",
     "pmpa questions/updat":"PMPA",
