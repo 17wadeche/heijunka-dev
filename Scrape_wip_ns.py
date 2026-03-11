@@ -1529,6 +1529,26 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 os.remove(tmp_path)
         except Exception:
             pass
+def parse_sheet_date_day_first_requires_year(sheet_name: str) -> str:
+    raw = (sheet_name or "").strip()
+    if not re.search(r"\b\d{4}\b", raw):
+        return ""
+    raw = raw.replace("\u00a0", " ")
+    raw = re.sub(r"\s+", " ", raw).strip()
+    fmts = [
+        "%d %b %Y",     # 23 Feb 2026
+        "%d %B %Y",     # 23 February 2026
+        "%d-%b-%Y",
+        "%d-%B-%Y",
+        "%d/%m/%Y",
+        "%Y-%m-%d",
+    ]
+    for fmt in fmts:
+        try:
+            return datetime.strptime(raw, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return ""
 def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Dict[str, Any], dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
@@ -2160,6 +2180,7 @@ def main():
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
     scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
     cos_source_file = r"C:\Users\wadec8\Medtronic PLC\COS Cell - Documents\Heijunka v2 TDD.xlsx"
+    spine_source_file = r"C:\Users\wadec8\Medtronic PLC\MEIC - RTG - Documents\Heijunka - RTG Spine CQ_V2.0_Apr2023.xlsx"
     nv_source_file = r"C:\Users\wadec8\Medtronic PLC\RTG Customer Quality Neurovascular - Documents\Cell\NV_Heijunka.xlsm"
     dbs_c13_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm"
     dbs_c14_source_file = r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm"
@@ -2181,6 +2202,40 @@ def main():
         raise FileNotFoundError(f"Input file not found: {meic_source_file}")
     if not os.path.exists(scs_source_file):
         raise FileNotFoundError(f"Input file not found: {scs_source_file}")
+    SPINE_CFG = {
+        "team": "Spine",
+        "person_cols": ("B", "O"),
+        "date_parser": parse_sheet_date_day_first_requires_year,
+        "min_period_date": "2025-06-30",
+        "max_period_date": "2026-02-23",
+        "cells": {
+            "total_available_hours": "P55",
+            "completed_hours": {"type": "sum_cells", "cells": ["Q4", "S4"]},
+            "wp1_output": "Q2",
+            "wp1_target": "Q7",
+            "wp2_output": "S2",
+            "wp2_target": "S7",
+            "uplh_wp1": "Q5",
+            "uplh_wp2": "S5",
+            "wp1_hours": "Q4",
+            "wp2_hours": "S4",
+        },
+        "rows": {
+            "hc_row": 25,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 45,
+            "person_available_row_for_person_hours": 55,
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 34, 37, 40, 43],
+            "wp2_hour_rows": [32, 35, 38, 41, 44],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
     MAZOR_CFG = {
         "person_cols": ("B", "J"),
         "cells": {
@@ -2508,6 +2563,8 @@ def main():
             d += timedelta(days=7)
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
+    if should_run("Spine"):
+        extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
     if should_run("PH"):
         extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
     if should_run("PH Cell 17"):

@@ -656,6 +656,7 @@ ACTIVITY_MAP = {
     "trainer/ mentor (development and delivery)":"Training/Mentoring",
     "reading training material":"Training/Mentoring",
     "collaboration (i.e. file discussion)":"Collaboration",
+    "team lead meeting":"Meeting",
     "flex team support": "Other Team WIP",
     "csf/ae/mazor support": "Other Team WIP",
     "qs":"Question",
