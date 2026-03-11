@@ -827,3 +827,16 @@
 PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\MEIC - RTG - Documents\\Heijunka - RTG Spine CQ_V2.0_Apr2023.xlsx'
 
 2026-03-11 13:47:16,235 | INFO | [PH] START
+2026-03-11 13:47:28,597 | INFO | === NS Metrics Run START ===
+2026-03-11 13:47:28,597 | INFO | Selected team: all
+2026-03-11 13:47:28,597 | INFO | [Spine] START
+2026-03-11 13:47:34,392 | INFO | [Spine] DONE | rows=30 | elapsed=0:00:05.794530
+2026-03-11 13:47:34,392 | INFO | [PH] START
+2026-03-11 13:47:49,808 | INFO | [PH] DONE | rows=352 | elapsed=0:00:15.416251
+2026-03-11 13:47:49,808 | INFO | [PH Cell 17] START
+2026-03-11 13:48:00,721 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:10.912866
+2026-03-11 13:48:00,721 | INFO | [SCS Cell 1] START
+2026-03-11 13:48:24,384 | INFO | [SCS Cell 1] DONE | rows=281 | elapsed=0:00:23.663558
+2026-03-11 13:48:24,384 | INFO | [MEIC PH] START
+2026-03-11 13:48:31,701 | INFO | [MEIC PH] DONE | rows=84 | elapsed=0:00:07.316866
+2026-03-11 13:48:31,701 | INFO | [DBS C13] START
