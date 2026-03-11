@@ -846,3 +846,6 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-11 13:49:37,106 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:00:35.800150
 2026-03-11 13:49:37,108 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
 2026-03-11 13:49:37,110 | INFO | [NV] START
+2026-03-11 13:50:59,690 | INFO | [NV] DONE | rows=41 | elapsed=0:01:22.579670
+2026-03-11 13:50:59,690 | INFO | [NV] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:50:59,690 | INFO | [Nav] START
