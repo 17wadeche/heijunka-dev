@@ -204,6 +204,18 @@ def _first_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
         if cand in cols:
             return cols[cand]
     return None
+def _coalesce_matching_cols(df: pd.DataFrame, candidates: List[str]) -> pd.Series:
+    matches = []
+    wanted = set(candidates)
+    for c in df.columns:
+        if _norm(c) in wanted:
+            matches.append(c)
+    if not matches:
+        return pd.Series([pd.NA] * len(df), index=df.index)
+    out = df[matches[0]]
+    for c in matches[1:]:
+        out = out.where(out.notna() & (out.astype(str).str.strip() != ""), df[c])
+    return out
 def _get_team_col(df: pd.DataFrame) -> Optional[str]:
     return _first_col(df, ["team", "team_name", "org_team", "squad"])
 def _get_date_col(df: pd.DataFrame) -> Optional[str]:
@@ -399,11 +411,52 @@ with st.sidebar:
     default_teams = [t for t in enabled_team_names if t in team_options]
     if not default_teams and team_options:
         default_teams = team_options
+    team_key = "enterprise_team_filter"
+    current_team_selection = st.session_state.get(team_key, default_teams)
+    current_team_selection = [t for t in current_team_selection if t in team_options]
+    if not current_team_selection and team_options:
+        current_team_selection = default_teams
+    st.session_state[team_key] = current_team_selection
     team_filter = st.multiselect(
         "Teams",
         options=team_options,
-        default=default_teams,
+        key=team_key,
     )
+def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+    rename_map = {
+        "team": "Team",
+        "week_start": "Week Start",
+        "completed_hours": "Completed Hours",
+        "people_count": "People Count",
+        "non_wip_hours": "Non-WIP Hours",
+        "ooo_hours": "OOO Hours",
+        "ou": "OU",
+        "portfolio": "Portfolio",
+        "capacity_hours": "Capacity Hours",
+        "unaccounted_hours": "Unaccounted Hours",
+        "wip_pct": "WIP %",
+        "non_wip_pct": "Non-WIP %",
+        "ooo_pct": "OOO %",
+        "unaccounted_pct": "Unaccounted %",
+    }
+    out = df.copy().rename(columns=rename_map)
+    if "Week Start" in out.columns:
+        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+    fmt = {}
+    for c in [
+        "Completed Hours",
+        "People Count",
+        "Non-WIP Hours",
+        "OOO Hours",
+        "Capacity Hours",
+        "Unaccounted Hours",
+    ]:
+        if c in out.columns:
+            fmt[c] = "{:,.2f}"
+    for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+        if c in out.columns:
+            fmt[c] = "{:.1%}"
+    return out.style.format(fmt)
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -589,42 +642,35 @@ def _weekly_team_export_df(
     metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
     nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
     if dfm is not None and not dfm.empty:
-        mc = _metrics_cols(dfm)
-        team_col_m = _get_team_col(dfm)
-        if team_col_m and mc["date"] and mc["wip_hours"]:
-            m = dfm.copy()
-            m[mc["date"]] = pd.to_datetime(m[mc["date"]], errors="coerce")
-            m = m.dropna(subset=[mc["date"]])
-            m["week_start"] = _weekly_start(m[mc["date"]])
-            m["completed_hours"] = _to_num(m[mc["wip_hours"]]).fillna(0.0)
+        m = dfm.copy()
+        team_col_m = _get_team_col(m)
+        date_ser = _coalesce_matching_cols(m, ["week", "period_date", "date", "day", "as_of", "timestamp"])
+        wip_ser = _coalesce_matching_cols(m, ["completed_hours", "wip_hours", "completedhours"])
+        if team_col_m is not None:
+            m["__date__"] = pd.to_datetime(date_ser, errors="coerce")
+            m["__completed_hours__"] = pd.to_numeric(wip_ser, errors="coerce")
+            m = m.dropna(subset=["__date__"])
+            m["week_start"] = _weekly_start(m["__date__"])
+            m["__completed_hours__"] = m["__completed_hours__"].fillna(0.0)
             metrics_team = (
                 m.groupby([team_col_m, "week_start"], as_index=False)
-                .agg(completed_hours=("completed_hours", "sum"))
+                .agg(completed_hours=("__completed_hours__", "sum"))
                 .rename(columns={team_col_m: "team"})
             )
     if dfnw is not None and not dfnw.empty:
         nw = dfnw.copy()
-        nwc = _nonwip_cols(nw)
         team_col_nw = _get_team_col(nw)
-        if team_col_nw and nwc["date"]:
-            nw[nwc["date"]] = pd.to_datetime(nw[nwc["date"]], errors="coerce")
-            nw = nw.dropna(subset=[nwc["date"]])
-            nw["week_start"] = _weekly_start(nw[nwc["date"]])
-            nw["people_count"] = (
-                _to_num(nw[nwc["people_count"]]).fillna(0.0)
-                if nwc["people_count"] and nwc["people_count"] in nw.columns
-                else 0.0
-            )
-            nw["non_wip_hours"] = (
-                _to_num(nw[nwc["total_nonwip"]]).fillna(0.0)
-                if nwc["total_nonwip"] and nwc["total_nonwip"] in nw.columns
-                else 0.0
-            )
-            nw["ooo_hours"] = (
-                _to_num(nw[nwc["ooohours"]]).fillna(0.0)
-                if nwc["ooohours"] and nwc["ooohours"] in nw.columns
-                else 0.0
-            )
+        date_ser = _coalesce_matching_cols(nw, ["week", "period_date", "date", "day", "as_of", "timestamp"])
+        people_ser = _coalesce_matching_cols(nw, ["people_count", "people_count."])
+        nonwip_ser = _coalesce_matching_cols(nw, ["total_non-wip_hours", "total_non_wip_hours", "total_non_wip_hours."])
+        ooo_ser = _coalesce_matching_cols(nw, ["ooo_hours", "ooo_hours."])
+        if team_col_nw is not None:
+            nw["__date__"] = pd.to_datetime(date_ser, errors="coerce")
+            nw = nw.dropna(subset=["__date__"])
+            nw["week_start"] = _weekly_start(nw["__date__"])
+            nw["people_count"] = pd.to_numeric(people_ser, errors="coerce").fillna(0.0)
+            nw["non_wip_hours"] = pd.to_numeric(nonwip_ser, errors="coerce").fillna(0.0)
+            nw["ooo_hours"] = pd.to_numeric(ooo_ser, errors="coerce").fillna(0.0)
             nonwip_team = (
                 nw.groupby([team_col_nw, "week_start"], as_index=False)
                 .agg(
@@ -1258,11 +1304,11 @@ with tabs[2]:
         ou_export = _rollup_export_level(team_export, "ou")
         portfolio_export = _rollup_export_level(team_export, "portfolio")
         st.markdown("#### Team weekly")
-        st.dataframe(team_export, use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
-        st.dataframe(ou_export, use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display(ou_export), use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
-        st.dataframe(portfolio_export, use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display(portfolio_export), use_container_width=True, hide_index=True)
         try:
             xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
             st.download_button(
