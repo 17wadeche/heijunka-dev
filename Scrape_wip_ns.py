@@ -2658,7 +2658,7 @@ def main():
     before = len(rows)
     rows = [
         r for r in rows
-        if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine"))
+        if (r.get("team") in ("SCS Super Cell", "PH Cell 17"))
         or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")
