@@ -849,3 +849,7 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-11 13:50:59,690 | INFO | [NV] DONE | rows=41 | elapsed=0:01:22.579670
 2026-03-11 13:50:59,690 | INFO | [NV] filter >= 2025-07-07: 41 -> 36
 2026-03-11 13:50:59,690 | INFO | [Nav] START
+2026-03-11 13:52:32,565 | INFO | [Nav] DONE | rows=38 | elapsed=0:01:32.875245
+2026-03-11 13:52:32,565 | INFO | [AE MEIC] START
+2026-03-11 13:53:57,459 | INFO | [AE MEIC] DONE | rows=38 | elapsed=0:01:24.894312
+2026-03-11 13:53:57,459 | INFO | [O-Arm MEIC] START
