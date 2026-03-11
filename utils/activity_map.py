@@ -646,6 +646,7 @@ ACTIVITY_MAP = {
     "tl call on complex file":"Meeting",
     "other (please specify)":"Other",
     "other - please specify":"Other",
+    "other-please specify":"Other",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
@@ -1406,6 +1407,7 @@ ACTIVITY_MAP = {
     "nextgen prep":"Next Gen",
     "team meetings, aems, team building, 1:1s, connect sessions":"Meeting",
     "clinical safety call":"Meeting",
+    ""
     "tier 1 meeting crdn":"Meeting",
     "qd meeting":"Meeting",
     "aem recording":"Meeting",
