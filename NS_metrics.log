@@ -888,3 +888,22 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-11 13:59:08,311 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-11 13:59:08,388 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 300 rows
 2026-03-11 13:59:08,388 | INFO | === NS Metrics Run END ===
+2026-03-11 14:11:24,534 | INFO | === NS Metrics Run START ===
+2026-03-11 14:11:24,534 | INFO | Selected team: all
+2026-03-11 14:11:24,541 | INFO | [Spine] START
+2026-03-11 14:11:41,325 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:16.783978
+2026-03-11 14:11:41,326 | INFO | [PH] START
+2026-03-11 14:12:23,704 | INFO | [PH] DONE | rows=352 | elapsed=0:00:42.378607
+2026-03-11 14:12:23,704 | INFO | [PH Cell 17] START
+2026-03-11 14:12:40,006 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:16.302229
+2026-03-11 14:12:40,007 | INFO | [SCS Cell 1] START
+2026-03-11 14:13:05,907 | INFO | [SCS Cell 1] DONE | rows=281 | elapsed=0:00:25.899905
+2026-03-11 14:13:05,907 | INFO | [MEIC PH] START
+2026-03-11 14:13:14,184 | INFO | [MEIC PH] DONE | rows=84 | elapsed=0:00:08.276637
+2026-03-11 14:13:14,184 | INFO | [DBS C13] START
+2026-03-11 14:14:16,279 | INFO | [DBS C13] DONE | rows=41 | elapsed=0:01:02.094864
+2026-03-11 14:14:16,279 | INFO | [DBS C13] filter >= 2025-07-07: 41 -> 36
+2026-03-11 14:14:16,279 | INFO | [DBS C14] START
+2026-03-11 14:14:52,924 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:00:36.645322
+2026-03-11 14:14:52,924 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
+2026-03-11 14:14:52,926 | INFO | [NV] START
