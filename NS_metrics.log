@@ -676,3 +676,154 @@
 2026-03-11 13:12:29,355 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-11 13:12:29,406 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 300 rows
 2026-03-11 13:12:29,406 | INFO | === NS Metrics Run END ===
+2026-03-11 13:17:11,456 | INFO | === NS Metrics Run START ===
+2026-03-11 13:17:11,456 | INFO | Selected team: all
+2026-03-11 13:17:11,473 | INFO | [Spine] START
+2026-03-11 13:17:17,579 | INFO | [Spine] DONE | rows=30 | elapsed=0:00:06.105705
+2026-03-11 13:17:17,579 | INFO | [PH] START
+2026-03-11 13:17:31,200 | INFO | [PH] DONE | rows=352 | elapsed=0:00:13.621024
+2026-03-11 13:17:31,200 | INFO | [PH Cell 17] START
+2026-03-11 13:17:43,411 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:12.209959
+2026-03-11 13:17:43,411 | INFO | [SCS Cell 1] START
+2026-03-11 13:18:04,017 | INFO | [SCS Cell 1] DONE | rows=281 | elapsed=0:00:20.606274
+2026-03-11 13:18:04,017 | INFO | [MEIC PH] START
+2026-03-11 13:18:12,342 | INFO | [MEIC PH] DONE | rows=84 | elapsed=0:00:08.325031
+2026-03-11 13:18:12,342 | INFO | [DBS C13] START
+2026-03-11 13:18:42,111 | INFO | [DBS C13] DONE | rows=41 | elapsed=0:00:29.768994
+2026-03-11 13:18:42,112 | INFO | [DBS C13] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:18:42,112 | INFO | [DBS C14] START
+2026-03-11 13:19:24,552 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:00:42.439460
+2026-03-11 13:19:24,552 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:19:24,552 | INFO | [NV] START
+2026-03-11 13:20:24,222 | INFO | [NV] DONE | rows=41 | elapsed=0:00:59.670306
+2026-03-11 13:20:24,222 | INFO | [NV] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:20:24,222 | INFO | [Nav] START
+2026-03-11 13:21:41,691 | INFO | [Nav] DONE | rows=38 | elapsed=0:01:17.469100
+2026-03-11 13:21:41,691 | INFO | [AE MEIC] START
+2026-03-11 13:23:03,695 | INFO | [AE MEIC] DONE | rows=38 | elapsed=0:01:22.004092
+2026-03-11 13:23:03,695 | INFO | [O-Arm MEIC] START
+2026-03-11 13:24:49,880 | INFO | [O-Arm MEIC] DONE | rows=38 | elapsed=0:01:46.184793
+2026-03-11 13:24:49,880 | INFO | [Mazor] START
+2026-03-11 13:26:40,364 | INFO | [Mazor] DONE | rows=40 | elapsed=0:01:50.483632
+2026-03-11 13:26:40,364 | INFO | [CSF] START
+2026-03-11 13:27:06,831 | INFO | [CSF] DONE | rows=39 | elapsed=0:00:26.467841
+2026-03-11 13:27:06,831 | INFO | [PSS] START
+2026-03-11 13:28:43,446 | INFO | [PSS] DONE | rows=40 | elapsed=0:01:36.614972
+2026-03-11 13:28:43,635 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-11 13:28:43,635 | INFO | [ENT] START
+2026-03-11 13:28:43,764 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.128839
+2026-03-11 13:28:43,765 | INFO | [DBS MEIC] START
+2026-03-11 13:28:43,768 | INFO | [DBS MEIC] DONE | rows=31 | elapsed=0:00:00.002792
+2026-03-11 13:28:43,768 | INFO | [SCS MEIC] START
+2026-03-11 13:28:43,782 | INFO | [SCS MEIC] DONE | rows=31 | elapsed=0:00:00.013709
+2026-03-11 13:28:43,782 | INFO | [TDD COS 1] START
+2026-03-11 13:29:21,793 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:00:38.011637
+2026-03-11 13:29:21,794 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-11 13:29:21,794 | INFO | [SCS Super Cell] START
+2026-03-11 13:29:46,719 | INFO | [SCS Super Cell] DONE | rows=196 | elapsed=0:00:24.924846
+2026-03-11 13:29:46,719 | INFO | [SCS Super Cell] rows scraped (pre-filter): 196
+2026-03-11 13:29:46,719 | INFO | [SCS Super Cell] filter >= 2025-06-30: 196 -> 36
+2026-03-11 13:29:46,719 | INFO | [MEIC PH] filter >= 2025-09-01: 84 -> 29
+2026-03-11 13:29:46,719 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-11 13:29:46,719 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1239 -> 603
+2026-03-11 13:29:46,719 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-11 13:29:46,719 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1239 -> 603
+2026-03-11 13:29:46,719 | INFO | [ALL] drop period_date == 2023-11-06: 603 -> 602
+2026-03-11 13:29:46,732 | INFO | [ALL] drop period_date == 2026-09-07: 602 -> 601
+2026-03-11 13:29:46,770 | INFO | Wrote 601 rows to NS_metrics.csv
+2026-03-11 13:29:46,857 | INFO | Wrote 300 rows to NS_WIP.csv
+2026-03-11 13:29:46,890 | INFO | [POST] WIP weekly keys=300
+2026-03-11 13:29:46,890 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-03-11 13:29:46,890 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-03-11 13:29:46,951 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 300 rows
+2026-03-11 13:29:46,952 | INFO | === NS Metrics Run END ===
+2026-03-11 13:33:27,066 | INFO | === NS Metrics Run START ===
+2026-03-11 13:33:27,067 | INFO | Selected team: all
+2026-03-11 13:33:27,071 | INFO | [Spine] START
+2026-03-11 13:33:33,085 | INFO | [Spine] DONE | rows=30 | elapsed=0:00:06.014769
+2026-03-11 13:33:33,085 | INFO | [PH] START
+2026-03-11 13:33:46,182 | INFO | [PH] DONE | rows=352 | elapsed=0:00:13.096507
+2026-03-11 13:33:46,182 | INFO | [PH Cell 17] START
+2026-03-11 13:33:54,985 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:08.803314
+2026-03-11 13:33:54,985 | INFO | [SCS Cell 1] START
+2026-03-11 13:34:08,080 | INFO | [SCS Cell 1] DONE | rows=281 | elapsed=0:00:13.094818
+2026-03-11 13:34:08,080 | INFO | [MEIC PH] START
+2026-03-11 13:34:12,847 | INFO | [MEIC PH] DONE | rows=84 | elapsed=0:00:04.767003
+2026-03-11 13:34:12,847 | INFO | [DBS C13] START
+2026-03-11 13:34:35,360 | INFO | [DBS C13] DONE | rows=41 | elapsed=0:00:22.512804
+2026-03-11 13:34:35,360 | INFO | [DBS C13] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:34:35,360 | INFO | [DBS C14] START
+2026-03-11 13:34:56,514 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:00:21.154043
+2026-03-11 13:34:56,515 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:34:56,515 | INFO | [NV] START
+2026-03-11 13:35:44,806 | INFO | [NV] DONE | rows=41 | elapsed=0:00:48.290808
+2026-03-11 13:35:44,807 | INFO | [NV] filter >= 2025-07-07: 41 -> 36
+2026-03-11 13:35:44,807 | INFO | [Nav] START
+2026-03-11 13:36:40,619 | INFO | [Nav] DONE | rows=38 | elapsed=0:00:55.811770
+2026-03-11 13:36:40,620 | INFO | [AE MEIC] START
+2026-03-11 13:37:20,242 | INFO | [AE MEIC] DONE | rows=38 | elapsed=0:00:39.621959
+2026-03-11 13:37:20,242 | INFO | [O-Arm MEIC] START
+2026-03-11 13:37:59,346 | INFO | [O-Arm MEIC] DONE | rows=38 | elapsed=0:00:39.103358
+2026-03-11 13:37:59,346 | INFO | [Mazor] START
+2026-03-11 13:39:02,989 | INFO | [Mazor] DONE | rows=40 | elapsed=0:01:03.643870
+2026-03-11 13:39:02,990 | INFO | [CSF] START
+2026-03-11 13:39:22,339 | INFO | [CSF] DONE | rows=39 | elapsed=0:00:19.348311
+2026-03-11 13:39:22,339 | INFO | [PSS] START
+2026-03-11 13:40:18,760 | INFO | [PSS] DONE | rows=40 | elapsed=0:00:56.421503
+2026-03-11 13:40:18,834 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-11 13:40:18,834 | INFO | [ENT] START
+2026-03-11 13:40:18,931 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.096545
+2026-03-11 13:40:18,931 | INFO | [DBS MEIC] START
+2026-03-11 13:40:18,931 | INFO | [DBS MEIC] DONE | rows=31 | elapsed=0:00:00
+2026-03-11 13:40:18,931 | INFO | [SCS MEIC] START
+2026-03-11 13:40:18,954 | INFO | [SCS MEIC] DONE | rows=31 | elapsed=0:00:00.023008
+2026-03-11 13:40:18,954 | INFO | [TDD COS 1] START
+2026-03-11 13:40:53,083 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:00:34.129350
+2026-03-11 13:40:53,084 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-11 13:40:53,084 | INFO | [SCS Super Cell] START
+2026-03-11 13:41:20,333 | INFO | [SCS Super Cell] DONE | rows=196 | elapsed=0:00:27.248551
+2026-03-11 13:41:20,334 | INFO | [SCS Super Cell] rows scraped (pre-filter): 196
+2026-03-11 13:41:20,335 | INFO | [SCS Super Cell] filter >= 2025-06-30: 196 -> 36
+2026-03-11 13:41:20,335 | INFO | [MEIC PH] filter >= 2025-09-01: 84 -> 29
+2026-03-11 13:41:20,337 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-11 13:41:20,340 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1239 -> 633
+2026-03-11 13:41:20,341 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-11 13:41:20,341 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1239 -> 633
+2026-03-11 13:41:20,342 | INFO | [ALL] drop period_date == 2023-11-06: 633 -> 632
+2026-03-11 13:41:20,342 | INFO | [ALL] drop period_date == 2026-09-07: 632 -> 631
+2026-03-11 13:41:20,410 | INFO | Wrote 631 rows to NS_metrics.csv
+2026-03-11 13:41:20,539 | INFO | Wrote 330 rows to NS_WIP.csv
+2026-03-11 13:41:20,589 | INFO | [POST] WIP weekly keys=330
+2026-03-11 13:41:20,589 | INFO | [POST] closures placeholders appended=30 -> closures.csv
+2026-03-11 13:41:20,590 | INFO | [POST] timeliness placeholders appended=30 -> timeliness.csv
+2026-03-11 13:41:20,699 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 300 rows
+2026-03-11 13:41:20,701 | INFO | === NS Metrics Run END ===
+2026-03-11 13:47:16,223 | INFO | === NS Metrics Run START ===
+2026-03-11 13:47:16,223 | INFO | Selected team: all
+2026-03-11 13:47:16,223 | INFO | [Spine] START
+2026-03-11 13:47:16,231 | ERROR | [Spine] FAIL | elapsed=0:00:00.007962 | error=[Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\MEIC - RTG - Documents\\Heijunka - RTG Spine CQ_V2.0_Apr2023.xlsx'
+2026-03-11 13:47:16,235 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 280, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2567, in <lambda>
+    extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 448, in scrape_workbook_with_config
+    wb = load_workbook(source_file, data_only=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 346, in load_workbook
+    reader = ExcelReader(filename, read_only, keep_vba,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 123, in __init__
+    self.archive = _validate_archive(fn)
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 95, in _validate_archive
+    archive = ZipFile(filename, 'r')
+              ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\zipfile\__init__.py", line 1331, in __init__
+    self.fp = io.open(file, filemode)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\MEIC - RTG - Documents\\Heijunka - RTG Spine CQ_V2.0_Apr2023.xlsx'
+
+2026-03-11 13:47:16,235 | INFO | [PH] START

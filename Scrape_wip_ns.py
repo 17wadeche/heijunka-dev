@@ -2209,7 +2209,7 @@ def main():
         "min_period_date": "2025-06-30",
         "max_period_date": "2026-02-23",
         "cells": {
-            "total_available_hours": "P55",
+            "total_available_hours": "P54",
             "completed_hours": {"type": "sum_cells", "cells": ["Q4", "S4"]},
             "wp1_output": "Q2",
             "wp1_target": "Q7",
@@ -2224,7 +2224,7 @@ def main():
             "hc_row": 25,
             "person_name_row_for_person_hours": 30,
             "person_actual_row_for_person_hours": 45,
-            "person_available_row_for_person_hours": 55,
+            "person_available_row_for_person_hours": 54,
             "person_name_row_for_outputs_by_person": 10,
             "person_target_row_for_outputs_by_person": 25,
             "person_name_row_for_hours_by_cell_by_person": 30,
@@ -2658,7 +2658,7 @@ def main():
     before = len(rows)
     rows = [
         r for r in rows
-        if (r.get("team") in ("SCS Super Cell", "PH Cell 17"))
+        if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine"))
         or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")
