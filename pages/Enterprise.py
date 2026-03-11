@@ -586,25 +586,22 @@ def _weekly_team_export_df(
     dfnw: Optional[pd.DataFrame],
     org: OrgConfig,
 ) -> pd.DataFrame:
-    if dfm is None or dfm.empty:
-        return pd.DataFrame()
-    mc = _metrics_cols(dfm)
-    if not mc["date"] or not mc["wip_hours"]:
-        return pd.DataFrame()
-    m = dfm.copy()
-    team_col_m = _get_team_col(m)
-    if not team_col_m:
-        return pd.DataFrame()
-    m[mc["date"]] = pd.to_datetime(m[mc["date"]], errors="coerce")
-    m = m.dropna(subset=[mc["date"]])
-    m["week_start"] = _weekly_start(m[mc["date"]])
-    m["completed_hours"] = _to_num(m[mc["wip_hours"]]).fillna(0.0)
-    metrics_team = (
-        m.groupby([team_col_m, "week_start"], as_index=False)
-        .agg(completed_hours=("completed_hours", "sum"))
-        .rename(columns={team_col_m: "team"})
-    )
+    metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
     nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
+    if dfm is not None and not dfm.empty:
+        mc = _metrics_cols(dfm)
+        team_col_m = _get_team_col(dfm)
+        if team_col_m and mc["date"] and mc["wip_hours"]:
+            m = dfm.copy()
+            m[mc["date"]] = pd.to_datetime(m[mc["date"]], errors="coerce")
+            m = m.dropna(subset=[mc["date"]])
+            m["week_start"] = _weekly_start(m[mc["date"]])
+            m["completed_hours"] = _to_num(m[mc["wip_hours"]]).fillna(0.0)
+            metrics_team = (
+                m.groupby([team_col_m, "week_start"], as_index=False)
+                .agg(completed_hours=("completed_hours", "sum"))
+                .rename(columns={team_col_m: "team"})
+            )
     if dfnw is not None and not dfnw.empty:
         nw = dfnw.copy()
         nwc = _nonwip_cols(nw)
@@ -613,18 +610,21 @@ def _weekly_team_export_df(
             nw[nwc["date"]] = pd.to_datetime(nw[nwc["date"]], errors="coerce")
             nw = nw.dropna(subset=[nwc["date"]])
             nw["week_start"] = _weekly_start(nw[nwc["date"]])
-            if nwc["people_count"] and nwc["people_count"] in nw.columns:
-                nw["people_count"] = _to_num(nw[nwc["people_count"]]).fillna(0.0)
-            else:
-                nw["people_count"] = 0.0
-            if nwc["total_nonwip"] and nwc["total_nonwip"] in nw.columns:
-                nw["non_wip_hours"] = _to_num(nw[nwc["total_nonwip"]]).fillna(0.0)
-            else:
-                nw["non_wip_hours"] = 0.0
-            if nwc["ooohours"] and nwc["ooohours"] in nw.columns:
-                nw["ooo_hours"] = _to_num(nw[nwc["ooohours"]]).fillna(0.0)
-            else:
-                nw["ooo_hours"] = 0.0
+            nw["people_count"] = (
+                _to_num(nw[nwc["people_count"]]).fillna(0.0)
+                if nwc["people_count"] and nwc["people_count"] in nw.columns
+                else 0.0
+            )
+            nw["non_wip_hours"] = (
+                _to_num(nw[nwc["total_nonwip"]]).fillna(0.0)
+                if nwc["total_nonwip"] and nwc["total_nonwip"] in nw.columns
+                else 0.0
+            )
+            nw["ooo_hours"] = (
+                _to_num(nw[nwc["ooohours"]]).fillna(0.0)
+                if nwc["ooohours"] and nwc["ooohours"] in nw.columns
+                else 0.0
+            )
             nonwip_team = (
                 nw.groupby([team_col_nw, "week_start"], as_index=False)
                 .agg(
@@ -634,7 +634,13 @@ def _weekly_team_export_df(
                 )
                 .rename(columns={team_col_nw: "team"})
             )
-    base = metrics_team.merge(nonwip_team, on=["team", "week_start"], how="outer").fillna(0.0)
+    if metrics_team.empty and nonwip_team.empty:
+        return pd.DataFrame()
+    base = metrics_team.merge(nonwip_team, on=["team", "week_start"], how="outer")
+    for col in ["completed_hours", "people_count", "non_wip_hours", "ooo_hours"]:
+        if col not in base.columns:
+            base[col] = 0.0
+        base[col] = pd.to_numeric(base[col], errors="coerce").fillna(0.0)
     meta = _team_meta_lookup(org)
     base = base.merge(meta, on="team", how="left")
     base["capacity_hours"] = base["people_count"] * 40.0
@@ -643,17 +649,14 @@ def _weekly_team_export_df(
         - base["completed_hours"]
         - base["non_wip_hours"]
         - base["ooo_hours"]
-    )
-    base["unaccounted_hours"] = base["unaccounted_hours"].clip(lower=0.0)
+    ).clip(lower=0.0)
     for src, pct_col in [
         ("completed_hours", "wip_pct"),
         ("non_wip_hours", "non_wip_pct"),
         ("ooo_hours", "ooo_pct"),
         ("unaccounted_hours", "unaccounted_pct"),
     ]:
-        base[pct_col] = (
-            base[src] / base["capacity_hours"]
-        ).where(base["capacity_hours"] > 0)
+        base[pct_col] = (base[src] / base["capacity_hours"]).where(base["capacity_hours"] > 0)
     return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
 def _rollup_export_level(df: pd.DataFrame, level: str) -> pd.DataFrame:
     if df.empty:
