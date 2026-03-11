@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
+import io
 from utils.activity_map import ACTIVITY_MAP
 def _candidate_repo_roots(start: Path) -> List[Path]:
     roots: List[Path] = []
@@ -570,7 +571,156 @@ for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_w
         if floor_candidate is not None:
             selected_nonwip_floor = floor_candidate
             break
-tabs = st.tabs(["Overview", "Non-WIP"])
+def _team_meta_lookup(org: OrgConfig) -> pd.DataFrame:
+    rows = []
+    for t in org.teams:
+        meta = t.meta or {}
+        rows.append({
+            "team": t.name,
+            "ou": meta.get("ou"),
+            "portfolio": meta.get("portfolio"),
+        })
+    return pd.DataFrame(rows)
+def _weekly_team_export_df(
+    dfm: Optional[pd.DataFrame],
+    dfnw: Optional[pd.DataFrame],
+    org: OrgConfig,
+) -> pd.DataFrame:
+    if dfm is None or dfm.empty:
+        return pd.DataFrame()
+    mc = _metrics_cols(dfm)
+    if not mc["date"] or not mc["wip_hours"]:
+        return pd.DataFrame()
+    m = dfm.copy()
+    team_col_m = _get_team_col(m)
+    if not team_col_m:
+        return pd.DataFrame()
+    m[mc["date"]] = pd.to_datetime(m[mc["date"]], errors="coerce")
+    m = m.dropna(subset=[mc["date"]])
+    m["week_start"] = _weekly_start(m[mc["date"]])
+    m["completed_hours"] = _to_num(m[mc["wip_hours"]]).fillna(0.0)
+    metrics_team = (
+        m.groupby([team_col_m, "week_start"], as_index=False)
+        .agg(completed_hours=("completed_hours", "sum"))
+        .rename(columns={team_col_m: "team"})
+    )
+    nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
+    if dfnw is not None and not dfnw.empty:
+        nw = dfnw.copy()
+        nwc = _nonwip_cols(nw)
+        team_col_nw = _get_team_col(nw)
+        if team_col_nw and nwc["date"]:
+            nw[nwc["date"]] = pd.to_datetime(nw[nwc["date"]], errors="coerce")
+            nw = nw.dropna(subset=[nwc["date"]])
+            nw["week_start"] = _weekly_start(nw[nwc["date"]])
+            if nwc["people_count"] and nwc["people_count"] in nw.columns:
+                nw["people_count"] = _to_num(nw[nwc["people_count"]]).fillna(0.0)
+            else:
+                nw["people_count"] = 0.0
+            if nwc["total_nonwip"] and nwc["total_nonwip"] in nw.columns:
+                nw["non_wip_hours"] = _to_num(nw[nwc["total_nonwip"]]).fillna(0.0)
+            else:
+                nw["non_wip_hours"] = 0.0
+            if nwc["ooohours"] and nwc["ooohours"] in nw.columns:
+                nw["ooo_hours"] = _to_num(nw[nwc["ooohours"]]).fillna(0.0)
+            else:
+                nw["ooo_hours"] = 0.0
+            nonwip_team = (
+                nw.groupby([team_col_nw, "week_start"], as_index=False)
+                .agg(
+                    people_count=("people_count", "sum"),
+                    non_wip_hours=("non_wip_hours", "sum"),
+                    ooo_hours=("ooo_hours", "sum"),
+                )
+                .rename(columns={team_col_nw: "team"})
+            )
+    base = metrics_team.merge(nonwip_team, on=["team", "week_start"], how="outer").fillna(0.0)
+    meta = _team_meta_lookup(org)
+    base = base.merge(meta, on="team", how="left")
+    base["capacity_hours"] = base["people_count"] * 40.0
+    base["unaccounted_hours"] = (
+        base["capacity_hours"]
+        - base["completed_hours"]
+        - base["non_wip_hours"]
+        - base["ooo_hours"]
+    )
+    base["unaccounted_hours"] = base["unaccounted_hours"].clip(lower=0.0)
+    for src, pct_col in [
+        ("completed_hours", "wip_pct"),
+        ("non_wip_hours", "non_wip_pct"),
+        ("ooo_hours", "ooo_pct"),
+        ("unaccounted_hours", "unaccounted_pct"),
+    ]:
+        base[pct_col] = (
+            base[src] / base["capacity_hours"]
+        ).where(base["capacity_hours"] > 0)
+    return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
+def _rollup_export_level(df: pd.DataFrame, level: str) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+    if level == "ou":
+        group_cols = ["week_start", "portfolio", "ou"]
+    elif level == "portfolio":
+        group_cols = ["week_start", "portfolio"]
+    else:
+        raise ValueError("level must be 'ou' or 'portfolio'")
+    out = (
+        df.groupby(group_cols, as_index=False)
+        .agg(
+            people_count=("people_count", "sum"),
+            completed_hours=("completed_hours", "sum"),
+            non_wip_hours=("non_wip_hours", "sum"),
+            ooo_hours=("ooo_hours", "sum"),
+        )
+    )
+    out["capacity_hours"] = out["people_count"] * 40.0
+    out["unaccounted_hours"] = (
+        out["capacity_hours"]
+        - out["completed_hours"]
+        - out["non_wip_hours"]
+        - out["ooo_hours"]
+    ).clip(lower=0.0)
+    for src, pct_col in [
+        ("completed_hours", "wip_pct"),
+        ("non_wip_hours", "non_wip_pct"),
+        ("ooo_hours", "ooo_pct"),
+        ("unaccounted_hours", "unaccounted_pct"),
+    ]:
+        out[pct_col] = (
+            out[src] / out["capacity_hours"]
+        ).where(out["capacity_hours"] > 0)
+    if level == "portfolio":
+        out["ou"] = pd.NA
+    cols = [
+        "week_start",
+        "portfolio",
+        "ou",
+        "people_count",
+        "completed_hours",
+        "non_wip_hours",
+        "ooo_hours",
+        "capacity_hours",
+        "unaccounted_hours",
+        "wip_pct",
+        "non_wip_pct",
+        "ooo_pct",
+        "unaccounted_pct",
+    ]
+    cols = [c for c in cols if c in out.columns]
+    return out[cols].sort_values(group_cols).reset_index(drop=True)
+def _excel_bytes_from_export_dfs(
+    team_df: pd.DataFrame,
+    ou_df: pd.DataFrame,
+    portfolio_df: pd.DataFrame,
+) -> bytes:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        team_df.to_excel(writer, index=False, sheet_name="Team Weekly")
+        ou_df.to_excel(writer, index=False, sheet_name="OU Weekly")
+        portfolio_df.to_excel(writer, index=False, sheet_name="Portfolio Weekly")
+    buf.seek(0)
+    return buf.getvalue()
+tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     if "metrics" in data:
         d = filter_by_team(data["metrics"])
@@ -1093,3 +1243,38 @@ with tabs[1]:
         st.pyplot(fig)
     else:
         st.info("No parsable activity rows found for the selected pie chart date range.")
+with tabs[2]:
+    st.subheader("Export")
+    export_metrics = _get_metrics_df()
+    export_nonwip = _get_nonwip_df()
+    team_export = _weekly_team_export_df(export_metrics, export_nonwip, org)
+    if team_export.empty:
+        st.info("No exportable team/week data found.")
+        st.stop()
+    ou_export = _rollup_export_level(team_export, "ou")
+    portfolio_export = _rollup_export_level(team_export, "portfolio")
+    st.markdown("#### Team weekly")
+    st.dataframe(
+        team_export,
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.markdown("#### OU weekly")
+    st.dataframe(
+        ou_export,
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.markdown("#### Portfolio weekly")
+    st.dataframe(
+        portfolio_export,
+        use_container_width=True,
+        hide_index=True,
+    )
+    xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
+    st.download_button(
+        label="Download Excel export",
+        data=xlsx_bytes,
+        file_name="enterprise_weekly_export.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
