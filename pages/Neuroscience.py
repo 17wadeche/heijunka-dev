@@ -1134,13 +1134,18 @@ if nonwip_mode:
             "Unaccounted": "Unaccounted",
         }
         stack["CategoryLabel"] = stack["Category"].map(label_map)
-        order_people = wk_people.sort_values("Non-WIP Hours", ascending=False)["person"].tolist()
-        vmax = float(pd.to_numeric(wk_people["Non-WIP Hours"], errors="coerce").max())
+        wk_people["StackTotal"] = (
+            wk_people["Accounted_Other"].fillna(0)
+            + wk_people["Accounted_NonOther"].fillna(0)
+            + wk_people["Unaccounted"].fillna(0)
+        )
+        order_people = wk_people.sort_values("StackTotal", ascending=False)["person"].tolist()
+        vmax = float(pd.to_numeric(wk_people["StackTotal"], errors="coerce").max())
         headroom = max(1.0, vmax * 0.18) if pd.notna(vmax) else 1.0
         y_scale = alt.Scale(domain=[0, vmax + headroom], nice=False, clamp=False)
         totals = (
-            wk_people[["person", "period_date", "Non-WIP Hours"]]
-            .rename(columns={"Non-WIP Hours": "Total"})
+            wk_people[["person", "period_date", "StackTotal"]]
+            .rename(columns={"StackTotal": "Total"})
             .assign(Status=lambda d: np.where(d["Total"] <= 7.5, "Good (≤7.5)", "Over (>7.5)"))
         )
         outline = (
