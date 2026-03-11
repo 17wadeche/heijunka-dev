@@ -970,7 +970,15 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
-def kpi_card(container, label: str, value, fmt: str | None = None, color: str | None = None, help: str | None = None):
+def kpi_card(
+    container,
+    label: str,
+    value,
+    fmt: str | None = None,
+    color: str | None = None,
+    help: str | None = None,
+    subtext: str | None = None,
+):
     if pd.isna(value):
         val_html = "—"
     else:
@@ -980,6 +988,7 @@ def kpi_card(container, label: str, value, fmt: str | None = None, color: str | 
             val_html = str(value)
     help_icon = f"""<span title="{help}" style="cursor:help;margin-left:6px;color:#9ca3af;">ⓘ</span>""" if help else ""
     value_color = color or "#111827"
+    subtext_html = f"""<div style="font-size:12px;color:#6b7280;margin-top:4px;">{subtext}</div>""" if subtext else ""
     container.markdown(
         f"""
         <div style="padding:12px 16px;border-radius:10px;border:1px solid #eee;">
@@ -987,29 +996,32 @@ def kpi_card(container, label: str, value, fmt: str | None = None, color: str | 
             <span>{label}</span>{help_icon}
           </div>
           <div style="font-size:28px;font-weight:700;color:{value_color};">{val_html}</div>
+          {subtext_html}
         </div>
         """,
         unsafe_allow_html=True,
     )
+def _capacity_subtext(hours_val, capacity_val) -> str | None:
+    if pd.isna(hours_val) or pd.isna(capacity_val) or float(capacity_val) <= 0:
+        return None
+    pct = float(hours_val) / float(capacity_val)
+    hrs_per_day = pct * 8.0
+    return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
 def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
     if v is None or pd.isna(v):
         return "#111827"
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
-st.markdown("<h1 style='text-align: center;'>CRM Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>IV Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
     label,
     value=st.session_state.get("nonwip_mode", False),
-    key="crm_nonwip_mode",
+    key="nonwip_mode",
     help="Switch between WIP and Non-WIP metrics"
 )
 if nonwip_mode:
-    nw = load_non_wip(
-        nw_path=str(NON_WIP_DEFAULT_PATH),
-        nw_url=NON_WIP_DATA_URL,
-        cache_tag="CRM",
-    )
+    nw = load_non_wip()
     if nw.empty:
         st.info("No Non-WIP data found yet. Make sure non_wip_activities.csv exists.")
         st.stop()
@@ -1017,7 +1029,7 @@ if nonwip_mode:
     teams_nw = sorted([t for t in nw["team"].dropna().unique()])
     c_team, c_week = st.columns(2)
     with c_team:
-        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="crm_nw_team")
+        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
     weeks_nw = sorted(
         pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
         reverse=True
@@ -1031,7 +1043,7 @@ if nonwip_mode:
             options=weeks_nw,
             index=0,
             format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-            key="crm_nw_week",
+            key="nw_week",
         )
     week_nw = pd.to_datetime(week_nw).normalize()
     sel = nw[(nw["team"] == team_nw) & (nw["period_date"] == week_nw)]
@@ -1059,19 +1071,65 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3, c4 = st.columns(4)
-    people_val = int(row["people_count"]) if pd.notna(row["people_count"]) else np.nan
-    kpi_card(c1, "People Count", people_val, fmt="{:,}")
-    hours_val = float(row["total_non_wip_hours"]) if pd.notna(row["total_non_wip_hours"]) else np.nan
-    kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
-    ooo_val = float(row.get("OOO Hours", np.nan)) if "OOO Hours" in sel.columns else np.nan
-    kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}", help="8 hours per person per OOO day")
-    nonwip_val = float(pct_non_wip) if pd.notna(pct_non_wip) else np.nan
+    wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
+    wip_hours_val = (
+        float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
+        if not wip_match.empty and "Completed Hours" in wip_match.columns
+        else np.nan
+    )
+    people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
+    capacity_val = (
+        float(people_count_val) * 40.0
+        if pd.notna(people_count_val) and float(people_count_val) > 0
+        else np.nan
+    )
+    nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
+        if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
+    ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
+        if pd.notna(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) else 0.0
+    used_hours = (
+        (0.0 if pd.isna(wip_hours_val) else float(wip_hours_val))
+        + (0.0 if pd.isna(nonwip_hours_val) else float(nonwip_hours_val))
+        + (0.0 if pd.isna(ooo_hours_val) else float(ooo_hours_val))
+    )
+    unaccounted_hours_val = (
+        max(float(capacity_val) - used_hours, 0.0)
+        if pd.notna(capacity_val)
+        else np.nan
+    )
+    wip_pct = (wip_hours_val / capacity_val) if pd.notna(wip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    nonwip_pct = (nonwip_hours_val / capacity_val) if pd.notna(nonwip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    ooo_pct = (ooo_hours_val / capacity_val) if pd.notna(ooo_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    unaccounted_pct = (unaccounted_hours_val / capacity_val) if pd.notna(unaccounted_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    kpi_card(
+        c1,
+        "WIP Hours",
+        wip_hours_val,
+        fmt="{:,.1f}",
+        color=percent_color(wip_pct, threshold=0.80, invert=False),
+        subtext=_capacity_subtext(wip_hours_val, capacity_val),
+    )
+    kpi_card(
+        c2,
+        "Non-WIP Hours",
+        nonwip_hours_val,
+        fmt="{:,.1f}",
+        color=percent_color(nonwip_pct, threshold=0.20, invert=True),
+        subtext=_capacity_subtext(nonwip_hours_val, capacity_val),
+    )
+    kpi_card(
+        c3,
+        "OOO Hours",
+        ooo_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(ooo_hours_val, capacity_val),
+    )
     kpi_card(
         c4,
-        "% Non-WIP",
-        nonwip_val,
-        fmt="{:.2f}%",
-        color=percent_color(nonwip_val, threshold=25.0, invert=True),
+        "Unaccounted Hours",
+        unaccounted_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(unaccounted_hours_val, capacity_val),
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
