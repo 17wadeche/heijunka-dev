@@ -907,3 +907,14 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-11 14:14:52,924 | INFO | [DBS C14] DONE | rows=41 | elapsed=0:00:36.645322
 2026-03-11 14:14:52,924 | INFO | [DBS C14] filter >= 2025-07-07: 41 -> 36
 2026-03-11 14:14:52,926 | INFO | [NV] START
+2026-03-11 14:15:04,302 | INFO | === NS Metrics Run START ===
+2026-03-11 14:15:04,302 | INFO | Selected team: all
+2026-03-11 14:15:04,302 | INFO | [Spine] START
+2026-03-11 14:15:12,628 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:08.325435
+2026-03-11 14:15:12,628 | INFO | [Spine New] START
+2026-03-11 14:15:20,589 | INFO | [Spine New] DONE | rows=1 | elapsed=0:00:07.961383
+2026-03-11 14:15:20,589 | INFO | [PH] START
+2026-03-11 14:15:39,021 | INFO | [PH] DONE | rows=352 | elapsed=0:00:18.432393
+2026-03-11 14:15:39,021 | INFO | [PH Cell 17] START
+2026-03-11 14:15:51,863 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:12.841400
+2026-03-11 14:15:51,863 | INFO | [SCS Cell 1] START
