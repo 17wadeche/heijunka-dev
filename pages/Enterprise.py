@@ -1250,31 +1250,23 @@ with tabs[2]:
     team_export = _weekly_team_export_df(export_metrics, export_nonwip, org)
     if team_export.empty:
         st.info("No exportable team/week data found.")
-        st.stop()
-    ou_export = _rollup_export_level(team_export, "ou")
-    portfolio_export = _rollup_export_level(team_export, "portfolio")
-    st.markdown("#### Team weekly")
-    st.dataframe(
-        team_export,
-        use_container_width=True,
-        hide_index=True,
-    )
-    st.markdown("#### OU weekly")
-    st.dataframe(
-        ou_export,
-        use_container_width=True,
-        hide_index=True,
-    )
-    st.markdown("#### Portfolio weekly")
-    st.dataframe(
-        portfolio_export,
-        use_container_width=True,
-        hide_index=True,
-    )
-    xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
-    st.download_button(
-        label="Download Excel export",
-        data=xlsx_bytes,
-        file_name="enterprise_weekly_export.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    else:
+        ou_export = _rollup_export_level(team_export, "ou")
+        portfolio_export = _rollup_export_level(team_export, "portfolio")
+
+        st.markdown("#### Team weekly")
+        st.dataframe(team_export, use_container_width=True, hide_index=True)
+
+        st.markdown("#### OU weekly")
+        st.dataframe(ou_export, use_container_width=True, hide_index=True)
+
+        st.markdown("#### Portfolio weekly")
+        st.dataframe(portfolio_export, use_container_width=True, hide_index=True)
+
+        xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
+        st.download_button(
+            label="Download Excel export",
+            data=xlsx_bytes,
+            file_name="enterprise_weekly_export.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
