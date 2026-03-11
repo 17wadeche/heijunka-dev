@@ -985,7 +985,7 @@ with tabs[1]:
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(total_hours=("hours", "sum"))
         .sort_values("total_hours", ascending=False)
-        .head(15)
+        .head(25)
         .reset_index(drop=True)
     )
     if total_hours.empty:
