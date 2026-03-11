@@ -713,50 +713,42 @@ def _excel_bytes_from_export_dfs(
     ou_df: pd.DataFrame,
     portfolio_df: pd.DataFrame,
 ) -> bytes:
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        team_df.to_excel(writer, index=False, sheet_name="Team Weekly")
-        ou_df.to_excel(writer, index=False, sheet_name="OU Weekly")
-        portfolio_df.to_excel(writer, index=False, sheet_name="Portfolio Weekly")
-    buf.seek(0)
-    return buf.getvalue()
+    last_err = None
+    for engine in ("openpyxl", "xlsxwriter"):
+        buf = io.BytesIO()
+        try:
+            with pd.ExcelWriter(buf, engine=engine) as writer:
+                team_df.to_excel(writer, index=False, sheet_name="Team Weekly")
+                ou_df.to_excel(writer, index=False, sheet_name="OU Weekly")
+                portfolio_df.to_excel(writer, index=False, sheet_name="Portfolio Weekly")
+            buf.seek(0)
+            return buf.getvalue()
+        except Exception as e:
+            last_err = e
+    raise RuntimeError(
+        f"Excel export requires openpyxl or xlsxwriter to be installed. Last error: {last_err}"
+    )
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 def _get_metrics_df() -> Optional[pd.DataFrame]:
-    if "metrics" in data:
-        d = filter_by_team(data["metrics"])
-        if not d.empty:
-            return d
-    if "metrics_aggregate_dev" in data:
-        d = filter_by_team(data["metrics_aggregate_dev"])
-        if not d.empty:
-            return d
-    if "NS_WIP" in data:
-        d = filter_by_team(data["NS_WIP"])
-        if not d.empty:
-            return d
-    if "CRM_WIP" in data:
-        d = filter_by_team(data["CRM_WIP"])
-        if not d.empty:
-            return d
-    return None
+    frames = []
+    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
+        if key in data:
+            d = filter_by_team(data[key])
+            if not d.empty:
+                frames.append(d.copy())
+    if not frames:
+        return None
+    return pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
-    if "ns_non_wip_activities" in data:
-        d = filter_by_team(data["ns_non_wip_activities"])
-        if not d.empty:
-            return d
-    if "crm_non_wip_activities" in data:
-        d = filter_by_team(data["crm_non_wip_activities"])
-        if not d.empty:
-            return d
-    if "non_wip" in data:
-        d = filter_by_team(data["non_wip"])
-        if not d.empty:
-            return d
-    if "non_wip_activities" in data:
-        d = filter_by_team(data["non_wip_activities"])
-        if not d.empty:
-            return d
-    return None
+    frames = []
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+        if key in data:
+            d = filter_by_team(data[key])
+            if not d.empty:
+                frames.append(d.copy())
+    if not frames:
+        return None
+    return pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
 def _metrics_cols(df: pd.DataFrame) -> Dict[str, Optional[str]]:
     return {
         "date": _get_date_col(df),
@@ -1245,8 +1237,17 @@ with tabs[1]:
             st.info("No parsable activity rows found for the selected pie chart date range.")
 with tabs[2]:
     st.subheader("Export")
-    export_metrics = _get_metrics_df()
-    export_nonwip = _get_nonwip_df()
+    export_metrics_raw = _get_metrics_df()
+    export_nonwip_raw = _get_nonwip_df()
+    export_bounds_df = export_metrics_raw if (export_metrics_raw is not None and not export_metrics_raw.empty) else export_nonwip_raw
+    ex_start, ex_end = section_date_range(
+        "Export date range",
+        export_bounds_df,
+        key="dr_export",
+        min_floor_ts=selected_nonwip_floor,
+    )
+    export_metrics = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
+    export_nonwip = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
     team_export = _weekly_team_export_df(export_metrics, export_nonwip, org)
     if team_export.empty:
         st.info("No exportable team/week data found.")
@@ -1259,10 +1260,13 @@ with tabs[2]:
         st.dataframe(ou_export, use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
         st.dataframe(portfolio_export, use_container_width=True, hide_index=True)
-        xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
-        st.download_button(
-            label="Download Excel export",
-            data=xlsx_bytes,
-            file_name="enterprise_weekly_export.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        try:
+            xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
+            st.download_button(
+                label="Download Excel export",
+                data=xlsx_bytes,
+                file_name="enterprise_weekly_export.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        except Exception as e:
+            st.error(f"Excel export failed: {e}")
