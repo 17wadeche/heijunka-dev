@@ -652,6 +652,67 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def build_person_weekly_accounting(
+    team: str,
+    week,
+    nw_row,
+    metrics_frame: pd.DataFrame,
+    nw_frame: pd.DataFrame,
+    week_hours: float = 40.0,
+) -> pd.DataFrame:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    long_nw = explode_non_wip_by_person(nw_frame)
+    nw_people = long_nw.loc[
+        (long_nw["team"] == team) & (long_nw["period_date"] == wk),
+        ["person", "Non-WIP Hours"]
+    ].copy()
+    if nw_people.empty:
+        nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
+    nw_people["person"] = nw_people["person"].astype(str).str.strip()
+    nw_people["Non-WIP Hours"] = pd.to_numeric(nw_people["Non-WIP Hours"], errors="coerce").fillna(0.0)
+    person_hours = explode_person_hours(metrics_frame)
+    wip_people = person_hours.loc[
+        (person_hours["team"] == team) & (person_hours["period_date"] == wk),
+        ["person", "Actual Hours"]
+    ].copy()
+    if wip_people.empty:
+        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
+    wip_people["person"] = wip_people["person"].astype(str).str.strip()
+    wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
+    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
+    acct_other_map, _ = accounted_nonwip_by_person_from_row(nw_row)
+    other_df = pd.DataFrame(
+        [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
+    )
+    if other_df.empty:
+        other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
+    people = pd.DataFrame({
+        "person": sorted(set(
+            nw_people["person"].astype(str).tolist()
+            + wip_people["person"].astype(str).tolist()
+            + other_df["person"].astype(str).tolist()
+        ))
+    })
+    out = (
+        people.merge(nw_people, on="person", how="left")
+              .merge(wip_people, on="person", how="left")
+              .merge(other_df, on="person", how="left")
+              .fillna(0.0)
+    )
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], out["Non-WIP Hours"])
+    out["Accounted Non-WIP"] = (out["Non-WIP Hours"] - out["Other Team WIP"]).clip(lower=0.0)
+    out["Unaccounted"] = (
+        float(week_hours)
+        - out["Completed Hours"]
+        - out["Other Team WIP"]
+        - out["Accounted Non-WIP"]
+    ).clip(lower=0.0)
+    out["Total Used"] = (
+        out["Completed Hours"] + out["Other Team WIP"] + out["Accounted Non-WIP"]
+    )
+    out["period_date"] = wk
+    out["team"] = team
+    return out.sort_values(["person"]).reset_index(drop=True)
 def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
     for c in candidates:
         if c in df.columns:
@@ -1031,30 +1092,24 @@ if nonwip_mode:
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
-    long_nw = explode_non_wip_by_person(nw)
-    wk_people = long_nw[(long_nw["team"] == team_nw) & (long_nw["period_date"] == week_nw)].dropna(subset=["Non-WIP Hours"])
+    wk_people = build_person_weekly_accounting(
+        team=team_nw,
+        week=week_nw,
+        nw_row=row,
+        metrics_frame=df,
+        nw_frame=nw,
+        week_hours=40.0,
+    )
     if wk_people.empty:
-        st.info("No per-person Non-WIP breakdown for this selection.")
+        st.info("No per-person weekly breakdown for this selection.")
     else:
-        acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(row)
-        wk_people = wk_people.assign(
-            Accounted_Other=lambda d: d["person"].map(lambda p: float(acct_other_map.get(str(p).strip(), 0.0))),
-            Accounted_NonOther=lambda d: d["person"].map(lambda p: float(acct_nonother_map.get(str(p).strip(), 0.0))),
-        )
-        wk_people["Accounted_Other"] = wk_people[["Accounted_Other", "Non-WIP Hours"]].min(axis=1)
-        remaining = (wk_people["Non-WIP Hours"] - wk_people["Accounted_Other"]).clip(lower=0)
-        wk_people["Accounted_NonOther"] = np.minimum(
-            wk_people["Accounted_NonOther"].astype(float),
-            remaining.astype(float)
-        )
-        wk_people["Unaccounted"] = (
-            wk_people["Non-WIP Hours"] 
-            - wk_people["Accounted_Other"] 
-            - wk_people["Accounted_NonOther"]
-        ).clip(lower=0)
+        wk_people = wk_people.rename(columns={
+            "Other Team WIP": "Accounted_Other",
+            "Accounted Non-WIP": "Accounted_NonOther",
+        })
         stack = (
             wk_people.melt(
-                id_vars=["person", "period_date", "Non-WIP Hours"],
+                id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
                 value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
                 var_name="Category",
                 value_name="Hours"
@@ -1062,7 +1117,14 @@ if nonwip_mode:
             .dropna(subset=["Hours"])
         )
         stack = stack.merge(
-            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted"]],
+            wk_people[[
+                "person",
+                "Completed Hours",
+                "Non-WIP Hours",
+                "Accounted_Other",
+                "Accounted_NonOther",
+                "Unaccounted"
+            ]],
             on="person",
             how="left",
         )
@@ -1123,10 +1185,11 @@ if nonwip_mode:
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
+                    alt.Tooltip("Completed Hours:Q", title="Completed Hours", format=",.2f"),
+                    alt.Tooltip("Non-WIP Hours:Q", title="Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
-                    alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_NonOther:Q", title="Non-WIP Non-Other Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
-                    alt.Tooltip("Non-WIP Hours:Q", title="Total Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
