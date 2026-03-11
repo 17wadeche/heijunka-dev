@@ -649,6 +649,7 @@ ACTIVITY_MAP = {
     "signal review":"Technical Assessment And Post Market Meetings, Peic Updates, Signal Review",
     "technical assessment and post market meetings, peic update":"Technical Assessment And Post Market Meetings, Peic Updates, Signal Review",
     "other-please specify":"Other",
+    "other- please specify":"Other",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
