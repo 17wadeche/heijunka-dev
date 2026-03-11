@@ -646,6 +646,7 @@ ACTIVITY_MAP = {
     "tl call on complex file":"Meeting",
     "other (please specify)":"Other",
     "other - please specify":"Other",
+    "signal review":"technical assessment and post market meetings, peic updates, signal review",
     "other-please specify":"Other",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
