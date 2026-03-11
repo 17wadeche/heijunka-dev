@@ -577,6 +577,70 @@ def build_meic_rows_from_team_tracker(
         df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
         df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
     return df
+def build_pss_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    NAME_COL   = _col_letter_to_idx("A")
+    COL_B      = _col_letter_to_idx("B")
+    ACT_START  = _col_letter_to_idx("C")
+    ACT_END    = _col_letter_to_idx("W")
+    COL_OOO    = _col_letter_to_idx("X")
+    HEADER_ROW = 1  
+    people_rows: List[dict] = []
+    seen_people = False
+    blank_run = 0
+    max_row = ws.shape[0] - 1
+    for i in range(2, max_row + 1):  # start at Excel row 3
+        raw_name = ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else ""
+        name = norm_name(raw_name)
+        if is_real_person(name):
+            seen_people = True
+            blank_run = 0
+            b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
+            ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+            people_rows.append({
+                "row_i": i,
+                "name": name,
+                "B": float(b),
+                "OOO": float(ooo),
+            })
+        else:
+            if seen_people:
+                blank_run += 1
+                if blank_run >= 3:
+                    break
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    activities: List[dict] = []
+    nonwip_by_person: Dict[str, float] = {}
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        person_total = 0.0
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
+            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            hrs = float(round(float(hrs), 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
+            person_total += hrs
+        if person_total != 0.0:
+            nonwip_by_person[name] = float(round(person_total, 2))
+    total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+    }
 def week_from_nv_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     m = re.fullmatch(r"(\d{2})([A-Za-z]{3})(\d{4})", s)
@@ -1158,6 +1222,14 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         activity_end_col_letter="AB",
     )
 TEAM_SOURCES: Dict[str, TeamSource] = {
+    "PSS": TeamSource(
+        team="PSS",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_pss_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
     "Spine": TeamSource(
         team="Spine",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MEIC - RTG - Documents\Spine_Heijunka.xlsm"),
