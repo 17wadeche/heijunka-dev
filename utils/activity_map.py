@@ -1409,6 +1409,7 @@ ACTIVITY_MAP = {
     "tier 1 meeting crdn":"Meeting",
     "qd meeting":"Meeting",
     "aem recording":"Meeting",
+    "rs jax inbox support":"RS Inbox",
     "training (launcher)":"Training/Mentoring",
     "training (launcher curves)":"Training/Mentoring",
     "meetings - crdn t1 and voyager prep":"Meeting",
