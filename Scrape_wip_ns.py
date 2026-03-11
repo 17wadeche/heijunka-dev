@@ -2152,7 +2152,7 @@ def scrape_spine_previous_weeks_xlsm(
         dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
-        cols = _excel_col_range("B", "V")
+        cols = _excel_col_range("B", "T")
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(excel_dir, "timeliness.csv")
         closures_path = os.path.join(excel_dir, "closures.csv")
@@ -2169,8 +2169,8 @@ def scrape_spine_previous_weeks_xlsm(
                 continue
             if period_date > today_iso:
                 continue
-            total_available_hours = safe_float(_com_call(lambda: ws.Range("X64").Value))
-            completed_hours = safe_float(_com_call(lambda: ws.Range("X56").Value))
+            total_available_hours = safe_float(_com_call(lambda: ws.Range("W64").Value))
+            completed_hours = safe_float(_com_call(lambda: ws.Range("X55").Value))
             wp1_tgt = safe_float(_com_call(lambda: ws.Range("AD10").Value))
             wp2_tgt = safe_float(_com_call(lambda: ws.Range("AF10").Value))
             wp1_out = safe_float(_com_call(lambda: ws.Range("AD5").Value))
@@ -2773,7 +2773,7 @@ def main():
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
     if should_run("Spine"):
         extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
-        extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, "Spine"))
+        extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, "Spine", ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PH"):
         extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
     if should_run("PH Cell 17"):
@@ -2867,7 +2867,7 @@ def main():
     before = len(rows)
     rows = [
         r for r in rows
-        if (r.get("team") in ("SCS Super Cell", "PH Cell 17"))
+        if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine"))
         or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")

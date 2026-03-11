@@ -486,6 +486,7 @@ def section_date_range(
     df: Optional[pd.DataFrame],
     key: str,
     min_floor_ts: Optional[pd.Timestamp] = None,
+    allow_future_dates: bool = False,
 ) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
     if df is None or df.empty:
         return None, None
@@ -499,14 +500,18 @@ def section_date_range(
         min_d = max(min_d, pd.to_datetime(min_floor_ts).date())
     max_d = mx.date()
     today_d = datetime.date.today()
-    max_selectable = today_d
-    if max_selectable < min_d:
-        max_selectable = min_d
-        st.warning(
-            f"{label}: all available data starts after today ({min_d}). "
-            "Date range has been clamped to the first available date."
-        )
-    preset_anchor_end = today_d
+    if allow_future_dates:
+        max_selectable = max_d
+        preset_anchor_end = max_d
+    else:
+        max_selectable = today_d
+        if max_selectable < min_d:
+            max_selectable = min_d
+            st.warning(
+                f"{label}: all available data starts after today ({min_d}). "
+                "Date range has been clamped to the first available date."
+            )
+        preset_anchor_end = today_d
     presets = [
         "Custom",
         "Past week",
@@ -543,7 +548,6 @@ def section_date_range(
     else:
         start_default = min_d
         end_default = max_selectable
-    anchor_end = max_selectable
     prev = st.session_state.get(last_preset_key)
     if prev != preset:
         st.session_state[dates_key] = (start_default, end_default)
@@ -1294,6 +1298,7 @@ with tabs[2]:
         export_bounds_df,
         key="dr_export",
         min_floor_ts=None,
+        allow_future_dates=True,
     )
     export_metrics = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
     export_nonwip = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
