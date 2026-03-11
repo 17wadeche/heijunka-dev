@@ -1247,7 +1247,7 @@ with tabs[2]:
         "Export date range",
         export_bounds_df,
         key="dr_export",
-        min_floor_ts=selected_nonwip_floor,
+        min_floor_ts=None,
     )
     export_metrics = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
     export_nonwip = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
