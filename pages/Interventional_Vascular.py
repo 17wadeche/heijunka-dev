@@ -1034,6 +1034,15 @@ if nonwip_mode:
             "Other Team WIP": "Accounted_Other",
             "Accounted Non-WIP": "Accounted_NonOther",
         })
+        stack = (
+            wk_people.melt(
+                id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
+                value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
+                var_name="Category",
+                value_name="Hours"
+            )
+            .dropna(subset=["Hours"])
+        )
         stack = stack.merge(
             wk_people[[
                 "person",
@@ -1043,11 +1052,6 @@ if nonwip_mode:
                 "Accounted_NonOther",
                 "Unaccounted"
             ]],
-            on="person",
-            how="left",
-        )
-        stack = stack.merge(
-            wk_people[["person", "Accounted_Other", "Accounted_NonOther", "Unaccounted"]],
             on="person",
             how="left",
         )
