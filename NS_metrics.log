@@ -853,3 +853,38 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-11 13:52:32,565 | INFO | [AE MEIC] START
 2026-03-11 13:53:57,459 | INFO | [AE MEIC] DONE | rows=38 | elapsed=0:01:24.894312
 2026-03-11 13:53:57,459 | INFO | [O-Arm MEIC] START
+2026-03-11 13:55:38,068 | INFO | [O-Arm MEIC] DONE | rows=38 | elapsed=0:01:40.608700
+2026-03-11 13:55:38,068 | INFO | [Mazor] START
+2026-03-11 13:56:44,173 | INFO | [Mazor] DONE | rows=40 | elapsed=0:01:06.105095
+2026-03-11 13:56:44,173 | INFO | [CSF] START
+2026-03-11 13:57:13,616 | INFO | [CSF] DONE | rows=39 | elapsed=0:00:29.442519
+2026-03-11 13:57:13,616 | INFO | [PSS] START
+2026-03-11 13:58:15,731 | INFO | [PSS] DONE | rows=40 | elapsed=0:01:02.115559
+2026-03-11 13:58:16,013 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-11 13:58:16,013 | INFO | [ENT] START
+2026-03-11 13:58:16,177 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.163338
+2026-03-11 13:58:16,178 | INFO | [DBS MEIC] START
+2026-03-11 13:58:16,191 | INFO | [DBS MEIC] DONE | rows=31 | elapsed=0:00:00.013349
+2026-03-11 13:58:16,191 | INFO | [SCS MEIC] START
+2026-03-11 13:58:16,206 | INFO | [SCS MEIC] DONE | rows=31 | elapsed=0:00:00.014466
+2026-03-11 13:58:16,206 | INFO | [TDD COS 1] START
+2026-03-11 13:58:47,308 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:00:31.102070
+2026-03-11 13:58:47,308 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-11 13:58:47,308 | INFO | [SCS Super Cell] START
+2026-03-11 13:59:08,055 | INFO | [SCS Super Cell] DONE | rows=196 | elapsed=0:00:20.747158
+2026-03-11 13:59:08,055 | INFO | [SCS Super Cell] rows scraped (pre-filter): 196
+2026-03-11 13:59:08,055 | INFO | [SCS Super Cell] filter >= 2025-06-30: 196 -> 36
+2026-03-11 13:59:08,055 | INFO | [MEIC PH] filter >= 2025-09-01: 84 -> 29
+2026-03-11 13:59:08,055 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-11 13:59:08,055 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1239 -> 633
+2026-03-11 13:59:08,070 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-11 13:59:08,070 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1239 -> 633
+2026-03-11 13:59:08,072 | INFO | [ALL] drop period_date == 2023-11-06: 633 -> 632
+2026-03-11 13:59:08,072 | INFO | [ALL] drop period_date == 2026-09-07: 632 -> 631
+2026-03-11 13:59:08,139 | INFO | Wrote 631 rows to NS_metrics.csv
+2026-03-11 13:59:08,272 | INFO | Wrote 330 rows to NS_WIP.csv
+2026-03-11 13:59:08,310 | INFO | [POST] WIP weekly keys=330
+2026-03-11 13:59:08,311 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-03-11 13:59:08,311 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-03-11 13:59:08,388 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 300 rows
+2026-03-11 13:59:08,388 | INFO | === NS Metrics Run END ===
