@@ -1190,11 +1190,10 @@ if nonwip_mode:
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Completed Hours:Q", title="Completed Hours", format=",.2f"),
-                    alt.Tooltip("Non-WIP Hours:Q", title="Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
-                    alt.Tooltip("Accounted_NonOther:Q", title="Non-WIP Non-Other Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
+                    alt.Tooltip("Non-WIP Hours:Q", title="Total Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
