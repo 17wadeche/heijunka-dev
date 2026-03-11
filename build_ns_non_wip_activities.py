@@ -1033,6 +1033,117 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         activity_start_col_letter="C",
         activity_end_col_letter="Y",
     )
+def week_from_spine_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
+    s = str(sheet_name).strip()
+    s_lower = s.lower()
+    bad_tab_words = {
+        "instruction", "instructions", "setup", "config", "list", "lists",
+        "lookup", "lookups", "read me", "readme", "cover", "template"
+    }
+    if any(word in s_lower for word in bad_tab_words):
+        return None
+    if ws.shape[0] < 18 or ws.shape[1] < 10:
+        return None
+    try:
+        b1 = ws.iat[0, 1]
+        dt = pd.to_datetime(b1, errors="coerce")
+        if _is_real_year(dt):
+            return dt.normalize()
+    except Exception:
+        pass
+    dt = pd.to_datetime(s, errors="coerce")
+    if _is_real_year(dt):
+        return dt.normalize()
+    m = re.search(r"(\d{1,2})[.\-_/](\d{1,2})[.\-_/](\d{2,4})", s)
+    if m:
+        mm = int(m.group(1))
+        dd = int(m.group(2))
+        yy = int(m.group(3))
+        if yy < 100:
+            yy += 2000
+        try:
+            return pd.Timestamp(year=yy, month=mm, day=dd).normalize()
+        except Exception:
+            pass
+    return None
+def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    PEOPLE_START = 2   # Excel row 3
+    PEOPLE_END   = 17  # Excel row 18
+    COL_B   = _col_letter_to_idx("B")
+    COL_OOO = _col_letter_to_idx("W")
+    ACT_START = _col_letter_to_idx("C")
+    ACT_END   = _col_letter_to_idx("AA")
+    HEADER_ROW = 1
+    TEAM_HOURS_CELL = "B20"
+    min_rows_needed = PEOPLE_END + 1      # need row index 17
+    min_cols_needed = ACT_END + 1         # need col index 26 (AA)
+    if ws.shape[0] < min_rows_needed or ws.shape[1] < 2:
+        return {
+            "people_rows": [],
+            "people_count": 0,
+            "ooo_hours": 0.0,
+            "total_nonwip_hours": np.nan,
+            "nonwip_by_person": {},
+            "nonwip_activities": [],
+            "ooo_map": {},
+        }
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)", TEAM_HOURS_CELL.strip())
+    team_hours_col = _col_letter_to_idx(m.group(1))
+    team_hours_row = int(m.group(2)) - 1
+    people_rows: List[dict] = []
+    last_people_row = min(PEOPLE_END, ws.shape[0] - 1)
+    for i in range(PEOPLE_START, last_people_row + 1):
+        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+        if not name or not is_real_person(name):
+            continue
+        expected = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
+        ooo      = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "B": float(expected),
+            "OOO": float(ooo),
+        })
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    team_hours_available = safe_float0(
+        ws.iat[team_hours_row, team_hours_col]
+        if ws.shape[0] > team_hours_row and ws.shape[1] > team_hours_col else 0.0
+    )
+    total_nonwip_hours = float(round((people_count * 40.0) - team_hours_available - ooo_hours, 2))
+    nonwip_by_person: Dict[str, float] = {}
+    for r in people_rows:
+        v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
+        if v != 0.0:
+            nonwip_by_person[r["name"]] = v
+    activities: List[dict] = []
+    max_act_col = min(ACT_END, ws.shape[1] - 1)
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        for c in range(ACT_START, max_act_col + 1):
+            if c == COL_OOO:
+                continue
+            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": float(round(float(hrs), 2)),
+            })
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+    }
 def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
@@ -1047,6 +1158,14 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         activity_end_col_letter="AB",
     )
 TEAM_SOURCES: Dict[str, TeamSource] = {
+    "Spine": TeamSource(
+        team="Spine",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MEIC - RTG - Documents\Spine_Heijunka.xlsm"),
+        week_from_sheet=week_from_spine_tab,
+        custom_builder=build_spine_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
     "DBS": TeamSource(
         team="DBS",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\DBS NON WIP.xlsx"),

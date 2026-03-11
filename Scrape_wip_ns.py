@@ -2193,7 +2193,7 @@ def scrape_spine_previous_weeks_xlsm(
                 name = safe_str(_com_call(lambda c=c: ws.Cells(33, c).Value))
                 if not name:
                     continue
-                actual = safe_float(_com_call(lambda c=c: ws.Cells(56, c).Value))
+                actual = safe_float(_com_call(lambda c=c: ws.Cells(55, c).Value))
                 available = safe_float(_com_call(lambda c=c: ws.Cells(64, c).Value))
                 person_hours[name] = {"actual": actual, "available": available}
             outputs_by_person: Dict[str, Dict[str, float]] = {}
