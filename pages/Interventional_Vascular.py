@@ -998,7 +998,7 @@ if nonwip_mode:
     hours_val = float(row["total_non_wip_hours"]) if pd.notna(row["total_non_wip_hours"]) else np.nan
     kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
     ooo_val = float(row.get("OOO Hours", np.nan)) if "OOO Hours" in sel.columns else np.nan
-    kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}", help="8 hours per person per OOO day")
+    kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}")
     nonwip_val = float(pct_non_wip) if pd.notna(pct_non_wip) else np.nan
     kpi_card(
         c4,
