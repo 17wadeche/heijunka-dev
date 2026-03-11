@@ -1157,6 +1157,7 @@ ACTIVITY_MAP = {
     "pc restart/update": "IT Issue/Update",
     "training louise": "Training/Mentoring",
     "cornerstone scrum":"Cornerstone",
+    "& cornerstone":"Cornerstone",
     "louise training": "Training/Mentoring",
     "audit prep": "Audit",
     "audit support fda ri review": "Audit",
