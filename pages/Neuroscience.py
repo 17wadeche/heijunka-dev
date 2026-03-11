@@ -1003,6 +1003,12 @@ def kpi_card(container, label: str, value, fmt: str | None = None, color: str | 
         """,
         unsafe_allow_html=True,
     )
+def _capacity_subtext(hours_val, capacity_val) -> str | None:
+    if pd.isna(hours_val) or pd.isna(capacity_val) or float(capacity_val) <= 0:
+        return None
+    pct = float(hours_val) / float(capacity_val)
+    hrs_per_day = pct * 8.0
+    return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
 def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
     if v is None or pd.isna(v):
         return "#111827"
@@ -1067,19 +1073,65 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3, c4 = st.columns(4)
-    people_val = int(row["people_count"]) if pd.notna(row["people_count"]) else np.nan
-    kpi_card(c1, "People Count", people_val, fmt="{:,}")
-    hours_val = float(row["total_non_wip_hours"]) if pd.notna(row["total_non_wip_hours"]) else np.nan
-    kpi_card(c2, "Total Non-WIP Hours", hours_val, fmt="{:,.1f}")
-    ooo_val = float(row.get("OOO Hours", np.nan)) if "OOO Hours" in sel.columns else np.nan
-    kpi_card(c3, "OOO Hours", ooo_val, fmt="{:,.1f}", help="8 hours per person per OOO day")
-    nonwip_val = float(pct_non_wip) if pd.notna(pct_non_wip) else np.nan
+    wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
+    wip_hours_val = (
+        float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
+        if not wip_match.empty and "Completed Hours" in wip_match.columns
+        else np.nan
+    )
+    people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
+    capacity_val = (
+        float(people_count_val) * 40.0
+        if pd.notna(people_count_val) and float(people_count_val) > 0
+        else np.nan
+    )
+    nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
+        if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
+    ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
+        if pd.notna(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) else 0.0
+    used_hours = (
+        (0.0 if pd.isna(wip_hours_val) else float(wip_hours_val))
+        + (0.0 if pd.isna(nonwip_hours_val) else float(nonwip_hours_val))
+        + (0.0 if pd.isna(ooo_hours_val) else float(ooo_hours_val))
+    )
+    unaccounted_hours_val = (
+        max(float(capacity_val) - used_hours, 0.0)
+        if pd.notna(capacity_val)
+        else np.nan
+    )
+    wip_pct = (wip_hours_val / capacity_val) if pd.notna(wip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    nonwip_pct = (nonwip_hours_val / capacity_val) if pd.notna(nonwip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    ooo_pct = (ooo_hours_val / capacity_val) if pd.notna(ooo_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    unaccounted_pct = (unaccounted_hours_val / capacity_val) if pd.notna(unaccounted_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    kpi_card(
+        c1,
+        "WIP Hours",
+        wip_hours_val,
+        fmt="{:,.1f}",
+        color=percent_color(wip_pct, threshold=0.80, invert=False),
+        subtext=_capacity_subtext(wip_hours_val, capacity_val),
+    )
+    kpi_card(
+        c2,
+        "Non-WIP Hours",
+        nonwip_hours_val,
+        fmt="{:,.1f}",
+        color=percent_color(nonwip_pct, threshold=0.20, invert=True),
+        subtext=_capacity_subtext(nonwip_hours_val, capacity_val),
+    )
+    kpi_card(
+        c3,
+        "OOO Hours",
+        ooo_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(ooo_hours_val, capacity_val),
+    )
     kpi_card(
         c4,
-        "% Non-WIP",
-        nonwip_val,
-        fmt="{:.2f}%",
-        color=percent_color(nonwip_val, threshold=25.0, invert=True),
+        "Unaccounted Hours",
+        unaccounted_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(unaccounted_hours_val, capacity_val),
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
