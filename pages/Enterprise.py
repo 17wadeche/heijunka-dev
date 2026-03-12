@@ -1290,19 +1290,38 @@ with tabs[1]:
             st.info("No parsable activity rows found for the selected pie chart date range.")
 with tabs[2]:
     st.subheader("Export")
-    export_metrics_raw = _get_metrics_df()
-    export_nonwip_raw = _get_nonwip_df()
-    export_bounds_df = export_metrics_raw if (export_metrics_raw is not None and not export_metrics_raw.empty) else export_nonwip_raw
-    ex_start, ex_end = section_date_range(
-        "Export date range",
-        export_bounds_df,
-        key="dr_export",
-        min_floor_ts=None,
-        allow_future_dates=True,
+    export_team_filter = st.multiselect(
+        "Export — Teams",
+        options=all_team_names,
+        default=all_team_names,
+        key="export_team_filter",
     )
-    export_metrics = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
-    export_nonwip = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
-    team_export = _weekly_team_export_df(export_metrics, export_nonwip, org)
+    def filter_by_export_team(df: pd.DataFrame) -> pd.DataFrame:
+        if not export_team_filter:
+            return df.iloc[0:0]
+        tc = _get_team_col(df)
+        if not tc:
+            return df
+        return df[df[tc].astype(str).isin(set(export_team_filter))]
+    export_metrics_raw = None
+    _frames = []
+    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
+        if key in data:
+            d = filter_by_export_team(data[key])
+            if not d.empty:
+                _frames.append(d.copy())
+    if _frames:
+        export_metrics_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
+    export_nonwip_raw = None
+    _frames = []
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+        if key in data:
+            d = filter_by_export_team(data[key])
+            if not d.empty:
+                _frames.append(d.copy())
+    if _frames:
+        export_nonwip_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
+    team_export = _weekly_team_export_df(export_metrics_raw, export_nonwip_raw, org)
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
