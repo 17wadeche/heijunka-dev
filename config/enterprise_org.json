@@ -13,7 +13,6 @@
     { "portfolio": "CRM", "team": "DS", "ou": "DS" },
     { "portfolio": "CRM", "team": "PCS & CDS", "ou": "PCS & CDS" },
     { "portfolio": "CRM", "team": "MCS", "ou": "MCS" },
-
     { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "PVH" },
     { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "SHA" },
     { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "SHA" },
@@ -22,7 +21,6 @@
     { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "CAS" },
     { "portfolio": "Interventional Vascular", "team": "ECT", "ou": "CS" },
     { "portfolio": "Interventional Vascular", "team": "SVT", "ou": "CS" },
-
     { "portfolio": "Medical Surgical", "team": "Surgical AST-GST", "ou": "Surgical" },
     { "portfolio": "Medical Surgical", "team": "Surgical Robotics", "ou": "Surgical" },
     { "portfolio": "Medical Surgical", "team": "Surgical Legal", "ou": "Surgical" },
