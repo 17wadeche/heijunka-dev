@@ -1290,12 +1290,14 @@ with tabs[1]:
             st.info("No parsable activity rows found for the selected pie chart date range.")
 with tabs[2]:
     st.subheader("Export")
+
     export_team_filter = st.multiselect(
         "Export — Teams",
         options=all_team_names,
         default=all_team_names,
         key="export_team_filter",
     )
+
     def filter_by_export_team(df: pd.DataFrame) -> pd.DataFrame:
         if not export_team_filter:
             return df.iloc[0:0]
@@ -1303,6 +1305,7 @@ with tabs[2]:
         if not tc:
             return df
         return df[df[tc].astype(str).isin(set(export_team_filter))]
+
     def filter_by_export_date(df: pd.DataFrame, start_ts, end_ts) -> pd.DataFrame:
         if start_ts is None or end_ts is None:
             return df
@@ -1313,35 +1316,28 @@ with tabs[2]:
         tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
         tmp = tmp.dropna(subset=[dc])
         return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
-    export_metrics_raw = None
-    _frames = []
+
+    # Build metrics frames — keep each CSV separate, apply team filter individually
+    # DO NOT concat across different schemas; pass them separately to _weekly_team_export_df
+    export_metrics_frames = []
     for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
         if key in data:
-            d = data[key].copy()  # raw, unfiltered
+            d = filter_by_export_team(data[key].copy())
             if not d.empty:
-                _frames.append(d)
-    if _frames:
-        export_metrics_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
-    export_nonwip_raw = None
-    _frames = []
+                export_metrics_frames.append(d)
+
+    export_nonwip_frames = []
     for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
         if key in data:
-            d = data[key].copy()  # raw, unfiltered
+            d = filter_by_export_team(data[key].copy())
             if not d.empty:
-                _frames.append(d)
-    if _frames:
-        export_nonwip_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
-    export_metrics_team_filtered = filter_by_export_team(export_metrics_raw) if export_metrics_raw is not None else None
-    export_nonwip_team_filtered = filter_by_export_team(export_nonwip_raw) if export_nonwip_raw is not None else None
-    export_bounds_df = (
-        export_metrics_team_filtered
-        if (export_metrics_team_filtered is not None and not export_metrics_team_filtered.empty)
-        else export_nonwip_team_filtered
+                export_nonwip_frames.append(d)
+
+    # For date bounds, use only the first metrics frame (consistent schema) 
+    export_bounds_df = export_metrics_frames[0] if export_metrics_frames else (
+        export_nonwip_frames[0] if export_nonwip_frames else None
     )
-    st.write("export_bounds_df shape:", export_bounds_df.shape if export_bounds_df is not None else None)
-    st.write("export_bounds_df columns:", list(export_bounds_df.columns) if export_bounds_df is not None else None)
-    st.write("export_metrics_raw shape:", export_metrics_raw.shape if export_metrics_raw is not None else None)
-    st.write("export_metrics_team_filtered shape:", export_metrics_team_filtered.shape if export_metrics_team_filtered is not None else None)
+
     ex_start, ex_end = section_date_range(
         "Export date range",
         export_bounds_df,
@@ -1349,30 +1345,47 @@ with tabs[2]:
         min_floor_ts=None,
         allow_future_dates=True,
     )
-    export_metrics_filtered = filter_by_export_date(export_metrics_team_filtered, ex_start, ex_end) if export_metrics_team_filtered is not None else None
-    export_nonwip_filtered = filter_by_export_date(export_nonwip_team_filtered, ex_start, ex_end) if export_nonwip_team_filtered is not None else None
+
+    # Apply date filter and concat within each group (same schema per group)
+    def _concat_frames(frames):
+        if not frames:
+            return None
+        if len(frames) == 1:
+            return frames[0]
+        # Concat only frames with matching columns to avoid schema corruption
+        base_cols = set(frames[0].columns)
+        compatible = [f for f in frames if set(f.columns) == base_cols]
+        other = [f for f in frames if set(f.columns) != base_cols]
+        result_frames = []
+        if compatible:
+            result_frames.append(pd.concat(compatible, ignore_index=True))
+        result_frames.extend(other)
+        if len(result_frames) == 1:
+            return result_frames[0]
+        return pd.concat(result_frames, ignore_index=True, sort=False)
+
+    export_metrics_filtered = _concat_frames(
+        [filter_by_export_date(f, ex_start, ex_end) for f in export_metrics_frames]
+    ) if export_metrics_frames else None
+
+    export_nonwip_filtered = _concat_frames(
+        [filter_by_export_date(f, ex_start, ex_end) for f in export_nonwip_frames]
+    ) if export_nonwip_frames else None
+
     team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
+
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
-            "portfolio": "Portfolio",
-            "ou": "OU",
-            "team": "Team",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "non_wip_pct": "Non-WIP %",
-            "ooo_pct": "OOO %",
-            "unaccounted_pct": "Unaccounted %",
+            "portfolio": "Portfolio", "ou": "OU", "team": "Team",
+            "week_start": "Week Start", "completed_hours": "Completed Hours",
+            "people_count": "People Count", "non_wip_hours": "Non-WIP Hours",
+            "ooo_hours": "OOO Hours", "capacity_hours": "Capacity Hours",
+            "unaccounted_hours": "Unaccounted Hours", "wip_pct": "WIP %",
+            "non_wip_pct": "Non-WIP %", "ooo_pct": "OOO %", "unaccounted_pct": "Unaccounted %",
         }
         preferred_order = [
-            "portfolio", "ou", "team", "week_start",
-            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
-            "capacity_hours", "unaccounted_hours",
+            "portfolio", "ou", "team", "week_start", "completed_hours", "people_count",
+            "non_wip_hours", "ooo_hours", "capacity_hours", "unaccounted_hours",
             "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
         ]
         cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
@@ -1387,26 +1400,19 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
-            "portfolio": "Portfolio",
-            "ou": "OU",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "non_wip_pct": "Non-WIP %",
-            "ooo_pct": "OOO %",
+            "portfolio": "Portfolio", "ou": "OU", "week_start": "Week Start",
+            "completed_hours": "Completed Hours", "people_count": "People Count",
+            "non_wip_hours": "Non-WIP Hours", "ooo_hours": "OOO Hours",
+            "capacity_hours": "Capacity Hours", "unaccounted_hours": "Unaccounted Hours",
+            "wip_pct": "WIP %", "non_wip_pct": "Non-WIP %", "ooo_pct": "OOO %",
             "unaccounted_pct": "Unaccounted %",
         }
         preferred_order = [
-            "portfolio", "ou", "week_start",
-            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
-            "capacity_hours", "unaccounted_hours",
+            "portfolio", "ou", "week_start", "completed_hours", "people_count",
+            "non_wip_hours", "ooo_hours", "capacity_hours", "unaccounted_hours",
             "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
         ]
         cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
@@ -1421,25 +1427,19 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
-            "portfolio": "Portfolio",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "non_wip_pct": "Non-WIP %",
-            "ooo_pct": "OOO %",
+            "portfolio": "Portfolio", "week_start": "Week Start",
+            "completed_hours": "Completed Hours", "people_count": "People Count",
+            "non_wip_hours": "Non-WIP Hours", "ooo_hours": "OOO Hours",
+            "capacity_hours": "Capacity Hours", "unaccounted_hours": "Unaccounted Hours",
+            "wip_pct": "WIP %", "non_wip_pct": "Non-WIP %", "ooo_pct": "OOO %",
             "unaccounted_pct": "Unaccounted %",
         }
         preferred_order = [
-            "portfolio", "week_start",
-            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
-            "capacity_hours", "unaccounted_hours",
+            "portfolio", "week_start", "completed_hours", "people_count",
+            "non_wip_hours", "ooo_hours", "capacity_hours", "unaccounted_hours",
             "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
         ]
         cols = [c for c in preferred_order if c in df.columns] + [
@@ -1456,17 +1456,20 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
         ou_export = _rollup_export_level(team_export, "ou")
         portfolio_export = _rollup_export_level(team_export, "portfolio")
+
         st.markdown("#### Team weekly")
         st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
         st.dataframe(_format_export_display_ou(ou_export), use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
         st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
+
         try:
             xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
             st.download_button(
