@@ -1364,7 +1364,9 @@ with tabs[2]:
     ) if export_nonwip_frames else None
     team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
     if not team_export.empty:
-        team_export = team_export[team_export["completed_hours"] > 0].reset_index(drop=True)
+        team_export = team_export[
+            (team_export["completed_hours"] > 0) & (team_export["people_count"] > 0)
+        ].reset_index(drop=True)
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio", "ou": "OU", "team": "Team",
