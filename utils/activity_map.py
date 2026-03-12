@@ -71,7 +71,7 @@ ACTIVITY_MAP = {
     "emails, raisng ticket for my cornerstone issue":"Email & IM",
     "shipping devices to nellcor, email":"Email & IM",
     "meetings - crdn tier 2 & sh r&d": "Meeting",
-    
+    "crdn tier 2 meeting": "Meeting",
     "admin, training":"Admin",
     "(discussion with aurelie - closurefast device for nellcor)": "Collaboration",
     "1 to 1 meeting": "Meeting",
