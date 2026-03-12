@@ -1338,6 +1338,10 @@ with tabs[2]:
         if (export_metrics_team_filtered is not None and not export_metrics_team_filtered.empty)
         else export_nonwip_team_filtered
     )
+    st.write("export_bounds_df shape:", export_bounds_df.shape if export_bounds_df is not None else None)
+    st.write("export_bounds_df columns:", list(export_bounds_df.columns) if export_bounds_df is not None else None)
+    st.write("export_metrics_raw shape:", export_metrics_raw.shape if export_metrics_raw is not None else None)
+    st.write("export_metrics_team_filtered shape:", export_metrics_team_filtered.shape if export_metrics_team_filtered is not None else None)
     ex_start, ex_end = section_date_range(
         "Export date range",
         export_bounds_df,
