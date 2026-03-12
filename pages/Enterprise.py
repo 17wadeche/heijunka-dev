@@ -1290,12 +1290,14 @@ with tabs[1]:
             st.info("No parsable activity rows found for the selected pie chart date range.")
 with tabs[2]:
     st.subheader("Export")
+
     export_team_filter = st.multiselect(
         "Export — Teams",
         options=all_team_names,
         default=all_team_names,
         key="export_team_filter",
     )
+
     def filter_by_export_team(df: pd.DataFrame) -> pd.DataFrame:
         if not export_team_filter:
             return df.iloc[0:0]
@@ -1303,25 +1305,50 @@ with tabs[2]:
         if not tc:
             return df
         return df[df[tc].astype(str).isin(set(export_team_filter))]
+
+    def filter_by_export_date(df: pd.DataFrame, start_ts, end_ts) -> pd.DataFrame:
+        if start_ts is None or end_ts is None:
+            return df
+        dc = _get_date_col(df)
+        if not dc:
+            return df
+        tmp = df.copy()
+        tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
+        tmp = tmp.dropna(subset=[dc])
+        return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
+
+    # Build raw frames directly from data dict — no sidebar filter involved at all
     export_metrics_raw = None
     _frames = []
     for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
         if key in data:
-            d = filter_by_export_team(data[key])
+            d = data[key].copy()  # raw, unfiltered
             if not d.empty:
-                _frames.append(d.copy())
+                _frames.append(d)
     if _frames:
         export_metrics_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
+
     export_nonwip_raw = None
     _frames = []
     for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
         if key in data:
-            d = filter_by_export_team(data[key])
+            d = data[key].copy()  # raw, unfiltered
             if not d.empty:
-                _frames.append(d.copy())
+                _frames.append(d)
     if _frames:
         export_nonwip_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
-    export_bounds_df = export_metrics_raw if (export_metrics_raw is not None and not export_metrics_raw.empty) else export_nonwip_raw
+
+    # Apply export team filter
+    export_metrics_team_filtered = filter_by_export_team(export_metrics_raw) if export_metrics_raw is not None else None
+    export_nonwip_team_filtered = filter_by_export_team(export_nonwip_raw) if export_nonwip_raw is not None else None
+
+    # Date range bounds from team-filtered data
+    export_bounds_df = (
+        export_metrics_team_filtered
+        if (export_metrics_team_filtered is not None and not export_metrics_team_filtered.empty)
+        else export_nonwip_team_filtered
+    )
+
     ex_start, ex_end = section_date_range(
         "Export date range",
         export_bounds_df,
@@ -1329,9 +1356,13 @@ with tabs[2]:
         min_floor_ts=None,
         allow_future_dates=True,
     )
-    export_metrics_filtered = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
-    export_nonwip_filtered = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
+
+    # Apply date filter on top of team filter
+    export_metrics_filtered = filter_by_export_date(export_metrics_team_filtered, ex_start, ex_end) if export_metrics_team_filtered is not None else None
+    export_nonwip_filtered = filter_by_export_date(export_nonwip_team_filtered, ex_start, ex_end) if export_nonwip_team_filtered is not None else None
+
     team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
+
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -1367,6 +1398,7 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -1401,6 +1433,7 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -1436,17 +1469,20 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
+
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
         ou_export = _rollup_export_level(team_export, "ou")
         portfolio_export = _rollup_export_level(team_export, "portfolio")
+
         st.markdown("#### Team weekly")
         st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
         st.dataframe(_format_export_display_ou(ou_export), use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
         st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
+
         try:
             xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
             st.download_button(
