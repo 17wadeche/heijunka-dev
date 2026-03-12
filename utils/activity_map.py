@@ -1194,6 +1194,8 @@ ACTIVITY_MAP = {
     "it issue/update": "IT Issue/Update",
     "workday career development":"Career Development",
     "rfai call": "Meeting",
+    "iris project and meeting":"Project Work",
+    "mail":"Email",
     "morning admin": "Admin",
     "lab monthly meeting project work":"Project Work",
     "meetings voyager transfer":"Meeting",
