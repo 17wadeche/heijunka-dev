@@ -1042,14 +1042,8 @@ if nonwip_mode:
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
-    today_ts = pd.Timestamp.today().normalize()
-    team_weeks = sorted(
-        [
-            d for d in pd.to_datetime(
-                f.loc[f["team"] == team_name, "period_date"].dropna().unique()
-            )
-            if pd.notna(d) and d <= today_ts
-        ],
+    weeks_nw = sorted(
+        pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
         reverse=True
     )
     if not weeks_nw:
@@ -1419,11 +1413,8 @@ if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
 has_dates = df["period_date"].notna().any()
-today = pd.Timestamp.today().normalize().date()
-raw_min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
-raw_max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
-min_date = raw_min_date
-max_date = min(raw_max_date, today) if raw_max_date else None
+min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
+max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
 if has_dates and min_date and max_date:
     if "start_date" not in st.session_state:
         st.session_state["start_date"] = min_date
@@ -1431,18 +1422,11 @@ if has_dates and min_date and max_date:
         st.session_state["end_date"] = max_date
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
-    if start > max_date:
-        start = max_date
-    if end > max_date:
-        end = max_date
-    if start < min_date:
-        start = min_date
-    if end < min_date:
-        end = min_date
     if start > end:
+        st.error("Start date cannot be after end date!")
         start, end = min_date, max_date
-    st.session_state["start_date"] = start
-    st.session_state["end_date"] = end
+        st.session_state["start_date"] = start
+        st.session_state["end_date"] = end
 else:
     start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
@@ -1863,14 +1847,8 @@ with left:
                 index=0,
                 key="hours_by_select",
             )
-            today_ts = pd.Timestamp.today().normalize()
             team_weeks = sorted(
-                [
-                    d for d in pd.to_datetime(
-                        f.loc[f["team"] == team_name, "period_date"].dropna().unique()
-                    )
-                    if pd.notna(d) and d <= today_ts
-                ],
+                pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()),
                 reverse=True
             )
             if not team_weeks:
@@ -2160,16 +2138,7 @@ with mid:
         st.caption("Select exactly one team to enable week drilldown.")
     else:
         team_name = teams_in_view[0]
-        today_ts = pd.Timestamp.today().normalize()
-        team_weeks = sorted(
-            [
-                d for d in pd.to_datetime(
-                    f.loc[f["team"] == team_name, "period_date"].dropna().unique()
-                )
-                if pd.notna(d) and d <= today_ts
-            ],
-            reverse=True
-        )
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()), reverse=True)
         if not team_weeks:
             st.info("No weeks available for drilldown.")
         else:
@@ -2553,14 +2522,8 @@ with right:
             index=0,
             key="uplh_by_select",
         )
-        today_ts = pd.Timestamp.today().normalize()
         team_weeks = sorted(
-            [
-                d for d in pd.to_datetime(
-                    f.loc[f["team"] == team_name, "period_date"].dropna().unique()
-                )
-                if pd.notna(d) and d <= today_ts
-            ],
+            pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()),
             reverse=True
         )
         if team_weeks:
