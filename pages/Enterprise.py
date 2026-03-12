@@ -1325,19 +1325,15 @@ with tabs[2]:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
                 export_metrics_frames.append(d)
-
     export_nonwip_frames = []
     for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
         if key in data:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
                 export_nonwip_frames.append(d)
-
-    # For date bounds, use only the first metrics frame (consistent schema) 
     export_bounds_df = export_metrics_frames[0] if export_metrics_frames else (
         export_nonwip_frames[0] if export_nonwip_frames else None
     )
-
     ex_start, ex_end = section_date_range(
         "Export date range",
         export_bounds_df,
@@ -1345,14 +1341,11 @@ with tabs[2]:
         min_floor_ts=None,
         allow_future_dates=True,
     )
-
-    # Apply date filter and concat within each group (same schema per group)
     def _concat_frames(frames):
         if not frames:
             return None
         if len(frames) == 1:
             return frames[0]
-        # Concat only frames with matching columns to avoid schema corruption
         base_cols = set(frames[0].columns)
         compatible = [f for f in frames if set(f.columns) == base_cols]
         other = [f for f in frames if set(f.columns) != base_cols]
@@ -1363,17 +1356,15 @@ with tabs[2]:
         if len(result_frames) == 1:
             return result_frames[0]
         return pd.concat(result_frames, ignore_index=True, sort=False)
-
     export_metrics_filtered = _concat_frames(
         [filter_by_export_date(f, ex_start, ex_end) for f in export_metrics_frames]
     ) if export_metrics_frames else None
-
     export_nonwip_filtered = _concat_frames(
         [filter_by_export_date(f, ex_start, ex_end) for f in export_nonwip_frames]
     ) if export_nonwip_frames else None
-
     team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
-
+    if not team_export.empty:
+        team_export = team_export[team_export["completed_hours"] > 0].reset_index(drop=True)
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio", "ou": "OU", "team": "Team",
@@ -1400,7 +1391,6 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
-
     def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio", "ou": "OU", "week_start": "Week Start",
@@ -1427,7 +1417,6 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
-
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio", "week_start": "Week Start",
@@ -1456,20 +1445,17 @@ with tabs[2]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         return out.style.format(fmt)
-
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
         ou_export = _rollup_export_level(team_export, "ou")
         portfolio_export = _rollup_export_level(team_export, "portfolio")
-
         st.markdown("#### Team weekly")
         st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
         st.dataframe(_format_export_display_ou(ou_export), use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
         st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
-
         try:
             xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
             st.download_button(
