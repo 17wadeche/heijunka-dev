@@ -407,15 +407,14 @@ with st.sidebar:
         if ou_filter
         else []
     )
-    team_options = [t.name for t in teams_after_ou]
-    default_teams = [t for t in enabled_team_names if t in team_options]
-    if not default_teams and team_options:
-        default_teams = team_options
     team_key = "enterprise_team_filter"
     team_options = [t.name for t in teams_after_ou]
     default_teams = [t for t in enabled_team_names if t in team_options] or team_options
-    if set(st.session_state.get(team_key, [])) - set(team_options):
+    prev_options_key = "enterprise_prev_team_options"
+    prev_team_options = st.session_state.get(prev_options_key)
+    if prev_team_options != team_options:
         st.session_state[team_key] = default_teams
+        st.session_state[prev_options_key] = team_options
     elif team_key not in st.session_state:
         st.session_state[team_key] = default_teams
     team_filter = st.multiselect(
