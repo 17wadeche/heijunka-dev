@@ -73,6 +73,8 @@ ACTIVITY_MAP = {
     "meetings - crdn tier 2 & sh r&d": "Meeting",
     "crdn tier 2 meeting": "Meeting",
     "admin, training":"Admin",
+    "proformas (x13)":"Proforma",
+    "email/ admin":"Email & IM",
     "(discussion with aurelie - closurefast device for nellcor)": "Collaboration",
     "1 to 1 meeting": "Meeting",
     "tier meeting": "Meeting",
