@@ -1321,18 +1321,132 @@ with tabs[2]:
                 _frames.append(d.copy())
     if _frames:
         export_nonwip_raw = pd.concat(_frames, ignore_index=True, sort=False).drop_duplicates()
-    team_export = _weekly_team_export_df(export_metrics_raw, export_nonwip_raw, org)
+    export_bounds_df = export_metrics_raw if (export_metrics_raw is not None and not export_metrics_raw.empty) else export_nonwip_raw
+    ex_start, ex_end = section_date_range(
+        "Export date range",
+        export_bounds_df,
+        key="dr_export",
+        min_floor_ts=None,
+        allow_future_dates=True,
+    )
+    export_metrics_filtered = filter_by_date_range(export_metrics_raw, ex_start, ex_end) if export_metrics_raw is not None else None
+    export_nonwip_filtered = filter_by_date_range(export_nonwip_raw, ex_start, ex_end) if export_nonwip_raw is not None else None
+    team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
+    def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+        rename_map = {
+            "portfolio": "Portfolio",
+            "ou": "OU",
+            "team": "Team",
+            "week_start": "Week Start",
+            "completed_hours": "Completed Hours",
+            "people_count": "People Count",
+            "non_wip_hours": "Non-WIP Hours",
+            "ooo_hours": "OOO Hours",
+            "capacity_hours": "Capacity Hours",
+            "unaccounted_hours": "Unaccounted Hours",
+            "wip_pct": "WIP %",
+            "non_wip_pct": "Non-WIP %",
+            "ooo_pct": "OOO %",
+            "unaccounted_pct": "Unaccounted %",
+        }
+        preferred_order = [
+            "portfolio", "ou", "team", "week_start",
+            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
+            "capacity_hours", "unaccounted_hours",
+            "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
+        ]
+        cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+        out = df[cols].copy().rename(columns=rename_map)
+        if "Week Start" in out.columns:
+            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+        fmt = {}
+        for c in ["Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours", "Capacity Hours", "Unaccounted Hours"]:
+            if c in out.columns:
+                fmt[c] = "{:,.2f}"
+        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+            if c in out.columns:
+                fmt[c] = "{:.1%}"
+        return out.style.format(fmt)
+    def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+        rename_map = {
+            "portfolio": "Portfolio",
+            "ou": "OU",
+            "week_start": "Week Start",
+            "completed_hours": "Completed Hours",
+            "people_count": "People Count",
+            "non_wip_hours": "Non-WIP Hours",
+            "ooo_hours": "OOO Hours",
+            "capacity_hours": "Capacity Hours",
+            "unaccounted_hours": "Unaccounted Hours",
+            "wip_pct": "WIP %",
+            "non_wip_pct": "Non-WIP %",
+            "ooo_pct": "OOO %",
+            "unaccounted_pct": "Unaccounted %",
+        }
+        preferred_order = [
+            "portfolio", "ou", "week_start",
+            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
+            "capacity_hours", "unaccounted_hours",
+            "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
+        ]
+        cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+        out = df[cols].copy().rename(columns=rename_map)
+        if "Week Start" in out.columns:
+            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+        fmt = {}
+        for c in ["Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours", "Capacity Hours", "Unaccounted Hours"]:
+            if c in out.columns:
+                fmt[c] = "{:,.2f}"
+        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+            if c in out.columns:
+                fmt[c] = "{:.1%}"
+        return out.style.format(fmt)
+    def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+        rename_map = {
+            "portfolio": "Portfolio",
+            "week_start": "Week Start",
+            "completed_hours": "Completed Hours",
+            "people_count": "People Count",
+            "non_wip_hours": "Non-WIP Hours",
+            "ooo_hours": "OOO Hours",
+            "capacity_hours": "Capacity Hours",
+            "unaccounted_hours": "Unaccounted Hours",
+            "wip_pct": "WIP %",
+            "non_wip_pct": "Non-WIP %",
+            "ooo_pct": "OOO %",
+            "unaccounted_pct": "Unaccounted %",
+        }
+        preferred_order = [
+            "portfolio", "week_start",
+            "completed_hours", "people_count", "non_wip_hours", "ooo_hours",
+            "capacity_hours", "unaccounted_hours",
+            "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
+        ]
+        cols = [c for c in preferred_order if c in df.columns] + [
+            c for c in df.columns if c not in preferred_order and c != "ou"
+        ]
+        out = df[cols].copy().rename(columns=rename_map)
+        if "Week Start" in out.columns:
+            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+        fmt = {}
+        for c in ["Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours", "Capacity Hours", "Unaccounted Hours"]:
+            if c in out.columns:
+                fmt[c] = "{:,.2f}"
+        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+            if c in out.columns:
+                fmt[c] = "{:.1%}"
+        return out.style.format(fmt)
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
         ou_export = _rollup_export_level(team_export, "ou")
         portfolio_export = _rollup_export_level(team_export, "portfolio")
         st.markdown("#### Team weekly")
-        st.dataframe(_format_export_display(team_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
-        st.dataframe(_format_export_display(ou_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_ou(ou_export), use_container_width=True, hide_index=True)
         st.markdown("#### Portfolio weekly")
-        st.dataframe(_format_export_display(portfolio_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
         try:
             xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
             st.download_button(
