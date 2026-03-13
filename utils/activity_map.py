@@ -1089,6 +1089,8 @@ ACTIVITY_MAP = {
     "cornerstone, scrum":"Cornerstone",
     "cornerstone,":"Cornerstone",
     "training and staff meeting":"Training/Mentoring",
+    "investigation capa training":"CAPA",
+    "checkin":"Meeting",
     "60 minute training meeting":"Training/Mentoring",
     "training and meeting":"Training/Mentoring",
     "affera training, rpa collaboration":"Training/Mentoring",
