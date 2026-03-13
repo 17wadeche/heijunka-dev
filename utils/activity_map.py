@@ -1082,7 +1082,7 @@ ACTIVITY_MAP = {
     "finding work, morning admin etc": "Metrics & Schedule",
     "traing file for laura":"Training/Mentoring",
     "and training":"Training/Mentoring",
-    "shcedule":"Metrics & Schedule"
+    "shcedule":"Metrics & Schedule",
     "cidex ordering. tergazyme/ virkon quote":"Ordering",
     "cidex ordering":"Ordering",
     "35 mins reverse-shadowing":"Training/Mentoring",
