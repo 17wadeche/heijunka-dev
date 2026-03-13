@@ -1107,7 +1107,7 @@ ACTIVITY_MAP = {
     "complaint investigation training":"Training/Mentoring",
     "qsr transition training":"Training/Mentoring",
     "complaint training recording":"Training/Mentoring",
-    "investigation training dfmeca review and added agile bookmarks ror parker document":"Training/Mentoring",
+    "investigation training dfmeca review and added agile bookmarks for parker document":"Training/Mentoring",
     "check-in 45min":"Meeting",
     "atlg eogs file":"Atlg Eogs",
     "atlg eogs event":"Atlg Eogs",
