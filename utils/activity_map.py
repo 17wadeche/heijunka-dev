@@ -1144,6 +1144,7 @@ ACTIVITY_MAP = {
     "meetings - crdn t":"Meeting",
     "investigation standard work update":"Admin",
     "china complex file meeting":"Meeting",
+    "questions, work pull":"Question",
     "meeting to discuss file":"Meeting",
     "doc update meeting":"Meeting",
     "audit complaint list request":"Audit",
