@@ -462,6 +462,7 @@ ACTIVITY_MAP = {
     "scrum and action": "Scrum & Action",
     "scrum& action": "Scrum & Action",
     "aged file review": "Aged WIP Review",
+    "investigation scrum": "Scrum & Action",
     "scrum &action": "Scrum & Action",
     "call": "Meeting",
     "investigation meeting": "Meeting",
