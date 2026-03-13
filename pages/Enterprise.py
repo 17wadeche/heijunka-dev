@@ -1316,9 +1316,6 @@ with tabs[2]:
         tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
         tmp = tmp.dropna(subset=[dc])
         return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
-
-    # Build metrics frames — keep each CSV separate, apply team filter individually
-    # DO NOT concat across different schemas; pass them separately to _weekly_team_export_df
     export_metrics_frames = []
     for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
         if key in data:
@@ -1326,7 +1323,7 @@ with tabs[2]:
             if not d.empty:
                 export_metrics_frames.append(d)
     export_nonwip_frames = []
-    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
         if key in data:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
