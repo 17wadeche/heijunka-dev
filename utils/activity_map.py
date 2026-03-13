@@ -470,6 +470,7 @@ ACTIVITY_MAP = {
     "meeeting": "Meeting",
     ". meeting": "Meeting",  # extra safety; usually cleaned earlier
     "qa review": "QA",
+    "power out": "IT Issue/Update",
     "qa review/correction": "QA",
     "qa review/update": "QA",
     "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
@@ -1019,6 +1020,7 @@ ACTIVITY_MAP = {
     "tier 2 crdn":"Meeting",
     "tier":"Meeting",
     "manufacturing assessment meeting.":"Mfg Assessment",
+    "mfg assessment meeting":"Mfg Assessment",
     "looking over change order":"Change Order",
     "ordering cidex from warehouse":"Ordering",
     "workshop email": "Email & IM",
