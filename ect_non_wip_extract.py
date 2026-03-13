@@ -16,6 +16,7 @@ START_DATE = date(2026, 1, 4)
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_CSV = SCRIPT_DIR / f"{TEAM.lower()}_non_wip_extract.csv"
 NON_WIP_CSV = SCRIPT_DIR / "non_wip.csv"
+NON_WIP_ACTIVITIES_CSV = SCRIPT_DIR / "non_wip_activities.csv"
 AVAILABLE_SHEET = "Available WIP Hours"
 PRODUCTION_SHEET = "#12 Production Analysis"
 PEOPLE_NAME_START_ROW = 6
@@ -35,6 +36,29 @@ OUTPUT_COLUMNS = [
     "WIP Workers Count",
     "WIP Workers OOO Hours",
 ]
+NON_WIP_ACTIVITIES_COLUMNS = [
+    "team",
+    "period_date",
+    "source_file",
+    "people_count",
+    "total_non_wip_hours",
+    "% in WIP",
+    "non_wip_by_person",
+    "non_wip_activities",
+    "OOO Hours",
+]
+def to_non_wip_activities_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "team": row.get("Team", ""),
+        "period_date": row.get("Week", ""),
+        "source_file": row.get("source_file", ""),
+        "people_count": row.get("People Count", ""),
+        "total_non_wip_hours": row.get("Total Non-WIP Hours", ""),
+        "% in WIP": row.get("% in WIP", ""),
+        "non_wip_by_person": row.get("Non-WIP by Person", ""),
+        "non_wip_activities": row.get("Non-WIP Activities", ""),
+        "OOO Hours": row.get("OOO Hours", ""),
+    }
 def normalize_name(value: Any) -> str:
     if value is None:
         return ""
@@ -309,6 +333,46 @@ def merge_rows_by_team_week(
         else:
             merged[key] = row
     return sorted(merged.values(), key=non_wip_sort_key)
+def merge_rows_by_team_period(
+    existing_rows: list[dict[str, Any]],
+    new_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    merged: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in existing_rows:
+        key = (
+            normalize_team(row.get("team")),
+            normalize_name(row.get("period_date")),
+        )
+        merged[key] = row
+    for row in new_rows:
+        key = (
+            normalize_team(row.get("team")),
+            normalize_name(row.get("period_date")),
+        )
+        if key in merged:
+            existing = merged[key]
+            candidate_score = (
+                safe_float(row.get("total_non_wip_hours")),
+                safe_float(row.get("OOO Hours")),
+                1 if normalize_name(row.get("non_wip_by_person")) not in {"", "{}", "[]"} else 0,
+                1 if normalize_name(row.get("non_wip_activities")) not in {"", "[]", "{}"} else 0,
+            )
+            existing_score = (
+                safe_float(existing.get("total_non_wip_hours")),
+                safe_float(existing.get("OOO Hours")),
+                1 if normalize_name(existing.get("non_wip_by_person")) not in {"", "{}", "[]"} else 0,
+                1 if normalize_name(existing.get("non_wip_activities")) not in {"", "[]", "{}"} else 0,
+            )
+            merged[key] = row if candidate_score > existing_score else existing
+        else:
+            merged[key] = row
+    return sorted(
+        merged.values(),
+        key=lambda r: (
+            normalize_name(r.get("team")).casefold(),
+            row_week_for_sort({"Week": r.get("period_date", "")}),
+        ),
+    )
 def dedupe_rows_by_team_week(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     deduped: dict[tuple[str, str], dict[str, Any]] = {}
     for row in rows:
@@ -355,11 +419,24 @@ def main() -> None:
             print(f"Error processing {path}: {exc}")
     rows = dedupe_rows_by_team_week(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
-    existing_fieldnames, existing_rows = read_csv_rows(NON_WIP_CSV)
-    final_fieldnames = ensure_fieldnames(existing_fieldnames, OUTPUT_COLUMNS)
-    merged_rows = merge_rows_by_team_week(existing_rows, rows)
-    write_csv_rows(NON_WIP_CSV, final_fieldnames, merged_rows)
+    existing_fieldnames_non_wip, existing_rows_non_wip = read_csv_rows(NON_WIP_CSV)
+    final_fieldnames_non_wip = ensure_fieldnames(existing_fieldnames_non_wip, OUTPUT_COLUMNS)
+    merged_rows_non_wip = merge_rows_by_team_week(existing_rows_non_wip, rows)
+    write_csv_rows(NON_WIP_CSV, final_fieldnames_non_wip, merged_rows_non_wip)
+    activity_rows = [to_non_wip_activities_row(row) for row in rows]
+    existing_fieldnames_activities, existing_rows_activities = read_csv_rows(NON_WIP_ACTIVITIES_CSV)
+    final_fieldnames_activities = ensure_fieldnames(
+        existing_fieldnames_activities,
+        NON_WIP_ACTIVITIES_COLUMNS,
+    )
+    merged_rows_activities = merge_rows_by_team_period(existing_rows_activities, activity_rows)
+    write_csv_rows(
+        NON_WIP_ACTIVITIES_CSV,
+        final_fieldnames_activities,
+        merged_rows_activities,
+    )
     print(f"Wrote {len(rows)} rows to {OUTPUT_CSV}")
-    print(f"Merged into {NON_WIP_CSV} with {len(merged_rows)} total rows")
+    print(f"Merged into {NON_WIP_CSV} with {len(merged_rows_non_wip)} total rows")
+    print(f"Merged into {NON_WIP_ACTIVITIES_CSV} with {len(merged_rows_activities)} total rows")
 if __name__ == "__main__":
     main()
