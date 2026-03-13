@@ -1045,6 +1045,7 @@ ACTIVITY_MAP = {
     "workshop request":"Next Gen",
     "finishing up pdp and work summary form with signatures etc and getting printed/scanned":"Admin",
     "sh mfg assessment":"Mfg Assessment",
+    "abby mfg & exp dates & smdr":"Mfg Assessment",
     "emails, chaning dhr tasks to oem cm tasks and completing and attaching the oem cm form": "Email & IM",
     "emails admin tier": "Email & IM",
     "lab montly meeting":"Meeting",
