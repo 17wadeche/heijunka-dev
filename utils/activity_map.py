@@ -1050,6 +1050,7 @@ ACTIVITY_MAP = {
     "emails admin tier": "Email & IM",
     "lab montly meeting":"Meeting",
     "check in":"Meeting",
+    "work day":"Admin",
     "finding work, emails etc, it issue": "Metrics & Schedule",
     "emails, finding work tool, lab set up, reopened file, additional photo": "Email & IM",
     "emails, pulling fw tool, updating dhr tasks to oem and filling out oem sheet": "Email & IM",
