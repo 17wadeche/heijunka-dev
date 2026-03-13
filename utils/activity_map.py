@@ -724,6 +724,7 @@ ACTIVITY_MAP = {
     "scrum/team meeting":"Scrum & Action",
     "grad project report":"Project Work",
     "dmaic research":"Problem Solving",
+    "probmen solving":"Problem Solving",
     "cornerstone, analysis training":"Cornerstone",
     "define of dmaic":"Problem Solving",
     "ohs survey: 15 min":"Admin",
