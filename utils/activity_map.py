@@ -1225,6 +1225,8 @@ ACTIVITY_MAP = {
     "aging file": "Aged WIP Review",
     "is tool": "IS Tool Review",
     "srcum": "Scrum & Action",
+    "check-in":"Meeting",
+    
     "readcube meeting":"Meeting",
     "readcube training": "Training/Mentoring",
     "vig training call": "Training/Mentoring",
