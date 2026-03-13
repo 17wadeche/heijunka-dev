@@ -1398,11 +1398,7 @@ with tabs[2]:
             "wip_pct": "WIP %", "non_wip_pct": "Non-WIP %", "ooo_pct": "OOO %",
             "unaccounted_pct": "Unaccounted %",
         }
-        preferred_order = [
-            "portfolio", "ou", "week_start", "completed_hours", "people_count",
-            "non_wip_hours", "ooo_hours", "capacity_hours", "unaccounted_hours",
-            "wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct",
-        ]
+        preferred_order = ["portfolio", "ou", "week_start", "capacity_hours", "people_count", "completed_hours", "wip_pct", "non_wip_hours", "non_wip_pct", "ooo_hours",  "ooo_pct",  "unaccounted_hours", "unaccounted_pct"]
         cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
         out = df[cols].copy().rename(columns=rename_map)
         if "Week Start" in out.columns:
