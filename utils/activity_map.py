@@ -1275,6 +1275,8 @@ ACTIVITY_MAP = {
     "pmq query review":"PMQ Meeting",
     "ri update/submit":"RI",
     "pmpa questions/update":"PMPA",
+    "pmpa meeting & prep":"PMPA",
+    "reviewing problem card":"Problem Solving",
     "precedent event/rd conflict": "RD Conflict",
     "rd conflict": "RD Conflict",
     "kickouts/hypercare":"Hypercare",
