@@ -1120,7 +1120,8 @@ ACTIVITY_MAP = {
     "parker investigation meeting":"Meeting",
     "queries/email": "Email & IM",
     "ri training":"Training/Mentoring",
-
+    "10562882doc meeting":"Meeting",
+    "update std instr for final vig":"Admin",
     "meeting letter generation":"Meeting",
     "training and question":"Training/Mentoring",
     "erg hub leaders play book meeting":"Erg Meeting",
