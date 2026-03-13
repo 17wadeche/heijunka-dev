@@ -1114,6 +1114,8 @@ ACTIVITY_MAP = {
     "ps- a3 review":"Problem Solving",
     "meeting letter generation":"Meeting",
     "training and question":"Training/Mentoring",
+    "erg hub leaders play book meeting":"Erg Meeting",
+    "emils & querie":"Email & IM",
     "training reviews, explanation":"Training/Mentoring",
     "training, keytext for letters, collaboration":"Training/Mentoring",
     "training meeting and staff meeting":"Training/Mentoring",
