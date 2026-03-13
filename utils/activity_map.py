@@ -1226,7 +1226,7 @@ ACTIVITY_MAP = {
     "is tool": "IS Tool Review",
     "srcum": "Scrum & Action",
     "check-in":"Meeting",
-    
+    "update to files from abby man.exp dates creating the smdrs and submitting if possible":"WIP Review",
     "readcube meeting":"Meeting",
     "readcube training": "Training/Mentoring",
     "vig training call": "Training/Mentoring",
