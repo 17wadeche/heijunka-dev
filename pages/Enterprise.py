@@ -1378,10 +1378,6 @@ with tabs[2]:
     export_nonwip_filtered = _concat_frames(
         [filter_by_export_date(f, ex_start, ex_end) for f in export_nonwip_frames]
     ) if export_nonwip_frames else None
-    if export_nonwip_filtered is not None:
-        st.write("Non-WIP columns:", list(export_nonwip_filtered.columns))
-        st.write("people_count sample:", export_nonwip_filtered.get("people_count", export_nonwip_filtered.get("People Count", "NOT FOUND")).head(10) if hasattr(export_nonwip_filtered.get("people_count", None), "head") else "col missing")
-        st.write(export_nonwip_filtered[["team"] + [c for c in export_nonwip_filtered.columns if "people" in c.lower()]].head(20))
     team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
     if not team_export.empty:
         team_export = team_export[
