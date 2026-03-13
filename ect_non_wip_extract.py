@@ -96,15 +96,36 @@ def parse_date_from_filename(path: Path) -> date | None:
         tail = stem[len(prefix):].strip()
     else:
         tail = stem
-    for fmt in ("%d %B %Y", "%d %b %Y", "%m-%d-%Y", "%m-%d-%y", "%m %d %Y"):
+    for fmt in (
+        "%d %B %Y",
+        "%d %b %Y",
+        "%m-%d-%Y",
+        "%m-%d-%y",
+        "%m %d %Y",
+    ):
         try:
             return datetime.strptime(tail, fmt).date()
         except ValueError:
             continue
-    m = re.search(r"(\d{1,2}[ -][A-Za-z]{3,9}[ -]\d{2,4}|\d{1,2}-\d{1,2}-\d{2,4})", tail)
+    m = re.search(
+        r"(\d{1,2}[ -][A-Za-z]{3,9}[ -]\d{2,4}|\d{1,2}[ -]\d{1,2}[ -]\d{2,4})",
+        tail,
+    )
     if m:
-        token = m.group(1)
-        for fmt in ("%d %B %Y", "%d %b %Y", "%d-%B-%Y", "%d-%b-%Y", "%m-%d-%Y", "%m-%d-%y"):
+        token = m.group(1).strip()
+        for fmt in (
+            "%d %B %Y",
+            "%d %b %Y",
+            "%d-%B-%Y",
+            "%d-%b-%Y",
+            "%d %B %Y",
+            "%d %b %Y",
+            "%m-%d-%Y",
+            "%m-%d-%y",
+            "%m %d %Y",
+            "%d-%m-%Y",
+            "%d-%m-%y",
+        ):
             try:
                 return datetime.strptime(token, fmt).date()
             except ValueError:
@@ -116,10 +137,19 @@ def round_hours(value: float) -> float:
     return round(value, 2)
 def get_people_count(ws_avail) -> int:
     unique_names: set[str] = set()
+    excluded = {"0", "total available hours"}
     for row_num in range(PEOPLE_NAME_START_ROW, PEOPLE_NAME_END_ROW + 1):
-        name = first_name_only(ws_avail[f"A{row_num}"].value)
-        if name:
-            unique_names.add(name)
+        raw_value = normalize_name(ws_avail[f"A{row_num}"].value)
+        if not raw_value:
+            continue
+        if raw_value.casefold() in excluded:
+            continue
+        name = first_name_only(raw_value)
+        if not name:
+            continue
+        if name.casefold() in excluded:
+            continue
+        unique_names.add(name)
     return len(unique_names)
 def find_candidate_files(folders: list[Path]) -> list[Path]:
     seen: set[Path] = set()
@@ -127,7 +157,9 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
     for folder in folders:
         if not folder.exists():
             continue
-        for path in sorted(folder.rglob(f"{TEAM} Future Heijunka *.xls*")):
+        for path in sorted(folder.rglob("*.xls*")):
+            if f"{TEAM} Future Heijunka" not in path.stem:
+                continue
             resolved = path.resolve()
             if resolved in seen:
                 continue
