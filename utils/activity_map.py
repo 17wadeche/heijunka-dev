@@ -411,6 +411,8 @@ ACTIVITY_MAP = {
     "mvp ftq question": "Question",
     "1-1 with manager": "Meeting",
     "fywt/heijunka": "Metrics & Schedule",
+    "fywt assigning partner": "Metrics & Schedule",
+    "fywt populate": "Metrics & Schedule",
     "parklief":"Parklife",
     "rpa meeing": "RPA Meeting/Action",
     "tm help":"Collaboration",
