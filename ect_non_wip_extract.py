@@ -168,6 +168,25 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
             if parsed is None or parsed >= START_DATE:
                 files.append(path)
     return sorted(files)
+def row_has_real_non_wip_data(row: dict[str, Any]) -> bool:
+    return any([
+        safe_float(row.get("Total Non-WIP Hours")) > 0,
+        safe_float(row.get("OOO Hours")) > 0,
+        normalize_name(row.get("Non-WIP by Person")) not in {"", "{}", "[]"},
+        normalize_name(row.get("Non-WIP Activities")) not in {"", "[]", "{}"},
+        normalize_name(row.get("WIP Workers")) not in {"", "[]", "{}"},
+        int(safe_float(row.get("WIP Workers Count"))) > 0,
+        safe_float(row.get("WIP Workers OOO Hours")) > 0,
+    ])
+def row_quality_score(row: dict[str, Any]) -> tuple[int, float, float, int]:
+    return (
+        1 if row_has_real_non_wip_data(row) else 0,
+        safe_float(row.get("Total Non-WIP Hours")),
+        safe_float(row.get("OOO Hours")),
+        int(safe_float(row.get("WIP Workers Count"))),
+    )
+def choose_better_row(existing: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+    return candidate if row_quality_score(candidate) > row_quality_score(existing) else existing
 def process_workbook(path: Path) -> dict[str, Any]:
     row = {col: "" for col in OUTPUT_COLUMNS}
     row["Team"] = TEAM
@@ -285,8 +304,23 @@ def merge_rows_by_team_week(
             normalize_team(row.get("Team")),
             normalize_name(row.get("Week")),
         )
-        merged[key] = row
+        if key in merged:
+            merged[key] = choose_better_row(merged[key], row)
+        else:
+            merged[key] = row
     return sorted(merged.values(), key=non_wip_sort_key)
+def dedupe_rows_by_team_week(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = (
+            normalize_team(row.get("Team")),
+            normalize_name(row.get("Week")),
+        )
+        if key in deduped:
+            deduped[key] = choose_better_row(deduped[key], row)
+        else:
+            deduped[key] = row
+    return sorted(deduped.values(), key=non_wip_sort_key)
 def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -319,7 +353,7 @@ def main() -> None:
                 }
             )
             print(f"Error processing {path}: {exc}")
-    rows = sort_rows_by_week(rows)
+    rows = dedupe_rows_by_team_week(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
     existing_fieldnames, existing_rows = read_csv_rows(NON_WIP_CSV)
     final_fieldnames = ensure_fieldnames(existing_fieldnames, OUTPUT_COLUMNS)
