@@ -413,6 +413,7 @@ ACTIVITY_MAP = {
     "fywt/heijunka": "Metrics & Schedule",
     "fywt assigning partner": "Metrics & Schedule",
     "fywt populate": "Metrics & Schedule",
+    "raci for a":"RACI",
     "parklief":"Parklife",
     "rpa meeing": "RPA Meeting/Action",
     "tm help":"Collaboration",
