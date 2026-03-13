@@ -279,6 +279,26 @@ def _canon_activity(label: str) -> str:
         else:
             pretty.append(w.capitalize())
     return " ".join(pretty)
+def _normalize_df_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    norm_to_first: Dict[str, str] = {}
+    rename: Dict[str, str] = {}
+    for col in df.columns:
+        n = _norm(col)
+        if n not in norm_to_first:
+            norm_to_first[n] = col
+            rename[col] = n
+        else:
+            primary = norm_to_first[n]
+            df[primary] = df[primary].where(
+                df[primary].notna() & (df[primary].astype(str).str.strip() != ""),
+                df[col]
+            )
+            rename[col] = None  # mark for drop
+    drop_cols = [c for c, v in rename.items() if v is None]
+    df = df.drop(columns=drop_cols)
+    df = df.rename(columns={c: v for c, v in rename.items() if v is not None})
+    return df
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import numpy as np
     if cat.empty:
@@ -1290,7 +1310,6 @@ with tabs[1]:
             st.info("No parsable activity rows found for the selected pie chart date range.")
 with tabs[2]:
     st.subheader("Export")
-
     export_team_filter = st.multiselect(
         "Export — Teams",
         options=all_team_names,
@@ -1327,7 +1346,7 @@ with tabs[2]:
         if key in data:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
-                export_nonwip_frames.append(d)
+                export_nonwip_frames.append(_normalize_df_columns(d))
     export_bounds_df = export_metrics_frames[0] if export_metrics_frames else (
         export_nonwip_frames[0] if export_nonwip_frames else None
     )
