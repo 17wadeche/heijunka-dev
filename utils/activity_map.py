@@ -1049,6 +1049,7 @@ ACTIVITY_MAP = {
     "emails, chaning dhr tasks to oem cm tasks and completing and attaching the oem cm form": "Email & IM",
     "emails admin tier": "Email & IM",
     "lab montly meeting":"Meeting",
+    "check in":"Meeting",
     "finding work, emails etc, it issue": "Metrics & Schedule",
     "emails, finding work tool, lab set up, reopened file, additional photo": "Email & IM",
     "emails, pulling fw tool, updating dhr tasks to oem and filling out oem sheet": "Email & IM",
