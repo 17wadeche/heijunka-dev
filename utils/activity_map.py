@@ -416,7 +416,7 @@ ACTIVITY_MAP = {
     "fywt assigning partner": "Metrics & Schedule",
     "fywt populate": "Metrics & Schedule",
     "fywt assign.": "Metrics & Schedule",
-    "schedule meeting": "Metrics & Schedule","
+    "schedule meeting": "Metrics & Schedule",
     "raci for a":"RACI",
     "pmpa email":"PMPA",
     "parklief":"Parklife",
