@@ -1134,6 +1134,7 @@ ACTIVITY_MAP = {
     "on acall":"Meeting",
     "quality day-grad stand":"Quality Day",
     "quality day prep":"Quality Day",
+    "problem solving & process improvement":"Problem Solving",
     "bagging device":"Bagging",
     "slide prep":"Admin",
     "meeting, ng, gb, event review/collaboration, emails/admin":"Meeting",
