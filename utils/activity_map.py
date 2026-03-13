@@ -1081,6 +1081,8 @@ ACTIVITY_MAP = {
     "pulling fw tool and email": "Metrics & Schedule",
     "finding work, morning admin etc": "Metrics & Schedule",
     "traing file for laura":"Training/Mentoring",
+    "and training":"Training/Mentoring",
+    "shcedule":"Metrics & Schedule"
     "cidex ordering. tergazyme/ virkon quote":"Ordering",
     "cidex ordering":"Ordering",
     "35 mins reverse-shadowing":"Training/Mentoring",
