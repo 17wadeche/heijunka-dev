@@ -727,6 +727,7 @@ ACTIVITY_MAP = {
     "probmen solving":"Problem Solving",
     "cornerstone, analysis training":"Cornerstone",
     "check-in template & next weeks scheudle saving":"Metrics & Schedule",
+    "fywt, schedule, scrum, green belt training,":"Metrics & Schedule",
     "define of dmaic":"Problem Solving",
     "ohs survey: 15 min":"Admin",
     "monthly meeting, emails, getting a device fron archive, additional photo":"Meeting",
