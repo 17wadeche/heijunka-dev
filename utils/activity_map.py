@@ -1132,6 +1132,8 @@ ACTIVITY_MAP = {
     "scrum/ coaching call":"Scrum & Action",
     "pvh meeting":"Meeting",
     "on acall":"Meeting",
+    "quality day-grad stand":"Quality Day",
+    "quality day prep":"Quality Day",
     "bagging device":"Bagging",
     "slide prep":"Admin",
     "meetings x":"Meeting",
