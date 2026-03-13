@@ -412,6 +412,7 @@ ACTIVITY_MAP = {
     "1-1 with manager": "Meeting",
     "fywt/heijunka": "Metrics & Schedule",
     "fywt": "Metrics & Schedule",
+    "fywt pop assigning": "Metrics & Schedule",
     "fywt assigning partner": "Metrics & Schedule",
     "fywt populate": "Metrics & Schedule",
     "raci for a":"RACI",
