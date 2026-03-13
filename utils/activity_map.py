@@ -720,6 +720,7 @@ ACTIVITY_MAP = {
     "cornerstone, live case video":"Cornerstone",
     "emails, training":"Training/Mentoring",
     "helping catherine ship valves, training":"Training/Mentoring",
+    "investigation training":"Training/Mentoring",
     "scrum: 20.":"Scrum & Action",
     "scrum/team meeting":"Scrum & Action",
     "grad project report":"Project Work",
