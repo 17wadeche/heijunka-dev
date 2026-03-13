@@ -420,6 +420,7 @@ ACTIVITY_MAP = {
     "raci for a":"RACI",
     "pmpa email":"PMPA",
     "parklief":"Parklife",
+    "reviewing capa files on rr tab and submitting":"CAPA",
     "rpa meeing": "RPA Meeting/Action",
     "tm help":"Collaboration",
     "rpa minutes and action": "RPA Meeting/Action",
