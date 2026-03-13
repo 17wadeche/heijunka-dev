@@ -1291,6 +1291,7 @@ ACTIVITY_MAP = {
     "email; training": "Email & IM",
     "emails/amin": "Email & IM",
     "email; article reivew for svt": "Email & IM",
+    "emails/querie": "Email & IM",
     "email admin": "Email & IM",
     "rpa action": "RPA Meeting/Action",
     "rpa minutes write-up":"RPA Meeting/Action",
