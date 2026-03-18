@@ -1135,7 +1135,7 @@ ACTIVITY_MAP = {
     "pvh meeting":"Meeting",
     "ng, email/admin, event review":"Next Gen",
     "ng, meetings, collaboration, coding, email/admin":"Next Gen",
-    "ffera ftq project, integer intuition project":"Project Work",
+    "affera ftq project, integer intuition project":"Project Work",
     "scrum, prep, collaboration":"Scrum & Action",
     "pulled work, questions, cornerstone":"Schedule & Metrics",
     "scrum, question":"Scrum & Action",
