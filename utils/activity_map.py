@@ -1140,6 +1140,7 @@ ACTIVITY_MAP = {
     "pulled work, questions, cornerstone":"Schedule & Metrics",
     "scrum, question":"Scrum & Action",
     "scrum, test event for new wf, question":"Scrum & Action",
+    "emaile":"Email & IM",
     "aortic/pmq meeting":"PMQ Meeting",
     "clinical slide review":"Admin",
     "clinical safety plan review/approval":"Admin",
