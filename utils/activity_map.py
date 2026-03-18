@@ -1130,6 +1130,8 @@ ACTIVITY_MAP = {
     "scrum, investigation training":"Training/Mentoring",
     "scrum/ corner stone training":"Scrum & Action",
     "scrum/ coaching call":"Scrum & Action",
+    "ke, meetings, rrtt review, gb, event review/collaboration, email/admin":"Admin",
+    "pulled work, question":"Question",
     "pvh meeting":"Meeting",
     "aortic/pmq meeting":"PMQ Meeting",
     "clinical slide review":"Admin",
