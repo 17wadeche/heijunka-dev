@@ -490,12 +490,13 @@ def build_meic_rows_from_team_tracker(
         print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}")
         return pd.DataFrame()
     out_rows: List[dict] = []
-    excel = win32.gencache.EnsureDispatch("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
+    excel = None
     wb = None
     temp_dir = None
     try:
+        excel = win32.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
         temp_dir = mkdtemp(prefix="meic_tracker_")
         temp_xlsx = Path(temp_dir) / xlsx_path.name
         shutil.copy2(xlsx_path, temp_xlsx)
@@ -567,8 +568,15 @@ def build_meic_rows_from_team_tracker(
                 print(f"[WARN] Failed MEIC week {week}: {e}")
     finally:
         if wb is not None:
-            wb.Close(SaveChanges=False)
-        excel.Quit()
+            try:
+                wb.Close(SaveChanges=False)
+            except Exception:
+                pass
+        if excel is not None:
+            try:
+                excel.Quit()
+            except Exception:
+                pass
         if temp_dir and Path(temp_dir).exists():
             shutil.rmtree(temp_dir, ignore_errors=True)
     df = pd.DataFrame(out_rows)
@@ -577,13 +585,85 @@ def build_meic_rows_from_team_tracker(
         df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
         df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
     return df
+def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    NAME_COL   = _col_letter_to_idx("A")
+    COL_B      = _col_letter_to_idx("B")
+    ACT_START  = _col_letter_to_idx("C")
+    ACT_END    = _col_letter_to_idx("R")
+    COL_OOO    = _col_letter_to_idx("S")
+    HEADER_ROW = 0
+    people_rows: List[dict] = []
+    seen_people = False
+    blank_run = 0
+    max_row = ws.shape[0] - 1
+    for i in range(1, max_row + 1):  # start at Excel row 2
+        raw_name = ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else ""
+        name = norm_name(raw_name)
+        if name.strip().lower() == "total":
+            break
+        if is_real_person(name):
+            seen_people = True
+            blank_run = 0
+            b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
+            ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+            people_rows.append({
+                "row_i": i,
+                "name": name,
+                "B": float(b),
+                "OOO": float(ooo),
+            })
+        else:
+            if seen_people:
+                blank_run += 1
+                if blank_run >= 3:
+                    break
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    activities: List[dict] = []
+    nonwip_by_person: Dict[str, float] = {}
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        person_total = 0.0
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
+            label = norm_name(
+                ws.iat[HEADER_ROW, c]
+                if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else ""
+            )
+            if not label:
+                continue
+            hrs = safe_float(
+                ws.iat[i, c]
+                if ws.shape[0] > i and ws.shape[1] > c else np.nan
+            )
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            hrs = float(round(float(hrs), 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
+            person_total += hrs
+        if person_total != 0.0:
+            nonwip_by_person[name] = float(round(person_total, 2))
+    total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+    }
 def build_pss_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     NAME_COL   = _col_letter_to_idx("A")
     COL_B      = _col_letter_to_idx("B")
     ACT_START  = _col_letter_to_idx("C")
     ACT_END    = _col_letter_to_idx("W")
     COL_OOO    = _col_letter_to_idx("X")
-    HEADER_ROW = 1  
+    HEADER_ROW = 4
     people_rows: List[dict] = []
     seen_people = False
     blank_run = 0
@@ -769,6 +849,7 @@ MEIC_PARENT_MAP = {
     "PH": {"PH", "PH MEIC"},
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
+    "PSS": {"PSS US", "PSS MEIC", "PSS Intern"}, 
 }
 def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
@@ -792,7 +873,7 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
-            if parent_team in {"DBS", "SCS", "PH"}:
+            if parent_team in {"DBS", "SCS", "PH", "PSS"}:
                 people_count_final = fallback_people_count
             else:
                 people_count_final = get_people_count_from_wip(
@@ -1222,11 +1303,27 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         activity_end_col_letter="AB",
     )
 TEAM_SOURCES: Dict[str, TeamSource] = {
-    "PSS": TeamSource(
-        team="PSS",
-        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"),
+    "PSS MEIC": TeamSource(
+        team="PSS MEIC",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm"),
         week_from_sheet=week_from_mnav_capacity_tab,
         custom_builder=build_pss_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "PSS Intern": TeamSource(
+        team="PSS Intern",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_pss_row,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
+    "PSS US": TeamSource(
+        team="PSS US",
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm"),
+        week_from_sheet=week_from_mnav_capacity_tab,
+        custom_builder=build_pss_us_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
@@ -1494,7 +1591,7 @@ def main():
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
         old_df = old_df[
-            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS"})
+            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS", "PSS"})
         ].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()

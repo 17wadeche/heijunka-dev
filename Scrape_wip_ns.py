@@ -129,6 +129,7 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
         ({"DBS C13", "DBS C14", "DBS MEIC"}, "DBS"),
         ({"MEIC PH", "PH", "PH Cell 17"}, "PH"),
         ({"SCS Cell 1", "SCS Super Cell", "SCS MEIC"}, "SCS"),
+        ({"PSS US", "PSS MEIC", "PSS MEIC Intern"}, "PSS"),
         (et_combine_teams, et_label),
     ]
     rename_map = {"TDD COS 1": "TDD"}
@@ -2397,7 +2398,9 @@ def main():
     oarm_meic_source_file = r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\OARM_MEIC_Heijunka.xlsm"
     mazor_source_file = r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Caesarea Team\CAE - Heijunka_v2.xlsm"
     csf_source_file   = r"C:\Users\wadec8\Medtronic PLC\CQ CSF Management - Documents\CSF_Heijunka.xlsm"
-    pss_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_Heijunka.xlsm"
+    pss_us_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm"
+    pss_meic_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm"
+    pss_intern_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm"
     ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
@@ -2500,7 +2503,35 @@ def main():
             "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
         },
     }
-    PSS_CFG = {
+    PSS_US_CFG = {
+        "person_cols": ("B", "F"),
+        "cells": {
+            "total_available_hours": "R64",
+            "completed_hours": "R54",
+            "wp1_target": "AD10",
+            "wp2_target": "AF10",
+            "wp1_output": "AD5",
+            "wp2_output": "AF5",
+            "uplh_wp1": "AD8",
+            "uplh_wp2": "AF8",
+            "wp1_hours": "AD7",
+            "wp2_hours": "AF7",
+        },
+        "rows": {
+            "person_name_row_for_person_hours": 33,
+            "person_actual_row_for_person_hours": 54,
+            "person_available_row_for_person_hours": 64,
+            "person_name_row_for_outputs_by_person": 13,
+            "person_target_row_for_outputs_by_person": 28,
+            "person_name_row_for_hours_by_cell_by_person": 33,
+            "wp1_hour_rows": [34, 38, 42, 46, 50],
+            "wp2_hour_rows": [35, 39, 43, 47, 51],
+            "person_name_row_for_output_by_cell_by_person": 13,
+            "wp1_output_rows_by_person": [14, 17, 20, 23, 26],
+            "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
+        },
+    }
+    PSS__MEIC_CFG = {
         "person_cols": ("B", "T"),
         "cells": {
             "total_available_hours": "W64",
@@ -2526,6 +2557,34 @@ def main():
             "person_name_row_for_output_by_cell_by_person": 13,
             "wp1_output_rows_by_person": [14, 17, 20, 23, 26],
             "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
+        },
+    }
+    PSS_MEIC_Intern_CFG = {
+        "person_cols": ("B", "Y"),
+        "cells": {
+            "total_available_hours": "AG64",
+            "completed_hours": "AG54",
+            "wp1_target": "AD10",
+            "wp2_target": "AF10",
+            "wp1_output": "AD5",
+            "wp2_output": "AF5",
+            "uplh_wp1": "AD8",
+            "uplh_wp2": "AF8",
+            "wp1_hours": "AD7",
+            "wp2_hours": "AF7",
+        },
+        "rows": {
+            "person_name_row_for_person_hours": 33,
+            "person_actual_row_for_person_hours": 54,
+            "person_available_row_for_person_hours": 64,
+            "person_name_row_for_outputs_by_person": 13,
+            "person_target_row_for_outputs_by_person": 28,
+            "person_name_row_for_hours_by_cell_by_person": 33,
+            "wp1_hour_rows": [34, 38, 42, 46, 50],
+            "wp2_hour_rows": [35, 39, 43, 47, 51],
+            "person_name_row_for_output_by_cell_by_person": 13,
+            "wp1_output_rows_by_person": [67, 72, 77, 82, 87],
+            "wp2_output_rows_by_person": [68, 73, 78, 83, 88],
         },
     }
     PH_CFG = {
@@ -2819,8 +2878,12 @@ def main():
         extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("CSF"):
         extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
-    if should_run("PSS"):
-        extend_team("PSS",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_source_file,   "PSS",   PSS_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("PSS US"):
+        extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("PSS MEIC"):
+        extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("PSS MEIC Intern"):
+        extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("ENT"):
         try:
             ent_name_note = apply_ent_name_replacements_to_sheet(
