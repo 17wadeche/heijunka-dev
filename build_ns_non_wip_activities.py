@@ -314,7 +314,7 @@ class TeamSource:
     layout: Optional[StandardLayout] = None
     week_from_sheet: Optional[Callable[[str, pd.DataFrame], Optional[pd.Timestamp]]] = None
     custom_builder: Optional[Callable[..., Dict]] = None
-    wip_workers_from: str = "NS_WIP"          # where Person Hours comes from
+    wip_workers_from: str = "NS_WIP"
     completed_hours_from: str = "NS_WIP"
 def week_from_sheetname_date(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
@@ -1091,8 +1091,8 @@ def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp
         expected_col_letter="B",
         ooo_col_letter="Q",
         deduct_cell="B11",
-        ooo_sum_start_row=1, ooo_sum_end_row=8,     # Q2:Q9
-        total_ooo_end_row=8,                        # Total uses Q2:Q9
+        ooo_sum_start_row=1, ooo_sum_end_row=8, 
+        total_ooo_end_row=8,            
         activity_header_row=0,
         activity_start_col_letter="C",
         activity_end_col_letter="P",
@@ -1104,8 +1104,8 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         expected_col_letter="B",
         ooo_col_letter="Z",
         deduct_cell="B10",
-        ooo_sum_start_row=1, ooo_sum_end_row=8,     # Z2:Z9 (OOO)
-        total_ooo_end_row=7,                        # Z2:Z8 (Total Non-WIP)
+        ooo_sum_start_row=1, ooo_sum_end_row=8,
+        total_ooo_end_row=7,      
         activity_header_row=0,
         activity_start_col_letter="C",
         activity_end_col_letter="Y",
@@ -1155,16 +1155,16 @@ def week_from_ent_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestam
         return None
     return dt.normalize()
 def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2   # Excel row 3
-    PEOPLE_END   = 17  # Excel row 18
+    PEOPLE_START = 2  
+    PEOPLE_END   = 17 
     COL_B   = _col_letter_to_idx("B")
     COL_OOO = _col_letter_to_idx("W")
     ACT_START = _col_letter_to_idx("C")
     ACT_END   = _col_letter_to_idx("AA")
     HEADER_ROW = 1
     TEAM_HOURS_CELL = "B20"
-    min_rows_needed = PEOPLE_END + 1      # need row index 17
-    min_cols_needed = ACT_END + 1         # need col index 26 (AA)
+    min_rows_needed = PEOPLE_END + 1   
+    min_cols_needed = ACT_END + 1        
     if ws.shape[0] < min_rows_needed or ws.shape[1] < 2:
         return {
             "people_rows": [],
@@ -1235,13 +1235,13 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
 def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
-        people_start_row=1, people_end_row=5,        # A2..A6
+        people_start_row=1, people_end_row=5,       
         expected_col_letter="B",
         ooo_col_letter="AC",
         deduct_cell="B7",
-        ooo_sum_start_row=1, ooo_sum_end_row=5,      # AC2:AC6
-        total_ooo_end_row=5,                         # Total uses AC2:AC6
-        activity_header_row=1,                       # row 2
+        ooo_sum_start_row=1, ooo_sum_end_row=5,     
+        total_ooo_end_row=5,                        
+        activity_header_row=1,                       
         activity_start_col_letter="C",
         activity_end_col_letter="AB",
     )
@@ -1306,11 +1306,11 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         team="TDD",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\RTG Customer Quality - Infusion - Documents\Non-D2D WIP Tracker TDD.xlsx"),
         layout=StandardLayout(
-            people_start_row=2,      # Excel row 3
-            totals_row=20,           # Excel row 21
-            activity_header_row=1,   # Excel row 2
-            activity_start_col=3,    # D
-            activity_end_col=34,     # AI
+            people_start_row=2,      
+            totals_row=20,           
+            activity_header_row=1,   
+            activity_start_col=3,    
+            activity_end_col=34,     
             min_rows=21,
             min_cols=35,
         ),
