@@ -1012,51 +1012,64 @@ def build_capacity_fixed_row(
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2       # Excel row 3, 0-indexed
-    PEOPLE_END   = 25      # Excel row 26 / Christy Cain, 0-indexed
-    COL_B        = _col_letter_to_idx("B")   # Expected WIP hours
-    COL_OOO      = _col_letter_to_idx("AA")  # Out of Office
+    PEOPLE_START = 2       # Excel row 3
+    PEOPLE_END   = 25      # Excel row 26
+    COL_B        = _col_letter_to_idx("B")
+    COL_Z        = _col_letter_to_idx("Z")
+    COL_AA       = _col_letter_to_idx("AA")
     ACT_START    = _col_letter_to_idx("C")
-    ACT_END      = _col_letter_to_idx("AG")
-    HEADER_ROW   = 1       # Excel row 2, 0-indexed
+    ACT_END      = _col_letter_to_idx("Y")   # stop before Z and AA
+    HEADER_ROW   = 1       # Excel row 2
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
         if not name or not is_real_person(name):
             continue
-        b   = safe_float0(ws.iat[i, COL_B]   if ws.shape[1] > COL_B   else 0.0)
-        ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
-        people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
+        b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
+        z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
+        aa = safe_float0(ws.iat[i, COL_AA] if ws.shape[1] > COL_AA else 0.0)
+        ooo = float(round(z + aa, 2))
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "B": b,
+            "OOO": ooo,
+            "Z_OOO": z,
+            "AA_OOO": aa,
+        })
+    people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
     activities: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
     for pr in people_rows:
-        i    = pr["row_i"]
+        i = pr["row_i"]
         name = pr["name"]
         person_total = 0.0
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
-            if c == COL_OOO:
-                continue  # skip AA — that's OOO, not a work activity
             label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[1] > c else "")
             if not label:
                 continue
             hrs = safe_float(ws.iat[i, c] if ws.shape[1] > c else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+            hrs = float(round(hrs, 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
             person_total += hrs
         if person_total != 0.0:
             nonwip_by_person[name] = float(round(person_total, 2))
     total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
-    people_count = len(set(r["name"] for r in people_rows))
     return {
-        "people_rows":      people_rows,
-        "people_count":     people_count,
-        "ooo_hours":        ooo_hours,
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
         "total_nonwip_hours": total_nonwip_hours,
         "nonwip_by_person": nonwip_by_person,
         "nonwip_activities": activities,
-        "ooo_map":          {r["name"]: r["OOO"] for r in people_rows},
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
@@ -1130,6 +1143,17 @@ def week_from_spine_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timest
         except Exception:
             pass
     return None
+def week_from_ent_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
+    s = str(sheet_name).strip()
+    m = re.search(r"\((\d{1,2})[_\-. ]([A-Za-z]{3,9})\)", s)
+    if not m:
+        return None
+    day = int(m.group(1))
+    mon_txt = m.group(2)
+    dt = pd.to_datetime(f"{day} {mon_txt} {DEFAULT_YEAR_IF_MISSING}", errors="coerce")
+    if pd.isna(dt):
+        return None
+    return dt.normalize()
 def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2   # Excel row 3
     PEOPLE_END   = 17  # Excel row 18
@@ -1357,7 +1381,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     "ENT": TeamSource(
         team="ENT",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Capacity Management\ENT_Capacity Management for Non WIP_March 9th.xlsm"),
-        week_from_sheet=week_from_mnav_capacity_tab,
+        week_from_sheet=week_from_ent_tab,
         custom_builder=build_ent_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
