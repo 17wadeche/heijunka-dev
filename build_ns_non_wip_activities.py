@@ -338,7 +338,7 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
     if "capacity mgmt" not in s_lower:
         return None
     try:
-        b1 = ws.iat[0, 1]  # B1
+        b1 = ws.iat[0, 1]  
         dt = pd.to_datetime(b1, errors="coerce")
         if _is_real_year(dt):
             return dt.normalize()
@@ -360,13 +360,13 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
                 return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
     return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
 def build_meic_teamtracker_block(ws: pd.DataFrame) -> Dict:
-    PEOPLE_START_ROW = 2          # Excel row 3 -> 0-index 2
-    HEADER_ROW = 1                # Excel row 2 -> 0-index 1
-    NAME_COL = 0                  # A
-    NONWIP_COL = 1                # B
-    OOO_COL = 2                   # C
-    ACTIVITY_START_COL = 3        # D
-    ACTIVITY_END_COL = 23         # X
+    PEOPLE_START_ROW = 2         
+    HEADER_ROW = 1                
+    NAME_COL = 0                  
+    NONWIP_COL = 1                
+    OOO_COL = 2                   
+    ACTIVITY_START_COL = 3        
+    ACTIVITY_END_COL = 23         
     people_rows: List[dict] = []
     for i in range(PEOPLE_START_ROW, len(ws)):
         name = norm_name(ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else "")
@@ -588,7 +588,7 @@ def build_pss_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     seen_people = False
     blank_run = 0
     max_row = ws.shape[0] - 1
-    for i in range(2, max_row + 1):  # start at Excel row 3
+    for i in range(2, max_row + 1):  
         raw_name = ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else ""
         name = norm_name(raw_name)
         if is_real_person(name):
@@ -653,13 +653,13 @@ def week_from_nv_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp
         return dt.normalize()
     return None
 def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 1   # A2 (0-indexed)
-    PEOPLE_END   = 12  # A13
-    COL_EXPECTED = _col_letter_to_idx("B")   # expected WIP hrs
-    COL_OOO      = _col_letter_to_idx("X")   # OOO hours
-    COL_NONWIP   = _col_letter_to_idx("Y")   # total non-d2d hours per person
+    PEOPLE_START = 1   
+    PEOPLE_END   = 12 
+    COL_EXPECTED = _col_letter_to_idx("B")   
+    COL_OOO      = _col_letter_to_idx("X")  
+    COL_NONWIP   = _col_letter_to_idx("Y")   
     DEDUCT_CELL  = "B19"
-    ACT_HEADER_ROW = 0  # row 2 (0-indexed)
+    ACT_HEADER_ROW = 0  
     ACT_START_COL  = _col_letter_to_idx("C")
     ACT_END_COL    = _col_letter_to_idx("W")
     m = re.fullmatch(r"([A-Za-z]+)(\d+)", DEDUCT_CELL.strip())
@@ -706,7 +706,7 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         "total_nonwip_hours": total_nonwip_hours,
         "nonwip_by_person": nonwip_by_person,
         "nonwip_activities": activities,
-        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},  # for WIP Workers OOO sum
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
@@ -939,13 +939,13 @@ def build_capacity_fixed_row(
     *,
     people_start_row: int,
     people_end_row: int,
-    expected_col_letter: str,    # column with "Expected Number of WIP Hours Per Week" (B)
-    ooo_col_letter: str,         # OOO column (Q or Z)
-    deduct_cell: str,            # e.g. "B8", "B11", "B10"
-    ooo_sum_start_row: int,      # inclusive, 0-indexed row
-    ooo_sum_end_row: int,        # inclusive, 0-indexed row
-    total_ooo_end_row: int,      # inclusive, used for Total Non-WIP formula (sometimes differs)
-    activity_header_row: int,    # row 1 => index 0, row 2 => index 1, etc
+    expected_col_letter: str,   
+    ooo_col_letter: str,        
+    deduct_cell: str,            
+    ooo_sum_start_row: int,      
+    ooo_sum_end_row: int,       
+    total_ooo_end_row: int,     
+    activity_header_row: int,    
     activity_start_col_letter: str,
     activity_end_col_letter: str,
 ) -> Dict:
@@ -957,7 +957,7 @@ def build_capacity_fixed_row(
     if not m:
         raise ValueError(f"Bad deduct_cell: {deduct_cell}")
     deduct_col = _col_letter_to_idx(m.group(1))
-    deduct_row = int(m.group(2)) - 1  # Excel -> 0-indexed
+    deduct_row = int(m.group(2)) - 1
     people_rows: List[dict] = []
     for i in range(people_start_row, people_end_row + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1012,14 +1012,14 @@ def build_capacity_fixed_row(
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2       # Excel row 3
-    PEOPLE_END   = 25      # Excel row 26
+    PEOPLE_START = 2   
+    PEOPLE_END   = 25    
     COL_B        = _col_letter_to_idx("B")
     COL_Z        = _col_letter_to_idx("Z")
     COL_AA       = _col_letter_to_idx("AA")
     ACT_START    = _col_letter_to_idx("C")
-    ACT_END      = _col_letter_to_idx("Y")   # stop before Z and AA
-    HEADER_ROW   = 1       # Excel row 2
+    ACT_END      = _col_letter_to_idx("Y")   
+    HEADER_ROW   = 1      
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1078,9 +1078,9 @@ def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] 
         expected_col_letter="B",
         ooo_col_letter="Q",
         deduct_cell="B8",
-        ooo_sum_start_row=1, ooo_sum_end_row=5,     # Q2:Q6
-        total_ooo_end_row=5,                        # Total uses Q2:Q6
-        activity_header_row=0,                      # row 1
+        ooo_sum_start_row=1, ooo_sum_end_row=5, 
+        total_ooo_end_row=5,             
+        activity_header_row=0,           
         activity_start_col_letter="C",
         activity_end_col_letter="P",
     )
