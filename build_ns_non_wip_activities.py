@@ -335,8 +335,13 @@ def _is_real_year(dt: pd.Timestamp, min_year: int = 2000) -> bool:
 def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     s_lower = s.lower()
-    if "capacity mgmt" not in s_lower:
-        return None
+    allowed = any(x in s_lower for x in [
+        "capacity mgmt",
+        "capacity management",
+        "capacity",
+    ])
+    if not allowed:
+        pass
     try:
         b1 = ws.iat[0, 1]  # B1
         dt = pd.to_datetime(b1, errors="coerce")
@@ -345,20 +350,34 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
     except Exception:
         pass
     m = re.search(r"\((\d{1,2})\.(\d{1,2})\)", s)
-    if not m:
-        return None
-    mm = int(m.group(1))
-    dd = int(m.group(2))
-    for r in range(0, 6):
-        for c in range(0, 6):
-            try:
-                v = ws.iat[r, c]
-            except Exception:
-                continue
-            dt = pd.to_datetime(v, errors="coerce")
-            if _is_real_year(dt):
-                return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
-    return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
+    if m:
+        mm = int(m.group(1))
+        dd = int(m.group(2))
+        for r in range(0, min(6, ws.shape[0])):
+            for c in range(0, min(6, ws.shape[1])):
+                try:
+                    v = ws.iat[r, c]
+                except Exception:
+                    continue
+                dt = pd.to_datetime(v, errors="coerce")
+                if _is_real_year(dt):
+                    return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
+        return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
+    dt = pd.to_datetime(s, errors="coerce")
+    if _is_real_year(dt):
+        return dt.normalize()
+    m = re.search(r"(\d{1,2})[./_-](\d{1,2})[./_-](\d{2,4})", s)
+    if m:
+        mm = int(m.group(1))
+        dd = int(m.group(2))
+        yy = int(m.group(3))
+        if yy < 100:
+            yy += 2000
+        try:
+            return pd.Timestamp(year=yy, month=mm, day=dd).normalize()
+        except Exception:
+            pass
+    return None
 def build_meic_teamtracker_block(ws: pd.DataFrame) -> Dict:
     PEOPLE_START_ROW = 2          # Excel row 3 -> 0-index 2
     HEADER_ROW = 1                # Excel row 2 -> 0-index 1
@@ -849,7 +868,6 @@ MEIC_PARENT_MAP = {
     "PH": {"PH", "PH MEIC"},
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
-    "PSS": {"PSS US", "PSS MEIC", "PSS Intern"}, 
 }
 def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
@@ -873,7 +891,7 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
-            if parent_team in {"DBS", "SCS", "PH", "PSS"}:
+            if parent_team in {"DBS", "SCS", "PH"}:
                 people_count_final = fallback_people_count
             else:
                 people_count_final = get_people_count_from_wip(
@@ -1591,7 +1609,7 @@ def main():
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
         old_df = old_df[
-            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS", "PSS"})
+            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS"})
         ].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
