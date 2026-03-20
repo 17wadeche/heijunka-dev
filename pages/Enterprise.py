@@ -806,6 +806,107 @@ def _rollup_export_level(df: pd.DataFrame, level: str) -> pd.DataFrame:
     ]
     cols = [c for c in cols if c in out.columns]
     return out[cols].sort_values(group_cols).reset_index(drop=True)
+def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {
+        "portfolio": "Portfolio",
+        "ou": "OU",
+        "team": "Team",
+        "week_start": "Week Start",
+        "completed_hours": "Completed Hours",
+        "people_count": "People Count",
+        "non_wip_hours": "Non-WIP Hours",
+        "ooo_hours": "OOO Hours",
+        "capacity_hours": "Capacity Hours",
+        "unaccounted_hours": "Unaccounted Hours",
+        "wip_pct": "WIP %",
+        "wip_avg_hours_day": "WIP Avg. Hours/Day",
+        "non_wip_pct": "Non-WIP %",
+        "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
+        "ooo_pct": "OOO %",
+        "ooo_avg_hours_day": "OOO Avg. Hours/Day",
+        "unaccounted_pct": "Unaccounted %",
+        "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+    }
+    preferred_order = [
+        "portfolio", "ou", "team", "week_start",
+        "capacity_hours", "people_count",
+        "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
+        "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
+        "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+    ]
+    cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+    out = df[cols].copy().rename(columns=rename_map)
+    if "Week Start" in out.columns:
+        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+    return out
+def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {
+        "portfolio": "Portfolio",
+        "ou": "OU",
+        "week_start": "Week Start",
+        "completed_hours": "Completed Hours",
+        "people_count": "People Count",
+        "non_wip_hours": "Non-WIP Hours",
+        "ooo_hours": "OOO Hours",
+        "capacity_hours": "Capacity Hours",
+        "unaccounted_hours": "Unaccounted Hours",
+        "wip_pct": "WIP %",
+        "wip_avg_hours_day": "WIP Avg. Hours/Day",
+        "non_wip_pct": "Non-WIP %",
+        "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
+        "ooo_pct": "OOO %",
+        "ooo_avg_hours_day": "OOO Avg. Hours/Day",
+        "unaccounted_pct": "Unaccounted %",
+        "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+    }
+    preferred_order = [
+        "portfolio", "ou", "week_start",
+        "capacity_hours", "people_count",
+        "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
+        "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
+        "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+    ]
+    cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+    out = df[cols].copy().rename(columns=rename_map)
+    if "Week Start" in out.columns:
+        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+    return out
+def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {
+        "portfolio": "Portfolio",
+        "week_start": "Week Start",
+        "completed_hours": "Completed Hours",
+        "people_count": "People Count",
+        "non_wip_hours": "Non-WIP Hours",
+        "ooo_hours": "OOO Hours",
+        "capacity_hours": "Capacity Hours",
+        "unaccounted_hours": "Unaccounted Hours",
+        "wip_pct": "WIP %",
+        "wip_avg_hours_day": "WIP Avg. Hours/Day",
+        "non_wip_pct": "Non-WIP %",
+        "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
+        "ooo_pct": "OOO %",
+        "ooo_avg_hours_day": "OOO Avg. Hours/Day",
+        "unaccounted_pct": "Unaccounted %",
+        "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+    }
+    preferred_order = [
+        "portfolio", "week_start",
+        "capacity_hours", "people_count",
+        "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
+        "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
+        "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+    ]
+    cols = [c for c in preferred_order if c in df.columns] + [
+        c for c in df.columns if c not in preferred_order and c != "ou"
+    ]
+    out = df[cols].copy().rename(columns=rename_map)
+    if "Week Start" in out.columns:
+        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+    return out
 def _excel_bytes_from_export_dfs(
     team_df: pd.DataFrame,
     ou_df: pd.DataFrame,
@@ -1572,7 +1673,14 @@ with tabs[2]:
         st.markdown("#### Portfolio weekly")
         st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
         try:
-            xlsx_bytes = _excel_bytes_from_export_dfs(team_export, ou_export, portfolio_export)
+            team_export_display = _display_export_team_df(team_export)
+            ou_export_display = _display_export_ou_df(ou_export)
+            portfolio_export_display = _display_export_portfolio_df(portfolio_export)
+            xlsx_bytes = _excel_bytes_from_export_dfs(
+                team_export_display,
+                ou_export_display,
+                portfolio_export_display,
+            )
             st.download_button(
                 label="Download Excel export",
                 data=xlsx_bytes,
