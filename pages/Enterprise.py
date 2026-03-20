@@ -204,6 +204,8 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         "ns_non_wip_activities": repo_root / "ns_non_wip_activities.csv",
         "CRM_WIP": repo_root / "CRM_WIP.csv",
         "crm_non_wip_activities": repo_root / "crm_non_wip_activities.csv",
+        "MS_WIP": repo_root / "MS_WIP.csv",
+        "ms_non_wip_activities": repo_root / "ms_non_wip_activities.csv",
     }
     out: Dict[str, pd.DataFrame] = {}
     for key, p in candidates.items():
@@ -663,7 +665,7 @@ if not team_filter:
     st.warning("No teams selected.")
     st.stop()
 selected_nonwip_floor = None
-for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+for key in ["ns_non_wip_activities", "crm_non_wip_activities", "ms_non_wip_activities", "non_wip", "non_wip_activities"]:
     if key in data:
         floor_candidate = _selected_nonwip_start_floor(filter_by_team(data[key]))
         if floor_candidate is not None:
@@ -930,7 +932,7 @@ def _excel_bytes_from_export_dfs(
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     frames = []
-    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
+    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
         if key in data:
             d = filter_by_team(data[key])
             if not d.empty:
@@ -940,7 +942,7 @@ def _get_metrics_df() -> Optional[pd.DataFrame]:
     return pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
     frames = []
-    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities","ms_non_wip_activities", "non_wip", "non_wip_activities"]:
         if key in data:
             d = filter_by_team(data[key])
             if not d.empty:
@@ -1131,7 +1133,7 @@ with tabs[0]:
         help="Team-total daily WIP = Completed Hours/5. Per-person daily WIP divides by headcount too.",
     )
     def _get_nonwip_activity_detail_df() -> Optional[pd.DataFrame]:
-        for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
+        for key in ["ns_non_wip_activities", "crm_non_wip_activities","ms_non_wip_activities", "non_wip_activities", "non_wip"]:
             if key in data:
                 d = filter_by_team(data[key])
                 if not d.empty:
@@ -1232,12 +1234,13 @@ with tabs[1]:
         and "non_wip_activities" not in data
         and "ns_non_wip_activities" not in data
         and "crm_non_wip_activities" not in data
+        and "ms_non_wip_activities" not in data
     ):
         st.info("No non-WIP CSVs found.")
     else:
         st.markdown("### Non-WIP activities")
         source_raw = None
-        for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+        for key in ["ns_non_wip_activities","ms_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
             if key in data:
                 cand = filter_by_team(data[key])
                 if not cand.empty:
@@ -1462,13 +1465,13 @@ with tabs[2]:
         tmp = tmp.dropna(subset=[dc])
         return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
     export_metrics_frames = []
-    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP"]:
+    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
         if key in data:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
                 export_metrics_frames.append(d)
     export_nonwip_frames = []
-    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
+    for key in ["ns_non_wip_activities", "ms_non_wip_activities","crm_non_wip_activities", "non_wip_activities", "non_wip"]:
         if key in data:
             d = filter_by_export_team(data[key].copy())
             if not d.empty:
