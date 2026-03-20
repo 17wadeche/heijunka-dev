@@ -1024,7 +1024,7 @@ def percent_color(v: float | None, threshold: float, invert: bool = False) -> st
         return "#111827"
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
-st.markdown("<h1 style='text-align: center;'>NS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>MS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
     label,
@@ -1425,7 +1425,8 @@ if has_dates and min_date and max_date:
     if "start_date" not in st.session_state:
         st.session_state["start_date"] = min_date
     if "end_date" not in st.session_state:
-        st.session_state["end_date"] = max_date
+        today_date = pd.Timestamp.today().normalize().date()
+        st.session_state["end_date"] = min(today_date, max_date)
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
     if start > end:
@@ -1759,7 +1760,9 @@ if has_dates and min_date and max_date:
     s = _to_date(st.session_state.get("start_date"))
     e = _to_date(st.session_state.get("end_date"))
     if s is None: s = min_date
-    if e is None: e = max_date
+    if e is None:
+        today_date = pd.Timestamp.today().normalize().date()
+        e = min(today_date, max_date)
     if s < min_date: s = min_date
     if s > max_date: s = max_date
     if e < min_date: e = min_date

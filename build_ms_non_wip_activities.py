@@ -16,6 +16,11 @@ TEAM_BY_BASENAME: Dict[str, str] = {
 DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm",
 ]
+NAME_COL = 12          # L
+ACTIVITY_START_COL = 13  # M
+ACTIVITY_END_COL = 20    # T
+OOO_COL = 21             # U
+NON_D2D_COL = 22  
 CSV_COLUMNS = [
     "team",
     "period_date",
@@ -55,6 +60,8 @@ def _cell_number(v: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+def _norm_name(s: str) -> str:
+    return " ".join((s or "").strip().split()).upper()
 def _as_date(v: Any) -> Optional[_dt.date]:
     if v is None:
         return None
@@ -72,6 +79,23 @@ def _as_date(v: Any) -> Optional[_dt.date]:
             except ValueError:
                 pass
     return None
+def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: int) -> List[str]:
+    people: List[str] = []
+    seen = set()
+    current_person = ""
+    for row in range(start_row + 1, end_row + 1):
+        person_cell = _as_text(ws.cell(row=row, column=3).value)  # col C
+        if person_cell:
+            current_person = person_cell
+        if not current_person:
+            continue
+        norm = _norm_name(current_person)
+        if norm == "X":
+            continue
+        if norm not in seen:
+            seen.add(norm)
+            people.append(current_person.strip())
+    return people
 def iso_date(d: Optional[_dt.date]) -> str:
     return d.isoformat() if isinstance(d, _dt.date) else ""
 def dumps_json(obj: Any) -> str:
@@ -110,29 +134,23 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
     starts = list(iter_available_blocks(ws))
     for idx, (start_row, week_date) in enumerate(starts):
         end_row = find_next_week_row(starts, idx, ws.max_row)
-        header_row = find_actual_non_wip_header_row(ws, start_row, end_row)
-        people_count_names: List[str] = []
+        week_people = parse_week_people_from_left_table(ws, start_row, end_row)
         non_wip_by_person: Dict[str, float] = {}
         non_wip_activities: List[Dict[str, Any]] = []
         ooo_by_person: Dict[str, float] = {}
         total_non_wip_hours = 0.0
         total_ooo_hours = 0.0
+        header_row = None
+        for row in range(start_row, end_row + 1):
+            m_val = _as_text(ws.cell(row=row, column=ACTIVITY_START_COL).value).strip().lower()
+            u_val = _as_text(ws.cell(row=row, column=OOO_COL).value).strip().lower()
+            v_val = _as_text(ws.cell(row=row, column=NON_D2D_COL).value).strip().lower()
+            if m_val == "audit" and u_val == "ooo" and ("non" in v_val):
+                header_row = row
+                break
         if header_row is None:
             results[week_date] = {
-                "people_count": 0,
-                "total_non_wip_hours": 0.0,
-                "ooo_hours": 0.0,
-                "non_wip_by_person": {},
-                "non_wip_activities": [],
-                "ooo_by_person": {},
-            }
-            continue
-        audit_col = find_column_by_header(ws, header_row, "Audit")
-        last_col = find_column_by_header(ws, header_row, "Non-D2D")
-        ooo_col = find_column_by_header(ws, header_row, "OOO")
-        if audit_col is None or last_col is None or ooo_col is None:
-            results[week_date] = {
-                "people_count": 0,
+                "people_count": len(week_people),
                 "total_non_wip_hours": 0.0,
                 "ooo_hours": 0.0,
                 "non_wip_by_person": {},
@@ -141,33 +159,33 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             }
             continue
         for row in range(header_row + 1, end_row + 1):
-            name = _as_text(ws.cell(row=row, column=12).value)
+            name = _as_text(ws.cell(row=row, column=NAME_COL).value)
             if not name:
                 continue
             lower_name = name.strip().lower()
             if lower_name == "total":
-                total_non_wip_hours = (_cell_number(ws.cell(row=row, column=last_col).value) or 0.0) / 60.0
-                total_ooo_hours = (_cell_number(ws.cell(row=row, column=ooo_col).value) or 0.0) / 60.0
+                total_non_wip_hours = (_cell_number(ws.cell(row=row, column=NON_D2D_COL).value) or 0.0) / 60.0
+                total_ooo_hours = (_cell_number(ws.cell(row=row, column=OOO_COL).value) or 0.0) / 60.0
                 continue
             if lower_name == "x":
                 continue
-            people_count_names.append(name)
-            person_total_non_wip = (_cell_number(ws.cell(row=row, column=last_col).value) or 0.0) / 60.0
-            person_ooo = (_cell_number(ws.cell(row=row, column=ooo_col).value) or 0.0) / 60.0
-            non_wip_by_person[name] = person_total_non_wip
-            ooo_by_person[name] = person_ooo
-            for col in range(audit_col, last_col + 1):
-                header = _as_text(ws.cell(row=header_row, column=col).value)
+            person_non_wip = (_cell_number(ws.cell(row=row, column=NON_D2D_COL).value) or 0.0) / 60.0
+            person_ooo = (_cell_number(ws.cell(row=row, column=OOO_COL).value) or 0.0) / 60.0
+            clean_name = name.strip()
+            non_wip_by_person[clean_name] = person_non_wip
+            ooo_by_person[clean_name] = person_ooo
+            for col in range(ACTIVITY_START_COL, ACTIVITY_END_COL + 1):
+                activity = _as_text(ws.cell(row=header_row, column=col).value).strip()
                 mins = _cell_number(ws.cell(row=row, column=col).value) or 0.0
                 hours = mins / 60.0
                 if hours > 0:
                     non_wip_activities.append({
-                        "name": name,
-                        "activity": header,
+                        "name": clean_name,
+                        "activity": activity,
                         "hours": hours,
                     })
         results[week_date] = {
-            "people_count": len(set(people_count_names)),
+            "people_count": len(week_people),
             "total_non_wip_hours": total_non_wip_hours,
             "ooo_hours": total_ooo_hours,
             "non_wip_by_person": non_wip_by_person,
@@ -263,13 +281,17 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
         wip_info = wip_lut.get(key, {})
         completed_hours = float(wip_info.get("Completed Hours", 0.0) or 0.0)
         wip_workers = list(wip_info.get("People in WIP", []) or [])
-        wip_workers_set = {x.strip() for x in wip_workers if str(x).strip()}
+        wip_workers_set = {_norm_name(x) for x in wip_workers if str(x).strip()}
         total_non_wip_hours = float(av.get("total_non_wip_hours", 0.0) or 0.0)
         pct_in_wip = safe_div(completed_hours, completed_hours + total_non_wip_hours)
         ooo_by_person = av.get("ooo_by_person", {}) or {}
+        ooo_by_person_norm = {
+            _norm_name(name): float(val or 0.0)
+            for name, val in ooo_by_person.items()
+        }
         wip_workers_ooo_hours = 0.0
         for worker in wip_workers_set:
-            wip_workers_ooo_hours += float(ooo_by_person.get(worker, 0.0) or 0.0)
+            wip_workers_ooo_hours += ooo_by_person_norm.get(worker, 0.0)
         row = {
             "team": team,
             "period_date": iso_date(period),
