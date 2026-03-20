@@ -1264,6 +1264,7 @@ ACTIVITY_MAP = {
     "file escalations/ corrections (gap findings, fer escalations)":"WIP Review",
     "collaboration (i.e. file discussion)": "Collaboration",
     "fill out capacity management tools (heijunka, non-wip)": "Metrics & Schedule",
+    "fill out capacity management tools (heijunka, non-wip chart)": "Metrics & Schedule",
     "blockers (it issues, gch issues, computer updates)": "IT Issue/Update",
     "coding updates related meeting":"Coding",
     "trainer/ mentor (development and delivery)":"Training/Mentoring",
