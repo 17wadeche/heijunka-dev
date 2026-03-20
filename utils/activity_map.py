@@ -1161,6 +1161,7 @@ ACTIVITY_MAP = {
     "scrum/ corner stone":"Scrum & Action",
     "pmpa mfg/exp dates input and smdr":"PMPA",
     "fywt assigning":"Metrics & Schedule",
+    "project support /gfe closures/iris":"Project Work",
     "emaile":"Email & IM",
     "aortic/pmq meeting":"PMQ Meeting",
     "clinical slide review":"Admin",
