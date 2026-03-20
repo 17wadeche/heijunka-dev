@@ -89,12 +89,12 @@ def _add_avg_hours_day_columns(df: pd.DataFrame) -> pd.DataFrame:
         if pct_col in out.columns:
             out[avg_col] = pd.to_numeric(out[pct_col], errors="coerce") * 8.0
     return out
-def _threshold_cell_style(val: Any, threshold: float) -> str:
+def _threshold_cell_style(val: Any, threshold: float, good_if_gte: bool = False) -> str:
     try:
         v = float(val)
     except Exception:
         return ""
-    good = v < threshold
+    good = v >= threshold if good_if_gte else v < threshold
     if good:
         return "background-color: #d1fae5; color: #065f46;"
     return "background-color: #fee2e2; color: #991b1b;"
@@ -1455,7 +1455,7 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80), subset=["WIP %"])
+            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
             styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
@@ -1505,7 +1505,7 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80), subset=["WIP %"])
+            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
             styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
@@ -1556,7 +1556,7 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80), subset=["WIP %"])
+            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
             styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
