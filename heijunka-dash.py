@@ -12,5 +12,6 @@ pg = st.navigation([
     st.Page("pages/Interventional_Vascular.py", title="Interventional Vascular"),
     st.Page("pages/Neuroscience.py", title="Neuroscience"),
     st.Page("pages/Cardiac_Rhythm_Management.py", title="Cardiac Rhythm Management"),
+    st.Page("pages/Medical_Surgical.py", title="Medical Surgical"),
 ])
 pg.run()
