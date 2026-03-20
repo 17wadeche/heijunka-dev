@@ -70,6 +70,60 @@ def _cell_number(v: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+def _norm_team(s: str) -> str:
+    return (s or "").strip().upper()
+def _norm_period_date(s: str) -> str:
+    s = (s or "").strip()
+    if not s:
+        return ""
+    try:
+        return _dt.date.fromisoformat(s).isoformat()
+    except ValueError:
+        return s
+def script_dir() -> str:
+    return os.path.dirname(os.path.abspath(__file__))
+def load_timeliness_lookup(path: str) -> Dict[Tuple[str, str], str]:
+    lut: Dict[Tuple[str, str], str] = {}
+    if not os.path.exists(path):
+        return lut
+    with open(path, "r", newline="", encoding="utf-8-sig") as fp:
+        reader = csv.DictReader(fp)
+        for row in reader:
+            team = _norm_team(row.get("team", ""))
+            period = _norm_period_date(row.get("period_date", ""))
+            val = (row.get("Open Complaint Timeliness", "") or "").strip()
+            if team and period:
+                lut[(team, period)] = val
+    return lut
+def load_closures_lookup(path: str) -> Dict[Tuple[str, str], Tuple[str, str]]:
+    lut: Dict[Tuple[str, str], Tuple[str, str]] = {}
+    if not os.path.exists(path):
+        return lut
+    with open(path, "r", newline="", encoding="utf-8-sig") as fp:
+        reader = csv.DictReader(fp)
+        for row in reader:
+            team = _norm_team(row.get("team", ""))
+            period = _norm_period_date(row.get("period_date", ""))
+            closures = (row.get("Closures", "") or "").strip()
+            opened = (row.get("Opened", "") or "").strip()
+            if team and period:
+                lut[(team, period)] = (closures, opened)
+    return lut
+def enrich_rows_with_metrics(
+    rows: List[Dict[str, Any]],
+    timeliness_lut: Dict[Tuple[str, str], str],
+    closures_lut: Dict[Tuple[str, str], Tuple[str, str]],
+) -> None:
+    for row in rows:
+        key = (_norm_team(row.get("team", "")), _norm_period_date(row.get("period_date", "")))
+
+        if key in timeliness_lut:
+            row["Open Complaint Timeliness"] = timeliness_lut[key]
+
+        if key in closures_lut:
+            closures, opened = closures_lut[key]
+            row["Closures"] = closures
+            row["Opened"] = opened
 def _as_text(v: Any) -> str:
     return str(v).strip() if v is not None else ""
 def _as_date(v: Any) -> Optional[_dt.date]:
@@ -350,6 +404,12 @@ def main() -> int:
             all_rows.append(blank_row_for_missing_file(path))
             continue
         all_rows.extend(scrape_one_workbook(path))
+    base_dir = script_dir()
+    timeliness_csv = os.path.join(base_dir, "timeliness.csv")
+    closures_csv = os.path.join(base_dir, "closures.csv")
+    timeliness_lut = load_timeliness_lookup(timeliness_csv)
+    closures_lut = load_closures_lookup(closures_csv)
+    enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         writer.writeheader()

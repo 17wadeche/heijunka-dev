@@ -12,7 +12,8 @@ TEAM_MAP = {
     "Coronary":"CRDN",
     "Infusion":"TDD",
     "Pain Stim": "SCS",
-    "Pelvic Health": "PH"
+    "Pelvic Health Total": "PH",
+    "Enabling Technologies Total": "Enabling Technologies"
 }
 MONTHREL_ALLOWED = {0, -1}
 OUT_DIR = r"C:\Users\wadec8\OneDrive - Medtronic PLC"
@@ -32,8 +33,6 @@ EXCLUDE_TEAMS = {
     "AAS",
     "Affera",
     "Airways",
-    "Boulder-AST",
-    "Boulder-GST",
     "Boxborough",
     "Brady",
     "DISPOSABLES",
@@ -46,7 +45,6 @@ EXCLUDE_TEAMS = {
     "HF-MCS",
     "Heart Failure HP",
     "Heart Failure LP",
-    "ILS-AST",
     "INPEN",
     "Implantable Tibial",
     "InterStim",
@@ -59,21 +57,15 @@ EXCLUDE_TEAMS = {
     "MOBILEAPP",
     "Medicrea",
     "NGP",
-    "North Haven-AST",
-    "North Haven-GST",
     "PARADIGM",
     "PCS-GWY",
     "PCS-MEIC",
     "PM-Apps",
     "PM-CTS",
-    "Patient Management",
-    "Patient Monitoring",
     "RESERVOIR",
     "RF Ablation",
-    "Renal Care Solutions",
     "SENSOR",
     "SOFTWARE",
-    "Surgical Robotics",
     "TRANSMITTER",
     "TYRX",
     "Tachy",
