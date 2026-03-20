@@ -1125,6 +1125,7 @@ ACTIVITY_MAP = {
     "meeting letter generation":"Meeting",
     "scrum/ aem":"Scrum & Action",
     "scrum/ erg meeting":"Scrum & Action",
+    "scrum, ohs survery":"Scrum & Action",
     "investigation job aid working session":"Admin",
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
