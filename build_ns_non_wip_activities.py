@@ -122,11 +122,9 @@ def _resolve_validation_list_values(wb, ws, cell_addr: str = "B1") -> List[pd.Ti
         if dt is not None:
             values.append(dt)
     formula = None
-    print(f"[DEBUG] Reading validation formula from {cell_addr}")
     try:
         cell = ws.Range(cell_addr)
         formula = cell.Validation.Formula1
-        print(f"[DEBUG] Validation formula at {cell_addr}: {formula}")
     except Exception:
         formula = None
     if formula:
@@ -142,7 +140,6 @@ def _resolve_validation_list_values(wb, ws, cell_addr: str = "B1") -> List[pd.Ti
             if hasattr(src_rng, "Rows") and hasattr(src_rng, "Columns"):
                 max_rows = min(src_rng.Rows.Count, 200)
                 max_cols = min(src_rng.Columns.Count, 10)
-                print(f"[DEBUG] Capping evaluated validation range to rows={max_rows}, cols={max_cols}")
                 for r in range(1, max_rows + 1):
                     for c in range(1, max_cols + 1):
                         _add(src_rng.Cells(r, c).Value)
@@ -359,11 +356,6 @@ def _get_matching_worksheet(wb, preferred_name: str):
         f"Could not find worksheet matching '{preferred_name}'. "
         f"Available sheets: {available}"
     )
-def debug_pss_cells(ws_com, team: str):
-    print(f"[DEBUG] {team} A2={ws_com.Range('A2').Value}")
-    print(f"[DEBUG] {team} B6={ws_com.Range('B6').Value}, B7={ws_com.Range('B7').Value}, B8={ws_com.Range('B8').Value}")
-    print(f"[DEBUG] {team} X6={ws_com.Range('X6').Value}, X7={ws_com.Range('X7').Value}, X8={ws_com.Range('X8').Value}")
-    print(f"[DEBUG] {team} C6={ws_com.Range('C6').Value}, D6={ws_com.Range('D6').Value}, E6={ws_com.Range('E6').Value}")
 def build_selector_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
@@ -375,7 +367,6 @@ def build_selector_rows_from_capacity_workbook(
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
         return pd.DataFrame()
-    print(f"[DEBUG] START selector loader for {team_src.team}")
     out_rows: List[dict] = []
     excel = win32.gencache.EnsureDispatch("Excel.Application")
     excel.Visible = False
@@ -383,35 +374,20 @@ def build_selector_rows_from_capacity_workbook(
     wb = None
     temp_dir = None
     try:
-        print(f"[DEBUG] Opening workbook for {team_src.team}: {xlsx_path}")
         wb = excel.Workbooks.Open(
             str(xlsx_path),
             UpdateLinks=3,
             ReadOnly=True
         )
-        print(f"[DEBUG] Opened workbook for {team_src.team}") 
         ws_com = _get_matching_worksheet(wb, sheet_name)
-        print(f"[DEBUG] Got worksheet {sheet_name} for {team_src.team}")
         excel.CalculateFullRebuild()
-        print(f"[DEBUG] Resolving validation values from {selector_cell}") 
         all_dates = _resolve_validation_list_values(wb, ws_com, selector_cell)
-        print(f"[DEBUG] Raw resolved dates count for {team_src.team}: {len(all_dates)}")
         if not all_dates:
             current_dt = _excel_date_to_timestamp(ws_com.Range(selector_cell).Value)
             if current_dt is not None:
                 all_dates = [current_dt]
-        if team_src.team in {"PSS MEIC", "PSS US", "PSS Intern"}:
-            debug_pss_cells(ws_com, team_src.team)
-            pss_min_date = pd.Timestamp("2026-02-01").normalize()
-            pss_max_date = pd.Timestamp.today().normalize()
-            all_dates = [
-                d for d in all_dates
-                if d is not None and pss_min_date <= pd.Timestamp(d).normalize() <= pss_max_date
-            ]
-        print(f"[DEBUG] Filtered dates for {team_src.team}: {[str(d.date()) for d in all_dates]}")
         for week in all_dates:
             try:
-                print(f"[DEBUG] {team_src.team} -> setting {selector_cell} to {week.date()}")
                 selector_range = ws_com.Range(selector_cell)
                 selector_range.Value = week.to_pydatetime()
                 try:
@@ -441,19 +417,15 @@ def build_selector_rows_from_capacity_workbook(
                 except Exception:
                     pass
                 excel.CalculateFullRebuild()
-                print(f"[DEBUG] {team_src.team} -> reading used range for {week.date()}")
                 used = ws_com.UsedRange.Value
                 if used is None:
-                    print(f"[DEBUG] {team_src.team} -> used range is None for {week.date()}")
                     continue
                 if not isinstance(used, tuple):
                     used = ((used,),)
                 ws_df = pd.DataFrame(list(used))
-                print(f"[DEBUG] {team_src.team} -> dataframe shape for {week.date()}: {ws_df.shape}")
-                if team_src.team in {"PSS MEIC", "PSS Intern"}:
-                    built = build_pss_row_from_com(ws_com, team_src.team)
-                else:
-                    built = team_src.custom_builder(team_src.team, ws_df, week)
+                if team_src.custom_builder is None:
+                    raise ValueError(f"No custom_builder configured for {team_src.team}")
+                built = team_src.custom_builder(team_src.team, ws_df, week)
                 print(
                     f"[DEBUG] {team_src.team} built summary for {week.date()} -> "
                     f"people_count={built['people_count']}, "
@@ -508,11 +480,9 @@ def build_selector_rows_from_capacity_workbook(
                     "wip_workers_count": int(wip_workers_count),
                     "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
                 })
-                print(f"[DEBUG] {team_src.team} -> appended row for {week.date()}") 
             except Exception as e:
                 print(f"[WARN] Failed {team_src.team} week {week}: {e}")
     finally:
-        print(f"[DEBUG] Cleaning up workbook for {team_src.team}") 
         if wb is not None:
             wb.Close(SaveChanges=False)
         excel.Quit()
@@ -523,8 +493,98 @@ def build_selector_rows_from_capacity_workbook(
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
         df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
         df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
-    print(f"[DEBUG] END selector loader for {team_src.team}, rows={len(df)}")   
     return df
+def week_from_pss_meic_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
+    s = str(sheet_name).strip()
+    s_lower = s.lower()
+    if "capacity mgmt" not in s_lower:
+        return None
+    m = re.search(r"\((\d{1,2})[.\-_/](\d{1,2})\)", s)
+    if not m:
+        return None 
+    mm = int(m.group(1))
+    dd = int(m.group(2))
+    for r in range(0, min(6, ws.shape[0])):
+        for c in range(0, min(6, ws.shape[1])):
+            try:
+                v = ws.iat[r, c]
+            except Exception:
+                continue
+            dt = pd.to_datetime(v, errors="coerce")
+            if _is_real_year(dt):
+                try:
+                    return pd.Timestamp(year=int(dt.year), month=mm, day=dd).normalize()
+                except Exception:
+                    pass
+    try:
+        return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
+    except Exception:
+        return None
+def build_pss_meic_dated_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    NAME_COL = _col_letter_to_idx("A")
+    COL_EXPECTED_WIP = _col_letter_to_idx("B")
+    ACT_START = _col_letter_to_idx("C")
+    ACT_END = _col_letter_to_idx("W")
+    COL_OOO = _col_letter_to_idx("X")
+    HEADER_ROW = 0          # Excel row 1
+    PEOPLE_START_ROW = 1    # Excel row 2
+    def header_label_for_col(c: int) -> str:
+        txt = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
+        return txt
+    people_rows: List[dict] = []
+    nonwip_by_person: Dict[str, float] = {}
+    activities: List[dict] = []
+    seen_people = False
+    blank_run = 0
+    for i in range(PEOPLE_START_ROW, ws.shape[0]):
+        raw_name = ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else ""
+        name = norm_name(raw_name)
+        if is_real_person(name):
+            seen_people = True
+            blank_run = 0
+            expected_wip = safe_float0(ws.iat[i, COL_EXPECTED_WIP] if ws.shape[1] > COL_EXPECTED_WIP else 0.0)
+            ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
+            people_rows.append({
+                "row_i": i,
+                "name": name,
+                "B": float(expected_wip),
+                "OOO": float(ooo),
+            })
+            person_nonwip_total = 0.0
+            for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
+                label = header_label_for_col(c)
+                if not label:
+                    continue
+                hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+                if pd.isna(hrs) or hrs <= 0:
+                    continue
+                hrs = float(round(float(hrs), 2))
+                activities.append({
+                    "name": name,
+                    "activity": label,
+                    "hours": hrs,
+                })
+                person_nonwip_total += hrs
+            person_nonwip_total = float(round(person_nonwip_total, 2))
+            if person_nonwip_total != 0.0:
+                nonwip_by_person[name] = person_nonwip_total
+        else:
+            if seen_people:
+                blank_run += 1
+                if blank_run >= 3:
+                    break
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+    }
 def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     s_lower = s.lower()
@@ -782,153 +842,6 @@ def build_meic_rows_from_team_tracker(
         df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
         df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
     return df
-def build_pss_row_from_com(ws_com, team: str) -> Dict:
-    NAME_COL = "A"
-    WIP_COL = "B"
-    ACT_START_COL = "C"
-    ACT_END_COL = "W"
-    OOO_COL = "X"
-    HEADER_ROW = 5
-    PEOPLE_START_ROW = 6
-    PEOPLE_END_ROW = 24
-    def cell(addr: str):
-        try:
-            return ws_com.Range(addr).Value
-        except Exception:
-            return None
-    def col_num_to_letter(n: int) -> str:
-        s = ""
-        while n:
-            n, rem = divmod(n - 1, 26)
-            s = chr(65 + rem) + s
-        return s
-    act_start_num = _col_letter_to_idx(ACT_START_COL) + 1
-    act_end_num = _col_letter_to_idx(ACT_END_COL) + 1
-    people_rows: List[dict] = []
-    nonwip_by_person: Dict[str, float] = {}
-    activities: List[dict] = []
-    for r in range(PEOPLE_START_ROW, PEOPLE_END_ROW + 1):
-        name = norm_name(cell(f"{NAME_COL}{r}"))
-        if not is_real_person(name):
-            continue
-        expected_wip = safe_float0(cell(f"{WIP_COL}{r}"))
-        ooo = safe_float0(cell(f"{OOO_COL}{r}"))
-        people_rows.append({
-            "row_i": r - 1,
-            "name": name,
-            "B": float(expected_wip),
-            "OOO": float(ooo),
-        })
-        nonwip = float(round(40.0 - expected_wip, 2))
-        if nonwip != 0.0:
-            nonwip_by_person[name] = nonwip
-        for c in range(act_start_num, act_end_num + 1):
-            col_letter = col_num_to_letter(c)
-            label = norm_name(cell(f"{col_letter}{HEADER_ROW}"))
-            hrs = safe_float(cell(f"{col_letter}{r}"))
-            if not label:
-                continue
-            if pd.isna(hrs) or hrs <= 0:
-                continue
-            activities.append({
-                "name": name,
-                "activity": label,
-                "hours": float(round(float(hrs), 2)),
-            })
-    people_count = len(set(r["name"] for r in people_rows))
-    sum_expected_wip = float(round(sum(r["B"] for r in people_rows), 2))
-    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
-    total_nonwip_hours = float(round((people_count * 40.0) - sum_expected_wip, 2))
-    print(
-        f"[DEBUG] {team} COM parsed -> people_count={people_count}, "
-        f"sum_expected_wip={sum_expected_wip}, ooo_hours={ooo_hours}, "
-        f"total_nonwip_hours={total_nonwip_hours}, activities={len(activities)}"
-    )
-    return {
-        "people_rows": people_rows,
-        "people_count": people_count,
-        "ooo_hours": ooo_hours,
-        "total_nonwip_hours": total_nonwip_hours,
-        "nonwip_by_person": nonwip_by_person,
-        "nonwip_activities": activities,
-        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
-    }
-def build_pss_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    NAME_COL = _col_letter_to_idx("A")
-    COL_B = _col_letter_to_idx("B")      # Expected Number of WIP Hours Per Week
-    ACT_START = _col_letter_to_idx("C")
-    ACT_END = _col_letter_to_idx("W")
-    COL_OOO = _col_letter_to_idx("X")
-    PEOPLE_START_ROW = 5   # Excel row 6
-    def header_label_for_col(c: int) -> str:
-        for r in range(0, min(PEOPLE_START_ROW, ws.shape[0])):
-            txt = norm_name(ws.iat[r, c] if ws.shape[1] > c else "")
-            if txt:
-                return txt
-        return ""
-    people_rows: List[dict] = []
-    seen_people = False
-    blank_run = 0
-    for i in range(PEOPLE_START_ROW, ws.shape[0]):
-        raw_name = ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else ""
-        name = norm_name(raw_name)
-        if is_real_person(name):
-            seen_people = True
-            blank_run = 0
-            expected_wip = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
-            ooo = safe_float0(ws.iat[i, COL_OOO] if ws.shape[1] > COL_OOO else 0.0)
-            people_rows.append({
-                "row_i": i,
-                "name": name,
-                "B": float(expected_wip),
-                "OOO": float(ooo),
-            })
-        else:
-            if seen_people:
-                blank_run += 1
-                if blank_run >= 3:
-                    break
-    people_count = len(set(r["name"] for r in people_rows))
-    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
-    total_expected_wip = float(round(sum(r["B"] for r in people_rows), 2))
-    total_nonwip_hours = float(round((people_count * 40.0) - total_expected_wip, 2))
-    nonwip_by_person: Dict[str, float] = {}
-    for r in people_rows:
-        v = float(round(40.0 - float(r["B"]), 2))
-        if v != 0.0:
-            nonwip_by_person[r["name"]] = v
-    activities: List[dict] = []
-    for pr in people_rows:
-        i = pr["row_i"]
-        name = pr["name"]
-        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
-            label = header_label_for_col(c)
-            if not label:
-                continue
-            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
-            if pd.isna(hrs) or hrs <= 0:
-                continue
-            activities.append({
-                "name": name,
-                "activity": label,
-                "hours": float(round(float(hrs), 2)),
-            })
-    print(
-        f"[DEBUG] {team} parsed -> people_count={people_count}, "
-        f"sum_expected_wip={total_expected_wip}, "
-        f"ooo_hours={ooo_hours}, "
-        f"total_nonwip_hours={total_nonwip_hours}, "
-        f"activities={len(activities)}"
-    )
-    return {
-        "people_rows": people_rows,
-        "people_count": people_count,
-        "ooo_hours": ooo_hours,
-        "total_nonwip_hours": total_nonwip_hours,
-        "nonwip_by_person": nonwip_by_person,
-        "nonwip_activities": activities,
-        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
-    }
 def week_from_nv_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     m = re.fullmatch(r"(\d{2})([A-Za-z]{3})(\d{4})", s)
@@ -1057,6 +970,7 @@ MEIC_PARENT_MAP = {
     "PH": {"PH", "PH MEIC"},
     "DBS": {"DBS", "DBS MEIC"},
     "SCS": {"SCS", "SCS MEIC"},
+    "PSS": {"PSS Intern", "PSS US", "PSS MEIC"}
 }
 def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
@@ -1618,8 +1532,8 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
         team="PSS MEIC",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm"),
-        week_from_sheet=week_from_mnav_capacity_tab,
-        custom_builder=build_pss_row,
+        week_from_sheet=week_from_pss_meic_tab,
+        custom_builder=build_pss_meic_dated_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
@@ -1634,8 +1548,8 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS Intern": TeamSource(
         team="PSS Intern",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm"),
-        week_from_sheet=week_from_mnav_capacity_tab,
-        custom_builder=build_pss_row,
+        week_from_sheet=week_from_pss_meic_tab,
+        custom_builder=build_pss_meic_dated_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
@@ -1787,14 +1701,6 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         if team_src.team != "DBS MEIC":
             return pd.DataFrame()
         return build_meic_rows_from_team_tracker(team_src.xlsx, wip_df=wip_df, metrics_df=metrics_df)
-    if team_src.team in {"PSS MEIC", "PSS Intern"}:
-        return build_selector_rows_from_capacity_workbook(
-            team_src,
-            wip_df=wip_df,
-            metrics_df=metrics_df,
-            selector_cell="A2",
-            sheet_name="Capacity mgmt",
-        )
     xlsx_path = team_src.xlsx
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
@@ -1807,7 +1713,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         week = team_src.week_from_sheet(sheet_name, ws)
         if week is None or pd.isna(week):
             continue
-        if team_src.team == "PSS US":
+        if team_src.team in {"PSS US", "PSS MEIC"}:
             pss_min_date = pd.Timestamp("2026-02-01").normalize()
             pss_max_date = pd.Timestamp.today().normalize()
             if not (pss_min_date <= week.normalize() <= pss_max_date):
