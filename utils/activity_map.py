@@ -1002,6 +1002,7 @@ ACTIVITY_MAP = {
     "emails, finding work tool, getting my gch fixed.": "Email & IM",
     "emails checking deco chemicals shipping": "Email & IM",
     "it issues, meeting": "IT Issue/Update",
+    "technical issues (it)": "IT Issue/Update",
     "emails cell replies tier": "Email & IM",
     "cornerstone, emails, admin":"Cornerstone",
     "discussing complex file, pullng haz/fai codes for ana":"Training/Mentoring",
