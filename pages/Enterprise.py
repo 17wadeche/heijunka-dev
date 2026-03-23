@@ -1076,41 +1076,6 @@ def _weekly_rollup_summary(
                                 pass
                     nonwip_wipworkers_by_week[wk] = nonwip_wipworkers_by_week.get(wk, 0.0) + s
     wk = m_wk.merge(n_wk, on="week_start", how="inner").sort_values("week_start")
-    debug_on = True
-    if debug_on:
-        with st.expander("DEBUG — weekly rollup summary", expanded=False):
-            st.write("denom_mode:", denom_mode)
-            st.write("selected teams:", team_filter)
-            st.markdown("**m_wk (WIP weekly)**")
-            if m_wk is None or m_wk.empty:
-                st.warning("m_wk is empty")
-            else:
-                st.dataframe(m_wk.reset_index(drop=True))
-            st.markdown("**n_wk (Non-WIP weekly)**")
-            if n_wk is None or n_wk.empty:
-                st.warning("n_wk is empty")
-            else:
-                st.dataframe(n_wk.reset_index(drop=True))
-            m_weeks = set(pd.to_datetime(m_wk["week_start"]).dropna()) if not m_wk.empty else set()
-            n_weeks = set(pd.to_datetime(n_wk["week_start"]).dropna()) if not n_wk.empty else set()
-            st.markdown("**Week alignment**")
-            st.write("weeks only in WIP:", sorted(m_weeks - n_weeks))
-            st.write("weeks only in Non-WIP:", sorted(n_weeks - m_weeks))
-            st.write("weeks in both:", sorted(m_weeks & n_weeks))
-            st.markdown("**wk after inner merge**")
-            if wk.empty:
-                st.error("wk is empty after inner merge — WIP and Non-WIP week_start values do not overlap.")
-            else:
-                st.dataframe(wk.reset_index(drop=True))
-            st.markdown("**Team names found in source frames**")
-            if dfm is not None and not dfm.empty:
-                tc_m = _get_team_col(dfm)
-                if tc_m:
-                    st.write("WIP team names:", sorted(dfm[tc_m].dropna().astype(str).unique().tolist()))
-            if dfnw is not None and not dfnw.empty:
-                tc_nw = _get_team_col(dfnw)
-                if tc_nw:
-                    st.write("Non-WIP team names:", sorted(dfnw[tc_nw].dropna().astype(str).unique().tolist()))
     if wk.empty:
         return (None, None, None, None, None, None, None, None)
     if denom_mode == "Total HC on team":
@@ -1122,50 +1087,6 @@ def _weekly_rollup_summary(
         wk["ooo_use"] = wk["wip_workers_ooo"]
         wk["nonwip_use"] = wk["week_start"].map(lambda x: nonwip_wipworkers_by_week.get(pd.to_datetime(x), float("nan")))
         wk["nonwip_use"] = wk["nonwip_use"].where(wk["nonwip_use"].notna(), wk["nonwip_total"])
-    if debug_on and not wk.empty:
-        with st.expander("DEBUG — denominator and metric inputs", expanded=True):
-            dbg = wk.copy()
-            if "people_count" not in dbg.columns:
-                dbg["people_count"] = pd.NA
-            if "wip_workers_count" not in dbg.columns:
-                dbg["wip_workers_count"] = pd.NA
-            if "nonwip_total" not in dbg.columns:
-                dbg["nonwip_total"] = pd.NA
-            if "ooo_total" not in dbg.columns:
-                dbg["ooo_total"] = pd.NA
-            if "completed" not in dbg.columns:
-                dbg["completed"] = pd.NA
-            st.dataframe(
-                dbg[
-                    [
-                        "week_start",
-                        "completed",
-                        "people_count",
-                        "wip_workers_count",
-                        "nonwip_total",
-                        "ooo_total",
-                        "denom_hc",
-                        "nonwip_use",
-                        "ooo_use",
-                    ]
-                ].reset_index(drop=True)
-            )
-            bad_denom = dbg[dbg["denom_hc"].isna() | (pd.to_numeric(dbg["denom_hc"], errors="coerce") <= 0)]
-            if not bad_denom.empty:
-                st.error("These weeks have missing/zero denom_hc:")
-                st.dataframe(
-                    bad_denom[
-                        [
-                            "week_start",
-                            "people_count",
-                            "wip_workers_count",
-                            "denom_hc",
-                            "completed",
-                            "nonwip_total",
-                            "ooo_total",
-                        ]
-                    ].reset_index(drop=True)
-                )
     wk.loc[wk["denom_hc"] <= 0, "denom_hc"] = pd.NA
     wk["wip_daily_pp"] = wk["completed"] / (wk["denom_hc"] * float(wd))
     wk["nonwip_daily_pp"] = wk["nonwip_use"] / (wk["denom_hc"] * float(wd))
