@@ -1124,6 +1124,7 @@ ACTIVITY_MAP = {
     "emails admin meeting":"Admin",
     "10562882doc meeting":"Meeting",
     "update std instr for final vig":"Admin",
+    "quality check":"QA",
     "2 paid 15 minute breaks":"Break",
     "2 paid 15 minute break":"Break",
     "meeting letter generation":"Meeting",
