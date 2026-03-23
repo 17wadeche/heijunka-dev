@@ -942,11 +942,11 @@ def _get_metrics_df() -> Optional[pd.DataFrame]:
     return pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
 def _get_nonwip_df() -> Optional[pd.DataFrame]:
     frames = []
-    for key in ["ns_non_wip_activities", "crm_non_wip_activities","ms_non_wip_activities", "non_wip", "non_wip_activities"]:
+    for key in ["ns_non_wip_activities", "crm_non_wip_activities", "ms_non_wip_activities", "non_wip", "non_wip_activities"]:
         if key in data:
             d = filter_by_team(data[key])
             if not d.empty:
-                frames.append(d.copy())
+                frames.append(_normalize_df_columns(d.copy()))
     if not frames:
         return None
     return pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
