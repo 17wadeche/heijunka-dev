@@ -1126,6 +1126,7 @@ ACTIVITY_MAP = {
     "scrum/ aem":"Scrum & Action",
     "scrum/ erg meeting":"Scrum & Action",
     "scrum, ohs survery":"Scrum & Action",
+    "ohs survery":"Admin",
     "investigation job aid working session":"Admin",
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
