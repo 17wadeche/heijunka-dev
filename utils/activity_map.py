@@ -1233,6 +1233,8 @@ ACTIVITY_MAP = {
     "questions/discussion": "Question",
     "training product training team meeting cross functional meeting aems + townhall":"Training/Mentoring",
     "letter training prism":"Training/Mentoring",
+    "wf testing, collaboration, scrum, questions, vpn issue":"Collaboration",
+    "ng, event reviews, meetings, collaboration, emails/admin":"Next Gen",
     "affera ftq training prep":"Project Work",
     "scrum, questions, collaboration, email":"Scrum & Action",
     "ng, meetings, collaboration/event reviews, email/admin":"Next Gen",
