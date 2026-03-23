@@ -1779,3 +1779,12 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-03-23 10:47:35,787 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-23 10:47:35,872 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 347 rows
 2026-03-23 10:47:35,874 | INFO | === NS Metrics Run END ===
+2026-03-23 11:55:44,278 | INFO | === NS Metrics Run START ===
+2026-03-23 11:55:44,279 | INFO | Selected team: all
+2026-03-23 11:55:44,281 | INFO | [Spine] START
+2026-03-23 11:55:56,692 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:12.410453
+2026-03-23 11:55:56,692 | INFO | [Spine New] START
+2026-03-23 11:56:17,130 | INFO | [Spine New] DONE | rows=3 | elapsed=0:00:20.438201
+2026-03-23 11:56:17,130 | INFO | [PH] START
+2026-03-23 11:56:46,497 | INFO | [PH] DONE | rows=355 | elapsed=0:00:29.366898
+2026-03-23 11:56:46,499 | INFO | [PH Cell 17] START
