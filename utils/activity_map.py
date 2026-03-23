@@ -1233,6 +1233,8 @@ ACTIVITY_MAP = {
     "questions/discussion": "Question",
     "training product training team meeting cross functional meeting aems + townhall":"Training/Mentoring",
     "letter training prism":"Training/Mentoring",
+    "affera ftq training prep":"Project Work",
+    "scrum, questions, collaboration, email":"Scrum & Action",
     "ng, meetings, collaboration/event reviews, email/admin":"Next Gen",
     "lit scrum metric":"Scrum & Action",
     "pvh aged file review":"Aged WIP Review",
