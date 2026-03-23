@@ -1237,6 +1237,7 @@ ACTIVITY_MAP = {
     "pmq cr post-meeting q's review":"PMQ Meeting",
     "it issues over im and phone": "IT Issue/Update",
     "windows update": "IT Issue/Update",
+    "wip review/gemba prep":"Gemba",
     "imdrf code call": "Meeting",
     "pvh tier": "Meeting",
     "pmpa meeting 30": "Meeting",
