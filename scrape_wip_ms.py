@@ -53,6 +53,9 @@ CSV_COLUMNS = [
 EXCLUDED_STATIONS = {"ooo", "non wip", ""}
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
+EXCLUDED_NAMES = {"x", "0", ""}
+def is_valid_name(name: str) -> bool:
+    return name.strip().lower() not in EXCLUDED_NAMES
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
@@ -186,7 +189,7 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, float]]:
             category = _as_text(ws.cell(row=row, column=4).value)
             if person_cell:
                 current_person = person_cell
-            if current_person and category.lower() == "available wip":
+            if is_valid_name(current_person) and category.lower() == "available wip":
                 total = 0.0
                 for col in range(5, 10):  # E:I
                     total += _cell_number(ws.cell(row=row, column=col).value) or 0.0
@@ -230,7 +233,7 @@ def parse_production_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
         station_is_wip = is_wip_station(station)
         if station_is_wip:
             bucket["completed_minutes"] += mins
-            if person:
+            if person and is_valid_name(person):
                 bucket["wip_people"].add(person)
                 bucket["actual_hours_by_person"][person] += mins / 60.0
                 bucket["outputs_by_person"][person]["output"] += actual_output
