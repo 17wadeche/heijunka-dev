@@ -1119,6 +1119,7 @@ ACTIVITY_MAP = {
     "parker inv meeting":"Meeting",
     "parker investigation meeting":"Meeting",
     "queries/email": "Email & IM",
+    "mentorship (abby)":"Training/Mentoring",
     "ri training":"Training/Mentoring",
     "emails admin meeting":"Admin",
     "10562882doc meeting":"Meeting",
