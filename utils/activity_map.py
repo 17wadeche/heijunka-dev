@@ -1013,6 +1013,7 @@ ACTIVITY_MAP = {
     "thai ri":"RI",
     "ri, cornerstone, scrum, question":"RI",
     "integer - email, questions, call": "Email & IM",
+    "pricing contract buyer training":"Training/Mentoring",
     "collab, training":"Collaboration",
     "project feedback meeting":"Meeting",
     "shipping, meeting":"Meeting",
