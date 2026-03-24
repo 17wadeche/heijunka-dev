@@ -1011,6 +1011,8 @@ ACTIVITY_MAP = {
     "emails, lab set up, closing file, it issue": "Email & IM",
     "clinical review korea ri":"RI",
     "thai ri":"RI",
+    "ri, cornerstone, scrum, question":"RI",
+    "integer - email, questions, call": "Email & IM",
     "collab, training":"Collaboration",
     "shipping, meeting":"Meeting",
     "emails, discussing dhr tasks, finding work tool": "Email & IM",
