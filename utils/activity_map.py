@@ -1016,6 +1016,7 @@ ACTIVITY_MAP = {
     "email, meeting": "Email & IM",
     "integer - email, questions, call": "Email & IM",
     "pricing contract buyer training":"Training/Mentoring",
+    "collaboration, late run through, question":"Collaboration",
     "collab, training":"Collaboration",
     "project feedback meeting":"Meeting",
     "shipping, meeting":"Meeting",
