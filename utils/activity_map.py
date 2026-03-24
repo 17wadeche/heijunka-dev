@@ -1133,6 +1133,7 @@ ACTIVITY_MAP = {
     "ps- a3 review":"Problem Solving",
     "global town hall w geoff martha":"Meeting",
     "career planning with purpose training":"Training/Mentoring",
+    "training/mentor review/feedback, meeting: scrum, training update":"Training/Mentoring",
     "scrum/ problem solving":"Problem Solving",
     "ndia webinar irish center for diversity":"Meeting",
     "parker inv meeting":"Meeting",
