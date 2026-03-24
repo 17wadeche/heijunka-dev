@@ -1012,6 +1012,7 @@ ACTIVITY_MAP = {
     "clinical review korea ri":"RI",
     "thai ri":"RI",
     "ri, cornerstone, scrum, question":"RI",
+    "cos1 training":"Training/Mentoring",
     "email, meeting": "Email & IM",
     "integer - email, questions, call": "Email & IM",
     "pricing contract buyer training":"Training/Mentoring",
