@@ -1014,6 +1014,7 @@ ACTIVITY_MAP = {
     "ri, cornerstone, scrum, question":"RI",
     "integer - email, questions, call": "Email & IM",
     "collab, training":"Collaboration",
+    "project feedback meeting":"Meeting",
     "shipping, meeting":"Meeting",
     "emails, discussing dhr tasks, finding work tool": "Email & IM",
     "emails, cleaning after deco, packing device": "Email & IM",
