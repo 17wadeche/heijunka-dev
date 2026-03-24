@@ -1015,6 +1015,8 @@ ACTIVITY_MAP = {
     "cos1 training:":"Training/Mentoring",
     "email, meeting": "Email & IM",
     "integer - email, questions, call": "Email & IM",
+    "iris project":"Project Work",
+    "watch emer work on file":"Training/Mentoring",
     "pricing contract buyer training":"Training/Mentoring",
     "collaboration, late run through, question":"Collaboration",
     "collab, training":"Collaboration",
