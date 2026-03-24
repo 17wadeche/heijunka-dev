@@ -1009,6 +1009,8 @@ ACTIVITY_MAP = {
     "helping colleagues and emails. sorting through crdn list of devices that are expected":"Collaboration",
     "emails, pvh change order update, ohs update": "Email & IM",
     "emails, lab set up, closing file, it issue": "Email & IM",
+    "clinical review korea ri":"RI",
+    "thai ri":"RI",
     "shipping, meeting":"Meeting",
     "emails, discussing dhr tasks, finding work tool": "Email & IM",
     "emails, cleaning after deco, packing device": "Email & IM",
