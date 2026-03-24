@@ -1153,10 +1153,10 @@ ACTIVITY_MAP = {
     "ohs survery":"Admin",
     "investigation job aid working session":"Admin",
     "computer issues + restart": "IT Issue/Update",
-    looking through liberant documents + reviewing old complaint
+    "looking through liberant documents + reviewing old complaint":"Reading File/Document Information",
     "dt kick off analysis meeting with saif":"Meeting",
     "purchase training":"Training/Mentoring",
-    spiderfx and venaseal document/investigation reading
+    "spiderfx and venaseal document/investigation reading":"Reading File/Document Information",
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
     "scrum/ corner stone training":"Scrum & Action",
