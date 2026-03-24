@@ -12,16 +12,19 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
+    r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
     "RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     "WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
+    "AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
 }
 DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm"
 ]
 CSV_COLUMNS = [
     "team",
