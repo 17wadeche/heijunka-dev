@@ -125,6 +125,7 @@ ACTIVITY_MAP = {
     "meeting (voyager fume hood)": "Meeting",
     "nellcor shipping":"shipment",
     "q3 town hall recording": "Meeting",
+    "town hall meeting": "Meeting",
     "emails, dealing with issues from devices,dmaic":"Email & IM",
     "cornerstone, voyager meeting":"Cornerstone",
     "fwt, reading agile document": "Metrics & Schedule",
