@@ -1463,8 +1463,9 @@ has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
 if has_dates and min_date and max_date:
+    default_start = pd.to_datetime("2025-10-27").date()
     if "start_date" not in st.session_state:
-        st.session_state["start_date"] = min_date
+        st.session_state["start_date"] = max(min_date, default_start)
     if "end_date" not in st.session_state:
         st.session_state["end_date"] = max_date
     start = st.session_state["start_date"]
