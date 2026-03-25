@@ -2953,19 +2953,71 @@ with mid2:
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
-    st.subheader("Completed vs Non-WIP vs OOO vs Unaccounted")
+    st.subheader("Completed vs Other Team WIP vs Accounted Non-WIP vs OOO vs Unaccounted")
     _nw = load_non_wip()
     teams_cfg = load_team_config()
     irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
-    person_mix = build_person_time_mix_over_time(
-        metrics_frame=f,
-        nw_frame=_nw,
-        teams_in_view=teams_in_view,
-        irl_people_lookup=irl_lookup,
-        week_hours=40.0,
-    ).dropna(subset=["period_date", "person", "Pct"]).copy()
+    mix_rows = []
+    nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
+    if not nw_sub.empty:
+        for _, nw_row in nw_sub.iterrows():
+            team = str(nw_row.get("team", "")).strip()
+            wk = pd.to_datetime(nw_row.get("period_date"), errors="coerce")
+            if not team or pd.isna(wk):
+                continue
+            wk = wk.normalize()
+            wk_people = build_person_weekly_accounting(
+                team=team,
+                week=wk,
+                nw_row=nw_row,
+                metrics_frame=f,
+                nw_frame=_nw,
+                week_hours=40.0,
+                irl_people=irl_lookup.get(team, set()),
+            )
+            if wk_people.empty:
+                continue
+            wk_people = wk_people.copy()
+            wk_people["Completed Time"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+            wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
+            wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+            wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+            wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people["Denom"] = (
+                wk_people["Completed Time"]
+                + wk_people["Other Team WIP"]
+                + wk_people["Accounted Non-WIP"]
+                + wk_people["OOO"]
+                + wk_people["Unaccounted"]
+            )
+            long_df = wk_people.melt(
+                id_vars=["team", "period_date", "person", "Denom"],
+                value_vars=[
+                    "Completed Time",
+                    "Other Team WIP",
+                    "Accounted Non-WIP",
+                    "OOO",
+                    "Unaccounted",
+                ],
+                var_name="Category",
+                value_name="Hours",
+            )
+            long_df["Pct"] = np.where(
+                long_df["Denom"] > 0,
+                long_df["Hours"] / long_df["Denom"],
+                np.nan,
+            )
+            mix_rows.append(
+                long_df[["team", "period_date", "person", "Category", "Hours", "Pct"]]
+            )
+    person_mix = (
+        pd.concat(mix_rows, ignore_index=True)
+        if mix_rows
+        else pd.DataFrame(columns=["team", "period_date", "person", "Category", "Hours", "Pct"])
+    )
+    person_mix = person_mix.dropna(subset=["period_date", "person", "Pct"]).copy()
     if person_mix.empty:
-        st.info("No Completed vs Non-WIP vs OOO vs Unaccounted data available.")
+        st.info("No Completed vs Other Team WIP vs Accounted Non-WIP vs OOO vs Unaccounted data available.")
     else:
         mix_weeks = sorted(person_mix["period_date"].dropna().unique(), reverse=True)
         picked_mix_week = st.selectbox(
@@ -2992,14 +3044,37 @@ with right2:
         if week_mix.empty:
             st.info("No person mix data for that selection.")
         else:
+            category_domain = [
+                "Completed Time",
+                "Other Team WIP",
+                "Accounted Non-WIP",
+                "OOO",
+                "Unaccounted",
+            ]
+            category_colors = [
+                "#2563eb",  # Completed Time
+                "#8b5cf6",  # Other Team WIP
+                "#22c55e",  # Accounted Non-WIP
+                "#f59e0b",  # OOO
+                "#9ca3af",  # Unaccounted
+            ]
+            week_mix["Category"] = pd.Categorical(
+                week_mix["Category"],
+                categories=category_domain,
+                ordered=True,
+            )
             person_order = (
                 week_mix.groupby("person", as_index=False)["Hours"]
                 .sum()
                 .sort_values("Hours", ascending=False)["person"]
                 .tolist()
             )
-            category_domain = ["Completed Time", "Non-WIP", "OOO", "Unaccounted"]
-            category_colors = ["#2563eb", "#22c55e", "#f59e0b", "#9ca3af"]
+            label_src = week_mix.copy()
+            label_src = label_src.sort_values(["person", "Category"])
+            label_src["Pct"] = pd.to_numeric(label_src["Pct"], errors="coerce").fillna(0.0)
+            label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
+            label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
+            label_src = label_src[label_src["Pct"] >= 0.05].copy()
             bars = alt.Chart(week_mix).mark_bar().encode(
                 x=alt.X(
                     "person:N",
@@ -3032,22 +3107,20 @@ with right2:
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
-            label_src = week_mix[week_mix["Pct"] >= 0.05].copy()
             labels = alt.Chart(label_src).mark_text(
                 color="white",
                 fontSize=11,
                 fontWeight="bold",
-                baseline="middle",
                 align="center",
+                baseline="middle",
             ).encode(
                 x=alt.X("person:N", sort=person_order),
                 y=alt.Y(
-                    "Pct:Q",
-                    stack="center",
+                    "y_mid:Q",
                     scale=alt.Scale(domain=[0, 1]),
+                    axis=None,
                 ),
                 detail="Category:N",
-                order=alt.Order("Category:N", sort="ascending"),
                 text=alt.Text("Pct:Q", format=".0%"),
             )
             top_chart = (bars + labels).properties(
@@ -3068,6 +3141,11 @@ with right2:
             if drill_df.empty:
                 st.info("No over-time data for that person.")
             else:
+                drill_df["Category"] = pd.Categorical(
+                    drill_df["Category"],
+                    categories=category_domain,
+                    ordered=True,
+                )
                 drill = (
                     alt.Chart(drill_df)
                     .mark_bar()
