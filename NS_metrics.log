@@ -2505,3 +2505,98 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ 
 2026-03-25 10:10:56,932 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-25 10:10:57,039 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 330 rows
 2026-03-25 10:10:57,041 | INFO | === NS Metrics Run END ===
+2026-03-25 14:39:47,298 | INFO | === NS Metrics Run START ===
+2026-03-25 14:39:47,298 | INFO | Selected team: all
+2026-03-25 14:39:47,298 | INFO | [Spine] START
+2026-03-25 14:39:55,297 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:07.999360
+2026-03-25 14:39:55,298 | INFO | [Spine New] START
+2026-03-25 14:40:12,817 | INFO | [Spine New] DONE | rows=3 | elapsed=0:00:17.518587
+2026-03-25 14:40:12,817 | INFO | [PH] START
+2026-03-25 14:40:32,134 | INFO | [PH] DONE | rows=355 | elapsed=0:00:19.316831
+2026-03-25 14:40:32,135 | INFO | [PH Cell 17] START
+2026-03-25 14:40:45,883 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:13.748433
+2026-03-25 14:40:45,883 | INFO | [SCS Cell 1] START
+2026-03-25 14:41:03,911 | INFO | [SCS Cell 1] DONE | rows=283 | elapsed=0:00:18.028378
+2026-03-25 14:41:03,911 | INFO | [MEIC PH] START
+2026-03-25 14:41:09,818 | INFO | [MEIC PH] DONE | rows=86 | elapsed=0:00:05.906256
+2026-03-25 14:41:09,818 | INFO | [DBS C13] START
+2026-03-25 14:41:12,707 | ERROR | [DBS C13] FAIL | elapsed=0:00:02.888967 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm
+2026-03-25 14:41:12,707 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2848, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 751, in scrape_dbs_previous_weeks_xlsm
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 736, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm
+
+2026-03-25 14:41:12,816 | INFO | [DBS C13] filter >= 2025-07-07: 0 -> 0
+2026-03-25 14:41:12,816 | INFO | [DBS C14] START
+2026-03-25 14:41:15,952 | ERROR | [DBS C14] FAIL | elapsed=0:00:03.136073 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm
+2026-03-25 14:41:15,952 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2857, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 751, in scrape_dbs_previous_weeks_xlsm
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 736, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm
+
+2026-03-25 14:41:16,317 | INFO | [DBS C14] filter >= 2025-07-07: 0 -> 0
+2026-03-25 14:41:16,317 | INFO | [NV] START
+2026-03-25 14:41:58,225 | INFO | [NV] DONE | rows=43 | elapsed=0:00:41.908220
+2026-03-25 14:41:58,226 | INFO | [NV] filter >= 2025-07-07: 43 -> 38
+2026-03-25 14:41:58,226 | INFO | [Nav] START
+2026-03-25 14:43:32,770 | INFO | [Nav] DONE | rows=40 | elapsed=0:01:34.543835
+2026-03-25 14:43:32,776 | INFO | [AE MEIC] START
+2026-03-25 14:44:40,436 | INFO | [AE MEIC] DONE | rows=40 | elapsed=0:01:07.660172
+2026-03-25 14:44:40,436 | INFO | [O-Arm MEIC] START
+2026-03-25 14:45:28,803 | INFO | [O-Arm MEIC] DONE | rows=39 | elapsed=0:00:48.366577
+2026-03-25 14:45:28,816 | INFO | [Mazor] START
+2026-03-25 14:46:50,425 | INFO | [Mazor] DONE | rows=42 | elapsed=0:01:21.609771
+2026-03-25 14:46:50,425 | INFO | [CSF] START
+2026-03-25 14:47:15,813 | INFO | [CSF] DONE | rows=41 | elapsed=0:00:25.387882
+2026-03-25 14:47:15,813 | INFO | [PSS US] START
+2026-03-25 14:47:31,793 | INFO | [PSS US] DONE | rows=43 | elapsed=0:00:15.979707
+2026-03-25 14:47:31,795 | INFO | [PSS MEIC] START
+2026-03-25 14:48:42,656 | INFO | [PSS MEIC] DONE | rows=42 | elapsed=0:01:10.860559
+2026-03-25 14:48:42,656 | INFO | [PSS MEIC Intern] START
+2026-03-25 14:49:07,437 | INFO | [PSS MEIC Intern] DONE | rows=43 | elapsed=0:00:24.781410
+2026-03-25 14:49:07,507 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-25 14:49:07,507 | INFO | [ENT] START
+2026-03-25 14:49:07,645 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.138408
+2026-03-25 14:49:07,646 | INFO | [DBS MEIC] START
+2026-03-25 14:49:07,660 | INFO | [DBS MEIC] DONE | rows=33 | elapsed=0:00:00.013515
+2026-03-25 14:49:07,660 | INFO | [SCS MEIC] START
+2026-03-25 14:49:07,673 | INFO | [SCS MEIC] DONE | rows=33 | elapsed=0:00:00.012996
+2026-03-25 14:49:07,673 | INFO | [TDD COS 1] START
+2026-03-25 14:49:45,954 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:00:38.280961
+2026-03-25 14:49:45,955 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-25 14:49:45,955 | INFO | [SCS Super Cell] START
+2026-03-25 14:50:09,791 | INFO | [SCS Super Cell] DONE | rows=198 | elapsed=0:00:23.836688
+2026-03-25 14:50:09,791 | INFO | [SCS Super Cell] rows scraped (pre-filter): 198
+2026-03-25 14:50:09,791 | INFO | [SCS Super Cell] filter >= 2025-06-30: 198 -> 38
+2026-03-25 14:50:09,791 | INFO | [MEIC PH] filter >= 2025-09-01: 86 -> 31
+2026-03-25 14:50:09,791 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-25 14:50:09,791 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1286 -> 596
+2026-03-25 14:50:09,791 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-25 14:50:09,791 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1286 -> 596
+2026-03-25 14:50:09,791 | INFO | [ALL] drop period_date == 2023-11-06: 596 -> 595
+2026-03-25 14:50:09,791 | INFO | [ALL] drop period_date == 2026-09-07: 595 -> 594
+2026-03-25 14:50:09,858 | INFO | Wrote 594 rows to NS_metrics.csv
+2026-03-25 14:50:09,974 | INFO | Wrote 331 rows to NS_WIP.csv
+2026-03-25 14:50:10,004 | INFO | [POST] WIP weekly keys=330
+2026-03-25 14:50:10,004 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-03-25 14:50:10,005 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-03-25 14:50:10,084 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 330 rows
+2026-03-25 14:50:10,086 | INFO | === NS Metrics Run END ===
