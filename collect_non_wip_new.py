@@ -351,9 +351,6 @@ def build_non_wip_rows(config_path: str,
             avail_anchors,
             hidden_avail_rows,
         )
-        if team == "Aortic":
-            for d, names in sorted(people_by_week.items()):
-                print(" ", d, "->", len(names), names)
         team_weeks = weeks_for_team(metrics_csv, team)
         for iso in team_weeks:
             wk_date = _to_date(iso)
