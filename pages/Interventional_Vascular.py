@@ -2978,13 +2978,13 @@ with right2:
             if wk_people.empty:
                 continue
             wk_people = wk_people.copy()
-            wk_people["Completed Time"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+            wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
             wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
             wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
             wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
             wk_people["Denom"] = (
-                wk_people["Completed Time"]
+                wk_people["WIP"]
                 + wk_people["Other Team WIP"]
                 + wk_people["Accounted Non-WIP"]
                 + wk_people["OOO"]
@@ -2993,7 +2993,7 @@ with right2:
             long_df = wk_people.melt(
                 id_vars=["team", "period_date", "person", "Denom"],
                 value_vars=[
-                    "Completed Time",
+                    "WIP",
                     "Other Team WIP",
                     "Accounted Non-WIP",
                     "OOO",
