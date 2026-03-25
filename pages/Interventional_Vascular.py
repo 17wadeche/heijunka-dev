@@ -612,16 +612,28 @@ def build_person_weekly_accounting(
     )
     if other_df.empty:
         other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
-    ooo_map = nw_row.get("ooo_by_person", {})
-    if isinstance(ooo_map, str):
-        try:
-            ooo_map = json.loads(ooo_map)
-        except Exception:
-            ooo_map = {}
-    if not isinstance(ooo_map, dict):
-        ooo_map = {}
+    payload = nw_row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    ooo_by_person: dict[str, float] = {}
+    if isinstance(activities, list):
+        for item in activities:
+            if not isinstance(item, dict):
+                continue
+            person = str(item.get("name", "")).strip()
+            activity = str(item.get("activity", "")).strip().upper()
+            try:
+                hrs = float(item.get("hours", 0) or 0)
+            except Exception:
+                hrs = 0.0
+            if not person or hrs <= 0:
+                continue
+            if activity == "OOO":
+                ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
     ooo_df = pd.DataFrame(
-        [{"person": str(k).strip(), "OOO Hours": float(v)} for k, v in ooo_map.items()]
+        [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
     )
     if ooo_df.empty:
         ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
