@@ -1418,6 +1418,7 @@ ACTIVITY_MAP = {
     "check-in":"Meeting",
     "update to files from abby man.exp dates creating the smdrs and submitting if possible":"WIP Review",
     "readcube meeting":"Meeting",
+    "meeting with tl":"Meeting",
     "readcube training": "Training/Mentoring",
     "vig training call": "Training/Mentoring",
     "pmq follow-up": "PMQ Meeting",
