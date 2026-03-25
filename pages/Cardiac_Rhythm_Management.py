@@ -281,6 +281,9 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
     accounted_nonother = {k: round(v, 2) for k, v in accounted_nonother.items()}
     return accounted_other, accounted_nonother
+NAME_ALIASES = {
+    "-":"-",
+}
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
     s = " ".join(s.split())
