@@ -1090,11 +1090,27 @@ if nonwip_mode:
         else np.nan
     )
     people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
-    capacity_val = (
-        float(people_count_val) * 40.0
-        if pd.notna(people_count_val) and float(people_count_val) > 0
-        else np.nan
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    wk_people_kpi = build_person_weekly_accounting(
+        team=team_nw,
+        week=week_nw,
+        nw_row=row,
+        metrics_frame=df,
+        nw_frame=nw,
+        week_hours=40.0,
+        irl_people=team_irl_people,
     )
+    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
+        capacity_val = float(pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum())
+    else:
+        irl_count = len(team_irl_people)
+        total_people = float(people_count_val) if pd.notna(people_count_val) and float(people_count_val) > 0 else np.nan
+        if pd.notna(total_people):
+            non_irl_count = max(total_people - irl_count, 0.0)
+            capacity_val = (irl_count * 39.0) + (non_irl_count * 40.0)
+        else:
+            capacity_val = np.nan
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
     ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
