@@ -214,6 +214,7 @@ NAME_ALIASES = {
     "gowda, manjunath":"Manjunath Gowda",
     "andrew o":"Andrew",
     "kumar, shailesh":"Shailesh Kumar",
+    "michael": "Michael F",
     "mani s.":"Mani",
     "kuche":"Ku Che",
     "goutham kumar, p":"P Goutham Kumar",
