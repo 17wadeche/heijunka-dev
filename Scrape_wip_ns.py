@@ -336,6 +336,7 @@ ENT_NAME_REPLACEMENTS = {
     "Badugu, Aravind Kumar": "Aravind Kumar Badugu",
     "Boya, Kranthi Kumar": "Kranthi Kumar Boya",
     "Kumari, Taruna": "Taruna Kumari",
+    "Pavani Uppari":"Uppari Pavani",
     "Raju, Surekha": "Surekha Raju Anantarapu",
     "S, Selvarasu": "Selvarasu Sampathu",
     "Uppari, Pavani": "Uppari Pavani",
