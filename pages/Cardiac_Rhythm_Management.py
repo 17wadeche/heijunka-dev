@@ -59,15 +59,18 @@ def load_non_wip(
     cache_tag: str = "CRM", 
 ) -> pd.DataFrame:
     if nw_url is None:
-        nw_url = NON_WIP_DATA_URL    if nw_url:
+        nw_url = NON_WIP_DATA_URL
+    if nw_url:
         try:
             df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
         except Exception:
             import io, requests
             r = requests.get(nw_url, timeout=20)
             r.raise_for_status()
-            df = pd.read_csv(io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
-                             dtype=str, keep_default_na=False)
+            df = pd.read_csv(
+                io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
+                dtype=str, keep_default_na=False
+            )
     else:
         p = Path(nw_path or NON_WIP_DEFAULT_PATH)
         if not p.exists():
