@@ -3045,9 +3045,9 @@ with right2:
             st.info("No person mix data for that selection.")
         else:
             category_domain = [
-                "Completed Time",
+                "WIP",
                 "Other Team WIP",
-                "Accounted Non-WIP",
+                "Non-WIP",
                 "OOO",
                 "Unaccounted",
             ]
@@ -3059,9 +3059,9 @@ with right2:
                 "#9ca3af",  # Unaccounted
             ]
             category_order_map = {
-                "Completed Time": 0,
+                "WIP": 0,
                 "Other Team WIP": 1,
-                "Accounted Non-WIP": 2,
+                "Non-WIP": 2,
                 "OOO": 3,
                 "Unaccounted": 4,
             }
