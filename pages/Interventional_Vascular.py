@@ -2889,7 +2889,6 @@ with mid2:
                             )
                         )
                         ref = alt.Chart(pd.DataFrame({"y": [6]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
-
                         st.altair_chart(bars + labels + ref, use_container_width=True)
         else:
             st.caption("Select exactly one team to drill into per-person daily hours.")
