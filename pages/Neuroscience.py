@@ -195,7 +195,7 @@ def load_data(data_path: str | None, data_url: str | None):
     return _postprocess(df)
 NAME_ALIASES = {
     "Mirlay": "Mirlay Morin",
-    "john smith": "John Smith",
+    "Nikita": "Nikita Schazenbach",
 }
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
