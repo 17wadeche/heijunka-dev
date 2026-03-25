@@ -3145,6 +3145,20 @@ with right2:
                 options=people_for_drill,
                 key="time_mix_person_right2",
             )
+            drill_controls_left, drill_controls_right = st.columns(2)
+            with drill_controls_left:
+                drill_window = st.segmented_control(
+                    "Window",
+                    options=[8, 12, 16],
+                    default=16,
+                    key="time_mix_window_right2",
+                )
+            with drill_controls_right:
+                factor_out_ooo = st.toggle(
+                    "Factor out OOO",
+                    value=False,
+                    key="time_mix_factor_out_ooo_right2",
+                )
             drill_df = person_mix[person_mix["person"] == picked_person_mix].copy()
             if multi_team and chosen_mix_teams:
                 drill_df = drill_df[drill_df["team"].isin(chosen_mix_teams)].copy()
@@ -3155,47 +3169,96 @@ with right2:
                 drill_df = drill_df[drill_df["Category"].isin(category_domain)].copy()
                 drill_df["CategoryOrder"] = drill_df["Category"].map(category_order_map)
                 drill_df["Pct"] = pd.to_numeric(drill_df["Pct"], errors="coerce").fillna(0.0)
-                drill = (
-                    alt.Chart(drill_df)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("period_date:T", title="Week"),
-                        y=alt.Y(
-                            "Pct:Q",
-                            title="% of Time",
-                            stack="normalize",
-                            axis=alt.Axis(format=".0%"),
-                            scale=alt.Scale(domain=[0, 1]),
-                        ),
-                        color=alt.Color(
-                            "Category:N",
-                            title="Legend",
-                            scale=alt.Scale(
-                                domain=category_domain,
-                                range=category_colors,
-                            ),
-                            sort=category_domain,
-                            legend=alt.Legend(
-                                orient="top",
-                                direction="horizontal",
-                                title=None,
-                                labelLimit=200,
-                            ),
-                        ),
-                        order=alt.Order("CategoryOrder:Q", sort="ascending"),
-                        tooltip=[
-                            alt.Tooltip("team:N", title="Team"),
-                            alt.Tooltip("period_date:T", title="Week"),
-                            alt.Tooltip("Category:N", title="Category"),
-                            alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                            alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
-                        ],
+                drill_df["Hours"] = pd.to_numeric(drill_df["Hours"], errors="coerce").fillna(0.0)
+                drill_df["period_date"] = pd.to_datetime(drill_df["period_date"], errors="coerce")
+                latest_weeks = (
+                    pd.Series(drill_df["period_date"].dropna().sort_values().unique())
+                    .tolist()
+                )[-int(drill_window):]
+                drill_df = drill_df[drill_df["period_date"].isin(latest_weeks)].copy()
+                if factor_out_ooo and not drill_df.empty:
+                    base_df = drill_df.copy()
+                    weekly_person_totals = (
+                        base_df.groupby(["period_date", "person"], as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "TotalHours"})
                     )
-                    .properties(
-                        height=280,
+                    weekly_ooo = (
+                        base_df[base_df["Category"] == "OOO"]
+                        .groupby(["period_date", "person"], as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "OOOHours"})
                     )
-                )
-                st.altair_chart(drill, use_container_width=True)
+                    weekly_base = weekly_person_totals.merge(
+                        weekly_ooo,
+                        on=["period_date", "person"],
+                        how="left",
+                    )
+                    weekly_base["OOOHours"] = weekly_base["OOOHours"].fillna(0.0)
+                    weekly_base["AdjDenom"] = (
+                        weekly_base["TotalHours"] - weekly_base["OOOHours"]
+                    ).clip(lower=0.0)
+                    drill_df = drill_df[drill_df["Category"] != "OOO"].copy()
+                    drill_df = drill_df.merge(
+                        weekly_base[["period_date", "person", "AdjDenom"]],
+                        on=["period_date", "person"],
+                        how="left",
+                    )
+                    drill_df["Pct"] = np.where(
+                        drill_df["AdjDenom"] > 0,
+                        drill_df["Hours"] / drill_df["AdjDenom"],
+                        np.nan,
+                    )
+                    drill_df = drill_df.dropna(subset=["Pct"]).copy()
+                if drill_df.empty:
+                    st.info("No over-time data for that person after applying filters.")
+                else:
+                    drill_categories = [c for c in category_domain if (not factor_out_ooo or c != "OOO")]
+                    drill_colors = [
+                        category_colors[category_domain.index(c)]
+                        for c in drill_categories
+                    ]
+                    drill = (
+                        alt.Chart(drill_df)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("period_date:T", title="Week"),
+                            y=alt.Y(
+                                "Pct:Q",
+                                title="% of Time" if not factor_out_ooo else "% of Non-OOO Time",
+                                stack="normalize",
+                                axis=alt.Axis(format=".0%"),
+                                scale=alt.Scale(domain=[0, 1]),
+                            ),
+                            color=alt.Color(
+                                "Category:N",
+                                title="Legend",
+                                scale=alt.Scale(
+                                    domain=drill_categories,
+                                    range=drill_colors,
+                                ),
+                                sort=drill_categories,
+                                legend=alt.Legend(
+                                    orient="top",
+                                    direction="horizontal",
+                                    title=None,
+                                    labelLimit=200,
+                                ),
+                            ),
+                            order=alt.Order("CategoryOrder:Q", sort="ascending"),
+                            tooltip=[
+                                alt.Tooltip("team:N", title="Team"),
+                                alt.Tooltip("period_date:T", title="Week"),
+                                alt.Tooltip("Category:N", title="Category"),
+                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                                alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                            ],
+                        )
+                        .properties(
+                            height=280,
+                        )
+                    )
+                    st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
