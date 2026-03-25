@@ -202,6 +202,8 @@ NAME_ALIASES = {
     "s, prabhu":"Prabhu S",
     "damahe, jagruti":"Jagruti Damahe",
     "kallagunta, malleshwari":"Malleshwari Kallagunta",
+    "s, giridhar":"Giridhar S",
+    "goutham kumar, p":"P Goutham Kumar",
 }
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
