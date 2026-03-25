@@ -13,7 +13,10 @@ TEAM_MAP = {
     "Infusion":"TDD",
     "Pain Stim": "SCS",
     "Pelvic Health Total": "PH",
-    "Enabling Technologies Total": "Enabling Technologies"
+    "Enabling Technologies Total": "Enabling Technologies",
+    "Ventilation":"VSS",
+    "HF-MCS":"MCS",
+    
 }
 MONTHREL_ALLOWED = {0, -1}
 OUT_DIR = r"C:\Users\wadec8\OneDrive - Medtronic PLC"
@@ -24,7 +27,8 @@ ROW_HIERARCHY_FIELD_NAME = "Operating Groups"
 COL_HIERARCHY_FIELD_NAME = "Calendar"
 TIMELINESS_CSV_PATH = r"C:\heijunka-dev\timeliness.csv"
 AVERAGE_MERGE_GROUPS = {
-    "PVH": {"EndoVenous", "Peripheral"}
+    "PVH": {"EndoVenous", "Peripheral"},
+    "Surgical AST-GST": {"Boulder-AST","Boulder-GST", "North Haven-GST", "North Haven-AST"}
 }
 MERGE_LOOKUP = {member: target
                 for target, members in AVERAGE_MERGE_GROUPS.items()
@@ -42,7 +46,6 @@ EXCLUDE_TEAMS = {
     "EPG",
     "Enterra",
     "GIS",
-    "HF-MCS",
     "Heart Failure HP",
     "Heart Failure LP",
     "INPEN",
@@ -69,7 +72,6 @@ EXCLUDE_TEAMS = {
     "TRANSMITTER",
     "TYRX",
     "Tachy",
-    "Ventilation",
     "Vitatron",
     "â€‹Undetermined",
     "Undetermined"

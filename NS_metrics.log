@@ -2354,3 +2354,57 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-03-24 23:44:16,435 | INFO | [AE MEIC] START
 2026-03-24 23:46:56,165 | INFO | [AE MEIC] DONE | rows=40 | elapsed=0:02:39.729008
 2026-03-24 23:46:56,169 | INFO | [O-Arm MEIC] START
+2026-03-25 08:21:58,431 | INFO | === NS Metrics Run START ===
+2026-03-25 08:21:58,432 | INFO | Selected team: all
+2026-03-25 08:21:58,437 | INFO | [Spine] START
+2026-03-25 08:22:19,535 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:21.097386
+2026-03-25 08:22:19,535 | INFO | [Spine New] START
+2026-03-25 08:23:02,499 | INFO | [Spine New] DONE | rows=3 | elapsed=0:00:42.964445
+2026-03-25 08:23:02,500 | INFO | [PH] START
+2026-03-25 08:23:44,819 | INFO | [PH] DONE | rows=355 | elapsed=0:00:42.319254
+2026-03-25 08:23:44,820 | INFO | [PH Cell 17] START
+2026-03-25 08:24:08,084 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:23.263923
+2026-03-25 08:24:08,088 | INFO | [SCS Cell 1] START
+2026-03-25 08:24:43,101 | INFO | [SCS Cell 1] DONE | rows=283 | elapsed=0:00:35.012906
+2026-03-25 08:24:43,101 | INFO | [MEIC PH] START
+2026-03-25 08:24:52,179 | INFO | [MEIC PH] DONE | rows=86 | elapsed=0:00:09.078197
+2026-03-25 08:24:52,180 | INFO | [DBS C13] START
+2026-03-25 08:24:56,433 | ERROR | [DBS C13] FAIL | elapsed=0:00:04.251908 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm
+2026-03-25 08:24:56,436 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2848, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 751, in scrape_dbs_previous_weeks_xlsm
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 736, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C13.xlsm
+
+2026-03-25 08:24:56,937 | INFO | [DBS C13] filter >= 2025-07-07: 0 -> 0
+2026-03-25 08:24:56,937 | INFO | [DBS C14] START
+2026-03-25 08:25:00,636 | ERROR | [DBS C14] FAIL | elapsed=0:00:03.699111 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm
+2026-03-25 08:25:00,637 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2857, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 751, in scrape_dbs_previous_weeks_xlsm
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 736, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Heijunka_C14.xlsm
+
+2026-03-25 08:25:01,011 | INFO | [DBS C14] filter >= 2025-07-07: 0 -> 0
+2026-03-25 08:25:01,011 | INFO | [NV] START
+2026-03-25 08:25:51,714 | INFO | [NV] DONE | rows=43 | elapsed=0:00:50.702556
+2026-03-25 08:25:51,715 | INFO | [NV] filter >= 2025-07-07: 43 -> 38
+2026-03-25 08:25:51,715 | INFO | [Nav] START
+2026-03-25 08:27:31,746 | INFO | [Nav] DONE | rows=40 | elapsed=0:01:40.030088
+2026-03-25 08:27:31,746 | INFO | [AE MEIC] START
