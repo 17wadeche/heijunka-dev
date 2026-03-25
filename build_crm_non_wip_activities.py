@@ -187,7 +187,7 @@ def compute_non_wip_by_person(ws_av: Worksheet) -> Dict[str, float]:
     return out
 def compute_non_wip_activities(ws_av: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
-    for name_cell, (c1, c2), label_col, _ in NON_WIP_SPECS:
+    for name_cell, (c1, c2), label_col, (ooo_c1, ooo_c2) in NON_WIP_SPECS:
         raw_name = read_merged_value(ws_av, name_cell)
         if not raw_name or is_excluded_person(raw_name):
             continue
@@ -214,6 +214,10 @@ def compute_non_wip_activities(ws_av: Worksheet) -> List[Dict[str, Any]]:
             if hours_sum:
                 key = (name, activity)
                 agg[key] = agg.get(key, 0.0) + hours_sum
+        ooo_hours = sum_range(ws_av, ooo_c1, ooo_c2)
+        if ooo_hours:
+            key = (name, "OOO")
+            agg[key] = agg.get(key, 0.0) + float(ooo_hours)
     return [
         {"name": n, "activity": a, "hours": float(h)}
         for (n, a), h in sorted(agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower()))
