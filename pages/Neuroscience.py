@@ -1050,12 +1050,18 @@ if nonwip_mode:
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+    today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
-        pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
+        [
+            d for d in pd.to_datetime(
+                nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()
+            )
+            if pd.notna(d) and pd.to_datetime(d).normalize() <= today_nw
+        ],
         reverse=True
     )
     if not weeks_nw:
-        st.info("No weeks available for this team.")
+        st.info("No weeks available for this team up to today.")
         st.stop()
     with c_week:
         week_nw = st.selectbox(
