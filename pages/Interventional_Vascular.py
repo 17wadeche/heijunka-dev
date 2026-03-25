@@ -2978,6 +2978,7 @@ with right2:
         week_mix = person_mix[
             person_mix["period_date"] == pd.to_datetime(picked_mix_week).normalize()
         ].copy()
+        chosen_mix_teams = []
         if multi_team:
             teams_present = sorted(week_mix["team"].dropna().unique().tolist())
             chosen_mix_teams = st.multiselect(
@@ -2997,6 +2998,8 @@ with right2:
                 .sort_values("Hours", ascending=False)["person"]
                 .tolist()
             )
+            category_domain = ["Completed Time", "Non-WIP", "OOO", "Unaccounted"]
+            category_colors = ["#2563eb", "#22c55e", "#f59e0b", "#9ca3af"]
             bars = alt.Chart(week_mix).mark_bar().encode(
                 x=alt.X(
                     "person:N",
@@ -3015,10 +3018,11 @@ with right2:
                     "Category:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["Completed Time", "Non-WIP", "OOO", "Unaccounted"],
-                        range=["#7c3aed", "#22c55e", "#a855f7", "#9ca3af"],
+                        domain=category_domain,
+                        range=category_colors,
                     ),
                 ),
+                order=alt.Order("Category:N", sort="ascending"),
                 tooltip=[
                     alt.Tooltip("team:N", title="Team"),
                     alt.Tooltip("person:N", title="Person"),
@@ -3033,10 +3037,17 @@ with right2:
                 color="white",
                 fontSize=11,
                 fontWeight="bold",
+                baseline="middle",
+                align="center",
             ).encode(
                 x=alt.X("person:N", sort=person_order),
-                y=alt.Y("Pct:Q", stack="normalize"),
+                y=alt.Y(
+                    "Pct:Q",
+                    stack="center",
+                    scale=alt.Scale(domain=[0, 1]),
+                ),
                 detail="Category:N",
+                order=alt.Order("Category:N", sort="ascending"),
                 text=alt.Text("Pct:Q", format=".0%"),
             )
             top_chart = (bars + labels).properties(
@@ -3052,42 +3063,46 @@ with right2:
                 key="time_mix_person_right2",
             )
             drill_df = person_mix[person_mix["person"] == picked_person_mix].copy()
-            if multi_team and "chosen_mix_teams" in locals() and chosen_mix_teams:
+            if multi_team and chosen_mix_teams:
                 drill_df = drill_df[drill_df["team"].isin(chosen_mix_teams)].copy()
-            drill = (
-                alt.Chart(drill_df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y(
-                        "Pct:Q",
-                        title="% of Time",
-                        stack="normalize",
-                        axis=alt.Axis(format=".0%"),
-                        scale=alt.Scale(domain=[0, 1]),
-                    ),
-                    color=alt.Color(
-                        "Category:N",
-                        title="Legend",
-                        scale=alt.Scale(
-                            domain=["Completed Time", "Non-WIP", "OOO", "Unaccounted"],
-                            range=["#7c3aed", "#22c55e", "#a855f7", "#9ca3af"],
+            if drill_df.empty:
+                st.info("No over-time data for that person.")
+            else:
+                drill = (
+                    alt.Chart(drill_df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("period_date:T", title="Week"),
+                        y=alt.Y(
+                            "Pct:Q",
+                            title="% of Time",
+                            stack="normalize",
+                            axis=alt.Axis(format=".0%"),
+                            scale=alt.Scale(domain=[0, 1]),
                         ),
-                    ),
-                    tooltip=[
-                        alt.Tooltip("team:N", title="Team"),
-                        alt.Tooltip("period_date:T", title="Week"),
-                        alt.Tooltip("Category:N", title="Category"),
-                        alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                        alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
-                    ],
+                        color=alt.Color(
+                            "Category:N",
+                            title="Legend",
+                            scale=alt.Scale(
+                                domain=category_domain,
+                                range=category_colors,
+                            ),
+                        ),
+                        order=alt.Order("Category:N", sort="ascending"),
+                        tooltip=[
+                            alt.Tooltip("team:N", title="Team"),
+                            alt.Tooltip("period_date:T", title="Week"),
+                            alt.Tooltip("Category:N", title="Category"),
+                            alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                            alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                        ],
+                    )
+                    .properties(
+                        height=280,
+                        title=f"{picked_person_mix} • time mix over time",
+                    )
                 )
-                .properties(
-                    height=280,
-                    title=f"{picked_person_mix} • time mix over time",
-                )
-            )
-            st.altair_chart(drill, use_container_width=True)
+                st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
