@@ -53,8 +53,13 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
-    if nw_url:
+def load_non_wip(
+    nw_path: str | None = None,
+    nw_url: str | None = None,
+    cache_tag: str = "CRM", 
+) -> pd.DataFrame:
+    if nw_url is None:
+        nw_url = NON_WIP_DATA_URL    if nw_url:
         try:
             df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
         except Exception:
