@@ -3323,12 +3323,10 @@ with right2:
                         detail="Category:N",
                         text=alt.Text("Pct:Q", format=".0%"),
                     )
-
                     drill = (drill_bars + drill_labels).properties(
                         height=280,
                         width=drill_width,
                     )
-
                     st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
