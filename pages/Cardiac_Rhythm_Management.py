@@ -639,7 +639,7 @@ def build_person_weekly_accounting(
     )
     if acct_df.empty:
         acct_df = pd.DataFrame(columns=["person", "Accounted Non-WIP"])
-    payload = nw_row.get("non_wip_activities", "[]")
+    payload = nw_row.get("crm_non_wip_activities", "[]")
     try:
         activities = json.loads(payload) if isinstance(payload, str) else payload
     except Exception:
