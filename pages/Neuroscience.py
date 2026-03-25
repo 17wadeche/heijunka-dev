@@ -194,7 +194,7 @@ def load_data(data_path: str | None, data_url: str | None):
         return pd.DataFrame()
     return _postprocess(df)
 NAME_ALIASES = {
-    "john smith jr": "John Smith",
+    "Mirlay": "Mirlay Morin",
     "john smith": "John Smith",
 }
 def normalize_person_name(name: str) -> str:
