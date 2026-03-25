@@ -206,7 +206,7 @@ NAME_ALIASES = {
     "dey, pranjal":"Pranjal Dey",
     "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
     "s, giridhar":"Giridhar S",
-    "anwar, mohd faiz":"Mohd Faiz Answar",
+    "anwar, mohd faiz":"Mohd Faiz Anwar",
     "nath, koushik":"Koushik Nath",
     "iligiri, gopikalyani":"Gopikalyani Iligiri",
     "gowda, manjunath":"Manjunath Gowda",
