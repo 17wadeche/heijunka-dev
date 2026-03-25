@@ -212,6 +212,7 @@ NAME_ALIASES = {
     "nath, koushik":"Koushik Nath",
     "iligiri, gopikalyani":"Gopikalyani Iligiri",
     "gowda, manjunath":"Manjunath Gowda",
+    "andrew o":"Andrew",
     "kumar, shailesh":"Shailesh Kumar",
     "mani s.":"Mani",
     "kuche":"Ku Che",
