@@ -203,6 +203,8 @@ NAME_ALIASES = {
     "damahe, jagruti":"Jagruti Damahe",
     "kallagunta, malleshwari":"Malleshwari Kallagunta",
     "s, giridhar":"Giridhar S",
+    "iligiri, gopikalyani":"Gopikalyani Iligiri",
+    "gowda, manjunath":"Manjunath Gowda",
     "goutham kumar, p":"P Goutham Kumar",
 }
 def normalize_person_name(name: str) -> str:
