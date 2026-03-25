@@ -336,7 +336,6 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         if not s:
             rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
             continue
-
         pattern = re.compile(
             r"(?P<num>\d+)\s*(?P<unit>h|hr|hrs|hour|hours|m|min|mins|minute|minutes)?\b",
             re.IGNORECASE,
