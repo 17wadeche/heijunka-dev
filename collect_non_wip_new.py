@@ -194,7 +194,11 @@ def parse_prod_analysis(
             hrs = mins / 60.0
             b["ooo_hours"] += hrs
             if name:
-                b["ooo_by_person"][name] += hrs
+                b["non_wip_activities"].append({
+                    "name": name,
+                    "activity": "OOO",
+                    "hours": round(hrs, 2),
+                })
         act_key = "".join(ch for ch in act.upper() if ch.isalnum())
         is_other_team_wip = (
             flag in other_team_wip_flags
