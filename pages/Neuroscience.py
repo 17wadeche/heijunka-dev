@@ -204,6 +204,7 @@ NAME_ALIASES = {
     "kallagunta, malleshwari":"Malleshwari Kallagunta",
     "gopikalyani ijigiri":"Gopikalyani Iligiri",
     "dey, pranjal":"Pranjal Dey",
+    "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
     "s, giridhar":"Giridhar S",
     "iligiri, gopikalyani":"Gopikalyani Iligiri",
     "gowda, manjunath":"Manjunath Gowda",
