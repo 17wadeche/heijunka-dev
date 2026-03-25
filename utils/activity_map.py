@@ -1898,6 +1898,7 @@ ACTIVITY_MAP = {
     "restore lsh bridge review":"LSH Bridge",
     "rs inbox":"RS Inbox",
     "next gen call":"Next Gen",
+    "korea ri":"RI",
     "meeting & action": "Meeting",
     "cornerston":"Cornerstone",
     "team lead meeting & action": "Meeting",
