@@ -1470,17 +1470,17 @@ has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
 if has_dates and min_date and max_date:
-    if "start_date" not in st.session_state:
+    if "start_date" not in st.session_state or st.session_state["start_date"] is None:
         st.session_state["start_date"] = min_date
-    if "end_date" not in st.session_state:
+    if "end_date" not in st.session_state or st.session_state["end_date"] is None:
+        st.session_state["end_date"] = max_date
+    st.session_state["start_date"] = min(max(st.session_state["start_date"], min_date), max_date)
+    st.session_state["end_date"] = min(max(st.session_state["end_date"], min_date), max_date)
+    if st.session_state["start_date"] > st.session_state["end_date"]:
+        st.session_state["start_date"] = min_date
         st.session_state["end_date"] = max_date
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
-    if start > end:
-        st.error("Start date cannot be after end date!")
-        start, end = min_date, max_date
-        st.session_state["start_date"] = start
-        st.session_state["end_date"] = end
 else:
     start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
@@ -1746,14 +1746,16 @@ if has_dates and min_date and max_date:
     with date_col1:
         st.date_input(
             "Start",
+            value=st.session_state["start_date"],
             min_value=min_date,
-            max_value=max_date,
+            max_value=st.session_state["end_date"],
             key="start_date",
         )
     with date_col2:
         st.date_input(
             "End",
-            min_value=min_date,
+            value=st.session_state["end_date"],
+            min_value=st.session_state["start_date"],
             max_value=max_date,
             key="end_date",
         )
