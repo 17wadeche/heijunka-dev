@@ -3182,7 +3182,6 @@ with right2:
                     )
                     .properties(
                         height=280,
-                        title=f"{picked_person_mix} • time mix over time",
                     )
                 )
                 st.altair_chart(drill, use_container_width=True)
