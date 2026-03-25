@@ -612,29 +612,46 @@ def build_person_weekly_accounting(
     )
     if other_df.empty:
         other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
+    ooo_map = nw_row.get("ooo_by_person", {})
+    if isinstance(ooo_map, str):
+        try:
+            ooo_map = json.loads(ooo_map)
+        except Exception:
+            ooo_map = {}
+    if not isinstance(ooo_map, dict):
+        ooo_map = {}
+    ooo_df = pd.DataFrame(
+        [{"person": str(k).strip(), "OOO Hours": float(v)} for k, v in ooo_map.items()]
+    )
+    if ooo_df.empty:
+        ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
     people = pd.DataFrame({
         "person": sorted(set(
             nw_people["person"].astype(str).tolist()
             + wip_people["person"].astype(str).tolist()
             + other_df["person"].astype(str).tolist()
+            + ooo_df["person"].astype(str).tolist()
         ))
     })
     out = (
         people.merge(nw_people, on="person", how="left")
               .merge(wip_people, on="person", how="left")
               .merge(other_df, on="person", how="left")
+              .merge(ooo_df, on="person", how="left")
               .fillna(0.0)
     )
+    out["OOO Hours"] = np.minimum(out["OOO Hours"], out["Non-WIP Hours"])
     out["Other Team WIP"] = np.minimum(out["Other Team WIP"], out["Non-WIP Hours"])
     out["Accounted Non-WIP"] = (out["Non-WIP Hours"] - out["Other Team WIP"]).clip(lower=0.0)
     out["Unaccounted"] = (
         float(week_hours)
         - out["Completed Hours"]
+        - out["OOO Hours"]
         - out["Other Team WIP"]
         - out["Accounted Non-WIP"]
     ).clip(lower=0.0)
     out["Total Used"] = (
-        out["Completed Hours"] + out["Other Team WIP"] + out["Accounted Non-WIP"]
+        out["Completed Hours"] + out["OOO Hours"] + out["Other Team WIP"] + out["Accounted Non-WIP"]
     )
     out["period_date"] = wk
     out["team"] = team
@@ -1098,7 +1115,7 @@ if nonwip_mode:
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
-                value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
+                value_vars=["OOO Hours","Accounted_Other", "Accounted_NonOther", "Unaccounted"],
                 var_name="Category",
                 value_name="Hours"
             )
@@ -1109,6 +1126,7 @@ if nonwip_mode:
                 "person",
                 "Completed Hours",
                 "Non-WIP Hours",
+                "OOO Hours",
                 "Accounted_Other",
                 "Accounted_NonOther",
                 "Unaccounted"
@@ -1117,13 +1135,15 @@ if nonwip_mode:
             how="left",
         )
         label_map = {
+            "OOO Hours": "OOO",
             "Accounted_Other": "Other Team WIP",
             "Accounted_NonOther": "Accounted Non-WIP",
             "Unaccounted": "Unaccounted",
         }
         stack["CategoryLabel"] = stack["Category"].map(label_map)
         wk_people["StackTotal"] = (
-            wk_people["Accounted_Other"].fillna(0)
+            wk_people["OOO Hours"].fillna(0)
+            + wk_people["Accounted_Other"].fillna(0)
             + wk_people["Accounted_NonOther"].fillna(0)
             + wk_people["Unaccounted"].fillna(0)
         )
@@ -1172,8 +1192,8 @@ if nonwip_mode:
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
-                        range=["#2563eb", "#22c55e", "#9ca3af"],
+                        domain=["OOO", "Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
+                        range=["#a855f7", "#2563eb", "#22c55e", "#9ca3af"],
                     ),
                 ),
                 tooltip=[
@@ -1181,6 +1201,7 @@ if nonwip_mode:
                     alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
                     alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
+                    alt.Tooltip("OOO Hours:Q", title="OOO Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
@@ -1208,6 +1229,7 @@ if nonwip_mode:
                             .sum()
                             .rename(columns={"HoursRaw": "Hours"})
                 )
+                cat = cat[cat["Activity"].astype(str).str.strip().str.upper() != "OOO"].copy()
                 cat = split_nonwip_activity_minutes(cat)
                 if not cat.empty:
                     cat = cat.sort_values("Hours", ascending=False)
