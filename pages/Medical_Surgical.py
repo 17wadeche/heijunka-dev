@@ -659,6 +659,7 @@ def build_person_weekly_accounting(
     metrics_frame: pd.DataFrame,
     nw_frame: pd.DataFrame,
     week_hours: float = 40.0,
+    irl_people: set[str] | None = None,
 ) -> pd.DataFrame:
     wk = pd.to_datetime(week, errors="coerce").normalize()
     long_nw = explode_non_wip_by_person(nw_frame)
@@ -680,44 +681,115 @@ def build_person_weekly_accounting(
     wip_people["person"] = wip_people["person"].astype(str).str.strip()
     wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
     wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
-    acct_other_map, _ = accounted_nonwip_by_person_from_row(nw_row)
+    acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
     other_df = pd.DataFrame(
         [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
     )
     if other_df.empty:
         other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
-    people = pd.DataFrame({
-        "person": sorted(set(
-            nw_people["person"].astype(str).tolist()
-            + wip_people["person"].astype(str).tolist()
-            + other_df["person"].astype(str).tolist()
-        ))
-    })
-    out = (
-        people.merge(nw_people, on="person", how="left")
-              .merge(wip_people, on="person", how="left")
-              .merge(other_df, on="person", how="left")
-              .fillna(0.0)
+    acct_df = pd.DataFrame(
+        [{"person": str(k).strip(), "Accounted Non-WIP": float(v)} for k, v in acct_nonother_map.items()]
     )
-    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], out["Non-WIP Hours"])
-    out["Accounted Non-WIP"] = (out["Non-WIP Hours"] - out["Other Team WIP"]).clip(lower=0.0)
+    if acct_df.empty:
+        acct_df = pd.DataFrame(columns=["person", "Accounted Non-WIP"])
+    payload = nw_row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    ooo_by_person: dict[str, float] = {}
+    if isinstance(activities, list):
+        for item in activities:
+            if not isinstance(item, dict):
+                continue
+            person = normalize_person_name(str(item.get("name", "")).strip())
+            activity = str(item.get("activity", "")).strip().upper()
+            try:
+                hrs = float(item.get("hours", 0) or 0)
+            except Exception:
+                hrs = 0.0
+            if not person or hrs <= 0:
+                continue
+            if activity == "OOO":
+                ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
+    ooo_df = pd.DataFrame(
+        [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
+    )
+    if ooo_df.empty:
+        ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
+    def _clean_person_col(df_in: pd.DataFrame, value_col: str) -> pd.DataFrame:
+        if df_in.empty:
+            return pd.DataFrame(columns=["person", value_col])
+        out = df_in.copy()
+        out["person"] = (
+            out["person"]
+            .astype("string")
+            .fillna("")
+            .map(lambda x: normalize_person_name(str(x).strip()))
+        )
+        out["person"] = out["person"].replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+        out = out.dropna(subset=["person"]).copy()
+        out[value_col] = pd.to_numeric(out[value_col], errors="coerce").fillna(0.0)
+        return out[["person", value_col]]
+    nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
+    wip_people = _clean_person_col(wip_people, "Completed Hours")
+    other_df = _clean_person_col(other_df, "Other Team WIP")
+    acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
+    ooo_df = _clean_person_col(ooo_df, "OOO Hours")
+    nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
+    wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
+    other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
+    acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
+    ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
+    all_people = sorted(
+        set(nw_people["person"].tolist())
+        | set(wip_people["person"].tolist())
+        | set(other_df["person"].tolist())
+        | set(acct_df["person"].tolist())
+        | set(ooo_df["person"].tolist())
+    )
+    people = pd.DataFrame({"person": pd.Series(all_people, dtype="string")})
+    out = (
+        people
+        .merge(nw_people.astype({"person": "string"}), on="person", how="left")
+        .merge(wip_people.astype({"person": "string"}), on="person", how="left")
+        .merge(other_df.astype({"person": "string"}), on="person", how="left")
+        .merge(acct_df.astype({"person": "string"}), on="person", how="left")
+        .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
+        .fillna(0.0)
+    )
+    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    out["Expected Hours"] = np.where(
+        out["person_key"].isin(irl_people_norm),
+        39.0,
+        float(week_hours),
+    )
+    out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
+    out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
+    out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
+    out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
+    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+    non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
+    remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
+    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
     out["Unaccounted"] = (
-        float(week_hours)
+        out["Expected Hours"]
         - out["Completed Hours"]
+        - out["OOO Hours"]
         - out["Other Team WIP"]
         - out["Accounted Non-WIP"]
     ).clip(lower=0.0)
     out["Total Used"] = (
-        out["Completed Hours"] + out["Other Team WIP"] + out["Accounted Non-WIP"]
+        out["Completed Hours"]
+        + out["OOO Hours"]
+        + out["Other Team WIP"]
+        + out["Accounted Non-WIP"]
     )
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
-def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    for c in candidates:
-        if c in df.columns:
-            return c
-    return None
 def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
     col = _find_first_col(
         df,
@@ -2934,362 +3006,381 @@ with mid2:
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
-    st.subheader("WIP vs Non-WIP Breakdown")
-    if len(teams_in_view) != 1:
-        st.caption("Select exactly one team to see the WIP vs Non-WIP breakdown.")
-    else:
-        team_name = teams_in_view[0]
-        if 'ppl_hours' not in locals():
-            ppl_hours = explode_person_hours(f)
-        team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
-        if team_people.empty:
-            st.info(f"No per-person WIP hours available for {team_name}.")
-        else:
-            week_options = sorted(
-                pd.to_datetime(team_people["period_date"].dropna().unique()),
-                reverse=True
+    st.subheader("Hours Trend")
+    _nw = load_non_wip()
+    teams_cfg = load_team_config()
+    irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
+    mix_rows = []
+    nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
+    if not nw_sub.empty:
+        for _, nw_row in nw_sub.iterrows():
+            team = str(nw_row.get("team", "")).strip()
+            wk = pd.to_datetime(nw_row.get("period_date"), errors="coerce")
+            if not team or pd.isna(wk):
+                continue
+            wk = wk.normalize()
+            wk_people = build_person_weekly_accounting(
+                team=team,
+                week=wk,
+                nw_row=nw_row,
+                metrics_frame=f,
+                nw_frame=_nw,
+                week_hours=40.0,
+                irl_people=irl_lookup.get(team, set()),
             )
-            if not week_options:
-                st.info("No weeks available for WIP / Non-WIP breakdown.")
-            else:
-                wk_choice = st.selectbox(
-                    "Week:",
-                    options=week_options,
-                    index=0,
-                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                    key="wip_nonwip_week_select",
+            if wk_people.empty:
+                continue
+            wk_people = wk_people.copy()
+            wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+            wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
+            wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+            wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+            wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people["Denom"] = (
+                wk_people["WIP"]
+                + wk_people["Other Team WIP"]
+                + wk_people["Non-WIP"]
+                + wk_people["OOO"]
+                + wk_people["Unaccounted"]
+            )
+            long_df = wk_people.melt(
+                id_vars=["team", "period_date", "person", "Denom"],
+                value_vars=[
+                    "WIP",
+                    "Other Team WIP",
+                    "Non-WIP",
+                    "OOO",
+                    "Unaccounted",
+                ],
+                var_name="Category",
+                value_name="Hours",
+            )
+            long_df["Pct"] = np.where(
+                long_df["Denom"] > 0,
+                long_df["Hours"] / long_df["Denom"],
+                np.nan,
+            )
+            mix_rows.append(
+                long_df[["team", "period_date", "person", "Category", "Hours", "Pct"]]
+            )
+    person_mix = (
+        pd.concat(mix_rows, ignore_index=True)
+        if mix_rows
+        else pd.DataFrame(columns=["team", "period_date", "person", "Category", "Hours", "Pct"])
+    )
+    person_mix = person_mix.dropna(subset=["period_date", "person", "Pct"]).copy()
+    if person_mix.empty:
+        st.info("No WIP vs Other Team WIP vs Non-WIP vs OOO vs Unaccounted data available.")
+    else:
+        mix_weeks = sorted(person_mix["period_date"].dropna().unique(), reverse=True)
+        picked_mix_week = st.selectbox(
+            "Week",
+            options=mix_weeks,
+            index=0,
+            format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+            key="time_mix_week_right2",
+        )
+        week_mix = person_mix[
+            person_mix["period_date"] == pd.to_datetime(picked_mix_week).normalize()
+        ].copy()
+        chosen_mix_teams = []
+        if multi_team:
+            teams_present = sorted(week_mix["team"].dropna().unique().tolist())
+            chosen_mix_teams = st.multiselect(
+                "Team(s)",
+                options=teams_present,
+                default=teams_present,
+                key="time_mix_teams_right2",
+            )
+            if chosen_mix_teams:
+                week_mix = week_mix[week_mix["team"].isin(chosen_mix_teams)].copy()
+        if week_mix.empty:
+            st.info("No person mix data for that selection.")
+        else:
+            category_domain = [
+                "WIP",
+                "Other Team WIP",
+                "Non-WIP",
+                "OOO",
+                "Unaccounted",
+            ]
+            category_colors = [
+                "#2563eb",  # WIP
+                "#8b5cf6",  # Other Team WIP
+                "#22c55e",  # Non-WIP
+                "#f59e0b",  # OOO
+                "#9ca3af",  # Unaccounted
+            ]
+            category_order_map = {
+                "WIP": 0,
+                "Other Team WIP": 1,
+                "Non-WIP": 2,
+                "OOO": 3,
+                "Unaccounted": 4,
+            }
+            week_mix["Category"] = week_mix["Category"].astype(str).str.strip()
+            week_mix = week_mix[week_mix["Category"].isin(category_domain)].copy()
+            week_mix["CategoryOrder"] = week_mix["Category"].map(category_order_map)
+            week_mix["Pct"] = pd.to_numeric(week_mix["Pct"], errors="coerce").fillna(0.0)
+            week_mix["Hours"] = pd.to_numeric(week_mix["Hours"], errors="coerce").fillna(0.0)
+            top_controls_left, top_controls_right = st.columns([1, 1])
+            with top_controls_left:
+                factor_out_ooo_top = st.toggle(
+                    "Factor out OOO (top chart)",
+                    value=False,
+                    key="time_mix_factor_out_ooo_top_right2",
                 )
-                wk_choice = pd.to_datetime(wk_choice).normalize()
-                wk_people_wip = team_people.loc[team_people["period_date"] == wk_choice].copy()
-                if wk_people_wip.empty:
-                    st.info("No per-person WIP hours available for this week.")
-                wk_people_wip["WIP Hours"] = pd.to_numeric(
-                    wk_people_wip["Actual Hours"],
-                    errors="coerce"
-                ).fillna(0.0)
-                team_week_row = f[
-                    (f["team"] == team_name) &
-                    (f["period_date"] == wk_choice)
-                ]
-                if "Completed Hours" in f.columns and not team_week_row.empty:
-                    ch = pd.to_numeric(team_week_row["Completed Hours"], errors="coerce")
-                    if ch.notna().any() and ch.sum() > 0:
-                        wip_total = float(ch.sum())
-                    else:
-                        wip_total = float(wk_people_wip["WIP Hours"].sum())
-                else:
-                    wip_total = float(wk_people_wip["WIP Hours"].sum())
-                nw_full = load_non_wip()
-                if nw_full.empty:
-                    st.info("No Non-WIP data available; showing WIP only.")
-                    nonwip_total = 0.0
-                    wk_nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
-                    has_nonwip_breakdown = False
-                else:
-                    nw_full = nw_full.copy()
-                    if "period_date" in nw_full.columns:
-                        nw_full["period_date"] = pd.to_datetime(
-                            nw_full["period_date"],
-                            errors="coerce"
-                        ).dt.normalize()
-                    sel_nw = nw_full[
-                        (nw_full["team"] == team_name)
-                        & (nw_full["period_date"] == wk_choice)
-                    ]
-                    if sel_nw.empty:
-                        st.info("No Non-WIP rows found for this team/week.")
-                        nonwip_total = 0.0
-                        wk_nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
-                        has_nonwip_breakdown = False
-                    else:
-                        row_nw = sel_nw.iloc[0]
-                        nonwip_total = float(
-                            pd.to_numeric(
-                                row_nw.get("total_non_wip_hours", 0.0),
-                                errors="coerce"
-                            ) or 0.0
-                        )
-                        long_nw = explode_non_wip_by_person(nw_full)
-                        wk_nw_people = (
-                            long_nw[
-                                (long_nw["team"] == team_name)
-                                & (long_nw["period_date"] == wk_choice)
-                            ]
-                            .copy()
-                        )
-                        has_nonwip_breakdown = (
-                            ("non_wip_activities" in row_nw.index)
-                            and str(row_nw.get("non_wip_activities", "")).strip() not in ("", "[]", "None", "none")
-                            and not wk_nw_people.empty
-                        )
-                        if has_nonwip_breakdown:
-                            wk_nw_people["Non-WIP Hours"] = pd.to_numeric(
-                                wk_nw_people["Non-WIP Hours"],
-                                errors="coerce"
-                            ).fillna(0.0)
-                            acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(row_nw)
-                            wk_nw_people["Accounted_Other"] = wk_nw_people["person"].map(
-                                lambda p: float(acct_other_map.get(str(p).strip(), 0.0))
-                            )
-                            wk_nw_people["Accounted_NonOther"] = wk_nw_people["person"].map(
-                                lambda p: float(acct_nonother_map.get(str(p).strip(), 0.0))
-                            )
-                            wk_nw_people["Accounted_Other"] = wk_nw_people[
-                                ["Accounted_Other", "Non-WIP Hours"]
-                            ].min(axis=1)
-                            remaining = (wk_nw_people["Non-WIP Hours"] - wk_nw_people["Accounted_Other"]).clip(lower=0)
-                            wk_nw_people["Accounted_NonOther"] = np.minimum(
-                                wk_nw_people["Accounted_NonOther"].astype(float),
-                                remaining.astype(float)
-                            )
-                            wk_nw_people["Unaccounted"] = (
-                                wk_nw_people["Non-WIP Hours"]
-                                - wk_nw_people["Accounted_Other"]
-                                - wk_nw_people["Accounted_NonOther"]
-                            ).clip(lower=0)
-                            nonwip_split_total = float(
-                                wk_nw_people[["Accounted_Other", "Accounted_NonOther", "Unaccounted"]]
-                                .sum()
-                                .sum()
-                            )
-                            if nonwip_total <= 0 and nonwip_split_total > 0:
-                                nonwip_total = nonwip_split_total
-                        else:
-                            wk_nw_people["Non-WIP Hours"] = pd.to_numeric(
-                                wk_nw_people.get("Non-WIP Hours", 0.0),
-                                errors="coerce"
-                            ).fillna(0.0)
-                total_chart = None
-                total_segments = []
-                if wip_total > 0:
-                    total_segments.append({
-                        "Segment": "WIP Hours",
-                        "SegmentLabel": "WIP Hours",
-                        "Hours": wip_total,
-                    })
-                if nonwip_total > 0:
-                    if has_nonwip_breakdown and not wk_nw_people.empty:
-                        tot_other = float(wk_nw_people["Accounted_Other"].sum())
-                        tot_nonother = float(wk_nw_people["Accounted_NonOther"].sum())
-                        tot_unacct = float(wk_nw_people["Unaccounted"].sum())
-                        if tot_nonother > 0:
-                            total_segments.append({
-                                "Segment": "Accounted Non-WIP",
-                                "SegmentLabel": "Accounted Non-WIP",
-                                "Hours": tot_nonother,
-                            })
-                        if tot_unacct > 0:
-                            total_segments.append({
-                                "Segment": "Unaccounted Non-WIP",
-                                "SegmentLabel": "Unaccounted Non-WIP",
-                                "Hours": tot_unacct,
-                            })
-                        if tot_other > 0:
-                            total_segments.append({
-                                "Segment": "Other Team WIP",
-                                "SegmentLabel": "Other Team WIP",
-                                "Hours": tot_other,
-                            })
-                    else:
-                        total_segments.append({
-                            "Segment": "Non-WIP Hours",
-                            "SegmentLabel": "Non-WIP Hours",
-                            "Hours": nonwip_total,
-                        })
-                if not total_segments:
-                    st.info("No WIP or Non-WIP hours found for this selection.")
-                else:
-                    total_df = pd.DataFrame(total_segments)
-                    total_df["Bar"] = "Team Total"
-                    tot_hours = float(total_df["Hours"].sum())
-                    nonwip_mask = ~total_df["Segment"].eq("WIP Hours")
-                    nonwip_sum = float(total_df.loc[nonwip_mask, "Hours"].sum())
-                    total_df["Share"] = np.where(tot_hours > 0, total_df["Hours"] / tot_hours, np.nan)
-                    total_df["PctOfTotal"] = total_df["Share"]
-                    total_df["PctOfNonWip"] = np.where(
-                        nonwip_mask & (nonwip_sum > 0),
-                        total_df["Hours"] / nonwip_sum,
+            top_mix = week_mix.copy()
+            if factor_out_ooo_top and not top_mix.empty:
+                weekly_person_totals = (
+                    top_mix.groupby(["period_date", "person"], as_index=False)["Hours"]
+                    .sum()
+                    .rename(columns={"Hours": "TotalHours"})
+                )
+                weekly_ooo = (
+                    top_mix[top_mix["Category"] == "OOO"]
+                    .groupby(["period_date", "person"], as_index=False)["Hours"]
+                    .sum()
+                    .rename(columns={"Hours": "OOOHours"})
+                )
+                weekly_base = weekly_person_totals.merge(
+                    weekly_ooo,
+                    on=["period_date", "person"],
+                    how="left",
+                )
+                weekly_base["OOOHours"] = weekly_base["OOOHours"].fillna(0.0)
+                weekly_base["AdjDenom"] = (
+                    weekly_base["TotalHours"] - weekly_base["OOOHours"]
+                ).clip(lower=0.0)
+                top_mix = top_mix[top_mix["Category"] != "OOO"].copy()
+                top_mix = top_mix.merge(
+                    weekly_base[["period_date", "person", "AdjDenom"]],
+                    on=["period_date", "person"],
+                    how="left",
+                )
+                top_mix["Pct"] = np.where(
+                    top_mix["AdjDenom"] > 0,
+                    top_mix["Hours"] / top_mix["AdjDenom"],
+                    np.nan,
+                )
+                top_mix = top_mix.dropna(subset=["Pct"]).copy()
+            top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
+            top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
+            person_order = (
+                top_mix.groupby("person", as_index=False)["Hours"]
+                .sum()
+                .sort_values("Hours", ascending=False)["person"]
+                .tolist()
+            )
+            label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
+            label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
+            label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
+            label_src = label_src[label_src["Pct"] >= 0.05].copy()
+            bars = alt.Chart(top_mix).mark_bar().encode(
+                x=alt.X(
+                    "person:N",
+                    title="Person",
+                    sort=person_order,
+                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                ),
+                y=alt.Y(
+                    "Pct:Q",
+                    title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
+                    stack="normalize",
+                    axis=alt.Axis(format=".0%"),
+                    scale=alt.Scale(domain=[0, 1]),
+                ),
+                color=alt.Color(
+                    "Category:N",
+                    title="Legend",
+                    scale=alt.Scale(
+                        domain=top_categories,
+                        range=top_colors,
+                    ),
+                    sort=top_categories,
+                    legend=alt.Legend(
+                        orient="top",
+                        direction="horizontal",
+                        title=None,
+                        labelLimit=200,
+                    ),
+                ),
+                order=alt.Order("CategoryOrder:Q", sort="ascending"),
+                tooltip=[
+                    alt.Tooltip("team:N", title="Team"),
+                    alt.Tooltip("person:N", title="Person"),
+                    alt.Tooltip("Category:N", title="Category"),
+                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                    alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                    alt.Tooltip("period_date:T", title="Week"),
+                ],
+            )
+            labels = alt.Chart(label_src).mark_text(
+                color="white",
+                fontSize=11,
+                fontWeight="bold",
+                align="center",
+                baseline="middle",
+            ).encode(
+                x=alt.X("person:N", sort=person_order),
+                y=alt.Y(
+                    "y_mid:Q",
+                    scale=alt.Scale(domain=[0, 1]),
+                    axis=None,
+                ),
+                detail="Category:N",
+                text=alt.Text("Pct:Q", format=".0%"),
+            )
+            top_chart = (bars + labels).properties(height=320)
+            st.altair_chart(top_chart, use_container_width=True)
+            st.markdown("##### Drill-down over time")
+            people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
+            picked_person_mix = st.selectbox(
+                "Person",
+                options=people_for_drill,
+                key="time_mix_person_right2",
+            )
+            drill_controls_left, drill_controls_right = st.columns(2)
+            with drill_controls_left:
+                drill_window = st.segmented_control(
+                    "Weeks",
+                    options=[8, 12, 16],
+                    default=16,
+                    key="time_mix_window_right2",
+                )
+            with drill_controls_right:
+                factor_out_ooo = st.toggle(
+                    "Factor out OOO",
+                    value=False,
+                    key="time_mix_factor_out_ooo_right2",
+                )
+            drill_df = person_mix[person_mix["person"] == picked_person_mix].copy()
+            if multi_team and chosen_mix_teams:
+                drill_df = drill_df[drill_df["team"].isin(chosen_mix_teams)].copy()
+            if drill_df.empty:
+                st.info("No over-time data for that person.")
+            else:
+                drill_df["Category"] = drill_df["Category"].astype(str).str.strip()
+                drill_df = drill_df[drill_df["Category"].isin(category_domain)].copy()
+                drill_df["CategoryOrder"] = drill_df["Category"].map(category_order_map)
+                drill_df["Pct"] = pd.to_numeric(drill_df["Pct"], errors="coerce").fillna(0.0)
+                drill_df["Hours"] = pd.to_numeric(drill_df["Hours"], errors="coerce").fillna(0.0)
+                drill_df["period_date"] = pd.to_datetime(drill_df["period_date"], errors="coerce")
+                latest_weeks = (
+                    pd.Series(drill_df["period_date"].dropna().sort_values().unique()).tolist()
+                )[-int(drill_window):]
+                drill_df = drill_df[drill_df["period_date"].isin(latest_weeks)].copy()
+                if factor_out_ooo and not drill_df.empty:
+                    base_df = drill_df.copy()
+                    weekly_person_totals = (
+                        base_df.groupby(["period_date", "person"], as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "TotalHours"})
+                    )
+                    weekly_ooo = (
+                        base_df[base_df["Category"] == "OOO"]
+                        .groupby(["period_date", "person"], as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "OOOHours"})
+                    )
+                    weekly_base = weekly_person_totals.merge(
+                        weekly_ooo,
+                        on=["period_date", "person"],
+                        how="left",
+                    )
+                    weekly_base["OOOHours"] = weekly_base["OOOHours"].fillna(0.0)
+                    weekly_base["AdjDenom"] = (
+                        weekly_base["TotalHours"] - weekly_base["OOOHours"]
+                    ).clip(lower=0.0)
+                    drill_df = drill_df[drill_df["Category"] != "OOO"].copy()
+                    drill_df = drill_df.merge(
+                        weekly_base[["period_date", "person", "AdjDenom"]],
+                        on=["period_date", "person"],
+                        how="left",
+                    )
+                    drill_df["Pct"] = np.where(
+                        drill_df["AdjDenom"] > 0,
+                        drill_df["Hours"] / drill_df["AdjDenom"],
                         np.nan,
                     )
-                    seg_order = [
-                        "WIP Hours",
-                        "Accounted Non-WIP",
-                        "Unaccounted Non-WIP",
-                        "Other Team WIP",
-                        "Non-WIP Hours",
+                    drill_df = drill_df.dropna(subset=["Pct"]).copy()
+                if drill_df.empty:
+                    st.info("No over-time data for that person after applying filters.")
+                else:
+                    drill_categories = [c for c in category_domain if (not factor_out_ooo or c != "OOO")]
+                    drill_colors = [
+                        category_colors[category_domain.index(c)]
+                        for c in drill_categories
                     ]
-                    total_chart = (
-                        alt.Chart(total_df)
-                        .mark_bar()
+                    drill_df = drill_df.sort_values(["period_date", "CategoryOrder"]).copy()
+                    drill_label_src = drill_df.copy()
+                    drill_label_src["cum_pct"] = drill_label_src.groupby("period_date")["Pct"].cumsum()
+                    drill_label_src["y_mid"] = drill_label_src["cum_pct"] - (drill_label_src["Pct"] / 2.0)
+                    drill_label_src = drill_label_src[drill_label_src["Pct"] >= 0.05].copy()
+                    week_count = max(len(latest_weeks), 1)
+                    drill_width = max(380, min(900, week_count * 52))
+                    drill_bars = (
+                        alt.Chart(drill_df)
+                        .mark_bar(size=28)
                         .encode(
-                            y=alt.Y("Bar:N", title=""),
                             x=alt.X(
-                                "Share:Q",
-                                stack="zero",
-                                axis=alt.Axis(
-                                    title="Share of hours (WIP + Non-WIP)",
-                                    format=".0%"
-                                ),
+                                "period_date:T",
+                                title="Week",
+                                axis=alt.Axis(format="%m/%d", labelAngle=0),
+                            ),
+                            y=alt.Y(
+                                "Pct:Q",
+                                title="% of Time" if not factor_out_ooo else "% of Non-OOO Time",
+                                stack="normalize",
+                                axis=alt.Axis(format=".0%"),
+                                scale=alt.Scale(domain=[0, 1]),
                             ),
                             color=alt.Color(
-                                "SegmentLabel:N",
-                                title="Segment",
-                                sort=seg_order,
+                                "Category:N",
+                                title="Legend",
                                 scale=alt.Scale(
-                                    domain=[
-                                        "WIP Hours",
-                                        "Accounted Non-WIP",
-                                        "Unaccounted Non-WIP",
-                                        "Other Team WIP"
-                                    ],
-                                    range=[
-                                        "#2563eb",  # WIP
-                                        "#22c55e",  # accounted non-wip
-                                        "#9ca3af",  # unaccounted non-wip
-                                        "#6366f1"
-                                    ],
+                                    domain=drill_categories,
+                                    range=drill_colors,
+                                ),
+                                sort=drill_categories,
+                                legend=alt.Legend(
+                                    orient="top",
+                                    direction="horizontal",
+                                    title=None,
+                                    labelLimit=200,
                                 ),
                             ),
+                            order=alt.Order("CategoryOrder:Q", sort="ascending"),
                             tooltip=[
-                                alt.Tooltip("SegmentLabel:N", title="Segment"),
-                                alt.Tooltip("Hours:Q",       title="Hours",        format=",.2f"),
-                                alt.Tooltip("PctOfTotal:Q",  title="% of total",   format=".1%"),
-                                alt.Tooltip("PctOfNonWip:Q", title="% of Non-WIP", format=".1%"),
+                                alt.Tooltip("team:N", title="Team"),
+                                alt.Tooltip("period_date:T", title="Week"),
+                                alt.Tooltip("Category:N", title="Category"),
+                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                                alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
                             ],
                         )
-                        .properties(
-                            height=280
-                        )
-                        .configure_view(stroke=None)
                     )
-                if wip_total <= 0 and (nonwip_total <= 0 or wk_nw_people.empty):
-                    if total_chart is not None:
-                        st.altair_chart(total_chart, use_container_width=True)
-                    st.caption("Per-person breakdown not available for this selection.")
-                else:
-                    wip_person = wk_people_wip[["person", "WIP Hours"]].copy()
-                    if not wk_nw_people.empty:
-                        cols_keep = ["person", "Non-WIP Hours"]
-                        if has_nonwip_breakdown:
-                            cols_keep += ["Accounted_Other", "Accounted_NonOther", "Unaccounted"]
-                        wk_nw_people_agg = (
-                            wk_nw_people[cols_keep]
-                            .groupby("person", as_index=False)
-                            .sum(min_count=1)
-                        )
-                    else:
-                        wk_nw_people_agg = pd.DataFrame(columns=["person", "Non-WIP Hours"])
-                    people_merged = wip_person.merge(
-                        wk_nw_people_agg,
-                        on="person",
-                        how="outer",
-                    ).fillna(0.0)
-                    if "Non-WIP Hours" not in people_merged.columns:
-                        people_merged["Non-WIP Hours"] = 0.0
-                    if has_nonwip_breakdown:
-                        for c in ["Accounted_Other", "Accounted_NonOther", "Unaccounted"]:
-                            if c not in people_merged.columns:
-                                people_merged[c] = 0.0
-                    else:
-                        people_merged["Accounted_Other"] = 0.0
-                        people_merged["Accounted_NonOther"] = 0.0
-                        people_merged["Unaccounted"] = people_merged["Non-WIP Hours"]
-                    people_merged["TotalHours"] = (
-                        people_merged["WIP Hours"] + people_merged["Non-WIP Hours"]
+                    drill_labels = alt.Chart(drill_label_src).mark_text(
+                        color="white",
+                        fontSize=10,
+                        fontWeight="bold",
+                        align="center",
+                        baseline="middle",
+                    ).encode(
+                        x=alt.X("period_date:T"),
+                        y=alt.Y(
+                            "y_mid:Q",
+                            scale=alt.Scale(domain=[0, 1]),
+                            axis=None,
+                        ),
+                        detail="Category:N",
+                        text=alt.Text("Pct:Q", format=".0%"),
                     )
-                    people_merged["NonWipTotal"] = people_merged["Non-WIP Hours"]
-                    seg_cols = [
-                        "WIP Hours",
-                        "Accounted_NonOther",
-                        "Unaccounted",
-                        "Accounted_Other",
-                    ]
-                    seg_label_map = {
-                        "WIP Hours": "WIP Hours",
-                        "Accounted_NonOther": "Accounted Non-WIP",
-                        "Unaccounted": "Unaccounted Non-WIP",
-                        "Accounted_Other": "Other Team WIP",
-                    }
-                    person_long = (
-                        people_merged.melt(
-                            id_vars=["person", "TotalHours", "NonWipTotal"],
-                            value_vars=seg_cols,
-                            var_name="Segment",
-                            value_name="Hours",
-                        )
-                        .query("Hours > 0")
-                        .copy()
+                    drill = (drill_bars + drill_labels).properties(
+                        height=280,
+                        width=drill_width,
                     )
-                    if person_long.empty:
-                        if total_chart is not None:
-                            st.altair_chart(total_chart, use_container_width=True)
-                        st.caption("No per-person hours to show for this selection.")
-                    else:
-                        person_long["SegmentLabel"] = person_long["Segment"].map(seg_label_map)
-                        person_long["PctOfPerson"] = np.where(
-                            person_long["TotalHours"] > 0,
-                            person_long["Hours"] / person_long["TotalHours"],
-                            np.nan,
-                        )
-                        person_long["PctOfNonWip"] = np.where(
-                            person_long["Segment"] == "WIP Hours",
-                            np.nan,
-                            np.where(
-                                person_long["NonWipTotal"] > 0,
-                                person_long["Hours"] / person_long["NonWipTotal"],
-                                np.nan,
-                            ),
-                        )
-                        order_people = sorted(people_merged["person"].astype(str).tolist())
-                        person_chart = (
-                            alt.Chart(person_long)
-                            .mark_bar()
-                            .encode(
-                                x=alt.X(
-                                    "person:N",
-                                    title="Person",
-                                    sort=order_people,
-                                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
-                                ),
-                                y=alt.Y(
-                                    "Hours:Q",
-                                    stack="normalize",
-                                    title="Share of hours (WIP + Non-WIP)",
-                                ),
-                                color=alt.Color(
-                                    "SegmentLabel:N",
-                                    title="Segment",
-                                    scale=alt.Scale(
-                                        domain=[
-                                            "WIP Hours",
-                                            "Accounted Non-WIP",
-                                            "Unaccounted Non-WIP",
-                                            "Other Team WIP",
-                                        ],
-                                        range=[
-                                            "#2563eb",  # WIP
-                                            "#22c55e",  # accounted non-wip
-                                            "#9ca3af",  # unaccounted non-wip
-                                            "#6366f1",  # other team wip
-                                        ],
-                                    ),
-                                ),
-                                tooltip=[
-                                    alt.Tooltip("person:N",       title="Person"),
-                                    alt.Tooltip("SegmentLabel:N", title="Segment"),
-                                    alt.Tooltip("Hours:Q",        title="Hours",        format=",.2f"),
-                                    alt.Tooltip("PctOfPerson:Q",  title="% of person",  format=".1%"),
-                                    alt.Tooltip("PctOfNonWip:Q",  title="% of Non-WIP", format=".1%"),
-                                ],
-                            )
-                            .properties(
-                                height=280,
-                            )
-                            .configure_view(stroke=None)
-                        )
-                        if total_chart is not None:
-                            st.altair_chart(total_chart, use_container_width=True)
-                        st.altair_chart(person_chart, use_container_width=True)
+                    st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
