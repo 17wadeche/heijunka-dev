@@ -198,7 +198,6 @@ NAME_ALIASES = {
     "nikita": "Nikita Schazenbach",
     "jacob": "Jacob Woolley",
     "madison": "Madison Moeller",
-    "pavani uppari":"Uppari Pavani",
     "s, prabhu":"Prabhu S"
 }
 def normalize_person_name(name: str) -> str:
