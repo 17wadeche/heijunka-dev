@@ -295,7 +295,18 @@ def build_activities(ws: pd.DataFrame, people_rows: List[dict], header_row_i: in
             hrs = safe_float(ws.iat[i, c] if c < ws.shape[1] else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": float(round(hrs, 2)),
+            })
+        ooo = float(round(safe_float0(pr.get("C", 0.0)), 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
     return activities
 @dataclass(frozen=True)
 class StandardLayout:
