@@ -3148,7 +3148,7 @@ with right2:
             drill_controls_left, drill_controls_right = st.columns(2)
             with drill_controls_left:
                 drill_window = st.segmented_control(
-                    "Window",
+                    "Weeks",
                     options=[8, 12, 16],
                     default=16,
                     key="time_mix_window_right2",
