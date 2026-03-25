@@ -3101,6 +3101,12 @@ with right2:
                         range=category_colors,
                     ),
                     sort=category_domain,
+                    legend=alt.Legend(
+                        orient="top",
+                        direction="horizontal",
+                        title=None,
+                        labelLimit=200,
+                    ),
                 ),
                 order=alt.Order("CategoryOrder:Q", sort="ascending"),
                 tooltip=[
@@ -3169,6 +3175,12 @@ with right2:
                                 range=category_colors,
                             ),
                             sort=category_domain,
+                            legend=alt.Legend(
+                                orient="top",
+                                direction="horizontal",
+                                title=None,
+                                labelLimit=200,
+                            ),
                         ),
                         order=alt.Order("CategoryOrder:Q", sort="ascending"),
                         tooltip=[
