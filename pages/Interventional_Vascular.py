@@ -653,6 +653,7 @@ def build_person_weekly_accounting(
               .fillna(0.0)
     )
     out["OOO Hours"] = np.minimum(out["OOO Hours"], out["Non-WIP Hours"])
+    non_ooo_nonwip = (out["Non-WIP Hours"] - out["OOO Hours"]).clip(lower=0.0)
     out["Other Team WIP"] = np.minimum(out["Other Team WIP"], out["Non-WIP Hours"])
     out["Accounted Non-WIP"] = (out["Non-WIP Hours"] - out["Other Team WIP"]).clip(lower=0.0)
     out["Unaccounted"] = (
