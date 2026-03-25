@@ -2953,7 +2953,7 @@ with mid2:
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right2:
-    st.subheader("Completed vs Other Team WIP vs Accounted Non-WIP vs OOO vs Unaccounted")
+    st.subheader("Hours Trend")
     _nw = load_non_wip()
     teams_cfg = load_team_config()
     irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
