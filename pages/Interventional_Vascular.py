@@ -1068,6 +1068,12 @@ if nonwip_mode:
     else:
         pct_in_wip = float(row.get("% in WIP", np.nan))
         pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    include_ooo_in_kpi_pct = st.toggle(
+        "Include OOO Hours in KPI % of capacity",
+        value=True,
+        key="include_ooo_in_kpi_pct",
+        help="When off, OOO Hours shows 0.0% of capacity and other KPI percentages are calculated against capacity excluding OOO hours.",
+    )
     def colored_percent_metric(container, label: str, value: float | None, threshold=80.0):
         if pd.isna(value):
             container.metric(label, "—")
@@ -1125,17 +1131,37 @@ if nonwip_mode:
         if pd.notna(capacity_val)
         else np.nan
     )
-    wip_pct = (wip_hours_val / capacity_val) if pd.notna(wip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    nonwip_pct = (nonwip_hours_val / capacity_val) if pd.notna(nonwip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    ooo_pct = (ooo_hours_val / capacity_val) if pd.notna(ooo_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    unaccounted_pct = (unaccounted_hours_val / capacity_val) if pd.notna(unaccounted_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    capacity_pct_basis = capacity_val
+    if not include_ooo_in_kpi_pct and pd.notna(capacity_val):
+        capacity_pct_basis = max(float(capacity_val) - float(ooo_hours_val), 0.0)
+
+    wip_pct = (
+        wip_hours_val / capacity_pct_basis
+        if pd.notna(wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    nonwip_pct = (
+        nonwip_hours_val / capacity_pct_basis
+        if pd.notna(nonwip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    ooo_pct = (
+        (ooo_hours_val / capacity_pct_basis)
+        if include_ooo_in_kpi_pct and pd.notna(ooo_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else 0.0
+    )
+    unaccounted_pct = (
+        unaccounted_hours_val / capacity_pct_basis
+        if pd.notna(unaccounted_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
     kpi_card(
         c1,
         "WIP Hours",
         wip_hours_val,
         fmt="{:,.1f}",
         color=percent_color(wip_pct, threshold=0.80, invert=False),
-        subtext=_capacity_subtext(wip_hours_val, capacity_val),
+        subtext=_capacity_subtext(wip_hours_val, capacity_pct_basis),
     )
     kpi_card(
         c2,
@@ -1143,21 +1169,24 @@ if nonwip_mode:
         nonwip_hours_val,
         fmt="{:,.1f}",
         color=percent_color(nonwip_pct, threshold=0.20, invert=True),
-        subtext=_capacity_subtext(nonwip_hours_val, capacity_val),
+        subtext=_capacity_subtext(nonwip_hours_val, capacity_pct_basis),
     )
     kpi_card(
         c3,
         "OOO Hours",
         ooo_hours_val,
         fmt="{:,.1f}",
-        subtext=_capacity_subtext(ooo_hours_val, capacity_val),
+        subtext=_capacity_subtext(
+            0.0 if not include_ooo_in_kpi_pct else ooo_hours_val,
+            capacity_pct_basis,
+        ),
     )
     kpi_card(
         c4,
         "Unaccounted Hours",
         unaccounted_hours_val,
         fmt="{:,.1f}",
-        subtext=_capacity_subtext(unaccounted_hours_val, capacity_val),
+        subtext=_capacity_subtext(unaccounted_hours_val, capacity_pct_basis),
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
