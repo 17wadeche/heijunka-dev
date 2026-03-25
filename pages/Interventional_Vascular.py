@@ -3058,20 +3058,24 @@ with right2:
                 "#f59e0b",  # OOO
                 "#9ca3af",  # Unaccounted
             ]
-            week_mix["Category"] = pd.Categorical(
-                week_mix["Category"],
-                categories=category_domain,
-                ordered=True,
-            )
+            category_order_map = {
+                "Completed Time": 0,
+                "Other Team WIP": 1,
+                "Accounted Non-WIP": 2,
+                "OOO": 3,
+                "Unaccounted": 4,
+            }
+            week_mix["Category"] = week_mix["Category"].astype(str).str.strip()
+            week_mix = week_mix[week_mix["Category"].isin(category_domain)].copy()
+            week_mix["CategoryOrder"] = week_mix["Category"].map(category_order_map)
+            week_mix["Pct"] = pd.to_numeric(week_mix["Pct"], errors="coerce").fillna(0.0)
             person_order = (
                 week_mix.groupby("person", as_index=False)["Hours"]
                 .sum()
                 .sort_values("Hours", ascending=False)["person"]
                 .tolist()
             )
-            label_src = week_mix.copy()
-            label_src = label_src.sort_values(["person", "Category"])
-            label_src["Pct"] = pd.to_numeric(label_src["Pct"], errors="coerce").fillna(0.0)
+            label_src = week_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
             label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
             label_src = label_src[label_src["Pct"] >= 0.05].copy()
@@ -3096,8 +3100,9 @@ with right2:
                         domain=category_domain,
                         range=category_colors,
                     ),
+                    sort=category_domain,
                 ),
-                order=alt.Order("Category:N", sort="ascending"),
+                order=alt.Order("CategoryOrder:Q", sort="ascending"),
                 tooltip=[
                     alt.Tooltip("team:N", title="Team"),
                     alt.Tooltip("person:N", title="Person"),
@@ -3141,11 +3146,10 @@ with right2:
             if drill_df.empty:
                 st.info("No over-time data for that person.")
             else:
-                drill_df["Category"] = pd.Categorical(
-                    drill_df["Category"],
-                    categories=category_domain,
-                    ordered=True,
-                )
+                drill_df["Category"] = drill_df["Category"].astype(str).str.strip()
+                drill_df = drill_df[drill_df["Category"].isin(category_domain)].copy()
+                drill_df["CategoryOrder"] = drill_df["Category"].map(category_order_map)
+                drill_df["Pct"] = pd.to_numeric(drill_df["Pct"], errors="coerce").fillna(0.0)
                 drill = (
                     alt.Chart(drill_df)
                     .mark_bar()
@@ -3165,8 +3169,9 @@ with right2:
                                 domain=category_domain,
                                 range=category_colors,
                             ),
+                            sort=category_domain,
                         ),
-                        order=alt.Order("Category:N", sort="ascending"),
+                        order=alt.Order("CategoryOrder:Q", sort="ascending"),
                         tooltip=[
                             alt.Tooltip("team:N", title="Team"),
                             alt.Tooltip("period_date:T", title="Week"),
