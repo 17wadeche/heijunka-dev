@@ -606,12 +606,17 @@ def build_person_weekly_accounting(
     wip_people["person"] = wip_people["person"].astype(str).str.strip()
     wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
     wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
-    acct_other_map, _ = accounted_nonwip_by_person_from_row(nw_row)
+    acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
     other_df = pd.DataFrame(
         [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
     )
     if other_df.empty:
         other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
+    acct_df = pd.DataFrame(
+        [{"person": str(k).strip(), "Accounted Non-WIP": float(v)} for k, v in acct_nonother_map.items()]
+    )
+    if acct_df.empty:
+        acct_df = pd.DataFrame(columns=["person", "Accounted Non-WIP"])
     payload = nw_row.get("non_wip_activities", "[]")
     try:
         activities = json.loads(payload) if isinstance(payload, str) else payload
@@ -642,23 +647,27 @@ def build_person_weekly_accounting(
             nw_people["person"].astype(str).tolist()
             + wip_people["person"].astype(str).tolist()
             + other_df["person"].astype(str).tolist()
+            + acct_df["person"].astype(str).tolist()
             + ooo_df["person"].astype(str).tolist()
         ))
     })
     out = (
         people.merge(nw_people, on="person", how="left")
-              .merge(wip_people, on="person", how="left")
-              .merge(other_df, on="person", how="left")
-              .merge(ooo_df, on="person", how="left")
-              .fillna(0.0)
+            .merge(wip_people, on="person", how="left")
+            .merge(other_df, on="person", how="left")
+            .merge(acct_df, on="person", how="left")
+            .merge(ooo_df, on="person", how="left")
+            .fillna(0.0)
     )
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
     out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
-    non_ooo_nonwip = (out["Non-WIP Hours"] - out["OOO Hours"]).clip(lower=0.0)
-    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_nonwip)
-    out["Accounted Non-WIP"] = (non_ooo_nonwip - out["Other Team WIP"]).clip(lower=0.0)
+    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+    non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
+    remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
+    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
     out["Unaccounted"] = (
         float(week_hours)
         - out["Completed Hours"]
