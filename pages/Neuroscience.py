@@ -196,9 +196,6 @@ def load_data(data_path: str | None, data_url: str | None):
 NAME_ALIASES = {
     "john smith jr": "John Smith",
     "john smith": "John Smith",
-    "j. smith": "John Smith",
-    "mary-ann lee": "Mary Ann Lee",
-    "mary ann lee": "Mary Ann Lee",
 }
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
@@ -573,7 +570,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                 "person": normalize_person_name(person)
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=["team", "period_date", "person"])
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
@@ -615,7 +612,10 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
                 "Available Hours": t,
                 "Utilization": util
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(
+        rows,
+        columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"]
+    )
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
