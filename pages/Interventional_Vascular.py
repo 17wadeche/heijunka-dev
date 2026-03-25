@@ -31,12 +31,11 @@ def _fmt_hours_minutes(x) -> str:
     if h and not m:
         return f"{h}h"
     return f"{m}m"
-TEAMS_CONFIG_PATH = Path(r"C:\heijunka-dev\teams.json")
+from pathlib import Path
+TEAMS_CONFIG_PATH = Path(__file__).resolve().parents[1] / "teams.json"
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_team_config(config_path: str | None = None) -> dict:
-    p = Path(config_path or TEAMS_CONFIG_PATH)
-    if not p.exists():
-        return {}
+    p = Path(config_path) if config_path else TEAMS_CONFIG_PATH
     try:
         with open(p, "r", encoding="utf-8") as f:
             obj = json.load(f)
@@ -44,22 +43,15 @@ def load_team_config(config_path: str | None = None) -> dict:
     except Exception:
         return {}
 def irl_people_for_team(team: str, config: dict) -> set[str]:
-    team_norm = str(team).strip().lower()
-    def _extract(node) -> set[str]:
-        if not isinstance(node, dict):
-            return set()
-        for k, v in node.items():
-            if str(k).strip().lower() == team_norm and isinstance(v, dict):
-                raw = v.get("irl_people", [])
-                if isinstance(raw, list):
-                    return {str(x).strip() for x in raw if str(x).strip()}
-        for v in node.values():
-            if isinstance(v, dict):
-                found = _extract(v)
-                if found:
-                    return found
+    if not isinstance(config, dict):
         return set()
-    return _extract(config)
+    team_cfg = config.get(str(team).strip(), {})
+    if not isinstance(team_cfg, dict):
+        return set()
+    raw = team_cfg.get("irl_people", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x).strip() for x in raw if str(x).strip()}
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
     if nw_url:
@@ -1163,6 +1155,8 @@ if nonwip_mode:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
     teams_cfg = load_team_config()
+    st.write("teams path:", str(TEAMS_CONFIG_PATH))
+    st.write("teams keys:", sorted(teams_cfg.keys()) if isinstance(teams_cfg, dict) else "not dict")
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     st.write("IRL people found:", sorted(team_irl_people))
     wk_people = build_person_weekly_accounting(
