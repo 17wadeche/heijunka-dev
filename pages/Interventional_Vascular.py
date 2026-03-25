@@ -31,6 +31,24 @@ def _fmt_hours_minutes(x) -> str:
     if h and not m:
         return f"{h}h"
     return f"{m}m"
+TEAMS_CONFIG_PATH = Path(r"C:\heijunka-dev\teams.json")
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_team_config(config_path: str | None = None) -> dict:
+    p = Path(config_path or TEAMS_CONFIG_PATH)
+    if not p.exists():
+        return {}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+def irl_people_for_team(team: str, config: dict) -> set[str]:
+    team_cfg = config.get(team, {}) if isinstance(config, dict) else {}
+    raw = team_cfg.get("irl_people", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x).strip() for x in raw if str(x).strip()}
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
     if nw_url:
@@ -585,6 +603,7 @@ def build_person_weekly_accounting(
     metrics_frame: pd.DataFrame,
     nw_frame: pd.DataFrame,
     week_hours: float = 40.0,
+    irl_people: set[str] | None = None,
 ) -> pd.DataFrame:
     wk = pd.to_datetime(week, errors="coerce").normalize()
     long_nw = explode_non_wip_by_person(nw_frame)
@@ -659,6 +678,12 @@ def build_person_weekly_accounting(
             .merge(ooo_df, on="person", how="left")
             .fillna(0.0)
     )
+    irl_people = irl_people or set()
+    out["Expected Hours"] = np.where(
+        out["person"].astype(str).str.strip().isin(irl_people),
+        39.0,
+        float(week_hours),
+    )
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
@@ -669,7 +694,7 @@ def build_person_weekly_accounting(
     remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
     out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
     out["Unaccounted"] = (
-        float(week_hours)
+        out["Expected Hours"]
         - out["Completed Hours"]
         - out["OOO Hours"]
         - out["Other Team WIP"]
@@ -1125,6 +1150,8 @@ if nonwip_mode:
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
@@ -1132,6 +1159,7 @@ if nonwip_mode:
         metrics_frame=df,
         nw_frame=nw,
         week_hours=40.0,
+        irl_people=team_irl_people,
     )
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
