@@ -194,8 +194,8 @@ def load_data(data_path: str | None, data_url: str | None):
         return pd.DataFrame()
     return _postprocess(df)
 NAME_ALIASES = {
-    "Mirlay": "Mirlay Morin",
-    "Nikita": "Nikita Schazenbach",
+    "mirlay": "Mirlay Morin",
+    "nikita": "Nikita Schazenbach",
 }
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
@@ -523,6 +523,9 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
             tgtv = pd.to_numeric(tgtv, errors="coerce")
             if pd.isna(outv) and pd.isna(tgtv):
                 continue
+            val = str(k).strip()
+            if key_label == "person":
+                val = normalize_person_name(val)
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
