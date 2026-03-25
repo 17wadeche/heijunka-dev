@@ -44,11 +44,22 @@ def load_team_config(config_path: str | None = None) -> dict:
     except Exception:
         return {}
 def irl_people_for_team(team: str, config: dict) -> set[str]:
-    team_cfg = config.get(team, {}) if isinstance(config, dict) else {}
-    raw = team_cfg.get("irl_people", [])
-    if not isinstance(raw, list):
+    team_norm = str(team).strip().lower()
+    def _extract(node) -> set[str]:
+        if not isinstance(node, dict):
+            return set()
+        for k, v in node.items():
+            if str(k).strip().lower() == team_norm and isinstance(v, dict):
+                raw = v.get("irl_people", [])
+                if isinstance(raw, list):
+                    return {str(x).strip() for x in raw if str(x).strip()}
+        for v in node.values():
+            if isinstance(v, dict):
+                found = _extract(v)
+                if found:
+                    return found
         return set()
-    return {str(x).strip() for x in raw if str(x).strip()}
+    return _extract(config)
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
     if nw_url:
@@ -678,9 +689,10 @@ def build_person_weekly_accounting(
             .merge(ooo_df, on="person", how="left")
             .fillna(0.0)
     )
-    irl_people = irl_people or set()
+    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
     out["Expected Hours"] = np.where(
-        out["person"].astype(str).str.strip().isin(irl_people),
+        out["person_key"].isin(irl_people_norm),
         39.0,
         float(week_hours),
     )
@@ -1152,6 +1164,7 @@ if nonwip_mode:
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    st.write("IRL people found:", sorted(team_irl_people))
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
