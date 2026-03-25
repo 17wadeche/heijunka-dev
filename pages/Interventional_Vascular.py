@@ -3017,7 +3017,7 @@ with right2:
     )
     person_mix = person_mix.dropna(subset=["period_date", "person", "Pct"]).copy()
     if person_mix.empty:
-        st.info("No Completed vs Other Team WIP vs Accounted Non-WIP vs OOO vs Unaccounted data available.")
+        st.info("No WIP vs Other Team WIP vs Non-WIP vs OOO vs Unaccounted data available.")
     else:
         mix_weeks = sorted(person_mix["period_date"].dropna().unique(), reverse=True)
         picked_mix_week = st.selectbox(
@@ -3052,9 +3052,9 @@ with right2:
                 "Unaccounted",
             ]
             category_colors = [
-                "#2563eb",  # Completed Time
+                "#2563eb",  # WIP
                 "#8b5cf6",  # Other Team WIP
-                "#22c55e",  # Accounted Non-WIP
+                "#22c55e",  # Non-WIP
                 "#f59e0b",  # OOO
                 "#9ca3af",  # Unaccounted
             ]
@@ -3069,17 +3069,61 @@ with right2:
             week_mix = week_mix[week_mix["Category"].isin(category_domain)].copy()
             week_mix["CategoryOrder"] = week_mix["Category"].map(category_order_map)
             week_mix["Pct"] = pd.to_numeric(week_mix["Pct"], errors="coerce").fillna(0.0)
+            week_mix["Hours"] = pd.to_numeric(week_mix["Hours"], errors="coerce").fillna(0.0)
+            top_controls_left, top_controls_right = st.columns([1, 1])
+            with top_controls_left:
+                factor_out_ooo_top = st.toggle(
+                    "Factor out OOO (top chart)",
+                    value=False,
+                    key="time_mix_factor_out_ooo_top_right2",
+                )
+            top_mix = week_mix.copy()
+            if factor_out_ooo_top and not top_mix.empty:
+                weekly_person_totals = (
+                    top_mix.groupby(["period_date", "person"], as_index=False)["Hours"]
+                    .sum()
+                    .rename(columns={"Hours": "TotalHours"})
+                )
+                weekly_ooo = (
+                    top_mix[top_mix["Category"] == "OOO"]
+                    .groupby(["period_date", "person"], as_index=False)["Hours"]
+                    .sum()
+                    .rename(columns={"Hours": "OOOHours"})
+                )
+                weekly_base = weekly_person_totals.merge(
+                    weekly_ooo,
+                    on=["period_date", "person"],
+                    how="left",
+                )
+                weekly_base["OOOHours"] = weekly_base["OOOHours"].fillna(0.0)
+                weekly_base["AdjDenom"] = (
+                    weekly_base["TotalHours"] - weekly_base["OOOHours"]
+                ).clip(lower=0.0)
+                top_mix = top_mix[top_mix["Category"] != "OOO"].copy()
+                top_mix = top_mix.merge(
+                    weekly_base[["period_date", "person", "AdjDenom"]],
+                    on=["period_date", "person"],
+                    how="left",
+                )
+                top_mix["Pct"] = np.where(
+                    top_mix["AdjDenom"] > 0,
+                    top_mix["Hours"] / top_mix["AdjDenom"],
+                    np.nan,
+                )
+                top_mix = top_mix.dropna(subset=["Pct"]).copy()
+            top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
+            top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
             person_order = (
-                week_mix.groupby("person", as_index=False)["Hours"]
+                top_mix.groupby("person", as_index=False)["Hours"]
                 .sum()
                 .sort_values("Hours", ascending=False)["person"]
                 .tolist()
             )
-            label_src = week_mix.sort_values(["person", "CategoryOrder"]).copy()
+            label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
             label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
             label_src = label_src[label_src["Pct"] >= 0.05].copy()
-            bars = alt.Chart(week_mix).mark_bar().encode(
+            bars = alt.Chart(top_mix).mark_bar().encode(
                 x=alt.X(
                     "person:N",
                     title="Person",
@@ -3088,7 +3132,7 @@ with right2:
                 ),
                 y=alt.Y(
                     "Pct:Q",
-                    title="% of Time",
+                    title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
                     stack="normalize",
                     axis=alt.Axis(format=".0%"),
                     scale=alt.Scale(domain=[0, 1]),
@@ -3097,10 +3141,10 @@ with right2:
                     "Category:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=category_domain,
-                        range=category_colors,
+                        domain=top_categories,
+                        range=top_colors,
                     ),
-                    sort=category_domain,
+                    sort=top_categories,
                     legend=alt.Legend(
                         orient="top",
                         direction="horizontal",
@@ -3134,12 +3178,10 @@ with right2:
                 detail="Category:N",
                 text=alt.Text("Pct:Q", format=".0%"),
             )
-            top_chart = (bars + labels).properties(
-                height=320,
-            )
+            top_chart = (bars + labels).properties(height=320)
             st.altair_chart(top_chart, use_container_width=True)
             st.markdown("##### Drill-down over time")
-            people_for_drill = sorted(week_mix["person"].dropna().unique().tolist())
+            people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
             picked_person_mix = st.selectbox(
                 "Person",
                 options=people_for_drill,
@@ -3172,8 +3214,7 @@ with right2:
                 drill_df["Hours"] = pd.to_numeric(drill_df["Hours"], errors="coerce").fillna(0.0)
                 drill_df["period_date"] = pd.to_datetime(drill_df["period_date"], errors="coerce")
                 latest_weeks = (
-                    pd.Series(drill_df["period_date"].dropna().sort_values().unique())
-                    .tolist()
+                    pd.Series(drill_df["period_date"].dropna().sort_values().unique()).tolist()
                 )[-int(drill_window):]
                 drill_df = drill_df[drill_df["period_date"].isin(latest_weeks)].copy()
                 if factor_out_ooo and not drill_df.empty:
@@ -3218,11 +3259,22 @@ with right2:
                         category_colors[category_domain.index(c)]
                         for c in drill_categories
                     ]
-                    drill = (
+                    drill_df = drill_df.sort_values(["period_date", "CategoryOrder"]).copy()
+                    drill_label_src = drill_df.copy()
+                    drill_label_src["cum_pct"] = drill_label_src.groupby("period_date")["Pct"].cumsum()
+                    drill_label_src["y_mid"] = drill_label_src["cum_pct"] - (drill_label_src["Pct"] / 2.0)
+                    drill_label_src = drill_label_src[drill_label_src["Pct"] >= 0.05].copy()
+                    week_count = max(len(latest_weeks), 1)
+                    drill_width = max(380, min(900, week_count * 52))
+                    drill_bars = (
                         alt.Chart(drill_df)
-                        .mark_bar()
+                        .mark_bar(size=34)
                         .encode(
-                            x=alt.X("period_date:T", title="Week"),
+                            x=alt.X(
+                                "period_date:T",
+                                title="Week",
+                                axis=alt.Axis(format="%m/%d", labelAngle=0),
+                            ),
                             y=alt.Y(
                                 "Pct:Q",
                                 title="% of Time" if not factor_out_ooo else "% of Non-OOO Time",
@@ -3254,10 +3306,29 @@ with right2:
                                 alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
                             ],
                         )
-                        .properties(
-                            height=280,
-                        )
                     )
+                    drill_labels = alt.Chart(drill_label_src).mark_text(
+                        color="white",
+                        fontSize=10,
+                        fontWeight="bold",
+                        align="center",
+                        baseline="middle",
+                    ).encode(
+                        x=alt.X("period_date:T"),
+                        y=alt.Y(
+                            "y_mid:Q",
+                            scale=alt.Scale(domain=[0, 1]),
+                            axis=None,
+                        ),
+                        detail="Category:N",
+                        text=alt.Text("Pct:Q", format=".0%"),
+                    )
+
+                    drill = (drill_bars + drill_labels).properties(
+                        height=280,
+                        width=drill_width,
+                    )
+
                     st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
