@@ -940,6 +940,63 @@ def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station:
     )
     keep = ["period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"]
     return m[keep].sort_values(["period_date","person"])
+def build_person_time_mix_over_time(
+    metrics_frame: pd.DataFrame,
+    nw_frame: pd.DataFrame,
+    teams_in_view: list[str],
+    irl_people_lookup: dict[str, set[str]] | None = None,
+    week_hours: float = 40.0,
+) -> pd.DataFrame:
+    cols = ["team", "period_date", "person", "Category", "Hours", "Pct"]
+    if metrics_frame.empty or nw_frame.empty or not teams_in_view:
+        return pd.DataFrame(columns=cols)
+    irl_people_lookup = irl_people_lookup or {}
+    out = []
+    nw_sub = nw_frame[nw_frame["team"].isin(teams_in_view)].copy()
+    if nw_sub.empty:
+        return pd.DataFrame(columns=cols)
+    for _, nw_row in nw_sub.iterrows():
+        team = str(nw_row.get("team", "")).strip()
+        wk = pd.to_datetime(nw_row.get("period_date"), errors="coerce")
+        if not team or pd.isna(wk):
+            continue
+        wk = wk.normalize()
+        wk_people = build_person_weekly_accounting(
+            team=team,
+            week=wk,
+            nw_row=nw_row,
+            metrics_frame=metrics_frame,
+            nw_frame=nw_frame,
+            week_hours=week_hours,
+            irl_people=irl_people_lookup.get(team, set()),
+        )
+        if wk_people.empty:
+            continue
+        wk_people = wk_people.copy()
+        wk_people["Completed Time"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+        wk_people["Non-WIP"] = (
+            pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+        )
+        wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+        wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+        wk_people["Denom"] = (
+            wk_people["Completed Time"]
+            + wk_people["Non-WIP"]
+            + wk_people["OOO"]
+            + wk_people["Unaccounted"]
+        )
+        long_df = wk_people.melt(
+            id_vars=["team", "period_date", "person", "Denom"],
+            value_vars=["Completed Time", "Non-WIP", "OOO", "Unaccounted"],
+            var_name="Category",
+            value_name="Hours",
+        )
+        long_df["Pct"] = np.where(long_df["Denom"] > 0, long_df["Hours"] / long_df["Denom"], np.nan)
+        out.append(long_df[cols])
+    if not out:
+        return pd.DataFrame(columns=cols)
+    return pd.concat(out, ignore_index=True)
 def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
     if outp.empty:
@@ -2895,6 +2952,142 @@ with mid2:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
+with right2:
+    st.subheader("Completed vs Non-WIP vs OOO vs Unaccounted")
+    _nw = load_non_wip()
+    teams_cfg = load_team_config()
+    irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
+    person_mix = build_person_time_mix_over_time(
+        metrics_frame=f,
+        nw_frame=_nw,
+        teams_in_view=teams_in_view,
+        irl_people_lookup=irl_lookup,
+        week_hours=40.0,
+    ).dropna(subset=["period_date", "person", "Pct"]).copy()
+    if person_mix.empty:
+        st.info("No Completed vs Non-WIP vs OOO vs Unaccounted data available.")
+    else:
+        mix_weeks = sorted(person_mix["period_date"].dropna().unique(), reverse=True)
+        picked_mix_week = st.selectbox(
+            "Week",
+            options=mix_weeks,
+            index=0,
+            format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+            key="time_mix_week_right2",
+        )
+        week_mix = person_mix[
+            person_mix["period_date"] == pd.to_datetime(picked_mix_week).normalize()
+        ].copy()
+        if multi_team:
+            teams_present = sorted(week_mix["team"].dropna().unique().tolist())
+            chosen_mix_teams = st.multiselect(
+                "Team(s)",
+                options=teams_present,
+                default=teams_present,
+                key="time_mix_teams_right2",
+            )
+            if chosen_mix_teams:
+                week_mix = week_mix[week_mix["team"].isin(chosen_mix_teams)].copy()
+        if week_mix.empty:
+            st.info("No person mix data for that selection.")
+        else:
+            person_order = (
+                week_mix.groupby("person", as_index=False)["Hours"]
+                .sum()
+                .sort_values("Hours", ascending=False)["person"]
+                .tolist()
+            )
+            bars = alt.Chart(week_mix).mark_bar().encode(
+                x=alt.X(
+                    "person:N",
+                    title="Person",
+                    sort=person_order,
+                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                ),
+                y=alt.Y(
+                    "Pct:Q",
+                    title="% of Time",
+                    stack="normalize",
+                    axis=alt.Axis(format=".0%"),
+                    scale=alt.Scale(domain=[0, 1]),
+                ),
+                color=alt.Color(
+                    "Category:N",
+                    title="Legend",
+                    scale=alt.Scale(
+                        domain=["Completed Time", "Non-WIP", "OOO", "Unaccounted"],
+                        range=["#7c3aed", "#22c55e", "#a855f7", "#9ca3af"],
+                    ),
+                ),
+                tooltip=[
+                    alt.Tooltip("team:N", title="Team"),
+                    alt.Tooltip("person:N", title="Person"),
+                    alt.Tooltip("Category:N", title="Category"),
+                    alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                    alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                    alt.Tooltip("period_date:T", title="Week"),
+                ],
+            )
+            label_src = week_mix[week_mix["Pct"] >= 0.05].copy()
+            labels = alt.Chart(label_src).mark_text(
+                color="white",
+                fontSize=11,
+                fontWeight="bold",
+            ).encode(
+                x=alt.X("person:N", sort=person_order),
+                y=alt.Y("Pct:Q", stack="normalize"),
+                detail="Category:N",
+                text=alt.Text("Pct:Q", format=".0%"),
+            )
+            top_chart = (bars + labels).properties(
+                height=320,
+                title="Per-person weekly time mix",
+            )
+            st.altair_chart(top_chart, use_container_width=True)
+            st.markdown("##### Drill-down over time")
+            people_for_drill = sorted(week_mix["person"].dropna().unique().tolist())
+            picked_person_mix = st.selectbox(
+                "Person",
+                options=people_for_drill,
+                key="time_mix_person_right2",
+            )
+            drill_df = person_mix[person_mix["person"] == picked_person_mix].copy()
+            if multi_team and "chosen_mix_teams" in locals() and chosen_mix_teams:
+                drill_df = drill_df[drill_df["team"].isin(chosen_mix_teams)].copy()
+            drill = (
+                alt.Chart(drill_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("period_date:T", title="Week"),
+                    y=alt.Y(
+                        "Pct:Q",
+                        title="% of Time",
+                        stack="normalize",
+                        axis=alt.Axis(format=".0%"),
+                        scale=alt.Scale(domain=[0, 1]),
+                    ),
+                    color=alt.Color(
+                        "Category:N",
+                        title="Legend",
+                        scale=alt.Scale(
+                            domain=["Completed Time", "Non-WIP", "OOO", "Unaccounted"],
+                            range=["#7c3aed", "#22c55e", "#a855f7", "#9ca3af"],
+                        ),
+                    ),
+                    tooltip=[
+                        alt.Tooltip("team:N", title="Team"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                        alt.Tooltip("Category:N", title="Category"),
+                        alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                        alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                    ],
+                )
+                .properties(
+                    height=280,
+                    title=f"{picked_person_mix} • time mix over time",
+                )
+            )
+            st.altair_chart(drill, use_container_width=True)
 if len(teams_in_view) == 1:
     team_name = teams_in_view[0]
     st.subheader(f"{team_name} • Multi-Axis View")
