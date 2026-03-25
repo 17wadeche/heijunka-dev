@@ -115,7 +115,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Non-WIP Hours": v
             })
     out = pd.DataFrame(rows, columns=cols)
@@ -193,6 +193,18 @@ def load_data(data_path: str | None, data_url: str | None):
     else:
         return pd.DataFrame()
     return _postprocess(df)
+NAME_ALIASES = {
+    "john smith jr": "John Smith",
+    "john smith": "John Smith",
+    "j. smith": "John Smith",
+    "mary-ann lee": "Mary Ann Lee",
+    "mary ann lee": "Mary Ann Lee",
+}
+def normalize_person_name(name: str) -> str:
+    s = str(name or "").strip()
+    s = " ".join(s.split())
+    key = s.lower()
+    return NAME_ALIASES.get(key, s)
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     _NA_STRINGS = {
         "": np.nan, "-": np.nan, "–": np.nan, "—": np.nan,
@@ -261,7 +273,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
-        name = str(d.get("name", "")).strip()
+        name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
             continue
         act_raw = str(d.get("activity", ""))
@@ -334,7 +346,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            [["Activity", "Day", "Name", "HoursRaw"]]
            .assign(
                Activity=lambda d: d["Activity"].astype(str).str.strip(),
-               Name=lambda d: d["Name"].astype(str).str.strip(),
+               Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
            )
     )
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
@@ -559,7 +571,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": person
+                "person": normalize_person_name(person)
             })
     out = pd.DataFrame(rows)
     if not out.empty:
@@ -598,7 +610,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
@@ -657,7 +669,7 @@ def build_person_weekly_accounting(
         for item in activities:
             if not isinstance(item, dict):
                 continue
-            person = str(item.get("name", "")).strip()
+            person = normalize_person_name(str(item.get("name", "")).strip())
             activity = str(item.get("activity", "")).strip().upper()
             try:
                 hrs = float(item.get("hours", 0) or 0)
@@ -672,6 +684,11 @@ def build_person_weekly_accounting(
     )
     if ooo_df.empty:
         ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
+    nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
+    wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
+    other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
+    acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
+    ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
     people = pd.DataFrame({
         "person": sorted(set(
             nw_people["person"].astype(str).tolist()
@@ -800,7 +817,7 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual": a,
                         "Target": t,
                     })
@@ -846,7 +863,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual Hours": a,
                         "Available Hours": np.nan,
                     })
@@ -862,7 +879,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                     "team": r["team"],
                     "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                     "cell_station": str(station).strip(),
-                    "person": str(person).strip(),
+                    "person": normalize_person_name(str(person).strip()),
                     "Actual Hours": a,
                     "Available Hours": t,
                 })
@@ -1027,6 +1044,26 @@ def _capacity_subtext(hours_val, capacity_val) -> str | None:
     pct = float(hours_val) / float(capacity_val)
     hrs_per_day = pct * 8.0
     return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
+def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    a = explode_non_wip_by_person(nw_frame)
+    b = explode_person_hours(metrics_frame)
+    c = explode_people_in_wip(metrics_frame)
+    names = set()
+    for df_, person_col in [(a, "person"), (b, "person"), (c, "person")]:
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col]
+        ].copy()
+        if not sub.empty:
+            vals = (
+                sub[person_col]
+                .astype(str)
+                .map(normalize_person_name)
+                .str.strip()
+            )
+            names.update(x for x in vals if x)
+    return len(names)
 def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
     if v is None or pd.isna(v):
         return "#111827"
@@ -1109,7 +1146,7 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
+    people_count_val = merged_people_count_for_week(team_nw, week_nw, df, nw)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people_kpi = build_person_weekly_accounting(
@@ -1408,6 +1445,10 @@ if nonwip_mode:
             )
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
+    team_hist = team_hist.copy()
+    team_hist["people_count"] = team_hist["period_date"].apply(
+        lambda wk: merged_people_count_for_week(team_nw, wk, df, nw)
+    )
     show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
     tbl = (
         team_hist[show_cols]
