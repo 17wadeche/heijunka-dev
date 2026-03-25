@@ -4,7 +4,7 @@ import sys
 from datetime import date
 PYTHON_BIN = sys.executable
 commands = [
-    #[PYTHON_BIN, "get_timeliness.py"],
+    [PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "heijunka_new_layout.py", "--all"],
     [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "metrics.csv", "--all", "--out", "non_wip.csv"],
     [PYTHON_BIN, "collect_metrics_dev.py"],
