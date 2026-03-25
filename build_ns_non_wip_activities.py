@@ -913,6 +913,13 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
             if pd.isna(hrs) or hrs <= 0:
                 continue
             activities.append({"name": name, "activity": label, "hours": float(round(float(hrs), 2))})
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -968,6 +975,13 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
             if pd.isna(hrs) or hrs <= 0:
                 continue
             activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -1217,6 +1231,13 @@ def build_capacity_fixed_row(
             if pd.isna(hrs) or hrs <= 0:
                 continue
             activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -1274,6 +1295,13 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
                 "hours": hrs,
             })
             person_total += hrs
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
         if person_total != 0.0:
             nonwip_by_person[name] = float(round(person_total, 2))
     total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
@@ -1352,6 +1380,13 @@ def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] =
                 "hours": hrs,
             })
             person_total += hrs
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
+            })
         if person_total != 0.0:
             nonwip_by_person[name] = float(round(person_total, 2))
     total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
@@ -1518,6 +1553,13 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
                 "name": name,
                 "activity": label,
                 "hours": float(round(float(hrs), 2)),
+            })
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
             })
     return {
         "people_rows": people_rows,
