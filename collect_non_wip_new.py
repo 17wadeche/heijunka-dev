@@ -373,6 +373,8 @@ def build_non_wip_rows(config_path: str,
             for item in activities:
                 if not isinstance(item, dict):
                     continue
+                if _clean(item.get("activity")).lower() == "ooo":
+                    continue
                 person = _clean(item.get("name"))
                 hrs = _to_float(item.get("hours")) or 0.0
                 if not person or hrs <= 0:
