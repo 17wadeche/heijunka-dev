@@ -1901,6 +1901,7 @@ ACTIVITY_MAP = {
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
     "rs inbox":"RS Inbox",
+    "aortic ri report":"RI",
     "next gen call":"Next Gen",
     "korea ri":"RI",
     "meeting & action": "Meeting",
