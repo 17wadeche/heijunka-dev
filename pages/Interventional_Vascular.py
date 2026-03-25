@@ -3268,12 +3268,13 @@ with right2:
                     drill_width = max(380, min(900, week_count * 52))
                     drill_bars = (
                         alt.Chart(drill_df)
-                        .mark_bar(size=34)
+                        .mark_bar()
                         .encode(
                             x=alt.X(
                                 "period_date:T",
                                 title="Week",
                                 axis=alt.Axis(format="%m/%d", labelAngle=0),
+                                scale=alt.Scale(paddingInner=0.15),
                             ),
                             y=alt.Y(
                                 "Pct:Q",
