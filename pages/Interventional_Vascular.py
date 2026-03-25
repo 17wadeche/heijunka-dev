@@ -1690,6 +1690,7 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
     return out
+
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"

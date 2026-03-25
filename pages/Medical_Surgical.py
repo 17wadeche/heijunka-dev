@@ -8,6 +8,7 @@ import streamlit as st
 import altair as alt
 import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\ms_non_wip_activities.csv")
@@ -30,48 +31,54 @@ def _fmt_hours_minutes(x) -> str:
     if h and not m:
         return f"{h}h"
     return f"{m}m"
+from pathlib import Path
+TEAMS_CONFIG_PATH = Path(__file__).resolve().parents[1] / "teams.json"
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_team_config(config_path: str | None = None) -> dict:
+    p = Path(config_path) if config_path else TEAMS_CONFIG_PATH
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+def irl_people_for_team(team: str, config: dict) -> set[str]:
+    if not isinstance(config, dict):
+        return set()
+    team_cfg = config.get(str(team).strip(), {})
+    if not isinstance(team_cfg, dict):
+        return set()
+    raw = team_cfg.get("irl_people", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x).strip() for x in raw if str(x).strip()}
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(
     nw_path: str | None = None,
-    nw_url: str | None = NON_WIP_DATA_URL
+    nw_url: str | None = None,
+    cache_tag: str = "MS", 
 ) -> pd.DataFrame:
-    empty_df = pd.DataFrame(columns=[
-        "team","period_date","source_file","people_count",
-        "total_non_wip_hours","% in WIP","non_wip_by_person"
-    ])
-    def _read_csv_text(text: str) -> pd.DataFrame:
-        import io
-        if not text or not text.strip():
-            return empty_df
-        return pd.read_csv(io.StringIO(text), dtype=str, keep_default_na=False)
+    if nw_url is None:
+        nw_url = NON_WIP_DATA_URL
     if nw_url:
-        import requests
         try:
-            r = requests.get(nw_url, timeout=20, allow_redirects=True)
+            df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        except Exception:
+            import io, requests
+            r = requests.get(nw_url, timeout=20)
             r.raise_for_status()
-            raw = r.content or b""
-            text = raw.decode("utf-8-sig", errors="replace")
-            head = text.lstrip()[:200].lower()
-            if head.startswith("<!doctype html") or head.startswith("<html") or "access denied" in head:
-                st.error("Non-WIP URL did not return a CSV (looks like an HTML/error page).")
-                return empty_df
-            try:
-                df = _read_csv_text(text)
-            except pd.errors.EmptyDataError:
-                st.warning("Non-WIP CSV contained no columns (EmptyDataError).")
-                return empty_df
-        except Exception as e:
-            st.error(f"Failed to fetch/parse MS_NON_WIP_DATA_URL: {e}")
-            return empty_df
+            df = pd.read_csv(
+                io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
+                dtype=str, keep_default_na=False
+            )
     else:
         p = Path(nw_path or NON_WIP_DEFAULT_PATH)
         if not p.exists():
-            return empty_df
-        try:
-            df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
-        except pd.errors.EmptyDataError:
-            st.warning("Local Non-WIP CSV file exists but is empty.")
-            return empty_df
+            return pd.DataFrame(columns=[
+                "team","period_date","source_file","people_count",
+                "total_non_wip_hours","% in WIP","non_wip_by_person"
+            ])
+        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
@@ -80,7 +87,10 @@ def load_non_wip(
     if "% in WIP" in df.columns and "% Non-WIP" not in df.columns:
         s = pd.to_numeric(df["% in WIP"], errors="coerce")
         if pd.notna(s.max()):
-            pct_wip_0_100 = (s * 100.0) if float(s.max()) <= 1.5 else s
+            if float(s.max()) <= 1.5:
+                pct_wip_0_100 = s * 100.0
+            else:
+                pct_wip_0_100 = s
             df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
@@ -105,7 +115,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Non-WIP Hours": v
             })
     out = pd.DataFrame(rows, columns=cols)
@@ -183,6 +193,37 @@ def load_data(data_path: str | None, data_url: str | None):
     else:
         return pd.DataFrame()
     return _postprocess(df)
+NAME_ALIASES = {
+    "mirlay": "Mirlay Morin",
+    "nikita": "Nikita Schazenbach",
+    "jacob": "Jacob Woolley",
+    "madison": "Madison Moeller",
+    "pavani uppari":"Uppari Pavani",
+    "s, prabhu":"Prabhu S",
+    "damahe, jagruti":"Jagruti Damahe",
+    "kallagunta, malleshwari":"Malleshwari Kallagunta",
+    "gopikalyani ijigiri":"Gopikalyani Iligiri",
+    "dey, pranjal":"Pranjal Dey",
+    "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
+    "shanmugasundaram, naveenkumar":"Naveen Shanmugasundaram",
+    "s, giridhar":"Giridhar S",
+    "surekha raju anantarapu":"Surekha Raju",
+    "anwar, mohd faiz":"Mohd Faiz Anwar",
+    "nath, koushik":"Koushik Nath",
+    "iligiri, gopikalyani":"Gopikalyani Iligiri",
+    "gowda, manjunath":"Manjunath Gowda",
+    "andrew o":"Andrew",
+    "kumar, shailesh":"Shailesh Kumar",
+    "michael": "Michael F",
+    "mani s.":"Mani",
+    "kuche":"Ku Che",
+    "goutham kumar, p":"P Goutham Kumar",
+}
+def normalize_person_name(name: str) -> str:
+    s = str(name or "").strip()
+    s = " ".join(s.split())
+    key = s.lower()
+    return NAME_ALIASES.get(key, s)
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     _NA_STRINGS = {
         "": np.nan, "-": np.nan, "–": np.nan, "—": np.nan,
@@ -251,7 +292,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
-        name = str(d.get("name", "")).strip()
+        name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
             continue
         act_raw = str(d.get("activity", ""))
@@ -324,7 +365,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            [["Activity", "Day", "Name", "HoursRaw"]]
            .assign(
                Activity=lambda d: d["Activity"].astype(str).str.strip(),
-               Name=lambda d: d["Name"].astype(str).str.strip(),
+               Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
            )
     )
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
@@ -353,64 +394,9 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         if re.fullmatch(r"email(s)?(&|and|/)?im", compact):
             return "Email & IM"
         key = lower
-        explicit_map = {
-            "email Etc.":"Email",
-            "emails Etc.":"Email",
-            "emails Misc": "Email",
-            "capa": "CAPA",
-            "em/etc": "Em Etc",
-            "capa meeting": "CAPA",
-            "scrum/checkin": "Scrum",
-            "capa call": "CAPA",
-            "capa working session": "CAPA",
-            "capa update call": "CAPA",
-            "pmpa weekly meeting": "Pmpa Meeting",
-            "finish scheduling": "Scheduling",
-            "audit checkin" : "Audit",
-            "heijunka review/update" : "Heijunka",
-            "scrumb": "Scrum",
-            "mtg" : "Meeting",
-            "scheduling/heijunka update": "Scheduling",
-            "e-mail": "Email",
-            "scrum/checking": "Scrum",
-            "heijunka population": "Heijunka",
-            "clinical task training" : "Clinical Task",
-            "training meeting": "Training",
-            "problem solving meeting":"Problem Solving",
-            "training (shadowing, scheduling, meeting, etc.)": "Training",
-            "scrim": "Scrum",
-            "review feedback": "Feedback",
-            "rpa lab meeting": "Rpa Meeting",
-            "rpa meeing": "Rpa Meeting",
-            "meet": "Meeting",
-            "email catch up": "Email",
-            "ri response":"RI",
-            "other queurie": "Other Querie",
-            "jumped to another meeting) global quality meeting": "Global Quality Meeting",
-            "it support/restart": "It Support",
-            "capa remediation review": "CAPA",
-            "ri": "RI",
-            "ri aortic meeting": "RI",
-            "scrum&action": "Scrum & Action",
-            "scrum & action": "Scrum & Action",
-            "scrum and action": "Scrum & Action",
-            "scrum& action": "Scrum & Action",
-            "aged file review": "Aging WIP Review",
-            "scrum &action": "Scrum & Action",
-            "meeting": "Meeting",
-            "meeeting": "Meeting",
-            ". meeting": "Meeting",  # extra safety; usually cleaned earlier
-            "qa review": "QA Review",
-            "qa review/correction": "QA Review",
-            "qa review/update": "QA Review",
-            "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
-            "risk mangement knowledge sharing call": "Risk Management Knowledge Sharing Call",
-            "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
-        }
+        explicit_map = ACTIVITY_MAP
         if key in explicit_map:
             return explicit_map[key]
-        if key in {"email", "emails"}:
-            return "Email"
         acronym_tokens = {
             "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
             "ri", "capa",
@@ -559,6 +545,9 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
             tgtv = pd.to_numeric(tgtv, errors="coerce")
             if pd.isna(outv) and pd.isna(tgtv):
                 continue
+            val = str(k).strip()
+            if key_label == "person":
+                val = normalize_person_name(val)
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
@@ -604,9 +593,9 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": person
+                "person": normalize_person_name(person)
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=["team", "period_date", "person"])
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
@@ -643,12 +632,15 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(
+        rows,
+        columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"]
+    )
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
@@ -790,6 +782,11 @@ def build_person_weekly_accounting(
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
+def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
 def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
     col = _find_first_col(
         df,
@@ -864,7 +861,7 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual": a,
                         "Target": t,
                     })
@@ -910,7 +907,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual Hours": a,
                         "Available Hours": np.nan,
                     })
@@ -926,7 +923,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                     "team": r["team"],
                     "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                     "cell_station": str(station).strip(),
-                    "person": str(person).strip(),
+                    "person": normalize_person_name(str(person).strip()),
                     "Actual Hours": a,
                     "Available Hours": t,
                 })
@@ -1091,12 +1088,32 @@ def _capacity_subtext(hours_val, capacity_val) -> str | None:
     pct = float(hours_val) / float(capacity_val)
     hrs_per_day = pct * 8.0
     return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
+def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    a = explode_non_wip_by_person(nw_frame)
+    b = explode_person_hours(metrics_frame)
+    c = explode_people_in_wip(metrics_frame)
+    names = set()
+    for df_, person_col in [(a, "person"), (b, "person"), (c, "person")]:
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col]
+        ].copy()
+        if not sub.empty:
+            vals = (
+                sub[person_col]
+                .astype(str)
+                .map(normalize_person_name)
+                .str.strip()
+            )
+            names.update(x for x in vals if x)
+    return len(names)
 def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
     if v is None or pd.isna(v):
         return "#111827"
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
-st.markdown("<h1 style='text-align: center;'>MS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>NS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
     label,
@@ -1114,18 +1131,18 @@ if nonwip_mode:
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
-    today = pd.Timestamp.today().normalize()
+    today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
         [
             d for d in pd.to_datetime(
                 nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()
             )
-            if pd.notna(d) and pd.to_datetime(d).normalize() <= today
+            if pd.notna(d) and pd.to_datetime(d).normalize() <= today_nw
         ],
         reverse=True
     )
     if not weeks_nw:
-        st.info("No non-WIP weeks available for this team on or before today.")
+        st.info("No weeks available for this team up to today.")
         st.stop()
     with c_week:
         week_nw = st.selectbox(
@@ -1146,6 +1163,12 @@ if nonwip_mode:
     else:
         pct_in_wip = float(row.get("% in WIP", np.nan))
         pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
+    include_ooo_in_kpi_pct = st.toggle(
+        "Include OOO Hours in KPI % of capacity",
+        value=True,
+        key="include_ooo_in_kpi_pct",
+        help="When off, OOO Hours shows 0.0% of capacity and other KPI percentages are calculated against capacity excluding OOO hours.",
+    )
     def colored_percent_metric(container, label: str, value: float | None, threshold=80.0):
         if pd.isna(value):
             container.metric(label, "—")
@@ -1167,12 +1190,28 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
-    capacity_val = (
-        float(people_count_val) * 40.0
-        if pd.notna(people_count_val) and float(people_count_val) > 0
-        else np.nan
+    people_count_val = merged_people_count_for_week(team_nw, week_nw, df, nw)
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    wk_people_kpi = build_person_weekly_accounting(
+        team=team_nw,
+        week=week_nw,
+        nw_row=row,
+        metrics_frame=df,
+        nw_frame=nw,
+        week_hours=40.0,
+        irl_people=team_irl_people,
     )
+    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
+        capacity_val = float(pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum())
+    else:
+        irl_count = len(team_irl_people)
+        total_people = float(people_count_val) if pd.notna(people_count_val) and float(people_count_val) > 0 else np.nan
+        if pd.notna(total_people):
+            non_irl_count = max(total_people - irl_count, 0.0)
+            capacity_val = (irl_count * 39.0) + (non_irl_count * 40.0)
+        else:
+            capacity_val = np.nan
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
     ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
@@ -1187,17 +1226,36 @@ if nonwip_mode:
         if pd.notna(capacity_val)
         else np.nan
     )
-    wip_pct = (wip_hours_val / capacity_val) if pd.notna(wip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    nonwip_pct = (nonwip_hours_val / capacity_val) if pd.notna(nonwip_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    ooo_pct = (ooo_hours_val / capacity_val) if pd.notna(ooo_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
-    unaccounted_pct = (unaccounted_hours_val / capacity_val) if pd.notna(unaccounted_hours_val) and pd.notna(capacity_val) and capacity_val > 0 else np.nan
+    capacity_pct_basis = capacity_val
+    if not include_ooo_in_kpi_pct and pd.notna(capacity_val):
+        capacity_pct_basis = max(float(capacity_val) - float(ooo_hours_val), 0.0)
+    wip_pct = (
+        wip_hours_val / capacity_pct_basis
+        if pd.notna(wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    nonwip_pct = (
+        nonwip_hours_val / capacity_pct_basis
+        if pd.notna(nonwip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    ooo_pct = (
+        (ooo_hours_val / capacity_pct_basis)
+        if include_ooo_in_kpi_pct and pd.notna(ooo_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else 0.0
+    )
+    unaccounted_pct = (
+        unaccounted_hours_val / capacity_pct_basis
+        if pd.notna(unaccounted_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
     kpi_card(
         c1,
         "WIP Hours",
         wip_hours_val,
         fmt="{:,.1f}",
         color=percent_color(wip_pct, threshold=0.80, invert=False),
-        subtext=_capacity_subtext(wip_hours_val, capacity_val),
+        subtext=_capacity_subtext(wip_hours_val, capacity_pct_basis),
     )
     kpi_card(
         c2,
@@ -1205,21 +1263,24 @@ if nonwip_mode:
         nonwip_hours_val,
         fmt="{:,.1f}",
         color=percent_color(nonwip_pct, threshold=0.20, invert=True),
-        subtext=_capacity_subtext(nonwip_hours_val, capacity_val),
+        subtext=_capacity_subtext(nonwip_hours_val, capacity_pct_basis),
     )
     kpi_card(
         c3,
         "OOO Hours",
         ooo_hours_val,
         fmt="{:,.1f}",
-        subtext=_capacity_subtext(ooo_hours_val, capacity_val),
+        subtext=_capacity_subtext(
+            0.0 if not include_ooo_in_kpi_pct else ooo_hours_val,
+            capacity_pct_basis,
+        ),
     )
     kpi_card(
         c4,
         "Unaccounted Hours",
         unaccounted_hours_val,
         fmt="{:,.1f}",
-        subtext=_capacity_subtext(unaccounted_hours_val, capacity_val),
+        subtext=_capacity_subtext(unaccounted_hours_val, capacity_pct_basis),
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
@@ -1232,6 +1293,8 @@ if nonwip_mode:
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
@@ -1239,6 +1302,7 @@ if nonwip_mode:
         metrics_frame=df,
         nw_frame=nw,
         week_hours=40.0,
+        irl_people=team_irl_people,
     )
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
@@ -1250,7 +1314,7 @@ if nonwip_mode:
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
-                value_vars=["Accounted_Other", "Accounted_NonOther", "Unaccounted"],
+                value_vars=["OOO Hours","Accounted_Other", "Accounted_NonOther", "Unaccounted"],
                 var_name="Category",
                 value_name="Hours"
             )
@@ -1261,6 +1325,7 @@ if nonwip_mode:
                 "person",
                 "Completed Hours",
                 "Non-WIP Hours",
+                "OOO Hours",
                 "Accounted_Other",
                 "Accounted_NonOther",
                 "Unaccounted"
@@ -1269,13 +1334,15 @@ if nonwip_mode:
             how="left",
         )
         label_map = {
+            "OOO Hours": "OOO",
             "Accounted_Other": "Other Team WIP",
             "Accounted_NonOther": "Accounted Non-WIP",
             "Unaccounted": "Unaccounted",
         }
         stack["CategoryLabel"] = stack["Category"].map(label_map)
         wk_people["StackTotal"] = (
-            wk_people["Accounted_Other"].fillna(0)
+            wk_people["OOO Hours"].fillna(0)
+            + wk_people["Accounted_Other"].fillna(0)
             + wk_people["Accounted_NonOther"].fillna(0)
             + wk_people["Unaccounted"].fillna(0)
         )
@@ -1324,8 +1391,8 @@ if nonwip_mode:
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
-                        range=["#2563eb", "#22c55e", "#9ca3af"],
+                        domain=["OOO", "Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
+                        range=["#a855f7", "#2563eb", "#22c55e", "#9ca3af"],
                     ),
                 ),
                 tooltip=[
@@ -1333,6 +1400,7 @@ if nonwip_mode:
                     alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
                     alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
+                    alt.Tooltip("OOO Hours:Q", title="OOO Hours", format=",.2f"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
@@ -1360,6 +1428,7 @@ if nonwip_mode:
                             .sum()
                             .rename(columns={"HoursRaw": "Hours"})
                 )
+                cat = cat[cat["Activity"].astype(str).str.strip().str.upper() != "OOO"].copy()
                 cat = split_nonwip_activity_minutes(cat)
                 if not cat.empty:
                     cat = cat.sort_values("Hours", ascending=False)
@@ -1421,13 +1490,10 @@ if nonwip_mode:
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
     team_hist = team_hist.copy()
-    if "% Non-WIP" not in team_hist.columns and "% in WIP" in team_hist.columns:
-        s = pd.to_numeric(team_hist["% in WIP"], errors="coerce")
-        if pd.notna(s.max()):
-            pct_wip_0_100 = (s * 100.0) if float(s.max()) <= 1.5 else s
-            team_hist["% Non-WIP"] = 100.0 - pct_wip_0_100
-    show_cols = ["team", "period_date", "people_count", "total_non_wip_hours", "% Non-WIP"]
-    show_cols = [c for c in show_cols if c in team_hist.columns]
+    team_hist["people_count"] = team_hist["period_date"].apply(
+        lambda wk: merged_people_count_for_week(team_nw, wk, df, nw)
+    )
+    show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
     tbl = (
         team_hist[show_cols]
         .rename(columns={
@@ -1441,14 +1507,15 @@ if nonwip_mode:
     )
     if "Date" in tbl.columns:
         tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
-    fmt = {}
-    if "People Count" in tbl.columns:
-        fmt["People Count"] = "{:,.0f}"
-    if "Non-WIP Hours" in tbl.columns:
-        fmt["Non-WIP Hours"] = "{:,.1f}"
-    if "% Non-WIP" in tbl.columns:
-        fmt["% Non-WIP"] = "{:.2f}%"
-    st.dataframe(tbl.style.format(fmt), use_container_width=True, hide_index=True)
+    st.dataframe(
+        tbl.style.format({
+            "People Count": "{:,.0f}",
+            "Non-WIP Hours": "{:,.1f}",
+            "% Non-WIP": "{:.2f}%",
+        }),
+        use_container_width=True,
+        hide_index=True,
+    )
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
@@ -1497,8 +1564,7 @@ if has_dates and min_date and max_date:
     if "start_date" not in st.session_state:
         st.session_state["start_date"] = min_date
     if "end_date" not in st.session_state:
-        today_date = pd.Timestamp.today().normalize().date()
-        st.session_state["end_date"] = min(today_date, max_date)
+        st.session_state["end_date"] = max_date
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
     if start > end:
@@ -1536,21 +1602,15 @@ tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.colum
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
 target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
 actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
-def build_person_station_outputs_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
+def build_person_station_outputs_over_time(df, team_name, person):
     import json
     rows = []
     col = "Output by Cell/Station - by person"
     if col not in df.columns:
-        return pd.DataFrame(columns=["period_date", "person", "cell_station", "Actual", "Target"])
-    def _norm(s: str) -> str:
-        return " ".join(str(s or "").strip().split()).lower()
-    person_norm = _norm(person_name)
+        return pd.DataFrame()
     sub = df.loc[df["team"] == team_name, ["period_date", col]].dropna(subset=[col]).copy()
     for _, r in sub.iterrows():
-        wk = pd.to_datetime(r["period_date"], errors="coerce")
-        if pd.isna(wk):
-            continue
-        wk = wk.normalize()
+        pdte = pd.to_datetime(r["period_date"]).normalize()
         payload = r[col]
         try:
             data = json.loads(payload) if isinstance(payload, str) else payload
@@ -1561,75 +1621,26 @@ def build_person_station_outputs_over_time(df: pd.DataFrame, team_name: str, per
         for station, person_map in data.items():
             if not isinstance(person_map, dict):
                 continue
-            matched_key = None
-            for k in person_map.keys():
-                if _norm(k) == person_norm:
-                    matched_key = k
-                    break
-            if matched_key is None:
-                continue
-            v = person_map.get(matched_key)
-            actual = target = np.nan
-            if isinstance(v, dict):
-                actual = pd.to_numeric(v.get("output", v.get("actual", v.get("Actual"))), errors="coerce")
-                target = pd.to_numeric(v.get("target", v.get("Target")), errors="coerce")
-            else:
-                actual = pd.to_numeric(v, errors="coerce")
-                target = np.nan  # typically not present in your current writer
-            if pd.isna(actual) and pd.isna(target):
-                continue
-            rows.append({
-                "period_date": wk,
-                "person": person_name,  # keep the label the user picked
-                "cell_station": str(station).strip(),
-                "Actual": actual,
-                "Target": target,
-            })
-    out = pd.DataFrame(rows, columns=["period_date", "person", "cell_station", "Actual", "Target"])
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
+            if person in person_map and isinstance(person_map[person], dict):
+                outv = pd.to_numeric(person_map[person].get("output"), errors="coerce")
+                tgtv = pd.to_numeric(person_map[person].get("target"), errors="coerce")
+                rows.append({
+                    "period_date": pdte,
+                    "person": person,
+                    "cell_station": station,
+                    "Actual": outv,
+                    "Target": tgtv,
+                })
+    return pd.DataFrame(rows)
 def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
-    import json
     def _first_col(cands):
         for c in cands:
             if c in df.columns:
                 return c
         return None
-    def _norm(s: str) -> str:
-        return " ".join(str(s or "").strip().split()).lower()
-    def _parse_json_cell(value):
-        if value is None or (isinstance(value, float) and pd.isna(value)):
-            return {}
-        if isinstance(value, (dict, list)):
-            return value
-        try:
-            return json.loads(value)
-        except Exception:
-            return {}
-    def _find_person_key(per_map: dict, person: str) -> str | None:
-        if not isinstance(per_map, dict):
-            return None
-        want = _norm(person)
-        for k in per_map.keys():
-            if _norm(k) == want:
-                return k
-        return None
-    def _get_number_or_dict_field(v, *keys):
-        if isinstance(v, dict):
-            for k in keys:
-                if k in v:
-                    return v.get(k)
-            return None
-        return v
-    def _as_float(x):
-        try:
-            return float(x)
-        except Exception:
-            return np.nan
-    col_uplh_pers = _first_col(["UPLH by Cell/Station - by person"])
-    col_out_pers  = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])
-    col_hrs_pers  = _first_col(["Hours by Cell/Station - by person"])
+    col_uplh_pers   = _first_col(["UPLH by Cell/Station - by person"])  # nested {station:{person:{actual,target}}}
+    col_out_pers    = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])  # {station:{person:{output,target}}}
+    col_hrs_pers    = _first_col(["Hours by Cell/Station - by person"])  # {station:{person:{actual,target}}}
     d = df.loc[df["team"] == team_name].copy()
     if d.empty:
         return pd.DataFrame()
@@ -1639,61 +1650,61 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
         wk = r.get("period_date", pd.NaT)
         if pd.isna(wk):
             continue
-        uplh_blob = _parse_json_cell(r.get(col_uplh_pers)) if col_uplh_pers else {}
-        out_blob  = _parse_json_cell(r.get(col_out_pers))  if col_out_pers  else {}
-        hrs_blob  = _parse_json_cell(r.get(col_hrs_pers))  if col_hrs_pers  else {}
+        def _parse_json_cell(value):
+            if pd.isna(value):
+                return {}
+            if isinstance(value, (dict, list)):
+                return value
+            try:
+                return json.loads(value)
+            except Exception:
+                return {}
+        uplh_blob  = _parse_json_cell(r.get(col_uplh_pers))  if col_uplh_pers else {}
+        out_blob   = _parse_json_cell(r.get(col_out_pers))   if col_out_pers  else {}
+        hrs_blob   = _parse_json_cell(r.get(col_hrs_pers))   if col_hrs_pers  else {}
         stations = set()
         for blob in (uplh_blob, out_blob, hrs_blob):
             if isinstance(blob, dict):
                 stations.update(blob.keys())
         for stn in sorted(stations):
-            stn_key = str(stn).strip()
+            stn_key = str(stn)
+            actual_uplh = target_uplh = np.nan
             actual_out = target_out = np.nan
             actual_hrs = target_hrs = np.nan
-            actual_uplh = target_uplh = np.nan
-            if isinstance(uplh_blob, dict) and isinstance(uplh_blob.get(stn), dict):
-                per_map = uplh_blob.get(stn) or {}
-                k = _find_person_key(per_map, person_name)
-                if k is not None:
-                    v = per_map.get(k)
-                    if isinstance(v, dict):
-                        actual_uplh = _as_float(v.get("actual", v.get("output", v.get("Actual"))))
-                        target_uplh = _as_float(v.get("target", v.get("Target")))
-                    else:
-                        actual_uplh = _as_float(v)
-            if isinstance(out_blob, dict) and isinstance(out_blob.get(stn), dict):
-                per_map = out_blob.get(stn) or {}
-                k = _find_person_key(per_map, person_name)
-                if k is not None:
-                    v = per_map.get(k)
-                    if isinstance(v, dict):
-                        actual_out = _as_float(v.get("output", v.get("actual", v.get("Actual"))))
-                        target_out = _as_float(v.get("target", v.get("Target")))
-                    else:
-                        actual_out = _as_float(v)   # numeric output
-                        target_out = np.nan         # usually not present
-            if isinstance(hrs_blob, dict) and isinstance(hrs_blob.get(stn), dict):
-                per_map = hrs_blob.get(stn) or {}
-                k = _find_person_key(per_map, person_name)
-                if k is not None:
-                    v = per_map.get(k)
-                    if isinstance(v, dict):
-                        actual_hrs = _as_float(v.get("actual", v.get("hours", v.get("Actual"))))
-                        target_hrs = _as_float(v.get("available", v.get("target", v.get("Target"))))
-                    else:
-                        actual_hrs = _as_float(v)   # numeric hours
-                        target_hrs = np.nan
+            if isinstance(uplh_blob.get(stn), dict):
+                per_map = uplh_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_uplh = pd.to_numeric(rec.get("actual"), errors="coerce")
+                    target_uplh = pd.to_numeric(rec.get("target"), errors="coerce")
+            if isinstance(out_blob.get(stn), dict):
+                per_map = out_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_out = pd.to_numeric(rec.get("output"), errors="coerce")
+                    target_out = pd.to_numeric(rec.get("target"), errors="coerce")
+            if isinstance(hrs_blob.get(stn), dict):
+                per_map = hrs_blob[stn]
+                if person_name in per_map:
+                    rec = per_map.get(person_name, {})
+                else:
+                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
+                if isinstance(rec, dict):
+                    actual_hrs = pd.to_numeric(rec.get("actual"), errors="coerce")
+                    target_hrs = pd.to_numeric(rec.get("target"), errors="coerce")
             if pd.isna(actual_uplh):
                 if pd.notna(actual_out) and pd.notna(actual_hrs) and actual_hrs not in (0, 0.0):
                     actual_uplh = actual_out / actual_hrs
             if pd.isna(target_uplh):
                 if pd.notna(target_out) and pd.notna(target_hrs) and target_hrs not in (0, 0.0):
                     target_uplh = target_out / target_hrs
-            if (
-                (pd.isna(actual_out) or actual_out == 0)
-                and (pd.isna(actual_hrs) or actual_hrs == 0)
-                and pd.isna(actual_uplh)
-            ):
+            if (pd.isna(actual_out) or actual_out == 0) and (pd.isna(actual_hrs) or actual_hrs == 0) and pd.isna(actual_uplh):
                 continue
             delta = np.nan
             if pd.notna(actual_uplh) and pd.notna(target_uplh):
@@ -1717,7 +1728,8 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
     num_cols = ["Actual", "Target", "Actual Hours", "Target Hours", "Actual UPLH", "Target UPLH", "Delta"]
     for c in num_cols:
         out[c] = pd.to_numeric(out[c], errors="coerce")
-    return out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
+    out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
+    return out
 def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
     if pd.isna(v):
         return np.nan, "{:.0%}"
@@ -1820,35 +1832,11 @@ kpi(
 )
 st.markdown("---")
 if has_dates and min_date and max_date:
-    if "start_date" not in st.session_state or st.session_state["start_date"] is None:
-        st.session_state["start_date"] = min_date
-    if "end_date" not in st.session_state or st.session_state["end_date"] is None:
-        st.session_state["end_date"] = max_date
-    def _to_date(x):
-        try:
-            return pd.to_datetime(x).date()
-        except Exception:
-            return None
-    s = _to_date(st.session_state.get("start_date"))
-    e = _to_date(st.session_state.get("end_date"))
-    if s is None: s = min_date
-    if e is None:
-        today_date = pd.Timestamp.today().normalize().date()
-        e = min(today_date, max_date)
-    if s < min_date: s = min_date
-    if s > max_date: s = max_date
-    if e < min_date: e = min_date
-    if e > max_date: e = max_date
-    if s > e:
-        s, e = min_date, max_date
-    st.session_state["start_date"] = s
-    st.session_state["end_date"] = e
     st.markdown("#### Date Range")
     date_col1, date_col2 = st.columns(2)
     with date_col1:
         st.date_input(
             "Start",
-            value=st.session_state["start_date"],   # <-- explicit value
             min_value=min_date,
             max_value=max_date,
             key="start_date",
@@ -1856,7 +1844,6 @@ if has_dates and min_date and max_date:
     with date_col2:
         st.date_input(
             "End",
-            value=st.session_state["end_date"],     # <-- explicit value
             min_value=min_date,
             max_value=max_date,
             key="end_date",
@@ -2999,7 +2986,6 @@ with mid2:
                             )
                         )
                         ref = alt.Chart(pd.DataFrame({"y": [6]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
-
                         st.altair_chart(bars + labels + ref, use_container_width=True)
         else:
             st.caption("Select exactly one team to drill into per-person daily hours.")
