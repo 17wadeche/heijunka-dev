@@ -709,27 +709,46 @@ def build_person_weekly_accounting(
     )
     if ooo_df.empty:
         ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
+    def _clean_person_col(df_in: pd.DataFrame, value_col: str) -> pd.DataFrame:
+        if df_in.empty:
+            return pd.DataFrame(columns=["person", value_col])
+        out = df_in.copy()
+        out["person"] = (
+            out["person"]
+            .astype("string")
+            .fillna("")
+            .map(lambda x: normalize_person_name(str(x).strip()))
+        )
+        out["person"] = out["person"].replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+        out = out.dropna(subset=["person"]).copy()
+        out[value_col] = pd.to_numeric(out[value_col], errors="coerce").fillna(0.0)
+        return out[["person", value_col]]
+    nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
+    wip_people = _clean_person_col(wip_people, "Completed Hours")
+    other_df = _clean_person_col(other_df, "Other Team WIP")
+    acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
+    ooo_df = _clean_person_col(ooo_df, "OOO Hours")
     nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
     wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
     other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
     acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
     ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
-    people = pd.DataFrame({
-        "person": sorted(set(
-            nw_people["person"].astype(str).tolist()
-            + wip_people["person"].astype(str).tolist()
-            + other_df["person"].astype(str).tolist()
-            + acct_df["person"].astype(str).tolist()
-            + ooo_df["person"].astype(str).tolist()
-        ))
-    })
+    all_people = sorted(
+        set(nw_people["person"].tolist())
+        | set(wip_people["person"].tolist())
+        | set(other_df["person"].tolist())
+        | set(acct_df["person"].tolist())
+        | set(ooo_df["person"].tolist())
+    )
+    people = pd.DataFrame({"person": pd.Series(all_people, dtype="string")})
     out = (
-        people.merge(nw_people, on="person", how="left")
-            .merge(wip_people, on="person", how="left")
-            .merge(other_df, on="person", how="left")
-            .merge(acct_df, on="person", how="left")
-            .merge(ooo_df, on="person", how="left")
-            .fillna(0.0)
+        people
+        .merge(nw_people.astype({"person": "string"}), on="person", how="left")
+        .merge(wip_people.astype({"person": "string"}), on="person", how="left")
+        .merge(other_df.astype({"person": "string"}), on="person", how="left")
+        .merge(acct_df.astype({"person": "string"}), on="person", how="left")
+        .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
+        .fillna(0.0)
     )
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
