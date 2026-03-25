@@ -565,6 +565,12 @@ def build_pss_meic_dated_row(team: str, ws: pd.DataFrame, week: Optional[pd.Time
                     "hours": hrs,
                 })
                 person_nonwip_total += hrs
+            if ooo > 0:
+                activities.append({
+                    "name": name,
+                    "activity": "OOO",
+                    "hours": float(round(ooo, 2)),
+                })
             person_nonwip_total = float(round(person_nonwip_total, 2))
             if person_nonwip_total != 0.0:
                 nonwip_by_person[name] = person_nonwip_total
@@ -667,6 +673,13 @@ def build_meic_teamtracker_block(ws: pd.DataFrame) -> Dict:
                 "name": name,
                 "activity": label,
                 "hours": float(round(float(hrs), 2)),
+            })
+        ooo = float(round(pr["OOO"], 2))
+        if ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": ooo,
             })
     return {
         "people_rows": people_rows,
