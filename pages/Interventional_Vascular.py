@@ -3130,7 +3130,6 @@ with right2:
             )
             top_chart = (bars + labels).properties(
                 height=320,
-                title="Per-person weekly time mix",
             )
             st.altair_chart(top_chart, use_container_width=True)
             st.markdown("##### Drill-down over time")
