@@ -1409,6 +1409,7 @@ ACTIVITY_MAP = {
     "issues from deco + shipment":"shipment",
     "it sorting issue": "IT Issue/Update",
     "rrtt report update": "RRTT",
+    "rrtt report": "RRTT",
     "pmpa questions/updat":"PMPA",
     "pvh call": "Meeting",
     "aging file": "Aged WIP Review",
