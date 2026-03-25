@@ -1155,10 +1155,7 @@ if nonwip_mode:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
     teams_cfg = load_team_config()
-    st.write("teams path:", str(TEAMS_CONFIG_PATH))
-    st.write("teams keys:", sorted(teams_cfg.keys()) if isinstance(teams_cfg, dict) else "not dict")
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
-    st.write("IRL people found:", sorted(team_irl_people))
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
