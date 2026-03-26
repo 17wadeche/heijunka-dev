@@ -995,6 +995,7 @@ ACTIVITY_MAP = {
     "tl":"Meeting",
     "sha t":"Meeting",
     "meetings -integer":"Meeting",
+    "cos":"Training/Mentoring",
     "preparing for second uni visit":"Admin",
     "liberant analysis meeting":"Meeting",
     "crdn complaint call":"Meeting",
