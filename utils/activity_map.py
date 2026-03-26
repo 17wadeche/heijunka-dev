@@ -123,6 +123,7 @@ ACTIVITY_MAP = {
     "aged file/metrics review":"Aged WIP Review",
     "grad project measure work":"Project Work",
     "global town hall meeting":"Meeting",
+    "iri":"Project Work",
     "parkmore townhall recording":"Meeting",
     "fume hood meeting":"Meeting",
     "emails about additional testing to stella":"Email & IM",
