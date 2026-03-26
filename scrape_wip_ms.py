@@ -13,18 +13,21 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
+    r"C:\Users\wadec8\Medtronic PLC\ACM Documents - General\ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
     "RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     "WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     "AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
+    "ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
 }
 DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm"
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\ACM Documents - General\ACM INV (US)-Heijunka v1.0 (002).xlsm"
 ]
 CSV_COLUMNS = [
     "team",
@@ -56,7 +59,7 @@ CSV_COLUMNS = [
 EXCLUDED_STATIONS = {"ooo", "non wip", ""}
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
-EXCLUDED_NAMES = {"x", "0", ""}
+EXCLUDED_NAMES = {"x", "0", "", "User1", "User2", "User3", "User4", "User5", "User6", "User7", "User8", "User9", "User10", "User11"}
 def is_valid_name(name: str) -> bool:
     return name.strip().lower() not in EXCLUDED_NAMES
 def _norm_path(p: str) -> str:
@@ -128,10 +131,8 @@ def enrich_rows_with_metrics(
 ) -> None:
     for row in rows:
         key = (_norm_team(row.get("team", "")), _norm_period_date(row.get("period_date", "")))
-
         if key in timeliness_lut:
             row["Open Complaint Timeliness"] = timeliness_lut[key]
-
         if key in closures_lut:
             closures, opened = closures_lut[key]
             row["Closures"] = closures
