@@ -1704,13 +1704,19 @@ with tabs[1]:
         st.info("No non-WIP CSVs found.")
     else:
         st.markdown("### Non-WIP activities")
-        source_raw = None
-        for key in ["ns_non_wip_activities","ms_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
+        source_frames = []
+        for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
             if key in data:
                 cand = filter_by_team(data[key])
                 if not cand.empty:
-                    source_raw = cand
-                    break
+                    source_frames.append(_normalize_df_columns(cand.copy()))
+        if not source_frames:
+            st.info("No Non-WIP activity data available after team filtering.")
+            st.stop()
+        if len(source_frames) == 1:
+            source_raw = source_frames[0]
+        else:
+            source_raw = pd.concat(source_frames, ignore_index=True, sort=False).drop_duplicates()
         if source_raw is None or source_raw.empty:
             st.info("No Non-WIP activity data available after team filtering.")
             st.stop()
