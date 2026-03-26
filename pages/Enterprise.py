@@ -872,7 +872,6 @@ def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         "non_wip_pct": "Non-WIP %",
         "ooo_pct": "OOO %",
         "unaccounted_pct": "Unaccounted %",
-        "other_team_wip_hours": "Other Team WIP Hours",
     }
     out = df.copy().rename(columns=rename_map)
     if "Week Start" in out.columns:
@@ -881,7 +880,6 @@ def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
     for c in [
         "Completed Hours",
         "People Count",
-        "Other Team WIP Hours",
         "Non-WIP Hours",
         "OOO Hours",
         "Capacity Hours",
@@ -1307,13 +1305,11 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "ou", "team", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
-        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -1342,7 +1338,6 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "ou", "week_start",
@@ -1376,7 +1371,6 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "week_start",
@@ -2032,7 +2026,6 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "ou", "team", "week_start",
@@ -2083,7 +2076,6 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "ou", "week_start",
@@ -2133,7 +2125,6 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "week_start",
