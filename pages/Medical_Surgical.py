@@ -3234,6 +3234,12 @@ with right2:
                     default=16,
                     key="time_mix_window_right2",
                 )
+                today = pd.Timestamp.today().normalize()
+                cutoff = today - pd.Timedelta(weeks=drill_window)
+                drill_df = drill_df[
+                    (drill_df["period_date"] >= cutoff) &
+                    (drill_df["period_date"] <= today)
+                ].copy()
             with drill_controls_right:
                 factor_out_ooo = st.toggle(
                     "Factor out OOO",
