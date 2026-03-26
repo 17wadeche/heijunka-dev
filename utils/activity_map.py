@@ -125,6 +125,7 @@ ACTIVITY_MAP = {
     "global town hall meeting":"Meeting",
     "parkmore townhall recording":"Meeting",
     "fume hood meeting":"Meeting",
+    "emails about additional testing to stella":"Email & IM",
     "sh/a meeting email":"Meeting",
     "looking for a device":"Looking for Device",
     "looking for lost device":"Looking for Device",
