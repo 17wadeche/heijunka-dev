@@ -43,6 +43,7 @@ ACTIVITY_MAP = {
     "reviewed and processed emails from when i was out of office (does not include emails from engineers)": "Email & IM",
     "pulled work": "Metrics & Schedule",
     "pulled work tool, yellow belt training": "Metrics & Schedule",
+    "yellow belt training":"Yellow Belt",
     "weekly schedule & heijunka meeting": "Metrics & Schedule",
     "weekly scheudle & audit resources update": "Metrics & Schedule",
     "team leads meeting & cornerstone": "Meeting",
