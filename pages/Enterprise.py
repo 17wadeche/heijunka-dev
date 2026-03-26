@@ -1751,7 +1751,7 @@ with tabs[1]:
         "Non-WIP date range",
         source_raw,
         key="dr_nonwip",
-        min_floor_ts=selected_nonwip_floor,
+        min_floor_ts=None,
     )
     source_df = filter_by_date_range(source_raw, nw_start, nw_end)
     if source_df.empty:
@@ -1826,11 +1826,12 @@ with tabs[1]:
         .agg(hours=("hours", "sum"))
         .sort_values(["week_start", "hours"], ascending=[True, False])
     )
+    top_n = 20
     total_hours = (
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(total_hours=("hours", "sum"))
         .sort_values("total_hours", ascending=False)
-        .head(15)
+        .head(top_n)
         .reset_index(drop=True)
     )
     if total_hours.empty:
@@ -1867,7 +1868,7 @@ with tabs[1]:
         "Pie chart date range",
         source_raw,
         key="dr_nonwip_pie",
-        min_floor_ts=selected_nonwip_floor,
+        min_floor_ts=None,
     )
     pie_source_df = filter_by_date_range(source_raw, pie_start, pie_end)
     if pie_source_df.empty:
