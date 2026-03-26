@@ -997,6 +997,7 @@ ACTIVITY_MAP = {
     "pvh meeting catch up":"Meeting",
     "computer restart and update": "IT Issue/Update",
     "cornerstone and email":"Cornerstone",
+    "email about additional testing to stella": "Email & IM",
     "audit prep - labelling":"Audit",
     "it iissue": "IT Issue/Update",
     "x tier":"Meeting",
