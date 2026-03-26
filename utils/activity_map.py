@@ -118,6 +118,7 @@ ACTIVITY_MAP = {
     "reading aortic educational document":"Reading File/Document Information",
     "emails + cell querie":"Email & IM",
     "emails, fwt, working on reopened file":"Email & IM",
+    "emails/team":"Email & IM",
     "reading aortic documanet": "Reading File/Document Information",
     "emails, admin":"Email & IM",
     "lab cleaning":"Admin",
