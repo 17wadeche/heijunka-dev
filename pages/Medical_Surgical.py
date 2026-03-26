@@ -3234,12 +3234,6 @@ with right2:
                     default=16,
                     key="time_mix_window_right2",
                 )
-                today = pd.Timestamp.today().normalize()
-                cutoff = today - pd.Timedelta(weeks=drill_window)
-                drill_df = drill_df[
-                    (drill_df["period_date"] >= cutoff) &
-                    (drill_df["period_date"] <= today)
-                ].copy()
             with drill_controls_right:
                 factor_out_ooo = st.toggle(
                     "Factor out OOO",
@@ -3249,6 +3243,12 @@ with right2:
             drill_df = person_mix[person_mix["person"] == picked_person_mix].copy()
             if multi_team and chosen_mix_teams:
                 drill_df = drill_df[drill_df["team"].isin(chosen_mix_teams)].copy()
+            today = pd.Timestamp.today().normalize()
+            cutoff = today - pd.Timedelta(weeks=drill_window)
+            drill_df = drill_df[
+                (drill_df["period_date"] >= cutoff) &
+                (drill_df["period_date"] <= today)
+            ].copy()
             if drill_df.empty:
                 st.info("No over-time data for that person.")
             else:
