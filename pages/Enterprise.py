@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
+import numpy as np
 import io
 from utils.activity_map import ACTIVITY_MAP
 def _candidate_repo_roots(start: Path) -> List[Path]:
@@ -33,6 +34,37 @@ def _candidate_repo_roots(start: Path) -> List[Path]:
             seen.add(rr)
             out.append(rr)
     return out
+NAME_ALIASES = {
+    "mirlay": "Mirlay Morin",
+    "nikita": "Nikita Schazenbach",
+    "jacob": "Jacob Woolley",
+    "madison": "Madison Moeller",
+    "pavani uppari":"Uppari Pavani",
+    "s, prabhu":"Prabhu S",
+    "damahe, jagruti":"Jagruti Damahe",
+    "kallagunta, malleshwari":"Malleshwari Kallagunta",
+    "gopikalyani ijigiri":"Gopikalyani Iligiri",
+    "dey, pranjal":"Pranjal Dey",
+    "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
+    "shanmugasundaram, naveenkumar":"Naveen Shanmugasundaram",
+    "s, giridhar":"Giridhar S",
+    "surekha raju anantarapu":"Surekha Raju",
+    "anwar, mohd faiz":"Mohd Faiz Anwar",
+    "nath, koushik":"Koushik Nath",
+    "iligiri, gopikalyani":"Gopikalyani Iligiri",
+    "gowda, manjunath":"Manjunath Gowda",
+    "andrew o":"Andrew",
+    "kumar, shailesh":"Shailesh Kumar",
+    "michael": "Michael F",
+    "mani s.":"Mani",
+    "kuche":"Ku Che",
+    "goutham kumar, p":"P Goutham Kumar",
+}
+def normalize_person_name(name: str) -> str:
+    s = str(name or "").strip()
+    s = " ".join(s.split())
+    key = s.lower()
+    return NAME_ALIASES.get(key, s)
 def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
     attempted: List[Path] = []
     start = Path(__file__).resolve()
@@ -98,6 +130,340 @@ def _threshold_cell_style(val: Any, threshold: float, good_if_gte: bool = False)
     if good:
         return "background-color: #d1fae5; color: #065f46;"
     return "background-color: #fee2e2; color: #991b1b;"
+TEAMS_CONFIG_PATH = Path(__file__).resolve().parents[1] / "teams.json"
+def load_team_config(config_path: str | None = None) -> dict:
+    p = Path(config_path) if config_path else TEAMS_CONFIG_PATH
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+def irl_people_for_team(team: str, config: dict) -> set[str]:
+    if not isinstance(config, dict):
+        return set()
+    team_cfg = config.get(str(team).strip(), {})
+    if not isinstance(team_cfg, dict):
+        return set()
+    raw = team_cfg.get("irl_people", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x).strip() for x in raw if str(x).strip()}
+def irl_people_for_team(team: str, config: dict) -> set[str]:
+    if not isinstance(config, dict):
+        return set()
+    team_cfg = config.get(str(team).strip(), {})
+    if not isinstance(team_cfg, dict):
+        return set()
+    raw = team_cfg.get("irl_people", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x).strip() for x in raw if str(x).strip()}
+def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
+    cols = ["team","period_date","person","Non-WIP Hours"]
+    if nw.empty or "non_wip_by_person" not in nw.columns:
+        return pd.DataFrame(columns=cols)
+    rows = []
+    sub = nw[["team","period_date","non_wip_by_person"]].dropna(subset=["non_wip_by_person"])
+    for _, r in sub.iterrows():
+        payload = r["non_wip_by_person"]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for person, hrs in obj.items():
+            try:
+                v = float(hrs)
+            except Exception:
+                v = np.nan
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": normalize_person_name(str(person).strip()),
+                "Non-WIP Hours": v
+            })
+    out = pd.DataFrame(rows, columns=cols)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "Person Hours" not in df.columns:
+        return pd.DataFrame(columns=[
+            "team","period_date","person","Actual Hours","Available Hours","Utilization"
+        ])
+    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA",
+                 "null", "NULL", "none", "None"}
+    def _is_good_name(s: str) -> bool:
+        t = str(s).strip()
+        return t and t not in BAD_NAMES and t.lower() not in {b.lower() for b in BAD_NAMES}
+    rows: list[dict] = []
+    sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
+    for _, r in sub.iterrows():
+        payload = r["Person Hours"]
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+            if not isinstance(obj, dict):
+                continue
+        except Exception:
+            continue
+        for person, vals in obj.items():
+            if not _is_good_name(person):
+                continue
+            a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
+            t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
+            a = float(a) if pd.notna(a) else 0.0
+            t = float(t) if pd.notna(t) else 0.0
+            if (a == 0.0) and (t == 0.0):
+                continue
+            util = (a / t) if t not in (0, 0.0) else np.nan
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": normalize_person_name(str(person).strip()),
+                "Actual Hours": a,
+                "Available Hours": t,
+                "Utilization": util
+            })
+    out = pd.DataFrame(
+        rows,
+        columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"]
+    )
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "People in WIP" not in df.columns:
+        return pd.DataFrame(columns=["team", "period_date", "person"])
+    sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
+    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
+    def _is_good_name(s: str) -> bool:
+        return s.strip() and s.strip() not in BAD_NAMES
+    rows: list[dict] = []
+    def _as_names(x) -> list[str]:
+        if isinstance(x, list):
+            return [str(s).strip() for s in x if _is_good_name(str(s))]
+        if isinstance(x, str):
+            s = x.strip()
+            try:
+                obj = json.loads(s)
+                if isinstance(obj, list):
+                    return [str(v).strip() for v in obj if _is_good_name(str(v))]
+                if isinstance(obj, dict):
+                    return [str(k).strip() for k, v in obj.items() if _is_good_name(str(k))]
+            except Exception:
+                pass
+            import re
+            parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if _is_good_name(p)]
+            return parts
+        if isinstance(x, dict):
+            return [str(k).strip() for k in x.keys() if _is_good_name(str(k))]
+        return []
+    import re
+    for _, r in sub.iterrows():
+        people = _as_names(r["People in WIP"])
+        for person in people:
+            rows.append({
+                "team": r["team"],
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": person
+            })
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    a = explode_non_wip_by_person(nw_frame)
+    b = explode_person_hours(metrics_frame)
+    c = explode_people_in_wip(metrics_frame)
+    names = set()
+    for df_, person_col in [(a, "person"), (b, "person"), (c, "person")]:
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col]
+        ].copy()
+        if not sub.empty:
+            vals = (
+                sub[person_col]
+                .astype(str)
+                .map(normalize_person_name)
+                .str.strip()
+            )
+            names.update(x for x in vals if x)
+    return len(names)
+def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str, float]]:
+    payload = row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    if not isinstance(activities, list) or not activities:
+        return {}, {}
+    import re
+    other_team_key = "OTHERTEAMWIP"
+    accounted_other: dict[str, float] = {}
+    accounted_nonother: dict[str, float] = {}
+    for d in activities:
+        name = normalize_person_name(str(d.get("name", "")).strip())
+        if not name:
+            continue
+        act_raw = str(d.get("activity", ""))
+        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())  # normalize
+        if act_key == "OOO":
+            continue
+        try:
+            hrs = float(d.get("hours", 0) or 0)
+        except Exception:
+            hrs = 0.0
+        if hrs <= 0:
+            continue
+        if act_key == other_team_key:
+            accounted_other[name] = accounted_other.get(name, 0.0) + hrs
+        else:
+            accounted_nonother[name] = accounted_nonother.get(name, 0.0) + hrs
+    accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
+    accounted_nonother = {k: round(v, 2) for k, v in accounted_nonother.items()}
+    return accounted_other, accounted_nonother
+def build_person_weekly_accounting(
+    team: str,
+    week,
+    nw_row,
+    metrics_frame: pd.DataFrame,
+    nw_frame: pd.DataFrame,
+    week_hours: float = 40.0,
+    irl_people: set[str] | None = None,
+) -> pd.DataFrame:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    long_nw = explode_non_wip_by_person(nw_frame)
+    nw_people = long_nw.loc[
+        (long_nw["team"] == team) & (long_nw["period_date"] == wk),
+        ["person", "Non-WIP Hours"]
+    ].copy()
+    if nw_people.empty:
+        nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
+    nw_people["person"] = nw_people["person"].astype(str).str.strip()
+    nw_people["Non-WIP Hours"] = pd.to_numeric(nw_people["Non-WIP Hours"], errors="coerce").fillna(0.0)
+    person_hours = explode_person_hours(metrics_frame)
+    wip_people = person_hours.loc[
+        (person_hours["team"] == team) & (person_hours["period_date"] == wk),
+        ["person", "Actual Hours"]
+    ].copy()
+    if wip_people.empty:
+        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
+    wip_people["person"] = wip_people["person"].astype(str).str.strip()
+    wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
+    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
+    acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
+    other_df = pd.DataFrame(
+        [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
+    )
+    if other_df.empty:
+        other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
+    acct_df = pd.DataFrame(
+        [{"person": str(k).strip(), "Accounted Non-WIP": float(v)} for k, v in acct_nonother_map.items()]
+    )
+    if acct_df.empty:
+        acct_df = pd.DataFrame(columns=["person", "Accounted Non-WIP"])
+    payload = nw_row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    ooo_by_person: dict[str, float] = {}
+    if isinstance(activities, list):
+        for item in activities:
+            if not isinstance(item, dict):
+                continue
+            person = normalize_person_name(str(item.get("name", "")).strip())
+            activity = str(item.get("activity", "")).strip().upper()
+            try:
+                hrs = float(item.get("hours", 0) or 0)
+            except Exception:
+                hrs = 0.0
+            if not person or hrs <= 0:
+                continue
+            if activity == "OOO":
+                ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
+    ooo_df = pd.DataFrame(
+        [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
+    )
+    if ooo_df.empty:
+        ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
+    def _clean_person_col(df_in: pd.DataFrame, value_col: str) -> pd.DataFrame:
+        if df_in.empty:
+            return pd.DataFrame(columns=["person", value_col])
+        out = df_in.copy()
+        out["person"] = (
+            out["person"]
+            .astype("string")
+            .fillna("")
+            .map(lambda x: normalize_person_name(str(x).strip()))
+        )
+        out["person"] = out["person"].replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+        out = out.dropna(subset=["person"]).copy()
+        out[value_col] = pd.to_numeric(out[value_col], errors="coerce").fillna(0.0)
+        return out[["person", value_col]]
+    nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
+    wip_people = _clean_person_col(wip_people, "Completed Hours")
+    other_df = _clean_person_col(other_df, "Other Team WIP")
+    acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
+    ooo_df = _clean_person_col(ooo_df, "OOO Hours")
+    nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
+    wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
+    other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
+    acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
+    ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
+    all_people = sorted(
+        set(nw_people["person"].tolist())
+        | set(wip_people["person"].tolist())
+        | set(other_df["person"].tolist())
+        | set(acct_df["person"].tolist())
+        | set(ooo_df["person"].tolist())
+    )
+    people = pd.DataFrame({"person": pd.Series(all_people, dtype="string")})
+    out = (
+        people
+        .merge(nw_people.astype({"person": "string"}), on="person", how="left")
+        .merge(wip_people.astype({"person": "string"}), on="person", how="left")
+        .merge(other_df.astype({"person": "string"}), on="person", how="left")
+        .merge(acct_df.astype({"person": "string"}), on="person", how="left")
+        .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
+        .fillna(0.0)
+    )
+    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    out["Expected Hours"] = np.where(
+        out["person_key"].isin(irl_people_norm),
+        39.0,
+        float(week_hours),
+    )
+    out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
+    out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
+    out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
+    out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
+    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+    non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
+    remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
+    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
+    out["Unaccounted"] = (
+        out["Expected Hours"]
+        - out["Completed Hours"]
+        - out["OOO Hours"]
+        - out["Other Team WIP"]
+        - out["Accounted Non-WIP"]
+    ).clip(lower=0.0)
+    out["Total Used"] = (
+        out["Completed Hours"]
+        + out["OOO Hours"]
+        + out["Other Team WIP"]
+        + out["Accounted Non-WIP"]
+    )
+    out["period_date"] = wk
+    out["team"] = team
+    return out.sort_values(["person"]).reset_index(drop=True)
 def _selected_nonwip_start_floor(df: Optional[pd.DataFrame]) -> Optional[pd.Timestamp]:
     if df is None or df.empty:
         return None
@@ -480,6 +846,7 @@ def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         "non_wip_pct": "Non-WIP %",
         "ooo_pct": "OOO %",
         "unaccounted_pct": "Unaccounted %",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     out = df.copy().rename(columns=rename_map)
     if "Week Start" in out.columns:
@@ -488,6 +855,7 @@ def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
     for c in [
         "Completed Hours",
         "People Count",
+        "Other Team WIP Hours",
         "Non-WIP Hours",
         "OOO Hours",
         "Capacity Hours",
@@ -686,77 +1054,124 @@ def _weekly_team_export_df(
     org: OrgConfig,
     factor_out_ooo: bool = False,
 ) -> pd.DataFrame:
-    metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
-    nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
-    if dfm is not None and not dfm.empty:
-        m = dfm.copy()
-        team_col_m = _get_team_col(m)
-        date_ser = _coalesce_matching_cols(m, ["week", "period_date", "date", "day", "as_of", "timestamp"])
-        wip_ser = _coalesce_matching_cols(m, ["completed_hours", "wip_hours", "completedhours"])
-        if team_col_m is not None:
-            m["__date__"] = pd.to_datetime(date_ser, errors="coerce")
-            m["__completed_hours__"] = pd.to_numeric(wip_ser, errors="coerce")
-            m = m.dropna(subset=["__date__"])
-            m["week_start"] = _weekly_start(m["__date__"])
-            m["__completed_hours__"] = m["__completed_hours__"].fillna(0.0)
-            metrics_team = (
-                m.groupby([team_col_m, "week_start"], as_index=False)
-                .agg(completed_hours=("__completed_hours__", "sum"))
-                .rename(columns={team_col_m: "team"})
-            )
-    if dfnw is not None and not dfnw.empty:
-        nw = dfnw.copy()
-        team_col_nw = _get_team_col(nw)
-        date_ser = _coalesce_matching_cols(nw, ["week", "period_date", "date", "day", "as_of", "timestamp"])
-        people_ser = _coalesce_matching_cols(nw, ["people_count", "people_count."])
-        nonwip_ser = _coalesce_matching_cols(nw, ["total_non-wip_hours", "total_non_wip_hours", "total_non_wip_hours."])
-        ooo_ser = _coalesce_matching_cols(nw, ["ooo_hours", "ooo_hours."])
-        if team_col_nw is not None:
-            nw["__date__"] = pd.to_datetime(date_ser, errors="coerce")
-            nw = nw.dropna(subset=["__date__"])
-            nw["week_start"] = _weekly_start(nw["__date__"])
-            nw["people_count"] = pd.to_numeric(people_ser, errors="coerce").fillna(0.0)
-            nw["non_wip_hours"] = pd.to_numeric(nonwip_ser, errors="coerce").fillna(0.0)
-            nw["ooo_hours"] = pd.to_numeric(ooo_ser, errors="coerce").fillna(0.0)
-            nonwip_team = (
-                nw.groupby([team_col_nw, "week_start"], as_index=False)
-                .agg(
-                    people_count=("people_count", "sum"),
-                    non_wip_hours=("non_wip_hours", "sum"),
-                    ooo_hours=("ooo_hours", "sum"),
-                )
-                .rename(columns={team_col_nw: "team"})
-            )
-    if metrics_team.empty and nonwip_team.empty:
+    if dfnw is None or dfnw.empty:
         return pd.DataFrame()
-    base = metrics_team.merge(nonwip_team, on=["team", "week_start"], how="outer")
-    for col in ["completed_hours", "people_count", "non_wip_hours", "ooo_hours"]:
-        if col not in base.columns:
-            base[col] = 0.0
-        base[col] = pd.to_numeric(base[col], errors="coerce").fillna(0.0)
+    teams_cfg = load_team_config()
     meta = _team_meta_lookup(org)
-    base = base.merge(meta, on="team", how="left")
-    base["capacity_hours"] = base["people_count"] * 40.0
+    nw = _normalize_df_columns(dfnw.copy())
+    if "period_date" not in nw.columns:
+        dc = _get_date_col(nw)
+        if dc is None:
+            return pd.DataFrame()
+        nw["period_date"] = pd.to_datetime(nw[dc], errors="coerce").dt.normalize()
+    else:
+        nw["period_date"] = pd.to_datetime(nw["period_date"], errors="coerce").dt.normalize()
+    if "team" not in nw.columns:
+        tc = _get_team_col(nw)
+        if tc is None:
+            return pd.DataFrame()
+        nw["team"] = nw[tc].astype(str).str.strip()
+    else:
+        nw["team"] = nw["team"].astype(str).str.strip()
+    nw = nw.dropna(subset=["period_date"])
+    enabled_team_names = {t.name for t in org.teams if t.enabled} or {t.name for t in org.teams}
+    nw = nw[nw["team"].isin(enabled_team_names)].copy()
+    if nw.empty:
+        return pd.DataFrame()
+    metrics_frame = _normalize_df_columns(dfm.copy()) if dfm is not None and not dfm.empty else pd.DataFrame()
+    rows: list[dict[str, Any]] = []
+    for _, nw_row in nw.iterrows():
+        team = str(nw_row.get("team", "")).strip()
+        wk = pd.to_datetime(nw_row.get("period_date"), errors="coerce")
+        if not team or pd.isna(wk):
+            continue
+        wk = wk.normalize()
+        team_irl_people = irl_people_for_team(team, teams_cfg)
+        wk_people = build_person_weekly_accounting(
+            team=team,
+            week=wk,
+            nw_row=nw_row,
+            metrics_frame=metrics_frame,
+            nw_frame=nw,
+            week_hours=40.0,
+            irl_people=team_irl_people,
+        )
+        if wk_people.empty:
+            continue
+        wk_people = wk_people.copy()
+        wk_people["Expected Hours"] = pd.to_numeric(wk_people["Expected Hours"], errors="coerce").fillna(0.0)
+        wk_people["Completed Hours"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+        wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
+        wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+        wk_people["OOO Hours"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+        wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+        people_count = merged_people_count_for_week(
+            team=team,
+            week=wk,
+            metrics_frame=metrics_frame,
+            nw_frame=nw,
+        )
+        if pd.isna(people_count):
+            people_count = float(
+                wk_people["person"]
+                .astype(str)
+                .str.strip()
+                .replace("", pd.NA)
+                .dropna()
+                .nunique()
+            )
+        completed_hours = float(wk_people["Completed Hours"].sum())
+        other_team_wip_hours = float(wk_people["Other Team WIP"].sum())
+        non_wip_hours = float(wk_people["Accounted Non-WIP"].sum())
+        ooo_hours = float(wk_people["OOO Hours"].sum())
+        capacity_hours = float(wk_people["Expected Hours"].sum())
+        unaccounted_hours = float(wk_people["Unaccounted"].sum())
+        if factor_out_ooo:
+            pct_denom = max(capacity_hours - ooo_hours, 0.0)
+            ooo_pct = 0.0
+        else:
+            pct_denom = capacity_hours
+            ooo_pct = (ooo_hours / pct_denom) if pct_denom > 0 else pd.NA
+        rows.append({
+            "team": team,
+            "week_start": wk,
+            "people_count": float(people_count),
+            "completed_hours": completed_hours,
+            "other_team_wip_hours": other_team_wip_hours,
+            "non_wip_hours": non_wip_hours,
+            "ooo_hours": ooo_hours,
+            "capacity_hours": capacity_hours,
+            "unaccounted_hours": unaccounted_hours,
+            "wip_pct": (completed_hours / pct_denom) if pct_denom > 0 else pd.NA,
+            "non_wip_pct": (non_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
+            "ooo_pct": ooo_pct,
+            "unaccounted_pct": (unaccounted_hours / pct_denom) if pct_denom > 0 else pd.NA,
+        })
+    if not rows:
+        return pd.DataFrame()
+    base = pd.DataFrame(rows)
+    base = (
+        base.groupby(["team", "week_start"], as_index=False)
+        .agg(
+            people_count=("people_count", "max"),
+            completed_hours=("completed_hours", "sum"),
+            other_team_wip_hours=("other_team_wip_hours", "sum"),
+            non_wip_hours=("non_wip_hours", "sum"),
+            ooo_hours=("ooo_hours", "sum"),
+            capacity_hours=("capacity_hours", "sum"),
+            unaccounted_hours=("unaccounted_hours", "sum"),
+        )
+    )
     if factor_out_ooo:
         pct_denom = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
-        base["unaccounted_hours"] = (
-            pct_denom
-            - base["completed_hours"]
-            - base["non_wip_hours"]
-        ).clip(lower=0.0)
         base["ooo_pct"] = 0.0
     else:
         pct_denom = base["capacity_hours"]
-        base["unaccounted_hours"] = (
-            base["capacity_hours"]
-            - base["completed_hours"]
-            - base["non_wip_hours"]
-            - base["ooo_hours"]
-        ).clip(lower=0.0)
         base["ooo_pct"] = (base["ooo_hours"] / pct_denom).where(pct_denom > 0)
     base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
     base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
+    base = base.merge(meta, on="team", how="left")
     base = _add_avg_hours_day_columns(base)
     return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
 def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = False) -> pd.DataFrame:
@@ -773,6 +1188,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         .agg(
             people_count=("people_count", "sum"),
             completed_hours=("completed_hours", "sum"),
+            other_team_wip_hours=("other_team_wip_hours", "sum"),
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
         )
@@ -809,6 +1225,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         "completed_hours",
         "wip_pct",
         "wip_avg_hours_day",
+        "other_team_wip_hours",
         "non_wip_hours",
         "non_wip_pct",
         "non_wip_avg_hours_day",
@@ -842,11 +1259,13 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "ou", "team", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -875,11 +1294,13 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "ou", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -907,11 +1328,13 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
+        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -1555,6 +1978,7 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "ou", "team", "week_start",
@@ -1605,6 +2029,7 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "ou", "week_start",
@@ -1654,6 +2079,7 @@ with tabs[2]:
             "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
             "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+            "other_team_wip_hours": "Other Team WIP Hours",
         }
         preferred_order = [
             "portfolio", "week_start",
