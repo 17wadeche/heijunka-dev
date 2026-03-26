@@ -119,6 +119,7 @@ ACTIVITY_MAP = {
     "emails + cell querie":"Email & IM",
     "emails, fwt, working on reopened file":"Email & IM",
     "emails/team":"Email & IM",
+    "aged file/metrics review":"Aged WIP Review",
     "reading aortic documanet": "Reading File/Document Information",
     "emails, admin":"Email & IM",
     "lab cleaning":"Admin",
