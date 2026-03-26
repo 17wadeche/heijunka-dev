@@ -992,6 +992,8 @@ ACTIVITY_MAP = {
     "on line training inpact 018 x1":"Meeting",
     "sha slide":"Admin",
     "getting data for meeting":"Meeting",
+    "tl":"Meeting",
+    "sha t":"Meeting",
     "crdn complaint call":"Meeting",
     "spider feedback question":"Feedback",
     "pvh meeting catch up":"Meeting",
