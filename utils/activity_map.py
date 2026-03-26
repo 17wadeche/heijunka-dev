@@ -186,6 +186,7 @@ ACTIVITY_MAP = {
     "admin and shipping":"Admin",
     "server issues and then rework on file from cell": "IT Issue/Update",
     "rpa lab meeting, network isssues, emails etc.": "RPA Meeting/Action",
+    "rpa collab": "RPA Meeting/Action",
     "network down": "IT Issue/Update",
     "meetings and admin": "Meeting",
     "no net work, agile": "IT Issue/Update",
