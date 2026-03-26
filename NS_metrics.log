@@ -2979,3 +2979,113 @@ pywintypes.com_error: (-2147352567, 'Exception occurred.', (0, None, None, None,
 2026-03-25 23:08:05,963 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-25 23:08:06,030 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 330 rows
 2026-03-25 23:08:06,032 | INFO | === NS Metrics Run END ===
+2026-03-26 08:30:52,708 | INFO | === NS Metrics Run START ===
+2026-03-26 08:30:52,712 | INFO | Selected team: all
+2026-03-26 08:30:52,720 | INFO | [Spine] START
+2026-03-26 08:31:25,491 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:32.771001
+2026-03-26 08:31:25,492 | INFO | [Spine New] START
+2026-03-26 08:32:09,598 | INFO | [Spine New] DONE | rows=3 | elapsed=0:00:44.106043
+2026-03-26 08:32:09,598 | INFO | [PH] START
+2026-03-26 08:33:23,471 | INFO | [PH] DONE | rows=355 | elapsed=0:01:13.872599
+2026-03-26 08:33:23,473 | INFO | [PH Cell 17] START
+2026-03-26 08:33:50,326 | INFO | [PH Cell 17] DONE | rows=20 | elapsed=0:00:26.853337
+2026-03-26 08:33:50,326 | INFO | [SCS Cell 1] START
+2026-03-26 08:34:33,468 | INFO | [SCS Cell 1] DONE | rows=283 | elapsed=0:00:43.141520
+2026-03-26 08:34:33,469 | INFO | [MEIC PH] START
+2026-03-26 08:34:46,304 | INFO | [MEIC PH] DONE | rows=86 | elapsed=0:00:12.835035
+2026-03-26 08:34:46,304 | INFO | [DBS C13] START
+2026-03-26 08:34:52,026 | ERROR | [DBS C13] FAIL | elapsed=0:00:05.722187 | error=(-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147352565), None)
+2026-03-26 08:34:52,039 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2848, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 752, in scrape_dbs_previous_weeks_xlsm
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 692, in _com_call
+    return fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 752, in <lambda>
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Temp\gen_py\3.12\00020813-0000-0000-C000-000000000046x0x1x9\Sheets.py", line 120, in __call__
+    ret = self._oleobj_.InvokeTypes(0, LCID, 2, (9, 0), ((12, 1),),Index
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147352565), None)
+
+2026-03-26 08:34:52,319 | INFO | [DBS C13] filter >= 2025-07-07: 0 -> 0
+2026-03-26 08:34:52,320 | INFO | [DBS C14] START
+2026-03-26 08:35:03,633 | ERROR | [DBS C14] FAIL | elapsed=0:00:11.312278 | error=(-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147352565), None)
+2026-03-26 08:35:03,644 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 281, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2857, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 752, in scrape_dbs_previous_weeks_xlsm
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 692, in _com_call
+    return fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 752, in <lambda>
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Temp\gen_py\3.12\00020813-0000-0000-C000-000000000046x0x1x9\Sheets.py", line 120, in __call__
+    ret = self._oleobj_.InvokeTypes(0, LCID, 2, (9, 0), ((12, 1),),Index
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147352565), None)
+
+2026-03-26 08:35:04,054 | INFO | [DBS C14] filter >= 2025-07-07: 0 -> 0
+2026-03-26 08:35:04,054 | INFO | [NV] START
+2026-03-26 08:36:52,723 | INFO | [NV] DONE | rows=43 | elapsed=0:01:48.669189
+2026-03-26 08:36:52,725 | INFO | [NV] filter >= 2025-07-07: 43 -> 38
+2026-03-26 08:36:52,726 | INFO | [Nav] START
+2026-03-26 08:39:52,736 | INFO | [Nav] still running...
+2026-03-26 08:40:34,987 | INFO | [Nav] DONE | rows=40 | elapsed=0:03:42.261317
+2026-03-26 08:40:34,989 | INFO | [AE MEIC] START
+2026-03-26 08:43:25,439 | INFO | [AE MEIC] DONE | rows=40 | elapsed=0:02:50.450356
+2026-03-26 08:43:25,441 | INFO | [O-Arm MEIC] START
+2026-03-26 08:45:26,591 | INFO | [O-Arm MEIC] DONE | rows=39 | elapsed=0:02:01.149411
+2026-03-26 08:45:26,591 | INFO | [Mazor] START
+2026-03-26 08:48:08,608 | INFO | [Mazor] DONE | rows=42 | elapsed=0:02:42.007810
+2026-03-26 08:48:08,618 | INFO | [CSF] START
+2026-03-26 08:50:07,254 | INFO | [CSF] DONE | rows=41 | elapsed=0:01:58.635815
+2026-03-26 08:50:07,258 | INFO | [PSS US] START
+2026-03-26 08:50:40,263 | INFO | [PSS US] DONE | rows=43 | elapsed=0:00:33.005313
+2026-03-26 08:50:40,267 | INFO | [PSS MEIC] START
+2026-03-26 08:53:35,970 | INFO | [PSS MEIC] DONE | rows=42 | elapsed=0:02:55.702896
+2026-03-26 08:53:35,972 | INFO | [PSS MEIC Intern] START
+2026-03-26 08:54:30,635 | INFO | [PSS MEIC Intern] DONE | rows=43 | elapsed=0:00:54.663055
+2026-03-26 08:54:31,603 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-03-26 08:54:31,607 | INFO | [ENT] START
+2026-03-26 08:54:32,376 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.769148
+2026-03-26 08:54:32,378 | INFO | [DBS MEIC] START
+2026-03-26 08:54:32,433 | INFO | [DBS MEIC] DONE | rows=33 | elapsed=0:00:00.054935
+2026-03-26 08:54:32,443 | INFO | [SCS MEIC] START
+2026-03-26 08:54:32,516 | INFO | [SCS MEIC] DONE | rows=33 | elapsed=0:00:00.072599
+2026-03-26 08:54:32,518 | INFO | [TDD COS 1] START
+2026-03-26 08:56:51,834 | INFO | [TDD COS 1] DONE | rows=197 | elapsed=0:02:19.318411
+2026-03-26 08:56:51,835 | INFO | [TDD COS 1] filter >= 2025-06-02: 197 -> 40
+2026-03-26 08:56:51,836 | INFO | [SCS Super Cell] START
+2026-03-26 08:58:01,281 | INFO | [SCS Super Cell] DONE | rows=198 | elapsed=0:01:09.444715
+2026-03-26 08:58:01,288 | INFO | [SCS Super Cell] rows scraped (pre-filter): 198
+2026-03-26 08:58:01,297 | INFO | [SCS Super Cell] filter >= 2025-06-30: 198 -> 38
+2026-03-26 08:58:01,314 | INFO | [MEIC PH] filter >= 2025-09-01: 86 -> 31
+2026-03-26 08:58:01,338 | INFO | [PH Cell 17] rows before TAA filter = 20
+2026-03-26 08:58:01,359 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1286 -> 596
+2026-03-26 08:58:01,360 | INFO | [PH Cell 17] rows after TAA filter = 20
+2026-03-26 08:58:01,361 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1286 -> 596
+2026-03-26 08:58:01,362 | INFO | [ALL] drop period_date == 2023-11-06: 596 -> 595
+2026-03-26 08:58:01,363 | INFO | [ALL] drop period_date == 2026-09-07: 595 -> 594
+2026-03-26 08:58:01,593 | INFO | Wrote 594 rows to NS_metrics.csv
+2026-03-26 08:58:01,921 | INFO | Wrote 331 rows to NS_WIP.csv
+2026-03-26 08:58:02,019 | INFO | [POST] WIP weekly keys=330
+2026-03-26 08:58:02,019 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-03-26 08:58:02,019 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-03-26 08:58:02,210 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 330 rows
+2026-03-26 08:58:02,217 | INFO | === NS Metrics Run END ===
