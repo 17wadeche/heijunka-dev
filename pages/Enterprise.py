@@ -160,12 +160,16 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
-    cols = ["team","period_date","person","Non-WIP Hours"]
+    cols = ["team", "period_date", "person", "Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
         return pd.DataFrame(columns=cols)
     rows = []
-    sub = nw[["team","period_date","non_wip_by_person"]].dropna(subset=["non_wip_by_person"])
+    sub = nw[["team", "period_date", "non_wip_by_person"]].dropna(subset=["non_wip_by_person"]).copy()
     for _, r in sub.iterrows():
+        wk = pd.to_datetime(r.get("period_date"), errors="coerce")
+        if pd.isna(wk):
+            continue
+        wk = pd.Timestamp(wk).normalize()
         payload = r["non_wip_by_person"]
         try:
             obj = json.loads(payload) if isinstance(payload, str) else payload
@@ -178,11 +182,14 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
                 v = float(hrs)
             except Exception:
                 v = np.nan
+            person_name = normalize_person_name(str(person).strip())
+            if not person_name:
+                continue
             rows.append({
-                "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": normalize_person_name(str(person).strip()),
-                "Non-WIP Hours": v
+                "team": str(r["team"]).strip(),
+                "period_date": wk,
+                "person": person_name,
+                "Non-WIP Hours": v,
             })
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
@@ -204,6 +211,10 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict] = []
     sub = temp.loc[:, ["team", "period_date", "person_hours"]].dropna(subset=["person_hours"]).copy()
     for _, r in sub.iterrows():
+        wk = pd.to_datetime(r.get("period_date"), errors="coerce")
+        if pd.isna(wk):
+            continue
+        wk = pd.Timestamp(wk).normalize()
         payload = r["person_hours"]
         try:
             obj = json.loads(payload) if isinstance(payload, str) else payload
@@ -214,17 +225,21 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
         for person, vals in obj.items():
             if not _is_good_name(person):
                 continue
-            a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
-            t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
+            vals = vals if isinstance(vals, dict) else {}
+            a = pd.to_numeric(vals.get("actual"), errors="coerce")
+            t = pd.to_numeric(vals.get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
             if a == 0.0 and t == 0.0:
                 continue
             util = (a / t) if t not in (0, 0.0) else np.nan
+            person_name = normalize_person_name(str(person).strip())
+            if not person_name:
+                continue
             rows.append({
                 "team": str(r["team"]).strip(),
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": normalize_person_name(str(person).strip()),
+                "period_date": wk,
+                "person": person_name,
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util,
@@ -266,13 +281,17 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict] = []
     sub = temp.loc[:, ["team", "period_date", "people_in_wip"]].dropna(subset=["people_in_wip"]).copy()
     for _, r in sub.iterrows():
+        wk = pd.to_datetime(r.get("period_date"), errors="coerce")
+        if pd.isna(wk):
+            continue
+        wk = pd.Timestamp(wk).normalize()
         people = _as_names(r["people_in_wip"])
         for person in people:
             if not person:
                 continue
             rows.append({
                 "team": str(r["team"]).strip(),
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "period_date": wk,
                 "person": person,
             })
     out = pd.DataFrame(rows, columns=cols)
