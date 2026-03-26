@@ -196,6 +196,12 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
                         "activity": activity,
                         "hours": hours,
                     })
+            if person_ooo > 0:
+                non_wip_activities.append({
+                    "name": clean_name,
+                    "activity": "OOO",
+                    "hours": person_ooo,
+                })
         results[week_date] = {
             "people_count": len(week_people),
             "total_non_wip_hours": total_non_wip_hours,
