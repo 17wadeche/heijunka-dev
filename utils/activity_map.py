@@ -122,6 +122,8 @@ ACTIVITY_MAP = {
     "aged file/metrics review":"Aged WIP Review",
     "reading aortic documanet": "Reading File/Document Information",
     "emails, admin":"Email & IM",
+    "code remediations, reportable pe to pe merge support, scrum, town hall":"Scrum & Action",
+    "affera code request":"Coding",
     "lab cleaning":"Admin",
     "clinical doc review":"Clinical Review",
     "laptop forced restart (new update)": "IT Issue/Update",
