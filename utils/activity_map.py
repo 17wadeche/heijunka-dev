@@ -994,6 +994,7 @@ ACTIVITY_MAP = {
     "getting data for meeting":"Meeting",
     "tl":"Meeting",
     "sha t":"Meeting",
+    "meetings -integer":"Meeting",
     "crdn complaint call":"Meeting",
     "spider feedback question":"Feedback",
     "pvh meeting catch up":"Meeting",
