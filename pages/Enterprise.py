@@ -670,120 +670,6 @@ for key in ["ns_non_wip_activities", "crm_non_wip_activities", "ms_non_wip_activ
         if floor_candidate is not None:
             selected_nonwip_floor = floor_candidate
             break
-def build_person_weekly_accounting(
-    team: str,
-    week,
-    nw_row,
-    metrics_frame: pd.DataFrame,
-    nw_frame: pd.DataFrame,
-    week_hours: float = 40.0,
-    irl_people: set[str] | None = None,
-) -> pd.DataFrame:
-    wk = pd.to_datetime(week, errors="coerce").normalize()
-    long_nw = explode_non_wip_by_person(nw_frame)
-    nw_people = long_nw.loc[
-        (long_nw["team"] == team) & (long_nw["period_date"] == wk),
-        ["person", "Non-WIP Hours"]
-    ].copy()
-    if nw_people.empty:
-        nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
-    nw_people["person"] = nw_people["person"].astype(str).str.strip()
-    nw_people["Non-WIP Hours"] = pd.to_numeric(nw_people["Non-WIP Hours"], errors="coerce").fillna(0.0)
-    person_hours = explode_person_hours(metrics_frame)
-    wip_people = person_hours.loc[
-        (person_hours["team"] == team) & (person_hours["period_date"] == wk),
-        ["person", "Actual Hours"]
-    ].copy()
-    if wip_people.empty:
-        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
-    wip_people["person"] = wip_people["person"].astype(str).str.strip()
-    wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
-    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
-    acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
-    other_df = pd.DataFrame(
-        [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
-    )
-    if other_df.empty:
-        other_df = pd.DataFrame(columns=["person", "Other Team WIP"])
-    acct_df = pd.DataFrame(
-        [{"person": str(k).strip(), "Accounted Non-WIP": float(v)} for k, v in acct_nonother_map.items()]
-    )
-    if acct_df.empty:
-        acct_df = pd.DataFrame(columns=["person", "Accounted Non-WIP"])
-    payload = nw_row.get("non_wip_activities", "[]")
-    try:
-        activities = json.loads(payload) if isinstance(payload, str) else payload
-    except Exception:
-        activities = []
-    ooo_by_person: dict[str, float] = {}
-    if isinstance(activities, list):
-        for item in activities:
-            if not isinstance(item, dict):
-                continue
-            person = str(item.get("name", "")).strip()
-            activity = str(item.get("activity", "")).strip().upper()
-            try:
-                hrs = float(item.get("hours", 0) or 0)
-            except Exception:
-                hrs = 0.0
-            if not person or hrs <= 0:
-                continue
-            if activity == "OOO":
-                ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
-    ooo_df = pd.DataFrame(
-        [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
-    )
-    if ooo_df.empty:
-        ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
-    people = pd.DataFrame({
-        "person": sorted(set(
-            nw_people["person"].astype(str).tolist()
-            + wip_people["person"].astype(str).tolist()
-            + other_df["person"].astype(str).tolist()
-            + acct_df["person"].astype(str).tolist()
-            + ooo_df["person"].astype(str).tolist()
-        ))
-    })
-    out = (
-        people.merge(nw_people, on="person", how="left")
-            .merge(wip_people, on="person", how="left")
-            .merge(other_df, on="person", how="left")
-            .merge(acct_df, on="person", how="left")
-            .merge(ooo_df, on="person", how="left")
-            .fillna(0.0)
-    )
-    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
-    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
-    out["Expected Hours"] = np.where(
-        out["person_key"].isin(irl_people_norm),
-        39.0,
-        float(week_hours),
-    )
-    out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
-    out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
-    out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
-    out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
-    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
-    non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
-    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
-    remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
-    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
-    out["Unaccounted"] = (
-        out["Expected Hours"]
-        - out["Completed Hours"]
-        - out["OOO Hours"]
-        - out["Other Team WIP"]
-        - out["Accounted Non-WIP"]
-    ).clip(lower=0.0)
-    out["Total Used"] = (
-        out["Completed Hours"]
-        + out["OOO Hours"]
-        + out["Other Team WIP"]
-        + out["Accounted Non-WIP"]
-    )
-    out["period_date"] = wk
-    out["team"] = team
-    return out.sort_values(["person"]).reset_index(drop=True)
 def _team_meta_lookup(org: OrgConfig) -> pd.DataFrame:
     rows = []
     for t in org.teams:
@@ -800,110 +686,77 @@ def _weekly_team_export_df(
     org: OrgConfig,
     factor_out_ooo: bool = False,
 ) -> pd.DataFrame:
-    if dfnw is None or dfnw.empty:
+    metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
+    nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
+    if dfm is not None and not dfm.empty:
+        m = dfm.copy()
+        team_col_m = _get_team_col(m)
+        date_ser = _coalesce_matching_cols(m, ["week", "period_date", "date", "day", "as_of", "timestamp"])
+        wip_ser = _coalesce_matching_cols(m, ["completed_hours", "wip_hours", "completedhours"])
+        if team_col_m is not None:
+            m["__date__"] = pd.to_datetime(date_ser, errors="coerce")
+            m["__completed_hours__"] = pd.to_numeric(wip_ser, errors="coerce")
+            m = m.dropna(subset=["__date__"])
+            m["week_start"] = _weekly_start(m["__date__"])
+            m["__completed_hours__"] = m["__completed_hours__"].fillna(0.0)
+            metrics_team = (
+                m.groupby([team_col_m, "week_start"], as_index=False)
+                .agg(completed_hours=("__completed_hours__", "sum"))
+                .rename(columns={team_col_m: "team"})
+            )
+    if dfnw is not None and not dfnw.empty:
+        nw = dfnw.copy()
+        team_col_nw = _get_team_col(nw)
+        date_ser = _coalesce_matching_cols(nw, ["week", "period_date", "date", "day", "as_of", "timestamp"])
+        people_ser = _coalesce_matching_cols(nw, ["people_count", "people_count."])
+        nonwip_ser = _coalesce_matching_cols(nw, ["total_non-wip_hours", "total_non_wip_hours", "total_non_wip_hours."])
+        ooo_ser = _coalesce_matching_cols(nw, ["ooo_hours", "ooo_hours."])
+        if team_col_nw is not None:
+            nw["__date__"] = pd.to_datetime(date_ser, errors="coerce")
+            nw = nw.dropna(subset=["__date__"])
+            nw["week_start"] = _weekly_start(nw["__date__"])
+            nw["people_count"] = pd.to_numeric(people_ser, errors="coerce").fillna(0.0)
+            nw["non_wip_hours"] = pd.to_numeric(nonwip_ser, errors="coerce").fillna(0.0)
+            nw["ooo_hours"] = pd.to_numeric(ooo_ser, errors="coerce").fillna(0.0)
+            nonwip_team = (
+                nw.groupby([team_col_nw, "week_start"], as_index=False)
+                .agg(
+                    people_count=("people_count", "sum"),
+                    non_wip_hours=("non_wip_hours", "sum"),
+                    ooo_hours=("ooo_hours", "sum"),
+                )
+                .rename(columns={team_col_nw: "team"})
+            )
+    if metrics_team.empty and nonwip_team.empty:
         return pd.DataFrame()
-    metrics_frame = dfm.copy() if dfm is not None else pd.DataFrame()
-    nw_frame = dfnw.copy()
-    if not metrics_frame.empty:
-        metrics_frame = _normalize_df_columns(metrics_frame)
-        if "period_date" in metrics_frame.columns:
-            metrics_frame["period_date"] = pd.to_datetime(
-                metrics_frame["period_date"], errors="coerce"
-            ).dt.normalize()
-    nw_frame = _normalize_df_columns(nw_frame)
-    if "period_date" not in nw_frame.columns:
-        date_col = _get_date_col(nw_frame)
-        if date_col:
-            nw_frame["period_date"] = pd.to_datetime(nw_frame[date_col], errors="coerce").dt.normalize()
-    else:
-        nw_frame["period_date"] = pd.to_datetime(nw_frame["period_date"], errors="coerce").dt.normalize()
-    team_col = _get_team_col(nw_frame)
-    if not team_col or "period_date" not in nw_frame.columns:
-        return pd.DataFrame()
-    teams_cfg = {}
-    teams_cfg_path = Path(__file__).resolve().parents[1] / "teams.json"
-    try:
-        with open(teams_cfg_path, "r", encoding="utf-8") as f:
-            teams_cfg = json.load(f)
-    except Exception:
-        teams_cfg = {}
-    def _irl_people_for_team(team: str) -> set[str]:
-        team_cfg = teams_cfg.get(str(team).strip(), {})
-        raw = team_cfg.get("irl_people", []) if isinstance(team_cfg, dict) else []
-        return {str(x).strip() for x in raw if str(x).strip()}
-    rows = []
-    nw_sub = nw_frame[nw_frame[team_col].astype(str).isin(set(team_filter))].copy()
-    for _, nw_row in nw_sub.iterrows():
-        team = str(nw_row.get(team_col, "")).strip()
-        wk = pd.to_datetime(nw_row.get("period_date"), errors="coerce")
-        if not team or pd.isna(wk):
-            continue
-        wk = wk.normalize()
-        wk_people = build_person_weekly_accounting(
-            team=team,
-            week=wk,
-            nw_row=nw_row,
-            metrics_frame=metrics_frame,
-            nw_frame=nw_frame,
-            week_hours=40.0,
-            irl_people=_irl_people_for_team(team),
-        )
-        if wk_people.empty:
-            continue
-        completed_hours = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0).sum()
-        non_wip_hours = (
-            pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0).sum()
-            + pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0).sum()
-        )
-        ooo_hours = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0).sum()
-        unaccounted_hours = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0).sum()
-        capacity_hours = pd.to_numeric(wk_people["Expected Hours"], errors="coerce").fillna(0.0).sum()
-        people_count = float(len(wk_people))
-        if factor_out_ooo:
-            pct_denom = max(float(capacity_hours) - float(ooo_hours), 0.0)
-            ooo_pct = 0.0
-        else:
-            pct_denom = float(capacity_hours)
-            ooo_pct = (float(ooo_hours) / pct_denom) if pct_denom > 0 else pd.NA
-        rows.append({
-            "team": team,
-            "week_start": wk,
-            "people_count": people_count,
-            "completed_hours": float(completed_hours),
-            "non_wip_hours": float(non_wip_hours),
-            "ooo_hours": float(ooo_hours),
-            "capacity_hours": float(capacity_hours),
-            "unaccounted_hours": float(unaccounted_hours),
-            "wip_pct": (float(completed_hours) / pct_denom) if pct_denom > 0 else pd.NA,
-            "non_wip_pct": (float(non_wip_hours) / pct_denom) if pct_denom > 0 else pd.NA,
-            "ooo_pct": ooo_pct,
-            "unaccounted_pct": (float(unaccounted_hours) / pct_denom) if pct_denom > 0 else pd.NA,
-        })
-    if not rows:
-        return pd.DataFrame()
-    base = pd.DataFrame(rows)
-    base = (
-        base.groupby(["team", "week_start"], as_index=False)
-        .agg(
-            people_count=("people_count", "max"),
-            completed_hours=("completed_hours", "sum"),
-            non_wip_hours=("non_wip_hours", "sum"),
-            ooo_hours=("ooo_hours", "sum"),
-            capacity_hours=("capacity_hours", "sum"),
-            unaccounted_hours=("unaccounted_hours", "sum"),
-        )
-    )
+    base = metrics_team.merge(nonwip_team, on=["team", "week_start"], how="outer")
+    for col in ["completed_hours", "people_count", "non_wip_hours", "ooo_hours"]:
+        if col not in base.columns:
+            base[col] = 0.0
+        base[col] = pd.to_numeric(base[col], errors="coerce").fillna(0.0)
+    meta = _team_meta_lookup(org)
+    base = base.merge(meta, on="team", how="left")
+    base["capacity_hours"] = base["people_count"] * 40.0
     if factor_out_ooo:
         pct_denom = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
+        base["unaccounted_hours"] = (
+            pct_denom
+            - base["completed_hours"]
+            - base["non_wip_hours"]
+        ).clip(lower=0.0)
         base["ooo_pct"] = 0.0
     else:
         pct_denom = base["capacity_hours"]
+        base["unaccounted_hours"] = (
+            base["capacity_hours"]
+            - base["completed_hours"]
+            - base["non_wip_hours"]
+            - base["ooo_hours"]
+        ).clip(lower=0.0)
         base["ooo_pct"] = (base["ooo_hours"] / pct_denom).where(pct_denom > 0)
     base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
     base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
-    meta = _team_meta_lookup(org)
-    base = base.merge(meta, on="team", how="left")
     base = _add_avg_hours_day_columns(base)
     return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
 def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = False) -> pd.DataFrame:
