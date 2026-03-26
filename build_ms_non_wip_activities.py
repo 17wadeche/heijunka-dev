@@ -102,7 +102,7 @@ def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: in
         if not current_person:
             continue
         norm = _norm_name(current_person)
-        if norm == "X":
+        if norm in {"X", "0", "USER1", "USER2", "USER3", "USER4"}:
             continue
         if norm not in seen:
             seen.add(norm)
@@ -172,7 +172,12 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             continue
         for row in range(header_row + 1, end_row + 1):
             name = _as_text(ws.cell(row=row, column=NAME_COL).value)
-            if not name:
+            clean_name = name.strip()
+            lower_name = clean_name.lower()
+            if (
+                not clean_name
+                or lower_name in {"0", "user1", "user2", "user3", "user4"}
+            ):
                 continue
             lower_name = name.strip().lower()
             if lower_name == "total":

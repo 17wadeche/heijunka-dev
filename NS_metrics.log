@@ -2865,3 +2865,8 @@ pywintypes.com_error: (-2147352567, 'Exception occurred.', (0, None, None, None,
 2026-03-25 21:00:31,799 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-25 21:00:31,899 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 330 rows
 2026-03-25 21:00:31,901 | INFO | === NS Metrics Run END ===
+2026-03-25 22:23:07,061 | INFO | === NS Metrics Run START ===
+2026-03-25 22:23:07,062 | INFO | Selected team: all
+2026-03-25 22:23:07,068 | INFO | [Spine] START
+2026-03-25 22:23:24,240 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:17.171870
+2026-03-25 22:23:24,241 | INFO | [Spine New] START

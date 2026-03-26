@@ -59,7 +59,12 @@ CSV_COLUMNS = [
 EXCLUDED_STATIONS = {"ooo", "non wip", ""}
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
-EXCLUDED_NAMES = {"x", "0", "", "User1", "User2", "User3", "User4", "User5", "User6", "User7", "User8", "User9", "User10", "User11"}
+EXCLUDED_NAMES = {
+    "x", "0", "",
+    "user1", "user2", "user3", "user4",
+    "user5", "user6", "user7", "user8",
+    "user9", "user10", "user11"
+}
 def is_valid_name(name: str) -> bool:
     return name.strip().lower() not in EXCLUDED_NAMES
 def _norm_path(p: str) -> str:
