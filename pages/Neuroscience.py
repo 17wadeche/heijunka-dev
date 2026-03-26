@@ -748,6 +748,7 @@ def build_person_weekly_accounting(
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
+        .fillna(0.0)
     )
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
