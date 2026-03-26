@@ -757,8 +757,6 @@ def _weekly_team_export_df(
     base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
     base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
-    base["ooo_hours"] = base["ooo_hours_display"]
-    base = base.drop(columns=["ooo_hours_display"])
     base = _add_avg_hours_day_columns(base)
     return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
 def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = False) -> pd.DataFrame:
@@ -800,8 +798,6 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     out["wip_pct"] = (out["completed_hours"] / pct_denom).where(pct_denom > 0)
     out["non_wip_pct"] = (out["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     out["unaccounted_pct"] = (out["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
-    out["ooo_hours"] = out["ooo_hours_display"]
-    out = out.drop(columns=["ooo_hours_display"])
     out = _add_avg_hours_day_columns(out)
     if level == "portfolio":
         out["ou"] = pd.NA
