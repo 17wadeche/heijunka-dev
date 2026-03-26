@@ -1700,20 +1700,16 @@ with tabs[1]:
         "crm_non_wip_activities",
         "non_wip_activities",
     ]
-
     available_frames = []
     for key in activity_keys:
         if key in data:
             cand = filter_by_team(data[key])
             if not cand.empty:
                 available_frames.append(_normalize_df_columns(cand.copy()))
-
     if not available_frames:
         st.info("No non-WIP activity CSVs found.")
         st.stop()
-
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
-
     nw_start, nw_end = section_date_range(
         "Non-WIP date range",
         source_raw,
@@ -1724,12 +1720,9 @@ with tabs[1]:
     if source_df.empty:
         st.info("No Non-WIP activity data available in this date range.")
         st.stop()
-
     source_df = _normalize_df_columns(source_df.copy())
-
     dc = _get_date_col(source_df)
     json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
-
     if not (dc and json_col):
         st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
         st.stop()
@@ -1742,21 +1735,26 @@ with tabs[1]:
             payload = _loads_json_maybe(r[json_col])
             if not payload:
                 continue
-            if isinstance(payload, list):
-                for item in payload:
-                    if not isinstance(item, dict):
-                        continue
-                    act = item.get("activity") or item.get("Activity") or item.get("type")
-                    hrs = item.get("hours") or item.get("Hours")
-                    if act is None or hrs is None:
-                        continue
-                    rows.append(
-                        {
-                            "week": wk,
-                            "activity": str(act).strip(),
-                            "hours": float(hrs) if str(hrs) != "" else 0.0,
-                        }
-                    )
+            if isinstance(payload, dict):
+                payload = [payload]
+            if not isinstance(payload, list):
+                continue
+            for item in payload:
+                if not isinstance(item, dict):
+                    continue
+                act = item.get("activity") or item.get("Activity") or item.get("type")
+                hrs = item.get("hours") or item.get("Hours")
+                if act is None or hrs is None:
+                    continue
+                try:
+                    hrs_val = float(hrs)
+                except Exception:
+                    hrs_val = 0.0
+                rows.append({
+                    "week": wk,
+                    "activity": str(act).strip(),
+                    "hours": hrs_val,
+                })
         if not rows:
             st.info("No parsable activity rows found in the JSON column.")
             st.stop()
