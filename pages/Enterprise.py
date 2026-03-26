@@ -299,24 +299,28 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
         out = out.drop_duplicates(subset=["team", "period_date", "person"])
     return out
-def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
+def merged_people_count_for_week(
+    team: str,
+    week,
+    long_nw: pd.DataFrame,
+    person_hours: pd.DataFrame,
+    people_in_wip: pd.DataFrame,
+) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    a = explode_non_wip_by_person(nw_frame)
-    b = explode_person_hours(metrics_frame)
-    c = explode_people_in_wip(metrics_frame)
     names = set()
-    for df_, person_col in [(a, "person"), (b, "person"), (c, "person")]:
+    for df_, person_col in [
+        (long_nw, "person"),
+        (person_hours, "person"),
+        (people_in_wip, "person"),
+    ]:
+        if df_ is None or df_.empty:
+            continue
         sub = df_.loc[
             (df_["team"] == team) & (df_["period_date"] == wk),
             [person_col]
         ].copy()
         if not sub.empty:
-            vals = (
-                sub[person_col]
-                .astype(str)
-                .map(normalize_person_name)
-                .str.strip()
-            )
+            vals = sub[person_col].astype(str).map(normalize_person_name).str.strip()
             names.update(x for x in vals if x)
     return len(names)
 def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str, float]]:
@@ -353,13 +357,12 @@ def build_person_weekly_accounting(
     team: str,
     week,
     nw_row,
-    metrics_frame: pd.DataFrame,
-    nw_frame: pd.DataFrame,
+    long_nw: pd.DataFrame,
+    person_hours: pd.DataFrame,
     week_hours: float = 40.0,
     irl_people: set[str] | None = None,
 ) -> pd.DataFrame:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    long_nw = explode_non_wip_by_person(nw_frame)
     nw_people = long_nw.loc[
         (long_nw["team"] == team) & (long_nw["period_date"] == wk),
         ["person", "Non-WIP Hours"]
@@ -368,7 +371,6 @@ def build_person_weekly_accounting(
         nw_people = pd.DataFrame(columns=["person", "Non-WIP Hours"])
     nw_people["person"] = nw_people["person"].astype(str).str.strip()
     nw_people["Non-WIP Hours"] = pd.to_numeric(nw_people["Non-WIP Hours"], errors="coerce").fillna(0.0)
-    person_hours = explode_person_hours(metrics_frame)
     wip_people = person_hours.loc[
         (person_hours["team"] == team) & (person_hours["period_date"] == wk),
         ["person", "Actual Hours"]
@@ -1079,6 +1081,24 @@ def _team_meta_lookup(org: OrgConfig) -> pd.DataFrame:
             "portfolio": meta.get("portfolio"),
         })
     return pd.DataFrame(rows)
+def _prepare_weekly_accounting_inputs(
+    metrics_frame: pd.DataFrame,
+    nw_frame: pd.DataFrame,
+) -> dict[str, pd.DataFrame]:
+    long_nw = explode_non_wip_by_person(nw_frame)
+    person_hours = explode_person_hours(metrics_frame)
+    people_in_wip = explode_people_in_wip(metrics_frame)
+    if not long_nw.empty:
+        long_nw["period_date"] = pd.to_datetime(long_nw["period_date"], errors="coerce").dt.normalize()
+    if not person_hours.empty:
+        person_hours["period_date"] = pd.to_datetime(person_hours["period_date"], errors="coerce").dt.normalize()
+    if not people_in_wip.empty:
+        people_in_wip["period_date"] = pd.to_datetime(people_in_wip["period_date"], errors="coerce").dt.normalize()
+    return {
+        "long_nw": long_nw,
+        "person_hours": person_hours,
+        "people_in_wip": people_in_wip,
+    }
 def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
     dfnw: Optional[pd.DataFrame],
