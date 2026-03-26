@@ -123,6 +123,7 @@ ACTIVITY_MAP = {
     "reading aortic documanet": "Reading File/Document Information",
     "emails, admin":"Email & IM",
     "lab cleaning":"Admin",
+    "clinical doc review":"Clinical Review",
     "laptop forced restart (new update)": "IT Issue/Update",
     "meeting (voyager fume hood)": "Meeting",
     "nellcor shipping":"shipment",
