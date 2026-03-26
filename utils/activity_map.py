@@ -1732,7 +1732,7 @@ ACTIVITY_MAP = {
     "ri repsonse":"RI",
     "rrt":"RRTT",
     "workshop":"Next Gen",
-    "meetings/ad hoc querie":"Meetings",
+    "meetings/ad hoc querie":"Meeting",
     "cornerstone and admin":"Admin",
     "dmaic":"Problem Solving",
     "ng workshop, email/admin/collab": "Next Gen",
