@@ -131,6 +131,7 @@ def _threshold_cell_style(val: Any, threshold: float, good_if_gte: bool = False)
         return "background-color: #d1fae5; color: #065f46;"
     return "background-color: #fee2e2; color: #991b1b;"
 TEAMS_CONFIG_PATH = Path(__file__).resolve().parents[1] / "teams.json"
+@st.cache_data(show_spinner=False)
 def load_team_config(config_path: str | None = None) -> dict:
     p = Path(config_path) if config_path else TEAMS_CONFIG_PATH
     try:
@@ -1130,6 +1131,10 @@ def _weekly_team_export_df(
     if nw.empty:
         return pd.DataFrame()
     metrics_frame = _normalize_df_columns(dfm.copy()) if dfm is not None and not dfm.empty else pd.DataFrame()
+    prepared = _prepare_weekly_accounting_inputs(metrics_frame, nw)
+    long_nw = prepared["long_nw"]
+    person_hours = prepared["person_hours"]
+    people_in_wip = prepared["people_in_wip"]
     metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
     if not metrics_frame.empty:
         if "period_date" not in metrics_frame.columns:
@@ -1172,8 +1177,8 @@ def _weekly_team_export_df(
             team=team,
             week=wk,
             nw_row=nw_row,
-            metrics_frame=metrics_frame,
-            nw_frame=nw,
+            long_nw=long_nw,
+            person_hours=person_hours,
             week_hours=40.0,
             irl_people=team_irl_people,
         )
@@ -1185,8 +1190,9 @@ def _weekly_team_export_df(
         people_count = merged_people_count_for_week(
             team=team,
             week=wk,
-            metrics_frame=metrics_frame,
-            nw_frame=nw,
+            long_nw=long_nw,
+            person_hours=person_hours,
+            people_in_wip=people_in_wip,
         )
         if people_count is None or float(people_count) <= 0:
             people_count = float(
