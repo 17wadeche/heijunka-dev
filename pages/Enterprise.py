@@ -738,27 +738,24 @@ def _weekly_team_export_df(
     base = base.merge(meta, on="team", how="left")
     base["capacity_hours"] = base["people_count"] * 40.0
     if factor_out_ooo:
-        base["capacity_hours_adj"] = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
-        base["ooo_hours_display"] = 0.0
+        pct_denom = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
         base["unaccounted_hours"] = (
-            base["capacity_hours_adj"]
+            pct_denom
             - base["completed_hours"]
             - base["non_wip_hours"]
         ).clip(lower=0.0)
-        pct_denom = base["capacity_hours_adj"]
+        base["ooo_pct"] = 0.0
     else:
-        base["capacity_hours_adj"] = base["capacity_hours"]
-        base["ooo_hours_display"] = base["ooo_hours"]
+        pct_denom = base["capacity_hours"]
         base["unaccounted_hours"] = (
             base["capacity_hours"]
             - base["completed_hours"]
             - base["non_wip_hours"]
             - base["ooo_hours"]
         ).clip(lower=0.0)
-        pct_denom = base["capacity_hours"]
+        base["ooo_pct"] = (base["ooo_hours"] / pct_denom).where(pct_denom > 0)
     base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
     base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
-    base["ooo_pct"] = (base["ooo_hours_display"] / pct_denom).where(pct_denom > 0)
     base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
     base["ooo_hours"] = base["ooo_hours_display"]
     base = base.drop(columns=["ooo_hours_display"])
@@ -784,27 +781,24 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     )
     out["capacity_hours"] = out["people_count"] * 40.0
     if factor_out_ooo:
-        out["capacity_hours_adj"] = (out["capacity_hours"] - out["ooo_hours"]).clip(lower=0.0)
-        out["ooo_hours_display"] = 0.0
+        pct_denom = (out["capacity_hours"] - out["ooo_hours"]).clip(lower=0.0)
         out["unaccounted_hours"] = (
-            out["capacity_hours_adj"]
+            pct_denom
             - out["completed_hours"]
             - out["non_wip_hours"]
         ).clip(lower=0.0)
-        pct_denom = out["capacity_hours_adj"]
+        out["ooo_pct"] = 0.0
     else:
-        out["capacity_hours_adj"] = out["capacity_hours"]
-        out["ooo_hours_display"] = out["ooo_hours"]
+        pct_denom = out["capacity_hours"]
         out["unaccounted_hours"] = (
             out["capacity_hours"]
             - out["completed_hours"]
             - out["non_wip_hours"]
             - out["ooo_hours"]
         ).clip(lower=0.0)
-        pct_denom = out["capacity_hours"]
+        out["ooo_pct"] = (out["ooo_hours"] / pct_denom).where(pct_denom > 0)
     out["wip_pct"] = (out["completed_hours"] / pct_denom).where(pct_denom > 0)
     out["non_wip_pct"] = (out["non_wip_hours"] / pct_denom).where(pct_denom > 0)
-    out["ooo_pct"] = (out["ooo_hours_display"] / pct_denom).where(pct_denom > 0)
     out["unaccounted_pct"] = (out["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
     out["ooo_hours"] = out["ooo_hours_display"]
     out = out.drop(columns=["ooo_hours_display"])
