@@ -189,19 +189,22 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty or "Person Hours" not in df.columns:
-        return pd.DataFrame(columns=[
-            "team","period_date","person","Actual Hours","Available Hours","Utilization"
-        ])
-    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA",
-                 "null", "NULL", "none", "None"}
+    cols = ["team", "period_date", "person", "Actual Hours", "Available Hours", "Utilization"]
+    if df is None or df.empty:
+        return pd.DataFrame(columns=cols)
+    temp = _normalize_df_columns(df.copy())
+    if "person_hours" not in temp.columns:
+        return pd.DataFrame(columns=cols)
+    if "team" not in temp.columns or "period_date" not in temp.columns:
+        return pd.DataFrame(columns=cols)
+    BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
     def _is_good_name(s: str) -> bool:
         t = str(s).strip()
         return t and t not in BAD_NAMES and t.lower() not in {b.lower() for b in BAD_NAMES}
     rows: list[dict] = []
-    sub = df.loc[:, ["team", "period_date", "Person Hours"]].dropna(subset=["Person Hours"]).copy()
+    sub = temp.loc[:, ["team", "period_date", "person_hours"]].dropna(subset=["person_hours"]).copy()
     for _, r in sub.iterrows():
-        payload = r["Person Hours"]
+        payload = r["person_hours"]
         try:
             obj = json.loads(payload) if isinstance(payload, str) else payload
             if not isinstance(obj, dict):
@@ -215,63 +218,67 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
-            if (a == 0.0) and (t == 0.0):
+            if a == 0.0 and t == 0.0:
                 continue
             util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
-                "team": r["team"],
+                "team": str(r["team"]).strip(),
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                 "person": normalize_person_name(str(person).strip()),
                 "Actual Hours": a,
                 "Available Hours": t,
-                "Utilization": util
+                "Utilization": util,
             })
-    out = pd.DataFrame(
-        rows,
-        columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"]
-    )
+    out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty or "People in WIP" not in df.columns:
-        return pd.DataFrame(columns=["team", "period_date", "person"])
-    sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
+    cols = ["team", "period_date", "person"]
+    if df is None or df.empty:
+        return pd.DataFrame(columns=cols)
+    temp = _normalize_df_columns(df.copy())
+    if "people_in_wip" not in temp.columns:
+        return pd.DataFrame(columns=cols)
+    if "team" not in temp.columns or "period_date" not in temp.columns:
+        return pd.DataFrame(columns=cols)
     BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
     def _is_good_name(s: str) -> bool:
-        return s.strip() and s.strip() not in BAD_NAMES
-    rows: list[dict] = []
+        return str(s).strip() and str(s).strip() not in BAD_NAMES
     def _as_names(x) -> list[str]:
         if isinstance(x, list):
-            return [str(s).strip() for s in x if _is_good_name(str(s))]
+            return [normalize_person_name(str(s).strip()) for s in x if _is_good_name(str(s))]
+        if isinstance(x, dict):
+            return [normalize_person_name(str(k).strip()) for k in x.keys() if _is_good_name(str(k))]
         if isinstance(x, str):
             s = x.strip()
             try:
                 obj = json.loads(s)
                 if isinstance(obj, list):
-                    return [str(v).strip() for v in obj if _is_good_name(str(v))]
+                    return [normalize_person_name(str(v).strip()) for v in obj if _is_good_name(str(v))]
                 if isinstance(obj, dict):
-                    return [str(k).strip() for k, v in obj.items() if _is_good_name(str(k))]
+                    return [normalize_person_name(str(k).strip()) for k in obj.keys() if _is_good_name(str(k))]
             except Exception:
                 pass
-            import re
             parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if _is_good_name(p)]
-            return parts
-        if isinstance(x, dict):
-            return [str(k).strip() for k in x.keys() if _is_good_name(str(k))]
+            return [normalize_person_name(p) for p in parts]
         return []
-    import re
+    rows: list[dict] = []
+    sub = temp.loc[:, ["team", "period_date", "people_in_wip"]].dropna(subset=["people_in_wip"]).copy()
     for _, r in sub.iterrows():
-        people = _as_names(r["People in WIP"])
+        people = _as_names(r["people_in_wip"])
         for person in people:
+            if not person:
+                continue
             rows.append({
-                "team": r["team"],
+                "team": str(r["team"]).strip(),
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": person
+                "person": person,
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+        out = out.drop_duplicates(subset=["team", "period_date", "person"])
     return out
 def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
@@ -1111,7 +1118,7 @@ def _weekly_team_export_df(
             metrics_frame=metrics_frame,
             nw_frame=nw,
         )
-        if pd.isna(people_count):
+        if people_count is None or float(people_count) <= 0:
             people_count = float(
                 wk_people["person"]
                 .astype(str)
@@ -1956,7 +1963,13 @@ with tabs[2]:
     )
     if not team_export.empty:
         team_export = team_export[
-            (team_export["completed_hours"] > 0) & (team_export["people_count"] > 0)
+            (
+                team_export["completed_hours"].fillna(0)
+                + team_export["other_team_wip_hours"].fillna(0)
+                + team_export["non_wip_hours"].fillna(0)
+                + team_export["ooo_hours"].fillna(0)
+                + team_export["unaccounted_hours"].fillna(0)
+            ) > 0
         ].reset_index(drop=True)
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
