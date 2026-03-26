@@ -1559,21 +1559,37 @@ if "teams_sel" not in st.session_state:
     st.session_state.teams_sel = saved or default_teams
 has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
-max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
-if has_dates and min_date and max_date:
+max_date_raw = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
+if has_dates and min_date and max_date_raw:
+    today_date = pd.Timestamp.today().normalize().date()
+    max_date = min(max_date_raw, today_date)
+    default_start = pd.to_datetime("2025-10-27").date()
     if "start_date" not in st.session_state:
-        st.session_state["start_date"] = min_date
+        st.session_state["start_date"] = max(min_date, default_start)
     if "end_date" not in st.session_state:
         st.session_state["end_date"] = max_date
+    else:
+        st.session_state["end_date"] = min(st.session_state["end_date"], max_date)
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
     if start > end:
         st.error("Start date cannot be after end date!")
-        start, end = min_date, max_date
-        st.session_state["start_date"] = start
-        st.session_state["end_date"] = end
-else:
-    start, end = None, None
+    st.markdown("#### Date Range")
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        st.date_input(
+            "Start",
+            min_value=min_date,
+            max_value=max_date,
+            key="start_date",
+        )
+    with date_col2:
+        st.date_input(
+            "End",
+            min_value=min_date,
+            max_value=max_date,
+            key="end_date",
+        )
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
