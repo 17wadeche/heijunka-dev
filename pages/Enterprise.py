@@ -1694,51 +1694,45 @@ EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 with tabs[1]:
-    if (
-        "non_wip" not in data
-        and "non_wip_activities" not in data
-        and "ns_non_wip_activities" not in data
-        and "crm_non_wip_activities" not in data
-        and "ms_non_wip_activities" not in data
-    ):
-        st.info("No non-WIP CSVs found.")
-    else:
-        st.markdown("### Non-WIP activities")
-        source_frames = []
-        for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activities", "non_wip", "non_wip_activities"]:
-            if key in data:
-                cand = filter_by_team(data[key])
-                if not cand.empty:
-                    source_frames.append(_normalize_df_columns(cand.copy()))
-        if not source_frames:
-            st.info("No Non-WIP activity data available after team filtering.")
-            st.stop()
-        if len(source_frames) == 1:
-            source_raw = source_frames[0]
-        else:
-            source_raw = pd.concat(source_frames, ignore_index=True, sort=False).drop_duplicates()
-        if source_raw is None or source_raw.empty:
-            st.info("No Non-WIP activity data available after team filtering.")
-            st.stop()
-        nw_start, nw_end = section_date_range(
-            "Non-WIP date range",
-            source_raw,
-            key="dr_nonwip",
-            min_floor_ts=selected_nonwip_floor,
-        )
-        source_df = filter_by_date_range(source_raw, nw_start, nw_end)
-        if source_df.empty:
-            st.info("No Non-WIP activity data available in this date range.")
-            st.stop()
-        dc = _get_date_col(source_df)
-        json_col = None
-        for c in source_df.columns:
-            if _norm(c) in {"non-wip_activities", "non_wip_activities"}:
-                json_col = c
-                break
-        if not (dc and json_col):
-            st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
-            st.stop()
+    activity_keys = [
+        "ns_non_wip_activities",
+        "ms_non_wip_activities",
+        "crm_non_wip_activities",
+        "non_wip_activities",
+    ]
+
+    available_frames = []
+    for key in activity_keys:
+        if key in data:
+            cand = filter_by_team(data[key])
+            if not cand.empty:
+                available_frames.append(_normalize_df_columns(cand.copy()))
+
+    if not available_frames:
+        st.info("No non-WIP activity CSVs found.")
+        st.stop()
+
+    source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
+
+    nw_start, nw_end = section_date_range(
+        "Non-WIP date range",
+        source_raw,
+        key="dr_nonwip",
+        min_floor_ts=selected_nonwip_floor,
+    )
+    source_df = filter_by_date_range(source_raw, nw_start, nw_end)
+    if source_df.empty:
+        st.info("No Non-WIP activity data available in this date range.")
+        st.stop()
+
+    source_df = _normalize_df_columns(source_df.copy())
+
+    dc = _get_date_col(source_df)
+    json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
+
+    if not (dc and json_col):
+        st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
+        st.stop()
         tmp = source_df.copy()
         tmp[dc] = _safe_to_datetime(tmp, dc)
         tmp = tmp.dropna(subset=[dc]).sort_values(dc)
