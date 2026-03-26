@@ -121,7 +121,7 @@ ACTIVITY_MAP = {
     "emails/team":"Email & IM",
     "qa collaboration":"QA",
     "aged file/metrics review":"Aged WIP Review",
-    "project measure work":"Project Work",
+    "grad project measure work":"Project Work",
     "global town hall meeting":"Meeting",
     "fume hood meeting":"Meeting",
     "sh/a meeting email":"Meeting",
