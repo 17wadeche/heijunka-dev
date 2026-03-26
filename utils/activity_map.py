@@ -127,7 +127,7 @@ ACTIVITY_MAP = {
     "fume hood meeting":"Meeting",
     "emails about additional testing to stella":"Email & IM",
     "sh/a meeting email":"Meeting",
-    "looking for lost device":"Looking for a Device",
+    "looking for lost device":"Looking For A Device",
     "meeting with nelcor":"Meeting",
     "reading aortic documanet": "Reading File/Document Information",
     "emails, admin":"Email & IM",
