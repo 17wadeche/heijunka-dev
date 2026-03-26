@@ -1761,12 +1761,44 @@ with tabs[1]:
         key="nonwip_top_n",
     )
 
-    nw_start, nw_end = section_date_range(
+    raw_dc = _get_date_col(source_raw)
+    if not raw_dc:
+        st.info("No date column found for Non-WIP activity data.")
+        st.stop()
+
+    source_raw = source_raw.copy()
+    source_raw[raw_dc] = pd.to_datetime(source_raw[raw_dc], errors="coerce")
+    source_raw = source_raw.dropna(subset=[raw_dc])
+
+    if source_raw.empty:
+        st.info("No dated Non-WIP activity data available.")
+        st.stop()
+
+    nonwip_min_d = source_raw[raw_dc].min().date()
+    nonwip_max_d = source_raw[raw_dc].max().date()
+
+    nw_dates = st.date_input(
         "Non-WIP date range",
-        source_raw,
-        key="dr_nonwip",
-        min_floor_ts=None,
+        value=(nonwip_min_d, nonwip_max_d),
+        min_value=nonwip_min_d,
+        max_value=nonwip_max_d,
+        key="dr_nonwip_dates_only",
+        help="Filters only this section.",
     )
+
+    if isinstance(nw_dates, tuple):
+        if len(nw_dates) == 2:
+            nw_start_d, nw_end_d = nw_dates
+        elif len(nw_dates) == 1:
+            nw_start_d, nw_end_d = nw_dates[0], nw_dates[0]
+        else:
+            nw_start_d, nw_end_d = nonwip_min_d, nonwip_max_d
+    else:
+        nw_start_d, nw_end_d = nw_dates, nw_dates
+
+    nw_start = pd.to_datetime(nw_start_d)
+    nw_end = pd.to_datetime(nw_end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+
     source_df = filter_by_date_range(source_raw, nw_start, nw_end)
 
     if source_df.empty:
@@ -1909,12 +1941,28 @@ with tabs[1]:
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
 
-    pie_start, pie_end = section_date_range(
+    pie_dates = st.date_input(
         "Pie chart date range",
-        source_raw,
-        key="dr_nonwip_pie",
-        min_floor_ts=None,
+        value=(nonwip_min_d, nonwip_max_d),
+        min_value=nonwip_min_d,
+        max_value=nonwip_max_d,
+        key="dr_nonwip_pie_dates_only",
+        help="Filters only the pie chart.",
     )
+
+    if isinstance(pie_dates, tuple):
+        if len(pie_dates) == 2:
+            pie_start_d, pie_end_d = pie_dates
+        elif len(pie_dates) == 1:
+            pie_start_d, pie_end_d = pie_dates[0], pie_dates[0]
+        else:
+            pie_start_d, pie_end_d = nonwip_min_d, nonwip_max_d
+    else:
+        pie_start_d, pie_end_d = pie_dates, pie_dates
+
+    pie_start = pd.to_datetime(pie_start_d)
+    pie_end = pd.to_datetime(pie_end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+
     pie_source_df = filter_by_date_range(source_raw, pie_start, pie_end)
 
     if pie_source_df.empty:
