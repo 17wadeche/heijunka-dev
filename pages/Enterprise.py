@@ -684,6 +684,7 @@ def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
     dfnw: Optional[pd.DataFrame],
     org: OrgConfig,
+    factor_out_ooo: bool = False,
 ) -> pd.DataFrame:
     metrics_team = pd.DataFrame(columns=["team", "week_start", "completed_hours"])
     nonwip_team = pd.DataFrame(columns=["team", "week_start", "people_count", "non_wip_hours", "ooo_hours"])
@@ -736,22 +737,34 @@ def _weekly_team_export_df(
     meta = _team_meta_lookup(org)
     base = base.merge(meta, on="team", how="left")
     base["capacity_hours"] = base["people_count"] * 40.0
-    base["unaccounted_hours"] = (
-        base["capacity_hours"]
-        - base["completed_hours"]
-        - base["non_wip_hours"]
-        - base["ooo_hours"]
-    ).clip(lower=0.0)
-    for src, pct_col in [
-        ("completed_hours", "wip_pct"),
-        ("non_wip_hours", "non_wip_pct"),
-        ("ooo_hours", "ooo_pct"),
-        ("unaccounted_hours", "unaccounted_pct"),
-    ]:
-        base[pct_col] = (base[src] / base["capacity_hours"]).where(base["capacity_hours"] > 0)
+    if factor_out_ooo:
+        base["capacity_hours_adj"] = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
+        base["ooo_hours_display"] = 0.0
+        base["unaccounted_hours"] = (
+            base["capacity_hours_adj"]
+            - base["completed_hours"]
+            - base["non_wip_hours"]
+        ).clip(lower=0.0)
+        pct_denom = base["capacity_hours_adj"]
+    else:
+        base["capacity_hours_adj"] = base["capacity_hours"]
+        base["ooo_hours_display"] = base["ooo_hours"]
+        base["unaccounted_hours"] = (
+            base["capacity_hours"]
+            - base["completed_hours"]
+            - base["non_wip_hours"]
+            - base["ooo_hours"]
+        ).clip(lower=0.0)
+        pct_denom = base["capacity_hours"]
+    base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
+    base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
+    base["ooo_pct"] = (base["ooo_hours_display"] / pct_denom).where(pct_denom > 0)
+    base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
+    base["ooo_hours"] = base["ooo_hours_display"]
+    base = base.drop(columns=["ooo_hours_display"])
     base = _add_avg_hours_day_columns(base)
     return base.sort_values(["week_start", "portfolio", "ou", "team"]).reset_index(drop=True)
-def _rollup_export_level(df: pd.DataFrame, level: str) -> pd.DataFrame:
+def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = False) -> pd.DataFrame:
     if df.empty:
         return df.copy()
     if level == "ou":
@@ -770,19 +783,31 @@ def _rollup_export_level(df: pd.DataFrame, level: str) -> pd.DataFrame:
         )
     )
     out["capacity_hours"] = out["people_count"] * 40.0
-    out["unaccounted_hours"] = (
-        out["capacity_hours"]
-        - out["completed_hours"]
-        - out["non_wip_hours"]
-        - out["ooo_hours"]
-    ).clip(lower=0.0)
-    for src, pct_col in [
-        ("completed_hours", "wip_pct"),
-        ("non_wip_hours", "non_wip_pct"),
-        ("ooo_hours", "ooo_pct"),
-        ("unaccounted_hours", "unaccounted_pct"),
-    ]:
-        out[pct_col] = (out[src] / out["capacity_hours"]).where(out["capacity_hours"] > 0)
+    if factor_out_ooo:
+        out["capacity_hours_adj"] = (out["capacity_hours"] - out["ooo_hours"]).clip(lower=0.0)
+        out["ooo_hours_display"] = 0.0
+        out["unaccounted_hours"] = (
+            out["capacity_hours_adj"]
+            - out["completed_hours"]
+            - out["non_wip_hours"]
+        ).clip(lower=0.0)
+        pct_denom = out["capacity_hours_adj"]
+    else:
+        out["capacity_hours_adj"] = out["capacity_hours"]
+        out["ooo_hours_display"] = out["ooo_hours"]
+        out["unaccounted_hours"] = (
+            out["capacity_hours"]
+            - out["completed_hours"]
+            - out["non_wip_hours"]
+            - out["ooo_hours"]
+        ).clip(lower=0.0)
+        pct_denom = out["capacity_hours"]
+    out["wip_pct"] = (out["completed_hours"] / pct_denom).where(pct_denom > 0)
+    out["non_wip_pct"] = (out["non_wip_hours"] / pct_denom).where(pct_denom > 0)
+    out["ooo_pct"] = (out["ooo_hours_display"] / pct_denom).where(pct_denom > 0)
+    out["unaccounted_pct"] = (out["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
+    out["ooo_hours"] = out["ooo_hours_display"]
+    out = out.drop(columns=["ooo_hours_display"])
     out = _add_avg_hours_day_columns(out)
     if level == "portfolio":
         out["ou"] = pd.NA
@@ -1444,7 +1469,6 @@ with tabs[2]:
         default=all_team_names,
         key="export_team_filter",
     )
-
     def filter_by_export_team(df: pd.DataFrame) -> pd.DataFrame:
         if not export_team_filter:
             return df.iloc[0:0]
@@ -1452,7 +1476,6 @@ with tabs[2]:
         if not tc:
             return df
         return df[df[tc].astype(str).isin(set(export_team_filter))]
-
     def filter_by_export_date(df: pd.DataFrame, start_ts, end_ts) -> pd.DataFrame:
         if start_ts is None or end_ts is None:
             return df
@@ -1485,6 +1508,12 @@ with tabs[2]:
         min_floor_ts=None,
         allow_future_dates=True,
     )
+    export_factor_out_ooo = st.toggle(
+        "Factor out OOO from export calculations",
+        value=False,
+        key="export_factor_out_ooo",
+        help="When on, OOO is removed from the denominator for export percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
+    )
     def _concat_frames(frames):
         if not frames:
             return None
@@ -1506,7 +1535,12 @@ with tabs[2]:
     export_nonwip_filtered = _concat_frames(
         [filter_by_export_date(f, ex_start, ex_end) for f in export_nonwip_frames]
     ) if export_nonwip_frames else None
-    team_export = _weekly_team_export_df(export_metrics_filtered, export_nonwip_filtered, org)
+    team_export = _weekly_team_export_df(
+        export_metrics_filtered,
+        export_nonwip_filtered,
+        org,
+        factor_out_ooo=export_factor_out_ooo,
+    )
     if not team_export.empty:
         team_export = team_export[
             (team_export["completed_hours"] > 0) & (team_export["people_count"] > 0)
@@ -1666,8 +1700,16 @@ with tabs[2]:
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
-        ou_export = _rollup_export_level(team_export, "ou")
-        portfolio_export = _rollup_export_level(team_export, "portfolio")
+        ou_export = _rollup_export_level(
+            team_export,
+            "ou",
+            factor_out_ooo=export_factor_out_ooo,
+        )
+        portfolio_export = _rollup_export_level(
+            team_export,
+            "portfolio",
+            factor_out_ooo=export_factor_out_ooo,
+        )
         st.markdown("#### Team weekly")
         st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
         st.markdown("#### OU weekly")
