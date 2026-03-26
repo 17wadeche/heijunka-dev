@@ -1731,6 +1731,8 @@ ACTIVITY_MAP = {
     "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training/Mentoring",
     "ri repsonse":"RI",
     "rrt":"RRTT",
+    "workshop":"Next Gen",
+    "meetings/ad hoc querie":"Meetings",
     "cornerstone and admin":"Admin",
     "dmaic":"Problem Solving",
     "ng workshop, email/admin/collab": "Next Gen",
