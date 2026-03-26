@@ -1574,22 +1574,6 @@ if has_dates and min_date and max_date_raw:
     end = st.session_state["ms_end_date"]
     if start > end:
         st.error("Start date cannot be after end date!")
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            min_value=min_date,
-            max_value=max_date,
-            key="ms_start_date",
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            min_value=min_date,
-            max_value=max_date,
-            key="ms_end_date",
-        )
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
@@ -1846,6 +1830,24 @@ kpi(
     "{:,.3f}",
     help="Closures ÷ All Available Hours",
 )
+st.markdown("---")
+if has_dates and min_date and max_date:
+    st.markdown("#### Date Range")
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        st.date_input(
+            "Start",
+            min_value=min_date,
+            max_value=max_date,
+            key="ms_start_date",
+        )
+    with date_col2:
+        st.date_input(
+            "End",
+            min_value=min_date,
+            max_value=max_date,
+            key="ms_end_date",
+        )
 st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
