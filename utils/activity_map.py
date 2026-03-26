@@ -1730,7 +1730,7 @@ ACTIVITY_MAP = {
     "ng workshop, emails/admin, ms review": "Next Gen",
     "unplanned meetings, training/mentoring, unplanned questions/interruptions/people showing up at my desk with questions requiring research and collaboration": "Training/Mentoring",
     "ri repsonse":"RI",
-    "rrt":"Rrtt",
+    "rrt":"RRTT",
     "cornerstone and admin":"Admin",
     "dmaic":"Problem Solving",
     "ng workshop, email/admin/collab": "Next Gen",
