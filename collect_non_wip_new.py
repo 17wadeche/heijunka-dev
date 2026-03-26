@@ -323,13 +323,14 @@ def build_non_wip_rows(config_path: str,
             "non_wip_by_person": defaultdict(float),
             "non_wip_activities": [],
         })
+        IGNORE_PROD_HIDDEN_ROWS = {"CRDN", "RPA Lab"}
         for hint in prod_hints:
             if not hint:
                 continue
             nm = _find_sheet_by_hint(sheet_names, hint)
             rows_s = list(get_rows(path, nm))
             anchors_s = (entry.get("week_anchors", {}) or {}).get(nm, [])
-            hidden_prod_rows = _hidden_rows(path, nm)
+            hidden_prod_rows = set() if team in IGNORE_PROD_HIDDEN_ROWS else _hidden_rows(path, nm)
             pb = parse_prod_analysis(rows_s, anchors_s, hidden_prod_rows)
             for wk, b in pb.items():
                 prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
