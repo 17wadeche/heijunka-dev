@@ -1910,6 +1910,7 @@ ACTIVITY_MAP = {
     "team collaboration, met stacy poe":"Collaboration",
     "ng, ms, event review, emails, colloboration, filling out pa board": "Next Gen",
     "ng, coding, emails, filling out pa board":"Email & IM",
+    "rs inbox support":"RS Inbox",
     "training, collaboration, meetings, ms/product, filling out pa, email": "Training/Mentoring",
     "ng, coding, event reviews, emails/messages, colloboration, filling out pa board": "Event Reviews",
     "/request for affera monitoring":"Data Request",
