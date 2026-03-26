@@ -328,7 +328,6 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     if not isinstance(activities, list) or not activities:
         return {}, {}
     import re
-    other_team_key = "OTHERTEAMWIP"
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
@@ -345,8 +344,6 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
             hrs = 0.0
         if hrs <= 0:
             continue
-        if act_key == other_team_key:
-            accounted_other[name] = accounted_other.get(name, 0.0) + hrs
         else:
             accounted_nonother[name] = accounted_nonother.get(name, 0.0) + hrs
     accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
@@ -1188,7 +1185,6 @@ def _weekly_team_export_df(
             "week_start": wk,
             "people_count": float(people_count),
             "completed_hours": completed_hours,
-            "other_team_wip_hours": 0.0,
             "non_wip_hours": non_wip_hours,
             "ooo_hours": ooo_hours,
             "capacity_hours": capacity_hours,
@@ -1206,7 +1202,6 @@ def _weekly_team_export_df(
         .agg(
             people_count=("people_count", "max"),
             completed_hours=("completed_hours", "sum"),
-            other_team_wip_hours=("other_team_wip_hours", "sum"),
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
@@ -1243,7 +1238,6 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
             ooo_hours=("ooo_hours", "sum"),
         )
     )
-    out["other_team_wip_hours"] = 0.0
     out["capacity_hours"] = out["people_count"] * 40.0
     out["unaccounted_hours"] = (
         out["capacity_hours"]
@@ -1271,7 +1265,6 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         "completed_hours",
         "wip_pct",
         "wip_avg_hours_day",
-        "other_team_wip_hours",
         "non_wip_hours",
         "non_wip_pct",
         "non_wip_avg_hours_day",
@@ -1343,7 +1336,6 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
         "portfolio", "ou", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
-        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -1376,7 +1368,6 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
         "portfolio", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct", "wip_avg_hours_day",
-        "other_team_wip_hours",
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
@@ -2000,7 +1991,6 @@ with tabs[2]:
         team_export = team_export[
             (
                 team_export["completed_hours"].fillna(0)
-                + team_export["other_team_wip_hours"].fillna(0)
                 + team_export["non_wip_hours"].fillna(0)
                 + team_export["ooo_hours"].fillna(0)
                 + team_export["unaccounted_hours"].fillna(0)
