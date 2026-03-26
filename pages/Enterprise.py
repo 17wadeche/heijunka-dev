@@ -2072,9 +2072,9 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
     def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
@@ -2122,9 +2122,9 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
@@ -2173,9 +2173,9 @@ with tabs[2]:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
         if "Non-WIP %" in out.columns:
-            styler = styler.applymap(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
         return styler
     if team_export.empty:
         st.info("No exportable team/week data found.")
@@ -2191,11 +2191,11 @@ with tabs[2]:
             factor_out_ooo=export_factor_out_ooo,
         )
         st.markdown("#### Team weekly")
-        st.dataframe(_format_export_display_team(team_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_team(team_export), width="stretch", hide_index=True)
         st.markdown("#### OU weekly")
-        st.dataframe(_format_export_display_ou(ou_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_ou(ou_export), width="stretch", hide_index=True)
         st.markdown("#### Portfolio weekly")
-        st.dataframe(_format_export_display_portfolio(portfolio_export), use_container_width=True, hide_index=True)
+        st.dataframe(_format_export_display_portfolio(portfolio_export), width="stretch", hide_index=True)
         try:
             team_export_display = _display_export_team_df(team_export)
             ou_export_display = _display_export_ou_df(ou_export)
