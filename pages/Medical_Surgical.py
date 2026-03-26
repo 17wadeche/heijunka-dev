@@ -1564,14 +1564,14 @@ if has_dates and min_date and max_date_raw:
     today_date = pd.Timestamp.today().normalize().date()
     max_date = min(max_date_raw, today_date)
     default_start = pd.to_datetime("2025-10-27").date()
-    if "start_date" not in st.session_state:
-        st.session_state["start_date"] = max(min_date, default_start)
-    if "end_date" not in st.session_state:
-        st.session_state["end_date"] = max_date
+    if "ms_start_date" not in st.session_state:
+        st.session_state["ms_start_date"] =max(min_date, default_start)
+    if "ms_end_date" not in st.session_state:
+        st.session_state["ms_end_date"] = max_date
     else:
-        st.session_state["end_date"] = min(st.session_state["end_date"], max_date)
-    start = st.session_state["start_date"]
-    end = st.session_state["end_date"]
+        st.session_state["ms_end_date"] = min(st.session_state["ms_end_date"], max_date)
+    start = st.session_state["ms_start_date"]
+    end = st.session_state["ms_end_date"]
     if start > end:
         st.error("Start date cannot be after end date!")
     st.markdown("#### Date Range")
@@ -1581,14 +1581,14 @@ if has_dates and min_date and max_date_raw:
             "Start",
             min_value=min_date,
             max_value=max_date,
-            key="start_date",
+            key="ms_start_date",
         )
     with date_col2:
         st.date_input(
             "End",
             min_value=min_date,
             max_value=max_date,
-            key="end_date",
+            key="ms_end_date",
         )
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
@@ -1855,14 +1855,14 @@ if has_dates and min_date and max_date:
             "Start",
             min_value=min_date,
             max_value=max_date,
-            key="start_date",
+            key="ms_start_date",
         )
     with date_col2:
         st.date_input(
             "End",
             min_value=min_date,
             max_value=max_date,
-            key="end_date",
+            key="ms_end_date",
         )
 st.markdown("---")
 left, mid, right = st.columns(3)
