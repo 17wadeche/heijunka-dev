@@ -1219,6 +1219,7 @@ ACTIVITY_MAP = {
     "dt kick off analysis meeting with saif":"Meeting",
     "purchase training":"Training/Mentoring",
     "spiderfx and venaseal document/investigation reading":"Reading File/Document Information",
+    "document/investigation reading":"Reading File/Document Information",
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
     "scrum/ corner stone training":"Scrum & Action",
