@@ -35,7 +35,7 @@ ACTIVITY_MAP = {
     "pmpa & lab meeting":"PMPA",
     "adn career fair planning meeting":"Career Development",
     "wip pull etc": "Metrics & Schedule",
-    "one to one, scrum, emails, question":"Meeting",
+    "one on one, scrum, emails, question":"Meeting",
     "scrum, collaboration":"Scrum & Action",
     "monthly precedent event meeting":"Meeting",
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
