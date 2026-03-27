@@ -53,6 +53,8 @@ ACTIVITY_MAP = {
     "scrum/check in":"Scrum & Action",
     "reviewed and processed emails from when i was out of office (does not include emails from engineers)": "Email & IM",
     "email a": "Email & IM",
+    "emails/adminl": "Email & IM",
+    "trainingl": "Training/Mentoring",
     "pulled work": "Metrics & Schedule",
     "pulled work tool, yellow belt training": "Metrics & Schedule",
     "yellow belt training":"Yellow Belt",
