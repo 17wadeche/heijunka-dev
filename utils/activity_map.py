@@ -44,6 +44,7 @@ ACTIVITY_MAP = {
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
     "metrics, tuesday schedule": "Metrics & Schedule",
     "scrum & audit meeting":"Scrum & Action",
+    "srum":"Scrum & Action",
     "walk in pink(120)":"Erg Meeting",
     "potential parker hot key list devleopment":"Project Work",
     "parker hot keys list":"Project Work",
