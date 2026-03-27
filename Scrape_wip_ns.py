@@ -441,6 +441,160 @@ def read_lookup_csv(path: str) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], s
         return lookup, ""
     except Exception as e:
         return lookup, f"Failed reading {os.path.basename(path)}: {e}"
+def scrape_dbs_dated_tabs_xlsx(
+    source_file: str,
+    team: str,
+    min_period_date: str = "2025-06-02",
+    max_period_date: Optional[str] = None,
+) -> list[dict]:
+    wb = load_workbook(source_file, data_only=True)
+    rows_out: list[dict] = []
+    cols = _excel_col_range("B", "R")
+    excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
+    timeliness_path = os.path.join(excel_dir, "timeliness.csv")
+    closures_path = os.path.join(excel_dir, "closures.csv")
+    timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
+    closures_lu, closures_err = read_lookup_csv(closures_path)
+    today_iso = date.today().isoformat()
+    upper_bound = max_period_date or today_iso
+    for ws in wb.worksheets:
+        period_date = parse_sheet_date_requires_year(ws.title)
+        if not period_date:
+            continue
+        if period_date < min_period_date:
+            continue
+        if period_date > upper_bound:
+            continue
+        total_available_hours = safe_float(ws["T61"].value)
+        completed_hours = safe_float(ws["T50"].value)
+        wp1_tgt = safe_float(ws["Z7"].value)
+        wp2_tgt = safe_float(ws["AB7"].value)
+        wp1_out = safe_float(ws["Z2"].value)
+        wp2_out = safe_float(ws["AB7"].value)
+        target_output = wp1_tgt + wp2_tgt
+        actual_output = wp1_out + wp2_out
+        if target_output < 0:
+            continue
+        target_uplh = safe_div(target_output, completed_hours)
+        actual_uplh = safe_div(actual_output, completed_hours)
+        uplh_wp1 = safe_float(ws["Z5"].value)
+        uplh_wp2 = safe_float(ws["AB7"].value)
+        hc_in_wip = 0
+        for c in cols:
+            if safe_float(ws.cell(row=50, column=c).value) != 0.0:
+                hc_in_wip += 1
+        actual_hc_used = safe_div(completed_hours, 32.5)
+        person_hours: Dict[str, Dict[str, float]] = {}
+        for c in cols:
+            name = safe_str(ws.cell(row=30, column=c).value)
+            if not name:
+                continue
+            actual = safe_float(ws.cell(row=50, column=c).value)
+            available = safe_float(ws.cell(row=61, column=c).value)
+            person_hours[name] = {"actual": actual, "available": available}
+        outputs_by_person: Dict[str, Dict[str, float]] = {}
+        for c in cols:
+            name = safe_str(ws.cell(row=10, column=c).value)
+            if not name:
+                continue
+            out_val = sum(
+                safe_float(ws.cell(row=r, column=c).value)
+                for r in range(11, 24)
+            )
+            tgt_val = safe_float(ws.cell(row=25, column=c).value)
+            if out_val != 0.0 or tgt_val != 0.0:
+                outputs_by_person[name] = {"output": out_val, "target": tgt_val}
+        outputs_by_cell = {
+            "WP1": {"output": wp1_out, "target": wp1_tgt},
+            "WP2": {"output": wp2_out, "target": wp2_tgt},
+        }
+        cell_station_hours = {
+            "WP1": safe_float(ws["Z4"].value),
+            "WP2": safe_float(ws["AB4"].value),
+        }
+        hours_by_cell_by_person = {"WP1": {}, "WP2": {}, "WP3": {}}
+        wp1_hour_rows = [31, 35, 39, 43, 47]
+        wp2_hour_rows = [32, 36, 40, 44, 48]
+        wp3_hour_rows = [33, 37, 41, 45, 49]
+        for c in cols:
+            name = safe_str(ws.cell(row=30, column=c).value)
+            if not name:
+                continue
+            wp1_hrs = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_hour_rows)
+            wp2_hrs = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_hour_rows)
+            wp3_hrs = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp3_hour_rows)
+            if wp1_hrs != 0.0:
+                hours_by_cell_by_person["WP1"][name] = wp1_hrs
+            if wp2_hrs != 0.0:
+                hours_by_cell_by_person["WP2"][name] = wp2_hrs
+            if wp3_hrs != 0.0:
+                hours_by_cell_by_person["WP3"][name] = wp3_hrs
+        output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        wp1_out_rows = [11, 14, 17, 20, 23]
+        wp2_out_rows = [12, 15, 18, 21, 24]
+        for c in cols:
+            name = safe_str(ws.cell(row=13, column=c).value)
+            if not name:
+                continue
+            wp1_o = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_out_rows)
+            wp2_o = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_out_rows)
+            if wp1_o != 0.0:
+                output_by_cell_by_person["WP1"][name] = wp1_o
+            if wp2_o != 0.0:
+                output_by_cell_by_person["WP2"][name] = wp2_o
+        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+        for wp in ("WP1", "WP2"):
+            for person, out_val in output_by_cell_by_person[wp].items():
+                hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
+                uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
+        key = (team, period_date)
+        open_complaint_timeliness = ""
+        closures = ""
+        opened = ""
+        trow = timeliness_lu.get(key)
+        if trow is not None:
+            open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
+        crow = closures_lu.get(key)
+        if crow is not None:
+            closures = safe_str(crow.get("Closures"))
+            opened = safe_str(crow.get("Opened"))
+        errs = []
+        if timeliness_err:
+            errs.append(timeliness_err)
+        if closures_err:
+            errs.append(closures_err)
+        if not trow and not timeliness_err:
+            errs.append(f"No timeliness match for {team} {period_date}")
+        if not crow and not closures_err:
+            errs.append(f"No closures match for {team} {period_date}")
+        rows_out.append({
+            "team": team,
+            "period_date": period_date,
+            "source_file": os.path.abspath(os.path.expandvars(source_file)),
+            "Total Available Hours": total_available_hours,
+            "Completed Hours": completed_hours,
+            "Target Output": target_output,
+            "Actual Output": actual_output,
+            "Target UPLH": target_uplh,
+            "Actual UPLH": actual_uplh,
+            "UPLH WP1": uplh_wp1,
+            "UPLH WP2": uplh_wp2,
+            "HC in WIP": hc_in_wip,
+            "Actual HC Used": actual_hc_used,
+            "People in WIP": "",
+            "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+            "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+            "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+            "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+            "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+            "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+            "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+            "Open Complaint Timeliness": open_complaint_timeliness,
+            "error": " | ".join(errs) if errs else "",
+            "Closures": closures,
+            "Opened": opened,
+        })
+    return rows_out
 def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[dict]:
     excel_dir = os.path.dirname(os.path.abspath(source_file))
     timeliness_path = os.path.join(excel_dir, "timeliness.csv")
@@ -696,25 +850,6 @@ def _com_call(fn, tries: int = 30, sleep_s: float = 0.25):
                 continue
             raise
     return fn()
-def _open_workbook_via_temp_copy(excel, source_file: str):
-    src = os.path.abspath(os.path.expandvars(source_file))
-    if not os.path.exists(src):
-        raise FileNotFoundError(f"File not found: {src}")
-    tmp_dir = tempfile.gettempdir()
-    base = os.path.splitext(os.path.basename(src))[0]
-    ext = os.path.splitext(src)[1]
-    tmp_path = os.path.join(tmp_dir, f"{base}__{uuid.uuid4().hex}{ext}")
-    shutil.copy2(src, tmp_path)
-    wb = excel.Workbooks.Open(
-        tmp_path,
-        UpdateLinks=0,
-        ReadOnly=True,
-        IgnoreReadOnlyRecommended=True,
-        Notify=False,
-        AddToMru=False,
-        CorruptLoad=0,
-    )
-    return wb, tmp_path
 def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
@@ -2316,6 +2451,22 @@ def scrape_spine_previous_weeks_xlsm(
                 os.remove(tmp_path)
         except Exception:
             pass
+def filter_rows_before(rows: list[dict], cutoff_iso: str) -> list[dict]:
+    return [r for r in rows if safe_str(r.get("period_date")) < cutoff_iso]
+def dedupe_rows_by_team_period(rows: list[dict]) -> list[dict]:
+    by_key: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        key = (safe_str(r.get("team")), safe_str(r.get("period_date")))
+        if key[0] and key[1]:
+            by_key[key] = r
+    out = list(by_key.values())
+    def _sort_key(r: dict) -> tuple[str, str]:
+        return (
+            safe_str(r.get("team")).lower(),
+            safe_str(r.get("period_date")),
+        )
+    out.sort(key=_sort_key)
+    return out
 def filter_rows_on_or_after(rows: list[dict], cutoff_iso: str) -> list[dict]:
     return [r for r in rows if safe_str(r.get("period_date")) >= cutoff_iso]
 def _looks_like_iso_date(s: str) -> bool:
@@ -2845,7 +2996,11 @@ def main():
     dbs_c13_rows = run_team(
         logger,
         "DBS C13",
-        lambda: scrape_dbs_previous_weeks_xlsm(dbs_c13_source_file, "DBS C13", ALL_MONDAYS_SINCE_2025_06_02),
+        lambda: scrape_dbs_dated_tabs_xlsx(
+            dbs_c13_source_file,
+            "DBS C13",
+            min_period_date="2025-06-02",
+        ),
     )
     before = len(dbs_c13_rows)
     dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
@@ -2854,7 +3009,11 @@ def main():
     dbs_c14_rows = run_team(
         logger,
         "DBS C14",
-        lambda: scrape_dbs_previous_weeks_xlsm(dbs_c14_source_file, "DBS C14", ALL_MONDAYS_SINCE_2025_06_02),
+        lambda: scrape_dbs_dated_tabs_xlsx(
+            dbs_c14_source_file,
+            "DBS C14",
+            min_period_date="2025-06-02",
+        ),
     )
     before = len(dbs_c14_rows)
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
