@@ -1226,7 +1226,7 @@ ACTIVITY_MAP = {
     "ms call":"Meeting",
     "std work *":"Admin",
     "uk ri call":"RI",
-    "enginner emails and 1 ri (turned into a merge - very messy)":"Emails & IM",
+    "enginner emails and 1 ri (turned into a merge - very messy)":"Email & IM",
     "fu question":"Question",
     "rm knowledge sharing meeting":"Knowledge Sharing Meeting",
     "administrative":"Admin",
