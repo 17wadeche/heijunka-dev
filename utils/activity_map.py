@@ -1232,6 +1232,7 @@ ACTIVITY_MAP = {
     "administrative":"Admin",
     "no access to gch compulsory update":"IT Issue/Update",
     "scrum/ coaching call":"Scrum & Action",
+    "email; collaboration":"Email & IM",
     "ke, meetings, rrtt review, gb, event review/collaboration, email/admin":"Admin",
     "pulled work, question":"Question",
     "pvh meeting":"Meeting",
