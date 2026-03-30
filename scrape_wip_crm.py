@@ -406,7 +406,7 @@ def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
     wb = load_workbook(path, data_only=True)
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
-    periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
+    periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()), reverse=True)
     rows: List[Dict[str, Any]] = []
     for period in periods:
         err_msgs: List[str] = []
