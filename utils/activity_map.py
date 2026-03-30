@@ -1236,6 +1236,8 @@ ACTIVITY_MAP = {
     "ke, meetings, rrtt review, gb, event review/collaboration, email/admin":"Admin",
     "pulled work, question":"Question",
     "pvh meeting":"Meeting",
+    "emails & ims":"Email & IM",
+    "cornestone":"Cornerstone",
     "ng, email/admin, event review":"Next Gen",
     "ng, meetings, collaboration, coding, email/admin":"Next Gen",
     "affera ftq project, integer intuition project":"Project Work",
