@@ -406,7 +406,7 @@ def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
     wb = load_workbook(path, data_only=True)
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
-    periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()), reverse=True)
+    periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
     rows: List[Dict[str, Any]] = []
     for period in periods:
         err_msgs: List[str] = []
@@ -628,6 +628,7 @@ def main() -> int:
     timeliness_lut = load_timeliness_lookup(args.timeliness_csv)
     closures_lut = load_closures_lookup(args.closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
+    all_rows.sort(key=lambda r: ((r.get("team") or ""), (r.get("period_date") or "")))
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         w = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         w.writeheader()
