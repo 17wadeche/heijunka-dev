@@ -1224,6 +1224,7 @@ ACTIVITY_MAP = {
     "scrum, investigation training":"Training/Mentoring",
     "scrum/ corner stone training":"Scrum & Action",
     "ms call":"Meeting",
+    "std work *":"Admin",
     "uk ri call":"RI",
     "fu question":"Question",
     "rm knowledge sharing meeting":"Knowledge Sharing Meeting",
