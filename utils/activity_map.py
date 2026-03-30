@@ -1230,6 +1230,7 @@ ACTIVITY_MAP = {
     "fu question":"Question",
     "rm knowledge sharing meeting":"Knowledge Sharing Meeting",
     "administrative":"Admin",
+    "no access to gch compulsory update":"IT Issue/Update",
     "scrum/ coaching call":"Scrum & Action",
     "ke, meetings, rrtt review, gb, event review/collaboration, email/admin":"Admin",
     "pulled work, question":"Question",
