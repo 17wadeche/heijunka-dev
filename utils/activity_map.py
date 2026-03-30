@@ -1222,6 +1222,7 @@ ACTIVITY_MAP = {
     "document/investigation reading":"Reading File/Document Information",
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
+    "reassess rd training":"Training/Mentoring",
     "scrum/ corner stone training":"Scrum & Action",
     "ms call":"Meeting",
     "std work *":"Admin",
