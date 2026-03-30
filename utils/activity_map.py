@@ -1238,7 +1238,7 @@ ACTIVITY_MAP = {
     "pvh meeting":"Meeting",
     "emails & ims":"Email & IM",
     "cornestone":"Cornerstone",
-    "ng, uat, meetings, event/collaboration, email/admin":"Next Gen",
+    "ng, uat, meetings, event review/collaboration, email/admin":"Next Gen",
     "metrics schedule montioring month/week end batch man 1ius task":"Metrics & Schedule",
     "recoding event":"Coding",
     "ng, email/admin, event review":"Next Gen",
