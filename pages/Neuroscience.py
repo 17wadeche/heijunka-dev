@@ -3151,12 +3151,7 @@ with right2:
                 top_mix = top_mix.dropna(subset=["Pct"]).copy()
             top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
             top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
-            person_order = (
-                top_mix.groupby("person", as_index=False)["Hours"]
-                .sum()
-                .sort_values("Hours", ascending=False)["person"]
-                .tolist()
-            )
+            person_order = sorted(top_mix["person"].dropna().unique().tolist())
             label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
             label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
@@ -3166,7 +3161,7 @@ with right2:
                     "person:N",
                     title="Person",
                     sort=person_order,
-                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                    axis=alt.Axis(labelAngle=-45, labelLimit=200),
                 ),
                 y=alt.Y(
                     "Pct:Q",
