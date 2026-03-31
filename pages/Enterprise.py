@@ -303,25 +303,25 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
 def merged_people_count_for_week(
     team: str,
     week,
-    long_nw: pd.DataFrame,
+    nw_frame: pd.DataFrame,
     person_hours: pd.DataFrame,
     people_in_wip: pd.DataFrame,
 ) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    if long_nw is not None and not long_nw.empty and team == "ENT":
-        nw_team = long_nw.copy()
-        if "period_date" in nw_team.columns:
-            nw_team["period_date"] = pd.to_datetime(nw_team["period_date"], errors="coerce").dt.normalize()
-
-        if "people_count" in nw_team.columns:
-            ent_match = nw_team.loc[
-                (nw_team["team"] == team) & (nw_team["period_date"] == wk),
+    if nw_frame is not None and not nw_frame.empty and team == "ENT":
+        raw_nw = nw_frame.copy()
+        if "period_date" in raw_nw.columns:
+            raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            ent_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
                 "people_count"
             ]
             ent_match = pd.to_numeric(ent_match, errors="coerce").dropna()
             if not ent_match.empty:
                 return int(ent_match.iloc[0])
     names = set()
+    long_nw = explode_non_wip_by_person(nw_frame)
     for df_, person_col in [
         (long_nw, "person"),
         (person_hours, "person"),
@@ -1203,7 +1203,7 @@ def _weekly_team_export_df(
         people_count = merged_people_count_for_week(
             team=team,
             week=wk,
-            long_nw=long_nw,
+            nw_frame=nw,
             person_hours=person_hours,
             people_in_wip=people_in_wip,
         )
