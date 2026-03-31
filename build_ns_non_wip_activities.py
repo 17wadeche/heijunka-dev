@@ -471,12 +471,15 @@ def build_selector_rows_from_capacity_workbook(
                 wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
                 wip_workers_count = len(wip_workers)
                 wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-                people_count_final = get_people_count_from_wip(
-                    wip_df=wip_df,
-                    team=team_src.team,
-                    week=week,
-                    fallback=people_count,
-                )
+                if team_src.team == "ENT":
+                    people_count_final = people_count
+                else:
+                    people_count_final = get_people_count_from_wip(
+                        wip_df=wip_df,
+                        team=team_src.team,
+                        week=week,
+                        fallback=people_count,
+                    )
                 out_rows.append({
                     "team": team_src.team,
                     "period_date": week.date().isoformat(),
@@ -1259,14 +1262,14 @@ def build_capacity_fixed_row(
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2   
-    PEOPLE_END   = 25    
+    PEOPLE_START = 2
+    PEOPLE_END   = 25
     COL_B        = _col_letter_to_idx("B")
     COL_Z        = _col_letter_to_idx("Z")
     COL_AA       = _col_letter_to_idx("AA")
     ACT_START    = _col_letter_to_idx("C")
-    ACT_END      = _col_letter_to_idx("Y")   
-    HEADER_ROW   = 1      
+    ACT_END      = _col_letter_to_idx("AG")
+    HEADER_ROW   = 1
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1843,7 +1846,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-        use_original_people_count_teams = {"DBS", "SCS", "TDD", "NV","PH"}
+        use_original_people_count_teams = {"DBS", "SCS", "TDD", "NV", "PH", "ENT"}
         if team_src.team in use_original_people_count_teams:
             people_count_final = int(people_count)
         else:
