@@ -1237,6 +1237,7 @@ ACTIVITY_MAP = {
     "mfg complaints review meeting":"Meeting",
     "meetings - sh r&d ftir":"Meeting",
     "acq training: iris trees: emails: tl activities: tl support":"Training/Mentoring",
+    "cleared cornerstone":"Cornerstone",
     "getting laptop from it & set up":"IT Issue/Update",
     "sh mfg&pmpa":"PMPA",
     "compulsory update":"IT Issue/Update",
