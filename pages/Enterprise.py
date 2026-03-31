@@ -308,18 +308,18 @@ def merged_people_count_for_week(
     people_in_wip: pd.DataFrame,
 ) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    if nw_frame is not None and not nw_frame.empty and team == "ENT":
+    if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS"}:
         raw_nw = nw_frame.copy()
         if "period_date" in raw_nw.columns:
             raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
         if "people_count" in raw_nw.columns:
-            ent_match = raw_nw.loc[
+            team_match = raw_nw.loc[
                 (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
                 "people_count"
             ]
-            ent_match = pd.to_numeric(ent_match, errors="coerce").dropna()
-            if not ent_match.empty:
-                return int(ent_match.iloc[0])
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
     names = set()
     long_nw = explode_non_wip_by_person(nw_frame)
     for df_, person_col in [
