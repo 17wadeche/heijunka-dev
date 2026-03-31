@@ -40,8 +40,9 @@ BAD_NAMES = {
 def get_dbs_people_count_from_tabs(
     wb,
     preferred_sheet_names: tuple[str, str] = ("DBS Cell 13", "DBS Cell 14"),
-    name_row_zero_based: int = 29,   # Excel row 30
+    name_row_zero_based: int = 29,
 ) -> int:
+    print("[DEBUG][DBS] get_dbs_people_count_from_tabs CALLED", flush=True)
     bad = {"", "open", "total"}
     def _find_ws(name: str):
         return _get_matching_worksheet(wb, name)
