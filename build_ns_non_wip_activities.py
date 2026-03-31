@@ -1277,25 +1277,28 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
         if not name or not is_real_person(name):
             continue
-        b  = safe_float0(ws.iat[i, COL_B]  if ws.shape[1] > COL_B  else 0.0)
-        z  = safe_float0(ws.iat[i, COL_Z]  if ws.shape[1] > COL_Z  else 0.0)
+        b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
+        z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
         aa = safe_float0(ws.iat[i, COL_AA] if ws.shape[1] > COL_AA else 0.0)
-        ooo = float(round(z + aa, 2))
+        zaa_ooo = float(round(z + aa, 2))
+
         people_rows.append({
             "row_i": i,
             "name": name,
             "B": b,
-            "OOO": ooo,
             "Z_OOO": z,
             "AA_OOO": aa,
+            "ZAA_OOO": zaa_ooo,
         })
     people_count = len(set(r["name"] for r in people_rows))
     activities: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
+    ooo_map: Dict[str, float] = {}
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
-        person_total = 0.0
+        person_nonwip_total = 0.0
+        activity_ooo_total = 0.0
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
             label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
             if not label:
@@ -1306,28 +1309,33 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             hrs = float(round(hrs, 2))
             label_upper = label.strip().upper()
             if label_upper in OOO_LABELS:
+                activity_ooo_total += hrs
                 continue
             activities.append({
                 "name": name,
                 "activity": label,
                 "hours": hrs,
             })
-            person_total += hrs
-        ooo = float(round(pr["OOO"], 2))
-        if ooo > 0:
+            person_nonwip_total += hrs
+        person_ooo = float(round(
+            activity_ooo_total if activity_ooo_total > 0 else pr["ZAA_OOO"],
+            2
+        ))
+        if person_ooo > 0:
             activities.append({
                 "name": name,
                 "activity": "OOO",
-                "hours": ooo,
+                "hours": person_ooo,
             })
-        if person_total > 0:
-            nonwip_by_person[name] = float(round(person_total, 2))
-    ooo_hours = float(round(
-        sum(a["hours"] for a in activities if a.get("activity") == "OOO"), 2
-    ))
-    total_nonwip_hours = float(round(
-        sum(a["hours"] for a in activities if a.get("activity") != "OOO"), 2
-    ))
+        if person_nonwip_total > 0:
+            nonwip_by_person[name] = float(round(person_nonwip_total, 2))
+        ooo_map[name] = person_ooo
+    ooo_hours = float(round(sum(ooo_map.values()), 2))
+    row_27_total = float(round(sum(
+        safe_float0(ws.iat[TOTAL_ROW, c] if ws.shape[0] > TOTAL_ROW and ws.shape[1] > c else 0.0)
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1)
+    ), 2))
+    total_nonwip_hours = float(round(row_27_total - ooo_hours, 2))
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -1335,7 +1343,7 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         "total_nonwip_hours": total_nonwip_hours,
         "nonwip_by_person": nonwip_by_person,
         "nonwip_activities": activities,
-        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
+        "ooo_map": ooo_map,
     }
 def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
