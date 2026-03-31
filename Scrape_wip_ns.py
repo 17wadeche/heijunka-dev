@@ -63,6 +63,7 @@ def parse_sheet_date_requires_year(sheet_name: str) -> str:
     if not re.search(r"\b\d{4}\b", raw):
         return ""
     raw = raw.replace("\u00a0", " ")
+    raw = re.sub(r"(\d{1,2})(st|nd|rd|th)\b", r"\1", raw, flags=re.IGNORECASE)
     raw = re.sub(r"\s+", " ", raw).strip()
     fmts = [
         "%b %d, %Y",   # Jun 02, 2025
@@ -470,7 +471,7 @@ def scrape_dbs_dated_tabs_xlsx(
         wp1_tgt = safe_float(ws["Z7"].value)
         wp2_tgt = safe_float(ws["AB7"].value)
         wp1_out = safe_float(ws["Z2"].value)
-        wp2_out = safe_float(ws["AB7"].value)
+        wp2_out = safe_float(ws["AB2"].value)
         target_output = wp1_tgt + wp2_tgt
         actual_output = wp1_out + wp2_out
         if target_output < 0:
@@ -478,7 +479,7 @@ def scrape_dbs_dated_tabs_xlsx(
         target_uplh = safe_div(target_output, completed_hours)
         actual_uplh = safe_div(actual_output, completed_hours)
         uplh_wp1 = safe_float(ws["Z5"].value)
-        uplh_wp2 = safe_float(ws["AB7"].value)
+        uplh_wp2 = safe_float(ws["AB5"].value)
         hc_in_wip = 0
         for c in cols:
             if safe_float(ws.cell(row=50, column=c).value) != 0.0:
