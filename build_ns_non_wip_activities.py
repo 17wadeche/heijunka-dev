@@ -1262,22 +1262,22 @@ def build_capacity_fixed_row(
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2
-    PEOPLE_END   = 25
-    TOTAL_ROW    = 26 
-    COL_B        = _col_letter_to_idx("B")
-    COL_Z        = _col_letter_to_idx("Z")
-    COL_AA       = _col_letter_to_idx("AA")
-    ACT_START    = _col_letter_to_idx("C")
-    ACT_END      = _col_letter_to_idx("AG")
-    HEADER_ROW   = 1
+    PEOPLE_START = 2    # Excel row 3
+    PEOPLE_END   = 25   # Excel row 26
+    TOTAL_ROW    = 26   # Excel row 27
+    COL_B  = _col_letter_to_idx("B")
+    COL_Z  = _col_letter_to_idx("Z")
+    COL_AA = _col_letter_to_idx("AA")
+    ACT_START  = _col_letter_to_idx("C")
+    ACT_END    = _col_letter_to_idx("AG")
+    HEADER_ROW = 1      # Excel row 2
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
         if not name or not is_real_person(name):
             continue
-        b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
-        z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
+        b  = safe_float0(ws.iat[i, COL_B]  if ws.shape[1] > COL_B  else 0.0)
+        z  = safe_float0(ws.iat[i, COL_Z]  if ws.shape[1] > COL_Z  else 0.0)
         aa = safe_float0(ws.iat[i, COL_AA] if ws.shape[1] > COL_AA else 0.0)
         ooo = float(round(z + aa, 2))
         people_rows.append({
@@ -1305,7 +1305,7 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            hrs = float(round(float(hrs), 2))
+            hrs = float(round(hrs, 2))
             activities.append({
                 "name": name,
                 "activity": label,
@@ -1319,7 +1319,7 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
                 "activity": "OOO",
                 "hours": ooo,
             })
-        if person_total != 0.0:
+        if person_total > 0:
             nonwip_by_person[name] = float(round(person_total, 2))
     row_27_total = float(round(sum(
         safe_float0(ws.iat[TOTAL_ROW, c] if ws.shape[0] > TOTAL_ROW and ws.shape[1] > c else 0.0)
