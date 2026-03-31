@@ -857,7 +857,15 @@ def build_meic_rows_from_team_tracker(
                 all_dates = [current_dt]
         for week in all_dates:
             try:
-                ws_com.Range("B1").Value = week.to_pydatetime()
+                print(f"[DEBUG][MEIC] about to set Team Tracker B1 for week {week.date()}", flush=True)
+                print(f"[DEBUG][MEIC] workbook={xlsx_path}", flush=True)
+                print(f"[DEBUG][MEIC] sheet={TEAM_TRACKER_SHEET}", flush=True)
+                try:
+                    is_protected = bool(ws_com.ProtectContents)
+                except Exception:
+                    is_protected = "unknown"
+                print(f"[DEBUG][MEIC] ProtectContents={is_protected}", flush=True)
+                ws_com.Range("A2").Value = week.to_pydatetime()
                 wb.RefreshAll()
                 excel.CalculateUntilAsyncQueriesDone()
                 excel.CalculateFullRebuild()
@@ -870,6 +878,7 @@ def build_meic_rows_from_team_tracker(
                 built = build_meic_teamtracker_block(ws_df)
                 split = split_meic_snapshot_into_teams(built)
                 for team_name, team_built in split.items():
+                    print(f"[DEBUG][MEIC] processing {team_name} for week {week.date()}", flush=True)
                     completed_match = metrics_df[
                         (metrics_df.get("team") == team_name) &
                         (metrics_df["period_date"] == week)
@@ -912,7 +921,11 @@ def build_meic_rows_from_team_tracker(
                         "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
                     })
             except Exception as e:
-                print(f"[WARN] Failed MEIC week {week}: {e}")
+                print(
+                    f"[WARN][MEIC] Failed before team split for week {week.date()} "
+                    f"on sheet {TEAM_TRACKER_SHEET} in workbook {xlsx_path}: {e}",
+                    flush=True,
+                )
     finally:
         if wb is not None:
             wb.Close(SaveChanges=False)
