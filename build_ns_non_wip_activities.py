@@ -37,6 +37,51 @@ BAD_NAMES = {
     "Mazor Hours Available", "MAZOR HOURS AVAILABLE",
     "Team 1 Hours Available", "Team Member"
 }
+def get_dbs_people_count_from_tabs(
+    wb,
+    preferred_sheet_names: tuple[str, str] = ("DBS Cell 13", "DBS Cell 14"),
+    name_row_zero_based: int = 29,   # Excel row 30
+) -> int:
+    bad = {"", "open", "total"}
+    def _find_ws(name: str):
+        return _get_matching_worksheet(wb, name)
+    unique_names: set[str] = set()
+    names_by_sheet: dict[str, list[str]] = {}
+    for sheet_name in preferred_sheet_names:
+        ws_com = _find_ws(sheet_name)
+        used = ws_com.UsedRange.Value
+        if used is None:
+            print(f"[DEBUG][DBS] {sheet_name}: no used range")
+            names_by_sheet[sheet_name] = []
+            continue
+        if not isinstance(used, tuple):
+            used = ((used,),)
+        ws_df = pd.DataFrame(list(used))
+        if ws_df.shape[0] <= name_row_zero_based:
+            print(f"[DEBUG][DBS] {sheet_name}: row 30 not available")
+            names_by_sheet[sheet_name] = []
+            continue
+        row_vals = ws_df.iloc[name_row_zero_based].tolist()
+        sheet_names_found = []
+        for raw in row_vals:
+            name = norm_name(raw)
+            if not name:
+                continue
+            if name.strip().lower() in bad:
+                continue
+            if not is_real_person(name):
+                continue
+            sheet_names_found.append(name)
+            unique_names.add(name)
+        names_by_sheet[sheet_name] = sheet_names_found
+        print(f"[DEBUG][DBS] {sheet_name} row 30 names: {sheet_names_found}")
+    if len(preferred_sheet_names) >= 2:
+        s1 = set(names_by_sheet.get(preferred_sheet_names[0], []))
+        s2 = set(names_by_sheet.get(preferred_sheet_names[1], []))
+        print(f"[DEBUG][DBS] overlap names: {sorted(s1 & s2)}")
+    print(f"[DEBUG][DBS] merged unique names counted: {sorted(unique_names)}")
+    print(f"[DEBUG][DBS] merged unique people_count: {len(unique_names)}")
+    return len(unique_names)
 def norm_name(x) -> str:
     return " ".join(str(x or "").strip().split())
 def is_real_person(name: str) -> bool:
@@ -375,8 +420,10 @@ def build_selector_rows_from_capacity_workbook(
     sheet_name: str = "Capacity mgmt",
 ) -> pd.DataFrame:
     xlsx_path = team_src.xlsx
+    print(f"[DEBUG] ENTER build_selector_rows_from_capacity_workbook for team={team_src.team!r}", flush=True)
+    print(f"[DEBUG] workbook path for {team_src.team!r}: {xlsx_path}", flush=True)
     if not xlsx_path.exists():
-        print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
+        print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}", flush=True)
         return pd.DataFrame()
     out_rows: List[dict] = []
     excel = win32.gencache.EnsureDispatch("Excel.Application")
@@ -471,8 +518,16 @@ def build_selector_rows_from_capacity_workbook(
                 wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
                 wip_workers_count = len(wip_workers)
                 wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-                if team_src.team == "ENT":
+                print(f"[DEBUG] team_src.team = {team_src.team!r}")
+                team_name = str(team_src.team).strip()
+                if team_name == "ENT":
                     people_count_final = people_count
+                elif team_name == "DBS" or "DBS" in team_name.upper():
+                    people_count_final = get_dbs_people_count_from_tabs(
+                        wb,
+                        preferred_sheet_names=("DBS Cell 13", "DBS Cell 14"),
+                        name_row_zero_based=29,
+                    )
                 else:
                     people_count_final = get_people_count_from_wip(
                         wip_df=wip_df,
