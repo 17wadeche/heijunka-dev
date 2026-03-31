@@ -1236,6 +1236,7 @@ ACTIVITY_MAP = {
     "dt transfer meeting with marmar and blair ruth (reg)":"Meeting",
     "mfg complaints review meeting":"Meeting",
     "meetings - sh r&d ftir":"Meeting",
+    "acq training: iris trees: emails: tl activities: tl support":"Training/Mentoring",
     "getting laptop from it & set up":"IT Issue/Update",
     "sh mfg&pmpa":"PMPA",
     "compulsory update":"IT Issue/Update",
