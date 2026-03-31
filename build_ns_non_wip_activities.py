@@ -1264,6 +1264,7 @@ def build_capacity_fixed_row(
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
     PEOPLE_END   = 25
+    TOTAL_ROW    = 26 
     COL_B        = _col_letter_to_idx("B")
     COL_Z        = _col_letter_to_idx("Z")
     COL_AA       = _col_letter_to_idx("AA")
@@ -1296,13 +1297,15 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         name = pr["name"]
         person_total = 0.0
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
-            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[1] > c else "")
+            if c in {COL_Z, COL_AA}:
+                continue
+            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
             if not label:
                 continue
-            hrs = safe_float(ws.iat[i, c] if ws.shape[1] > c else np.nan)
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            hrs = float(round(hrs, 2))
+            hrs = float(round(float(hrs), 2))
             activities.append({
                 "name": name,
                 "activity": label,
@@ -1318,7 +1321,6 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             })
         if person_total != 0.0:
             nonwip_by_person[name] = float(round(person_total, 2))
-    TOTAL_ROW = 26
     row_27_total = float(round(sum(
         safe_float0(ws.iat[TOTAL_ROW, c] if ws.shape[0] > TOTAL_ROW and ws.shape[1] > c else 0.0)
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1)
