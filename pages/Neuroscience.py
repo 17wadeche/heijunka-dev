@@ -334,13 +334,22 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         .str.strip()
         .replace({"": np.nan, "None": np.nan, "nan": np.nan})
     )
+    df["activity"] = (
+        df["activity"]
+        .astype(str)
+        .str.strip()
+        .replace({
+            "Out of Office": "OOO",
+            "Holiday": "OOO",
+        })
+    )
     grp = (
         df.groupby(["activity", "name"], as_index=False)
-          .agg(
-              hours=("hours", "sum"),
-              days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
-              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
-          )
+        .agg(
+            hours=("hours", "sum"),
+            days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
+            day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
+        )
     )
     def _label_row(r):
         n = r["days_known"]
