@@ -4150,3 +4150,8 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-03-31 09:27:31,244 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-03-31 09:27:31,299 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 337 rows
 2026-03-31 09:27:31,299 | INFO | === NS Metrics Run END ===
+2026-03-31 11:49:24,540 | INFO | === NS Metrics Run START ===
+2026-03-31 11:49:24,540 | INFO | Selected team: all
+2026-03-31 11:49:24,540 | INFO | [Spine] START
+2026-03-31 11:49:34,653 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:10.113258
+2026-03-31 11:49:34,653 | INFO | [Spine New] START
