@@ -1290,7 +1290,6 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             "AA_OOO": aa,
         })
     people_count = len(set(r["name"] for r in people_rows))
-    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
     activities: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
     for pr in people_rows:
@@ -1323,7 +1322,12 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             })
         if person_total > 0:
             nonwip_by_person[name] = float(round(person_total, 2))
-    total_nonwip_hours = float(round(sum(a["hours"] for a in activities if a.get("activity") != "OOO"), 2))
+    ooo_hours = float(round(
+        sum(a["hours"] for a in activities if a.get("activity") == "OOO"), 2
+    ))
+    total_nonwip_hours = float(round(
+        sum(a["hours"] for a in activities if a.get("activity") != "OOO"), 2
+    ))
     return {
         "people_rows": people_rows,
         "people_count": people_count,
