@@ -1318,7 +1318,11 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             })
         if person_total != 0.0:
             nonwip_by_person[name] = float(round(person_total, 2))
-    total_nonwip_hours = float(round(sum(a["hours"] for a in activities), 2))
+    TOTAL_ROW = 26
+    total_nonwip_hours = float(round(sum(
+        safe_float0(ws.iat[TOTAL_ROW, c] if ws.shape[0] > TOTAL_ROW and ws.shape[1] > c else 0.0)
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1)
+    ), 2))
     return {
         "people_rows": people_rows,
         "people_count": people_count,
