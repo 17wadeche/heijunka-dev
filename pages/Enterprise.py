@@ -1113,6 +1113,42 @@ def _prepare_weekly_accounting_inputs(
         "person_hours": person_hours,
         "people_in_wip": people_in_wip,
     }
+def ent_capacity_hours_for_week(
+    team: str,
+    week,
+    nw_frame: pd.DataFrame,
+    irl_people: set[str] | None = None,
+) -> float:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    if nw_frame is None or nw_frame.empty:
+        return 0.0
+    raw_nw = nw_frame.copy()
+    raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+    row = raw_nw.loc[
+        (raw_nw["team"] == team) & (raw_nw["period_date"] == wk)
+    ]
+    if row.empty:
+        return 0.0
+    people_count_series = pd.to_numeric(row["people_count"], errors="coerce").dropna()
+    people_count = int(people_count_series.iloc[0]) if not people_count_series.empty else 0
+    irl_count = 0
+    if "non_wip_by_person" in row.columns:
+        payload = row.iloc[0].get("non_wip_by_person")
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            obj = {}
+        if isinstance(obj, dict):
+            names = {
+                normalize_person_name(str(k).strip()).strip().lower()
+                for k in obj.keys()
+                if str(k).strip()
+            }
+            irl_count = sum(1 for n in names if n in irl_people_norm)
+    irl_count = min(irl_count, people_count)
+    non_irl_count = max(people_count - irl_count, 0)
+    return float((irl_count * 39.0) + (non_irl_count * 40.0))
 def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
     dfnw: Optional[pd.DataFrame],
@@ -1211,7 +1247,14 @@ def _weekly_team_export_df(
             people_count = float(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
-        capacity_hours = float(wk_people["Expected Hours"].sum())
+        if team == "ENT":
+            capacity_hours = ent_capacity_hours_for_week(
+                team=team,
+                week=wk,
+                nw_frame=nw,
+            )
+        else:
+            capacity_hours = float(wk_people["Expected Hours"].sum())
         ooo_hours = float(wk_people["OOO Hours"].sum())
         non_wip_hours = float(pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0)
         completed_match = metrics_team[
