@@ -2293,7 +2293,6 @@ with mid:
                                         st.altair_chart(
                                             (line_a + line_t).properties(
                                                 height=280,
-                                                title=f"{picked_station} • Outputs over time (station total)"
                                             ),
                                             use_container_width=True
                                         )
