@@ -1249,7 +1249,7 @@ def _weekly_team_export_df(
             )
         if team in {"NV", "Enabling Technologies", "DBS"}:
             capacity_hours = float(people_count) * 40.0
-        if team == "ENT":
+        elif team == "ENT":
             capacity_hours = ent_capacity_hours_for_week(
                 team=team,
                 week=wk,
