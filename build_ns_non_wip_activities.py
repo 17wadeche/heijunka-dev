@@ -382,6 +382,25 @@ class TeamSource:
     custom_builder: Optional[Callable[..., Dict]] = None
     wip_workers_from: str = "NS_WIP"
     completed_hours_from: str = "NS_WIP"
+def week_from_oarm_meic_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
+    s = str(sheet_name).strip()
+    if "capacity mgmt" not in s.lower():
+        return None
+    m = re.search(r"\(([A-Za-z]{3,9})\.(\d{1,2})\)", s)
+    if m:
+        mon_txt = m.group(1)
+        day = int(m.group(2))
+        dt = pd.to_datetime(f"{mon_txt} {day} {DEFAULT_YEAR_IF_MISSING}", errors="coerce")
+        if pd.notna(dt):
+            return dt.normalize()
+    m = re.search(r"\((\d{1,2})\.(\d{1,2})\)", s)
+    if m:
+        mm, dd = int(m.group(1)), int(m.group(2))
+        try:
+            return pd.Timestamp(year=DEFAULT_YEAR_IF_MISSING, month=mm, day=dd).normalize()
+        except Exception:
+            pass
+    return None
 def week_from_sheetname_date(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     dt = pd.to_datetime(s, errors="coerce")
@@ -1631,6 +1650,8 @@ def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] =
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    print(f"[DEBUG][O-Arm MEIC] build_oarm_meic_row called, week={week}, ws.shape={ws.shape}", flush=True)
+    print(f"[DEBUG][O-Arm MEIC] row 1 col 0 = {ws.iat[1, 0] if ws.shape[0] > 1 else 'N/A'}", flush=True)
     return build_capacity_fixed_row(
         team, ws,
         people_start_row=1, people_end_row=8,
@@ -1929,7 +1950,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     "O-Arm MEIC": TeamSource(
         team="O-Arm MEIC",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\OARM_MEIC_Heijunka.xlsm"),
-        week_from_sheet=week_from_mnav_capacity_tab,
+        week_from_sheet=week_from_oarm_meic_tab,   # <-- changed
         custom_builder=build_oarm_meic_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
@@ -2002,6 +2023,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
         return pd.DataFrame()
     sheets = pd.read_excel(xlsx_path, sheet_name=None, header=None, engine="openpyxl")
+    print(f"[DEBUG][{team_src.team}] sheet names: {list(sheets.keys())}", flush=True)  # ADD THIS
     out_rows: List[dict] = []
     for sheet_name, ws in sheets.items():
         if team_src.week_from_sheet is None:
