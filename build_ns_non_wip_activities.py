@@ -24,6 +24,184 @@ warnings.filterwarnings(
 MEIC_TRACKER_PATH = Path(
     r"C:\Users\wadec8\Medtronic PLC\MEIC_NMPH - Documents\NPH Tracker.xlsx"
 )
+MEIC_NON_D2D_LOG_SHEET = "Non-D2D WIP Time Log"
+def _week_start_monday(dt_series: pd.Series) -> pd.Series:
+    dt = pd.to_datetime(dt_series, errors="coerce").dt.normalize()
+    return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
+
+
+def _meic_team_for_person(name: str) -> Optional[str]:
+    nm = norm_name(name)
+    if nm in DBS_MEIC_NAMES:
+        return "DBS MEIC"
+    if nm in PH_MEIC_NAMES:
+        return "PH MEIC"
+    if nm in SCS_MEIC_NAMES:
+        return "SCS MEIC"
+    return None
+
+
+def build_meic_rows_from_non_d2d_log(
+    xlsx_path: Path,
+    wip_df: pd.DataFrame,
+    metrics_df: pd.DataFrame,
+    team_filter: Optional[str] = None,
+) -> pd.DataFrame:
+    if not xlsx_path.exists():
+        print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}", flush=True)
+        return pd.DataFrame()
+
+    ws = pd.read_excel(
+        xlsx_path,
+        sheet_name=MEIC_NON_D2D_LOG_SHEET,
+        header=None,
+        engine="openpyxl",
+    )
+
+    # B=date, C=task, F=minutes, I=name
+    raw = pd.DataFrame({
+        "date": ws.iloc[:, 1] if ws.shape[1] > 1 else pd.Series(dtype="object"),
+        "task": ws.iloc[:, 2] if ws.shape[1] > 2 else pd.Series(dtype="object"),
+        "minutes": ws.iloc[:, 5] if ws.shape[1] > 5 else pd.Series(dtype="object"),
+        "name": ws.iloc[:, 8] if ws.shape[1] > 8 else pd.Series(dtype="object"),
+    })
+
+    raw["name"] = raw["name"].map(norm_name)
+    raw["task"] = raw["task"].map(norm_name)
+    raw["minutes"] = pd.to_numeric(raw["minutes"], errors="coerce")
+    raw["date"] = pd.to_datetime(raw["date"], errors="coerce").dt.normalize()
+
+    raw = raw.dropna(subset=["date"])
+    raw = raw[raw["minutes"].notna() & (raw["minutes"] > 0)].copy()
+    raw = raw[raw["name"].map(is_real_person)].copy()
+    raw = raw[raw["task"].astype(str).str.strip() != ""].copy()
+
+    raw["team"] = raw["name"].map(_meic_team_for_person)
+    raw = raw[raw["team"].notna()].copy()
+
+    if team_filter:
+        raw = raw[raw["team"] == team_filter].copy()
+
+    if raw.empty:
+        print(f"[DEBUG][MEIC LOG] no rows after filtering for team_filter={team_filter!r}", flush=True)
+        return pd.DataFrame()
+
+    raw["period_date"] = _week_start_monday(raw["date"])
+    raw["hours"] = raw["minutes"] / 60.0
+
+    raw["is_ooo"] = raw["task"].str.casefold().isin({
+        "ooo",
+        "out of office",
+        "pto",
+        "vacation",
+    })
+
+    dbg = (
+        raw.groupby(["team", "period_date"], dropna=False)["hours"]
+        .sum()
+        .reset_index()
+        .sort_values(["period_date", "team"])
+    )
+    for _, r in dbg.iterrows():
+        print(
+            f"[DEBUG][MEIC LOG GROUPED] "
+            f"team={r['team']} "
+            f"week={pd.Timestamp(r['period_date']).date().isoformat()} "
+            f"hours={float(r['hours']):.2f}",
+            flush=True,
+        )
+
+    out_rows: List[dict] = []
+
+    for (team_name, week), grp in raw.groupby(["team", "period_date"], dropna=False):
+        week = pd.Timestamp(week).normalize()
+
+        nonwip_by_person = (
+            grp.groupby("name")["hours"]
+            .sum()
+            .round(2)
+            .to_dict()
+        )
+
+        activities = []
+        for (person, task), sub in grp.groupby(["name", "task"], dropna=False):
+            hrs = float(round(sub["hours"].sum(), 2))
+            if hrs > 0:
+                activities.append({
+                    "name": person,
+                    "activity": task,
+                    "hours": hrs,
+                })
+
+        ooo_by_person = (
+            grp.loc[grp["is_ooo"], ["name", "hours"]]
+            .groupby("name")["hours"]
+            .sum()
+            .round(2)
+            .to_dict()
+        )
+
+        ooo_hours = float(round(sum(ooo_by_person.values()), 2))
+        total_nonwip_hours = float(round(grp["hours"].sum(), 2))
+
+        completed_match = metrics_df[
+            (metrics_df.get("team") == team_name) &
+            (metrics_df["period_date"] == week)
+        ]
+        completed_hours = (
+            pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
+            if not completed_match.empty else np.nan
+        )
+
+        pct_in_wip = np.nan
+        if pd.notna(completed_hours):
+            denom = float(completed_hours) + float(total_nonwip_hours)
+            pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
+
+        wip_match = metrics_df[
+            (metrics_df.get("team") == team_name) &
+            (metrics_df["period_date"] == week)
+        ]
+        wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
+        wip_workers_count = len(wip_workers)
+        wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_by_person.get(n, 0.0)) for n in wip_workers), 2))
+
+        people_count_final = get_people_count_from_wip(
+            wip_df=wip_df,
+            team=team_name,
+            week=week,
+            fallback=grp["name"].nunique(),
+        )
+
+        out_rows.append({
+            "team": team_name,
+            "period_date": week.date().isoformat(),
+            "source_file": str(xlsx_path),
+            "people_count": int(people_count_final),
+            "team_member_names": json.dumps(sorted(grp["name"].dropna().unique().tolist()), ensure_ascii=False),
+            "total_non_wip_hours": total_nonwip_hours,
+            "OOO Hours": ooo_hours,
+            "% in WIP": float(round(pct_in_wip, 6)) if pd.notna(pct_in_wip) else np.nan,
+            "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
+            "non_wip_activities": json.dumps(activities, ensure_ascii=False),
+            "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+            "wip_workers_count": int(wip_workers_count),
+            "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+        })
+
+        print(
+            f"[DEBUG][MEIC LOG] team={team_name} week={week.date().isoformat()} "
+            f"rows={len(grp)} people={grp['name'].nunique()} "
+            f"non_wip={total_nonwip_hours:.2f} ooo={ooo_hours:.2f}",
+            flush=True,
+        )
+
+    df = pd.DataFrame(out_rows)
+    if not df.empty:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+        df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
+        df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return df
 def excel_cell(row_i_zero_based: int, col_i_zero_based: int) -> str:
     n = col_i_zero_based + 1
     letters = ""
@@ -33,6 +211,7 @@ def excel_cell(row_i_zero_based: int, col_i_zero_based: int) -> str:
     return f"{letters}{row_i_zero_based + 1}"
 DBS_MEIC_NAMES = {"Divya", "Reshmita", "Shankar"}
 PH_MEIC_NAMES = {"Sathya", "Arun", "Kavya"}
+SCS_MEIC_NAMES = {"Brajendra", "Nadeem", "Trisha", "Priyadarshini", "Sharavanan", "Raviteja", "Trilok", "Nitheesh", "Chaitanya", "Sinduja"}
 TEAM_TRACKER_SHEET = "Team Tracker"
 NS_WIP_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
 NS_METRICS_PATH = Path(r"C:\heijunka-dev\NS_metrics.csv")
@@ -506,7 +685,6 @@ def build_selector_rows_from_capacity_workbook(
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}", flush=True)
         return pd.DataFrame()
-
     out_rows: List[dict] = []
     pythoncom.CoInitialize()
     excel = win32com.client.DispatchEx("Excel.Application")
@@ -566,13 +744,11 @@ def build_selector_rows_from_capacity_workbook(
                 flush=True,
             )
             return pd.DataFrame()
-
         print(
             f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} "
             f"with dates {[d.date().isoformat() for d in all_dates]}",
             flush=True,
         )
-
         for week in all_dates:
             try:
                 selector_range = ws_com.Range(chosen_selector_cell)
@@ -705,6 +881,32 @@ def build_selector_rows_from_capacity_workbook(
         df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
         df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
     return df
+def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
+    if df is None or df.empty:
+        print(f"[DEBUG][{label}] no rows", flush=True)
+        return
+
+    tmp = df.copy()
+    tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
+    tmp["total_non_wip_hours"] = pd.to_numeric(tmp.get("total_non_wip_hours"), errors="coerce").fillna(0.0)
+    tmp["OOO Hours"] = pd.to_numeric(tmp.get("OOO Hours"), errors="coerce").fillna(0.0)
+
+    tmp = tmp[tmp["team"].isin(["PH", "PH MEIC"])].copy()
+    if tmp.empty:
+        print(f"[DEBUG][{label}] no PH / PH MEIC rows", flush=True)
+        return
+
+    tmp = tmp.sort_values(["period_date", "team"])
+
+    for _, r in tmp.iterrows():
+        print(
+            f"[DEBUG][{label}] "
+            f"week={pd.Timestamp(r['period_date']).date().isoformat()} "
+            f"team={r['team']} "
+            f"non_wip={float(r['total_non_wip_hours']):.2f} "
+            f"ooo={float(r['OOO Hours']):.2f}",
+            flush=True,
+        )
 def week_from_pss_meic_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     s_lower = s.lower()
@@ -979,6 +1181,7 @@ def build_meic_rows_from_team_tracker(
     xlsx_path: Path,
     wip_df: pd.DataFrame,
     metrics_df: pd.DataFrame,
+    team_filter: Optional[str] = None,
 ) -> pd.DataFrame:
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}")
@@ -1028,6 +1231,12 @@ def build_meic_rows_from_team_tracker(
                 ws_df = pd.DataFrame(list(used))
                 built = build_meic_teamtracker_block(ws_df)
                 split = split_meic_snapshot_into_teams(built)
+                if team_filter:
+                    split = {
+                        team_name: team_built
+                        for team_name, team_built in split.items()
+                        if team_name == team_filter
+                    }
                 for team_name, team_built in split.items():
                     print(f"[DEBUG][MEIC] processing {team_name} for week {week.date()}", flush=True)
                     completed_match = metrics_df[
@@ -1785,9 +1994,9 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
     PEOPLE_START = 2  
     PEOPLE_END   = 17 
     COL_B   = _col_letter_to_idx("B")
-    COL_OOO = _col_letter_to_idx("Y")
+    COL_OOO = _col_letter_to_idx("AC")
     ACT_START = _col_letter_to_idx("C")
-    ACT_END   = _col_letter_to_idx("AC")
+    ACT_END   = _col_letter_to_idx("AB")
     HEADER_ROW = 1
     TEAM_HOURS_CELL = "B20"
     min_rows_needed = PEOPLE_END + 1   
@@ -1958,7 +2167,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         team="PH",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Other\PH Non-D2D WIP.xlsx"),
         layout=StandardLayout(
-            people_start_row=2, totals_row=17,
+            people_start_row=2, totals_row=16,
             activity_header_row=1, activity_start_col=3, activity_end_col=37,
             min_rows=17, min_cols=3,
         ),
@@ -2051,9 +2260,12 @@ def build_nonwip_by_person_b_minus_c(people_rows: List[dict]) -> Dict[str, float
     return out
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
     if team_src.team in {"DBS MEIC", "SCS MEIC", "PH MEIC"}:
-        if team_src.team != "DBS MEIC":
-            return pd.DataFrame()
-        return build_meic_rows_from_team_tracker(team_src.xlsx, wip_df=wip_df, metrics_df=metrics_df)
+        return build_meic_rows_from_non_d2d_log(
+            team_src.xlsx,
+            wip_df=wip_df,
+            metrics_df=metrics_df,
+            team_filter=team_src.team,
+        )
     if team_src.team in {""}:
         return build_selector_rows_from_capacity_workbook(
             team_src,
@@ -2152,19 +2364,14 @@ def main():
         raise FileNotFoundError(f"Missing NS_WIP.csv: {NS_WIP_PATH}")
     if not NS_METRICS_PATH.exists():
         raise FileNotFoundError(f"Missing NS_metrics.csv: {NS_METRICS_PATH}")
-
     wip_df = load_csv(NS_WIP_PATH)
     metrics_df = load_metrics(NS_METRICS_PATH)
-
     built: List[pd.DataFrame] = []
     for team, src in TEAM_SOURCES.items():
         df_team = build_team_rows(src, wip_df=wip_df, metrics_df=metrics_df)
         if not df_team.empty:
             built.append(df_team)
-
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
-
-    # See ET team-level total_non_wip_hours by week BEFORE ET is rolled up
     et_weekly = (
         new_df.loc[
             new_df["team"].isin(ENABLE_TEAMS),
@@ -2174,10 +2381,8 @@ def main():
     )
     et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
     et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
-
     print("\n=== ET hours by team by week ===")
     print(et_weekly.to_string(index=False))
-
     for d in sorted(et_weekly["period_date"].dropna().unique()):
         week_rows = et_weekly[et_weekly["period_date"] == d]
         parts = []
@@ -2191,8 +2396,6 @@ def main():
                 f"{team}: people={people}, non_wip={non_wip:.2f}, ooo={ooo:.2f}, wip_workers_ooo={wip_ooo:.2f}"
             )
         print(f"{pd.Timestamp(d).date()} | " + " | ".join(parts), flush=True)
-
-    # Optional: pivot view
     et_pivot = (
         et_weekly.pivot_table(
             index="period_date",
@@ -2203,7 +2406,6 @@ def main():
         .fillna(0)
         .sort_index()
     )
-
     print("\n=== ET total_non_wip_hours pivot ===")
     print(et_pivot.to_string())
     if OUT_PATH.exists():
@@ -2217,9 +2419,10 @@ def main():
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     else:
         combined = new_df
-
+    log_weekly_ph_summary(combined, "PRE-ROLLUP")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
+    log_weekly_ph_summary(combined, "POST-ROLLUP")
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
 if __name__ == "__main__":
