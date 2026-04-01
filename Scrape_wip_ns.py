@@ -420,7 +420,7 @@ def parse_sheet_date_scs_missing_year(sheet_name: str) -> str:
             d = date(y, mm, dd)
         except ValueError:
             continue
-        if d.weekday() == 0:  # Monday
+        if d.weekday() == 0:
             return d.isoformat()
     return ""
 def col_range(start_col_letter: str, end_col_letter: str) -> range:
@@ -2904,7 +2904,7 @@ def main():
     SCS_SUPER_CFG = {
         "team": "SCS Super Cell",
         "person_cols": ("B", "V"),
-        "date_parser": parse_sheet_date_scs_missing_year,  # missing-year Monday logic
+        "date_parser": parse_sheet_date_scs_missing_year, 
         "cells": {
             "total_available_hours": {"type": "sum_range", "range": "B60:V60"},
             "completed_hours": {"type": "sum_range", "range": "B60:V60"},
@@ -3009,7 +3009,7 @@ def main():
         return out
     def mondays_since(start_iso: str, end_d: date) -> list[str]:
         start = date.fromisoformat(start_iso)
-        start = start - timedelta(days=start.weekday())  # ensure Monday
+        start = start - timedelta(days=start.weekday()) 
         out: list[str] = []
         d = start
         while d <= end_d:
