@@ -1177,10 +1177,8 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     COL_C = 2
     COL_AE = 30
     HEADER_ROW = 1
-
     AI20_ROW = 19
     AI20_COL = _col_letter_to_idx("AI")
-
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1193,23 +1191,19 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
         if pd.isna(ooo):
             ooo = 0.0
         people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
-
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
-
     ai20 = safe_float0(
         ws.iat[AI20_ROW, AI20_COL]
         if ws.shape[0] > AI20_ROW and ws.shape[1] > AI20_COL else 0.0
     )
     total_nonwip_hours = float(round(ai20, 2))
-
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
         v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
         if v == 0.0:
             continue
         nonwip_by_person[r["name"]] = v
-
     activities: List[dict] = []
     for pr in people_rows:
         i = pr["row_i"]
@@ -1229,7 +1223,6 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
                 "activity": "OOO",
                 "hours": ooo,
             })
-
     _debug_print_et_people(team, week, people_rows)
     return {
         "people_rows": people_rows,
@@ -1721,7 +1714,7 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         team, ws,
         people_start_row=1, people_end_row=7,
         expected_col_letter="B",
-        ooo_col_letter="Z",
+        ooo_col_letter="AC",
         deduct_cell="B10",
         ooo_sum_start_row=1, ooo_sum_end_row=8,
         total_ooo_end_row=7,
