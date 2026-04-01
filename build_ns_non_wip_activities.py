@@ -1351,6 +1351,19 @@ def combine_enabling_technologies(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.
         if "source_file" in rest.columns:
             rest = rest.drop(columns=["source_file"])
         return rest
+    print("\n[DEBUG][ET] People count breakdown by week and team:", flush=True)
+    all_dates = sorted(subset["period_date"].dropna().unique())
+    for d in all_dates:
+        week_rows = subset[subset["period_date"] == d]
+        total = 0
+        parts = []
+        for team in sorted(ENABLE_TEAMS):
+            team_row = week_rows[week_rows["team"] == team]
+            count = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum()) if not team_row.empty else 0
+            parts.append(f"{team}={count}")
+            total += count
+        print(f"  {pd.Timestamp(d).date()}  total={total}  [{', '.join(parts)}]", flush=True)
+    print("", flush=True)
     out_rows = []
     for period_date, g in subset.groupby("period_date", dropna=False):
         nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
@@ -2011,7 +2024,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         if team_src.team != "DBS MEIC":
             return pd.DataFrame()
         return build_meic_rows_from_team_tracker(team_src.xlsx, wip_df=wip_df, metrics_df=metrics_df)
-    if team_src.team in {"Nav", "CSF"}:
+    if team_src.team in {""}:
         return build_selector_rows_from_capacity_workbook(
             team_src,
             wip_df=wip_df,
@@ -2120,7 +2133,7 @@ def main():
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
         old_df = old_df[
-            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS"})
+            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS", *ENABLE_TEAMS})
         ].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
