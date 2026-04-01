@@ -3052,7 +3052,7 @@ def main():
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
     if should_run("Spine"):
         extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
-        extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, "Spine", ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, SPINE_NEW_CFG))
     if should_run("PH"):
         extend_team(
             "PH",

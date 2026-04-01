@@ -4491,3 +4491,36 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC
 2026-04-01 13:20:56,711 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-01 13:20:56,821 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 337 rows
 2026-04-01 13:20:56,822 | INFO | === NS Metrics Run END ===
+2026-04-01 13:26:55,896 | INFO | === NS Metrics Run START ===
+2026-04-01 13:26:55,898 | INFO | Selected team: all
+2026-04-01 13:26:55,904 | INFO | [Spine] START
+2026-04-01 13:27:07,615 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:11.710772
+2026-04-01 13:27:07,617 | INFO | [Spine New] START
+2026-04-01 13:27:26,638 | ERROR | [Spine New] FAIL | elapsed=0:00:19.019427 | error=unhashable type: 'dict'
+2026-04-01 13:27:26,656 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 282, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3055, in <lambda>
+    extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, SPINE_NEW_CFG))
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2392, in scrape_spine_previous_weeks_xlsm
+    trow = timeliness_lu.get(key)
+           ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'dict'
+
+2026-04-01 13:27:26,659 | INFO | [PH] START
+2026-04-01 13:28:37,520 | INFO | [PH] DONE | rows=542 | elapsed=0:01:10.860842
+2026-04-01 13:28:37,521 | INFO | [PH Cell 17] START
+2026-04-01 13:28:37,860 | INFO | [PH Cell 17] DONE | rows=1 | elapsed=0:00:00.338461
+2026-04-01 13:28:37,860 | INFO | [SCS Cell 1] START
+2026-04-01 13:29:20,263 | INFO | [SCS Cell 1] DONE | rows=284 | elapsed=0:00:42.403314
+2026-04-01 13:29:20,263 | INFO | [MEIC PH] START
+2026-04-01 13:29:29,786 | INFO | [MEIC PH] DONE | rows=87 | elapsed=0:00:09.523640
+2026-04-01 13:29:29,786 | INFO | [DBS C13] START
+2026-04-01 13:29:30,048 | INFO | [DBS C13] DONE | rows=2 | elapsed=0:00:00.261885
+2026-04-01 13:29:30,048 | INFO | [DBS C13] filter >= 2025-07-07: 2 -> 2
+2026-04-01 13:29:30,049 | INFO | [DBS C14] START
+2026-04-01 13:29:30,297 | INFO | [DBS C14] DONE | rows=2 | elapsed=0:00:00.247123
+2026-04-01 13:29:30,297 | INFO | [DBS C14] filter >= 2025-07-07: 2 -> 2
+2026-04-01 13:29:30,298 | INFO | [NV] START
