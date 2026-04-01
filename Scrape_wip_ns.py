@@ -2558,7 +2558,7 @@ def main():
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
     scs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\SCS\SCS_Data.csv"
-    ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 Heijunka.xlsx"
+    ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 New Heijunka.xlsx"
     out_file = "NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
@@ -2740,7 +2740,7 @@ def main():
             "wp2_output_rows_by_person": [68, 73, 78, 83, 88],
         },
     }
-    PH_CFG = {
+    PH_OLD_CFG = {
         "team": "PH",
         "person_cols": ("B", "R"),
         "cells": {
@@ -2771,38 +2771,72 @@ def main():
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
-    PH_CELL17_CFG = {
-        "team": "PH Cell 17",
-        "person_cols": ("B", "J"),
-        "date_parser": parse_sheet_date_requires_year,
-        "min_period_date": "2025-09-01",
+    PH_NEW_CFG = {
+        "team": "PH",
+        "person_cols": ("B", "R"),
+        "min_period_date": "2026-03-23",
         "cells": {
-            "total_available_hours": "L59",
-            "completed_hours": "L50",
-            "wp1_output": "R2",
-            "wp1_target": "R7",
-            "wp2_output": "T2",
-            "wp2_target": "T7",
-            "uplh_wp1": "R5",
-            "uplh_wp2": "T5",
-            "wp1_hours": "R4",
-            "wp2_hours": "T4",
+            "total_available_hours": "T61",
+            "completed_hours": "T50",
+            "wp1_output": "Z2",
+            "wp1_target": "Z7",
+            "wp2_output": "AB2",
+            "wp2_target": "AB7",
+            "uplh_wp1": "Z5",
+            "uplh_wp2": "AB5",
+            "wp1_hours": "Z4",
+            "wp2_hours": "AB4",
         },
         "rows": {
-            "hc_row": 25,
-            "person_name_row_for_person_hours": 30,
+            "hc_row": 50,
+            "person_name_row_for_person_hours": 55,
             "person_actual_row_for_person_hours": 50,
-            "person_available_row_for_person_hours": 59,
-            "person_name_row_for_outputs_by_person": 10,
+            "person_available_row_for_person_hours": 61,
+            "person_name_row_for_outputs_by_person": 55,
             "person_target_row_for_outputs_by_person": 25,
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 35, 39, 43, 47],
             "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "wp2_hour_rows": [33, 37, 41, 45, 49],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
+    PH_CELL17_CFG = {
+        "team": "PH Cell 17",
+        "person_cols": ("B", "L"),
+        "date_parser": parse_sheet_date_requires_year,
+        "min_period_date": "2025-09-01",
+        "cells": {
+            "total_available_hours": "N113",
+            "completed_hours": "N50",
+            "wp1_output": "T2",
+            "wp1_target": "T7",
+            "wp2_output": "U2",
+            "wp2_target": "U7",
+            "uplh_wp1": "T5",
+            "uplh_wp2": "U5",
+            "wp1_hours": "T4",
+            "wp2_hours": "U4",
+        },
+        "rows": {
+            "hc_row": 76,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 113,
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "wp3_hour_rows": [33, 34, 41, 45, 49],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [56, 60, 64, 68, 72],
+            "wp2_output_rows_by_person": [57, 61, 65, 69, 73],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(56, 74))},
     }
     MEIC_PH_CFG = {
         "team": "MEIC PH",
@@ -2987,7 +3021,12 @@ def main():
         extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
         extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, "Spine", ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PH"):
-        extend_team("PH", lambda: scrape_workbook_with_config(ph_source_file, PH_CFG))
+        extend_team(
+            "PH",
+            lambda:
+                scrape_workbook_with_config(ph_source_file, PH_OLD_CFG)
+                + scrape_workbook_with_config(ph_source_file, PH_NEW_CFG)
+        )
     if should_run("PH Cell 17"):
         extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
     if should_run("SCS Cell 1"):
