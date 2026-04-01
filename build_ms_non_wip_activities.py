@@ -100,6 +100,155 @@ def _as_date(v: Any) -> Optional[_dt.date]:
             except ValueError:
                 pass
     return None
+def json_load_safe(v: Any) -> Any:
+    if v is None:
+        return {}  
+    if isinstance(v, (dict, list)):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return {}
+        try:
+            return json.loads(s)
+        except Exception:
+            return {}
+    return {}
+
+def safe_float2(v: Any) -> float:
+    if v is None or v == "":
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = v.strip().replace(",", "")
+        if not s:
+            return 0.0
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+def _sum_simple_map(dst: dict, src: dict) -> None:
+    for k, v in (src or {}).items():
+        dst[k] = safe_float2(dst.get(k)) + safe_float2(v)
+
+def _merge_unique_list_of_dicts(items: list[dict]) -> list[dict]:
+    seen = set()
+    out = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = (
+            str(item.get("name", "")).strip(),
+            str(item.get("activity", "")).strip(),
+            safe_float2(item.get("hours")),
+        )
+        if key not in seen:
+            seen.add(key)
+            out.append({
+                "name": key[0],
+                "activity": key[1],
+                "hours": key[2],
+            })
+    return out
+
+def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # Map INV/AST-GST rows into one final team label
+    team_rollup_map = {
+        "Surgical AST-GST": "Surgical AST-GST",
+        "Surgical INV MEIC": "Surgical AST-GST",
+        "Surgical INV US": "Surgical AST-GST",
+    }
+
+    buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+
+    for row in rows:
+        raw_team = (row.get("team", "") or "").strip()
+        period_date = (row.get("period_date", "") or "").strip()
+        team = team_rollup_map.get(raw_team, raw_team)
+
+        r = dict(row)
+        r["team"] = team
+
+        key = (team, period_date)
+        buckets.setdefault(key, []).append(r)
+
+    out_rows: List[Dict[str, Any]] = []
+
+    for (team, period_date), group in buckets.items():
+        # Preserve blank undated rows as-is unless they truly need merging
+        if not team or not period_date:
+            if len(group) == 1:
+                out_rows.extend(group)
+            else:
+                out_rows.append(group[0])
+            continue
+
+        people_count = 0.0
+        total_non_wip_hours = 0.0
+        total_ooo_hours = 0.0
+        wip_workers_count = 0.0
+        wip_workers_ooo_hours = 0.0
+
+        pct_values: List[float] = []
+
+        non_wip_by_person: Dict[str, float] = {}
+        non_wip_activities_all: List[dict] = []
+        wip_workers_set = set()
+
+        for row in group:
+            people_count += safe_float2(row.get("people_count"))
+            total_non_wip_hours += safe_float2(row.get("total_non_wip_hours"))
+            total_ooo_hours += safe_float2(row.get("OOO Hours"))
+            wip_workers_count += safe_float2(row.get("wip_workers_count"))
+            wip_workers_ooo_hours += safe_float2(row.get("wip_workers_ooo_hours"))
+
+            pct = row.get("% in WIP")
+            if pct not in ("", None):
+                pct_values.append(safe_float2(pct))
+
+            _sum_simple_map(non_wip_by_person, json_load_safe(row.get("non_wip_by_person")))
+
+            nwa = json_load_safe(row.get("non_wip_activities"))
+            if isinstance(nwa, list):
+                non_wip_activities_all.extend(nwa)
+
+            ww = json_load_safe(row.get("wip_workers"))
+            if isinstance(ww, list):
+                for person in ww:
+                    name = str(person).strip()
+                    if name:
+                        wip_workers_set.add(name)
+
+        pct_in_wip_avg = (
+            sum(pct_values) / len(pct_values)
+            if pct_values else ""
+        )
+
+        out_rows.append({
+            "team": team,
+            "period_date": period_date,
+            "people_count": int(people_count) if float(people_count).is_integer() else people_count,
+            "total_non_wip_hours": total_non_wip_hours,
+            "OOO Hours": total_ooo_hours,
+            "% in WIP": pct_in_wip_avg,
+            "non_wip_by_person": dumps_json(non_wip_by_person),
+            "non_wip_activities": dumps_json(_merge_unique_list_of_dicts(non_wip_activities_all)),
+            "wip_workers": dumps_json(sorted(wip_workers_set)),
+            "wip_workers_count": int(wip_workers_count) if float(wip_workers_count).is_integer() else wip_workers_count,
+            "wip_workers_ooo_hours": wip_workers_ooo_hours,
+        })
+
+    out_rows.sort(key=lambda r: (
+        (r.get("team", "") or "").lower(),
+        r.get("period_date", "") or "9999-12-31",
+    ))
+    return out_rows
+
+
+
 def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: int) -> List[str]:
     people: List[str] = []
     seen = set()
@@ -355,12 +504,13 @@ def main() -> int:
             all_rows.append(blank_row_for_missing_file(path))
             continue
         all_rows.extend(scrape_one_workbook(path, wip_lut))
+    final_rows = rollup_non_wip_rows(all_rows)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         writer.writeheader()
-        for row in all_rows:
+        for row in final_rows:
             writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
-    print(f"Wrote {len(all_rows)} row(s) to {args.out}")
+    print(f"Wrote {len(final_rows)} row(s) to {args.out}")
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())

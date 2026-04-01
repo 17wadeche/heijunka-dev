@@ -2247,6 +2247,7 @@ def scrape_ent_from_csv(
     return rows_out
 def scrape_spine_previous_weeks_xlsm(
     source_file: str,
+    cfg: Dict[str, Any],
     team: str = "Spine",
     dropdown_override: Optional[list[Any]] = None,
 ) -> list[dict]:
@@ -2606,7 +2607,7 @@ def main():
         "date_parser": parse_sheet_date_day_first_requires_year,
         "min_period_date": "2026-02-24",
         "cells": {
-            "total_available_hours": "Z64",
+            "total_available_hours": "W64",
             "completed_hours": "W54",
             "wp1_output": "AD5",
             "wp1_target": "AD9",
@@ -3052,7 +3053,14 @@ def main():
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
     if should_run("Spine"):
         extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
-        extend_team("Spine New", lambda: scrape_spine_previous_weeks_xlsm(spine_new_source_file, SPINE_NEW_CFG))
+        extend_team(
+            "Spine",
+            lambda: scrape_spine_previous_weeks_xlsm(
+                spine_new_source_file,
+                SPINE_NEW_CFG,
+                team="Spine",
+            )
+        )
     if should_run("PH"):
         extend_team(
             "PH",

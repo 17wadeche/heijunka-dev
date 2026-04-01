@@ -8,6 +8,9 @@ from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from collections import defaultdict
+import json
+from typing import Any, Dict, List, Optional, Tuple
 TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
@@ -75,6 +78,175 @@ EXCLUDED_NAMES = {
     "user5", "user6", "user7", "user8",
     "user9", "user10", "user11"
 }
+def json_load_safe(v: Any) -> Any:
+    if v is None:
+        return {}
+    if isinstance(v, (dict, list)):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return {}
+        try:
+            return json.loads(s)
+        except Exception:
+            return {}
+    return {}
+def safe_float(v: Any) -> float:
+    if v is None or v == "":
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = v.strip().replace(",", "")
+        if not s:
+            return 0.0
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+    return 0.0
+def _sum_nested_person_map(dst: dict, src: dict, keys=("actual", "available")) -> None:
+    for name, rec in (src or {}).items():
+        if not isinstance(rec, dict):
+            continue
+        drec = dst.setdefault(name, {k: 0.0 for k in keys})
+        for k in keys:
+            drec[k] = safe_float(drec.get(k)) + safe_float(rec.get(k))
+def _sum_nested_output_target_map(dst: dict, src: dict) -> None:
+    for name, rec in (src or {}).items():
+        if not isinstance(rec, dict):
+            continue
+        drec = dst.setdefault(name, {"output": 0.0, "target": 0.0})
+        drec["output"] = safe_float(drec.get("output")) + safe_float(rec.get("output"))
+        drec["target"] = safe_float(drec.get("target")) + safe_float(rec.get("target"))
+def _sum_simple_map(dst: dict, src: dict) -> None:
+    for k, v in (src or {}).items():
+        dst[k] = safe_float(dst.get(k)) + safe_float(v)
+
+def _sum_cell_person_map(dst: dict, src: dict) -> None:
+    for cell, people in (src or {}).items():
+        if not isinstance(people, dict):
+            continue
+        dcell = dst.setdefault(cell, {})
+        for person, val in people.items():
+            dcell[person] = safe_float(dcell.get(person)) + safe_float(val)
+
+def _recalc_uplh_by_station_by_person(
+    output_by_station_by_person: Dict[str, Dict[str, float]],
+    hours_by_station_by_person: Dict[str, Dict[str, float]],
+) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for station in sorted(set(output_by_station_by_person) | set(hours_by_station_by_person)):
+        omap = output_by_station_by_person.get(station, {}) or {}
+        hmap = hours_by_station_by_person.get(station, {}) or {}
+        for person in sorted(set(omap) | set(hmap)):
+            hrs = safe_float(hmap.get(person))
+            outv = safe_float(omap.get(person))
+            if hrs:
+                out.setdefault(station, {})
+                out[station][person] = outv / hrs
+    return out
+def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        team = (row.get("team", "") or "").strip()
+        period_date = (row.get("period_date", "") or "").strip()
+        if team and period_date:
+            buckets[(team, period_date)].append(row)
+        else:
+            buckets[(team, period_date)].append(row)
+    out_rows: List[Dict[str, Any]] = []
+    for (team, period_date), group in buckets.items():
+        if len(group) == 1 or not team or not period_date:
+            out_rows.extend(group)
+            continue
+        total_available_hours = 0.0
+        completed_hours = 0.0
+        target_output = 0.0
+        actual_output = 0.0
+        hc_in_wip = 0
+        people_in_wip_set = set()
+        person_hours: Dict[str, Dict[str, float]] = {}
+        outputs_by_person: Dict[str, Dict[str, float]] = {}
+        outputs_by_station: Dict[str, Dict[str, float]] = {}
+        station_hours: Dict[str, float] = {}
+        hours_by_station_by_person: Dict[str, Dict[str, float]] = {}
+        output_by_station_by_person: Dict[str, Dict[str, float]] = {}
+        open_complaint_timeliness = ""
+        closures = ""
+        opened = ""
+        source_files: List[str] = []
+        errors: List[str] = []
+        for row in group:
+            total_available_hours += safe_float(row.get("Total Available Hours"))
+            completed_hours += safe_float(row.get("Completed Hours"))
+            target_output += safe_float(row.get("Target Output"))
+            actual_output += safe_float(row.get("Actual Output"))
+            hc_in_wip += int(safe_float(row.get("HC in WIP")))
+            people_in_wip = json_load_safe(row.get("People in WIP"))
+            if isinstance(people_in_wip, list):
+                people_in_wip_set.update(str(x).strip() for x in people_in_wip if str(x).strip())
+            _sum_nested_person_map(person_hours, json_load_safe(row.get("Person Hours")), keys=("actual", "available"))
+            _sum_nested_output_target_map(outputs_by_person, json_load_safe(row.get("Outputs by Person")))
+            _sum_nested_output_target_map(outputs_by_station, json_load_safe(row.get("Outputs by Cell/Station")))
+            _sum_simple_map(station_hours, json_load_safe(row.get("Cell/Station Hours")))
+            _sum_cell_person_map(hours_by_station_by_person, json_load_safe(row.get("Hours by Cell/Station - by person")))
+            _sum_cell_person_map(output_by_station_by_person, json_load_safe(row.get("Output by Cell/Station - by person")))
+            sf = (row.get("source_file", "") or "").strip()
+            if sf:
+                source_files.append(sf)
+            er = (row.get("error", "") or "").strip()
+            if er:
+                errors.append(er)
+            if not open_complaint_timeliness:
+                open_complaint_timeliness = (row.get("Open Complaint Timeliness", "") or "").strip()
+            if not closures:
+                closures = (row.get("Closures", "") or "").strip()
+            if not opened:
+                opened = (row.get("Opened", "") or "").strip()
+        target_uplh = safe_div(target_output, completed_hours)
+        actual_uplh = safe_div(actual_output, completed_hours)
+        actual_hc_used = safe_div(completed_hours, 32.5)
+        uplh_by_station_by_person = _recalc_uplh_by_station_by_person(
+            output_by_station_by_person,
+            hours_by_station_by_person,
+        )
+        wp1 = outputs_by_station.get("WP1", {})
+        wp2 = outputs_by_station.get("WP2", {})
+        wp1_hours = safe_float(station_hours.get("WP1"))
+        wp2_hours = safe_float(station_hours.get("WP2"))
+        uplh_wp1 = safe_div(safe_float(wp1.get("output")), wp1_hours) if wp1_hours else ""
+        uplh_wp2 = safe_div(safe_float(wp2.get("output")), wp2_hours) if wp2_hours else ""
+        out_rows.append({
+            "team": team,
+            "period_date": period_date,
+            "source_file": " | ".join(sorted(set(source_files))),
+            "Total Available Hours": total_available_hours,
+            "Completed Hours": completed_hours,
+            "Target Output": target_output,
+            "Actual Output": actual_output,
+            "Target UPLH": float(target_uplh) if target_uplh is not None else "",
+            "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
+            "UPLH WP1": float(uplh_wp1) if uplh_wp1 not in (None, "") else "",
+            "UPLH WP2": float(uplh_wp2) if uplh_wp2 not in (None, "") else "",
+            "HC in WIP": hc_in_wip,
+            "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
+            "People in WIP": dumps_json(sorted(people_in_wip_set)),
+            "Person Hours": dumps_json(person_hours),
+            "Outputs by Person": dumps_json(outputs_by_person),
+            "Outputs by Cell/Station": dumps_json(outputs_by_station),
+            "Cell/Station Hours": dumps_json(station_hours),
+            "Hours by Cell/Station - by person": dumps_json(hours_by_station_by_person),
+            "Output by Cell/Station - by person": dumps_json(output_by_station_by_person),
+            "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person),
+            "Open Complaint Timeliness": open_complaint_timeliness,
+            "error": "; ".join(sorted(set(errors))) if errors else "",
+            "Closures": closures,
+            "Opened": opened,
+        })
+    out_rows.sort(key=lambda r: ((r.get("team", "") or "").lower(), r.get("period_date", "") or "9999-12-31"))
+    return out_rows
 def is_valid_name(name: str) -> bool:
     return name.strip().lower() not in EXCLUDED_NAMES
 def _norm_path(p: str) -> str:
@@ -438,12 +610,13 @@ def main() -> int:
     timeliness_lut = load_timeliness_lookup(timeliness_csv)
     closures_lut = load_closures_lookup(closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
+    final_rows = rollup_rows_by_team_period(all_rows)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         writer.writeheader()
-        for row in all_rows:
+        for row in final_rows:
             writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
-    print(f"Wrote {len(all_rows)} row(s) to {args.out}")
+    print(f"Wrote {len(final_rows)} row(s) to {args.out}")
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
