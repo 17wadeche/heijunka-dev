@@ -2600,6 +2600,39 @@ def main():
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
+    SPINE_NEW_CFG = {
+        "team": "Spine",
+        "person_cols": ("B", "Q"),
+        "date_parser": parse_sheet_date_day_first_requires_year,
+        "min_period_date": "2026-02-24",
+        "cells": {
+            "total_available_hours": "Z64",
+            "completed_hours": "W54",
+            "wp1_output": "AD5",
+            "wp1_target": "AD9",
+            "wp2_output": "AF5",
+            "wp2_target": "AF9",
+            "uplh_wp1": "AD8",
+            "uplh_wp2": "AF8",
+            "wp1_hours": "AD7",
+            "wp2_hours": "AF7",
+        },
+        "rows": {
+            "hc_row": 28,
+            "person_name_row_for_person_hours": 33,
+            "person_actual_row_for_person_hours": 54,
+            "person_available_row_for_person_hours": 64,
+            "person_name_row_for_outputs_by_person": 13,
+            "person_target_row_for_outputs_by_person": 28,
+            "person_name_row_for_hours_by_cell_by_person": 33,
+            "wp1_hour_rows": [34, 38, 42, 46, 50],
+            "wp2_hour_rows": [35, 39, 43, 47, 51],
+            "person_name_row_for_output_by_cell_by_person": 13,
+            "wp1_output_rows_by_person": [14, 17, 20, 23, 26],
+            "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(14, 27))},
+    }
     MAZOR_CFG = {
         "person_cols": ("B", "J"),
         "cells": {
