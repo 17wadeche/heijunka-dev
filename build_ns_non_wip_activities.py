@@ -2202,14 +2202,6 @@ def main():
 
     print("\n=== ET total_non_wip_hours pivot ===")
     print(et_pivot.to_string())
-
-    # Optional export
-    et_weekly.to_csv(
-        r"C:\heijunka-dev\et_total_non_wip_hours_by_week.csv",
-        index=False,
-        encoding="utf-8-sig"
-    )
-
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
         old_df = old_df[
