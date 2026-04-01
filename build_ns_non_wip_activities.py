@@ -1699,7 +1699,7 @@ def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp
         team, ws,
         people_start_row=1, people_end_row=8,
         expected_col_letter="B",
-        ooo_col_letter="Q",
+        ooo_col_letter="R",
         deduct_cell="B11",
         ooo_sum_start_row=1, ooo_sum_end_row=8,
         total_ooo_end_row=8,
@@ -2171,15 +2171,29 @@ def main():
     et_weekly = (
         new_df.loc[
             new_df["team"].isin(ENABLE_TEAMS),
-            ["period_date", "team", "total_non_wip_hours"]
+            ["period_date", "team", "people_count", "total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"]
         ]
         .copy()
     )
     et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
     et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
 
-    print("\n=== ET total_non_wip_hours by team by week ===")
+    print("\n=== ET hours by team by week ===")
     print(et_weekly.to_string(index=False))
+
+    for d in sorted(et_weekly["period_date"].dropna().unique()):
+        week_rows = et_weekly[et_weekly["period_date"] == d]
+        parts = []
+        for team in sorted(ENABLE_TEAMS):
+            team_row = week_rows[week_rows["team"] == team]
+            people = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum())
+            non_wip = float(pd.to_numeric(team_row["total_non_wip_hours"], errors="coerce").fillna(0).sum())
+            ooo = float(pd.to_numeric(team_row["OOO Hours"], errors="coerce").fillna(0).sum())
+            wip_ooo = float(pd.to_numeric(team_row["wip_workers_ooo_hours"], errors="coerce").fillna(0).sum())
+            parts.append(
+                f"{team}: people={people}, non_wip={non_wip:.2f}, ooo={ooo:.2f}, wip_workers_ooo={wip_ooo:.2f}"
+            )
+        print(f"{pd.Timestamp(d).date()} | " + " | ".join(parts), flush=True)
 
     # Optional: pivot view
     et_pivot = (
