@@ -417,6 +417,15 @@ def _is_real_year(dt: pd.Timestamp, min_year: int = 2000) -> bool:
         return pd.notna(dt) and int(dt.year) >= min_year
     except Exception:
         return False
+def _read_excel_cell_value(ws: pd.DataFrame, cell_addr: str) -> float:
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)", str(cell_addr).strip())
+    if not m:
+        raise ValueError(f"Bad cell address: {cell_addr}")
+    col = _col_letter_to_idx(m.group(1))
+    row = int(m.group(2)) - 1
+    return safe_float0(
+        ws.iat[row, col] if ws.shape[0] > row and ws.shape[1] > col else 0.0
+    )
 def _get_matching_worksheet(wb, preferred_name: str):
     preferred = preferred_name.strip().lower()
     candidates = []
@@ -1168,30 +1177,39 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     COL_C = 2
     COL_AE = 30
     HEADER_ROW = 1
-    B21_ROW = 20
+
+    AI20_ROW = 19
+    AI20_COL = _col_letter_to_idx("AI")
+
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
-        if not name:
-            continue
-        if not is_real_person(name):
+        if not name or not is_real_person(name):
             continue
         b = safe_float(ws.iat[i, COL_B] if ws.shape[1] > COL_B else np.nan)
         ooo = safe_float(ws.iat[i, ooo_col] if ws.shape[1] > ooo_col else np.nan)
-        if pd.isna(b): b = 0.0
-        if pd.isna(ooo): ooo = 0.0
+        if pd.isna(b):
+            b = 0.0
+        if pd.isna(ooo):
+            ooo = 0.0
         people_rows.append({"row_i": i, "name": name, "B": b, "OOO": ooo})
+
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
-    b21 = safe_float(ws.iat[B21_ROW, COL_B] if ws.shape[0] > B21_ROW and ws.shape[1] > COL_B else np.nan)
-    if pd.isna(b21): b21 = 0.0
-    total_nonwip_hours = float(round((people_count * 40.0) - float(b21) - float(ooo_hours), 2))
+
+    ai20 = safe_float0(
+        ws.iat[AI20_ROW, AI20_COL]
+        if ws.shape[0] > AI20_ROW and ws.shape[1] > AI20_COL else 0.0
+    )
+    total_nonwip_hours = float(round(ai20, 2))
+
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
         v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
         if v == 0.0:
             continue
         nonwip_by_person[r["name"]] = v
+
     activities: List[dict] = []
     for pr in people_rows:
         i = pr["row_i"]
@@ -1211,6 +1229,7 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
                 "activity": "OOO",
                 "hours": ooo,
             })
+
     _debug_print_et_people(team, week, people_rows)
     return {
         "people_rows": people_rows,
@@ -1411,70 +1430,90 @@ def build_capacity_fixed_row(
     *,
     people_start_row: int,
     people_end_row: int,
-    expected_col_letter: str,   
-    ooo_col_letter: str,        
-    deduct_cell: str,            
-    ooo_sum_start_row: int,      
-    ooo_sum_end_row: int,       
-    total_ooo_end_row: int,     
-    activity_header_row: int,    
+    expected_col_letter: str,
+    ooo_col_letter: str,
+    deduct_cell: str,
+    ooo_sum_start_row: int,
+    ooo_sum_end_row: int,
+    total_ooo_end_row: int,
+    activity_header_row: int,
     activity_start_col_letter: str,
     activity_end_col_letter: str,
     week: Optional[pd.Timestamp] = None,
+    total_nonwip_cell: Optional[str] = None,   # NEW
 ) -> Dict:
     col_b = _col_letter_to_idx(expected_col_letter)
     col_ooo = _col_letter_to_idx(ooo_col_letter)
     act_start = _col_letter_to_idx(activity_start_col_letter)
     act_end   = _col_letter_to_idx(activity_end_col_letter)
+
     m = re.fullmatch(r"([A-Za-z]+)(\d+)", deduct_cell.strip())
     if not m:
         raise ValueError(f"Bad deduct_cell: {deduct_cell}")
     deduct_col = _col_letter_to_idx(m.group(1))
     deduct_row = int(m.group(2)) - 1
+
     people_rows: List[dict] = []
     for i in range(people_start_row, people_end_row + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
-        if not name:
-            continue
-        if not is_real_person(name):
+        if not name or not is_real_person(name):
             continue
         b = safe_float(ws.iat[i, col_b] if ws.shape[1] > col_b else np.nan)
         ooo = safe_float(ws.iat[i, col_ooo] if ws.shape[1] > col_ooo else np.nan)
-        if pd.isna(b): b = 0.0
-        if pd.isna(ooo): ooo = 0.0
-        people_rows.append({"row_i": i, "name": name, "B": float(b), "OOO": float(ooo)})
+        if pd.isna(b):
+            b = 0.0
+        if pd.isna(ooo):
+            ooo = 0.0
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "B": float(b),
+            "OOO": float(ooo),
+        })
+
     people_count = len(set(r["name"] for r in people_rows))
+
     ooo_hours = 0.0
     for r in range(ooo_sum_start_row, ooo_sum_end_row + 1):
-        val = ws.iat[r, col_ooo] if (ws.shape[0] > r and ws.shape[1] > col_ooo) else 0.0
+        val = ws.iat[r, col_ooo] if ws.shape[0] > r and ws.shape[1] > col_ooo else 0.0
         ooo_hours += safe_float0(val)
     ooo_hours = float(round(ooo_hours, 2))
-    deduct_val = safe_float(ws.iat[deduct_row, deduct_col] if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0)
-    if pd.isna(deduct_val):
-        deduct_val = 0.0
-    total_ooo = 0.0
-    for r in range(ooo_sum_start_row, total_ooo_end_row + 1):
-        val = ws.iat[r, col_ooo] if (ws.shape[0] > r and ws.shape[1] > col_ooo) else 0.0
-        total_ooo += safe_float0(val)
-    total_ooo = float(round(total_ooo, 2))
-    total_nonwip_hours = float(round((people_count * 40.0) - float(deduct_val) - float(total_ooo), 2))
+
+    # CHANGED: allow direct read from AI20 (or any supplied total cell)
+    if total_nonwip_cell:
+        total_nonwip_hours = float(round(_read_excel_cell_value(ws, total_nonwip_cell), 2))
+    else:
+        deduct_val = safe_float0(
+            ws.iat[deduct_row, deduct_col]
+            if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0
+        )
+        total_nonwip_hours = float(round((people_count * 40.0) - deduct_val - ooo_hours, 2))
+
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
         v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
         if v != 0.0:
             nonwip_by_person[r["name"]] = v
+
     activities: List[dict] = []
+    max_act_col = min(act_end, ws.shape[1] - 1)
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
-        for c in range(act_start, min(act_end, ws.shape[1] - 1) + 1):
+        for c in range(act_start, max_act_col + 1):
+            if c == col_ooo:
+                continue
             label = norm_name(ws.iat[activity_header_row, c] if ws.shape[0] > activity_header_row and ws.shape[1] > c else "")
             if not label:
                 continue
             hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            activities.append({"name": name, "activity": label, "hours": float(round(hrs, 2))})
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": float(round(float(hrs), 2)),
+            })
         ooo = float(round(pr["OOO"], 2))
         if ooo > 0:
             activities.append({
@@ -1482,7 +1521,7 @@ def build_capacity_fixed_row(
                 "activity": "OOO",
                 "hours": ooo,
             })
-    _debug_print_et_people(team, week, people_rows)
+
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -1663,20 +1702,19 @@ def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] =
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    print(f"[DEBUG][O-Arm MEIC] build_oarm_meic_row called, week={week}, ws.shape={ws.shape}", flush=True)
-    print(f"[DEBUG][O-Arm MEIC] row 1 col 0 = {ws.iat[1, 0] if ws.shape[0] > 1 else 'N/A'}", flush=True)
     return build_capacity_fixed_row(
         team, ws,
         people_start_row=1, people_end_row=8,
         expected_col_letter="B",
         ooo_col_letter="Q",
         deduct_cell="B11",
-        ooo_sum_start_row=1, ooo_sum_end_row=8, 
-        total_ooo_end_row=8,            
+        ooo_sum_start_row=1, ooo_sum_end_row=8,
+        total_ooo_end_row=8,
         activity_header_row=0,
         activity_start_col_letter="C",
         activity_end_col_letter="P",
         week=week,
+        total_nonwip_cell="AI20",   # NEW
     )
 def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
@@ -1686,11 +1724,12 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         ooo_col_letter="Z",
         deduct_cell="B10",
         ooo_sum_start_row=1, ooo_sum_end_row=8,
-        total_ooo_end_row=7,      
+        total_ooo_end_row=7,
         activity_header_row=0,
         activity_start_col_letter="C",
         activity_end_col_letter="Y",
         week=week,
+        total_nonwip_cell="AI20",   # NEW
     )
 def week_from_pss_us_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
@@ -1840,16 +1879,17 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
 def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
-        people_start_row=1, people_end_row=5,       
+        people_start_row=1, people_end_row=5,
         expected_col_letter="B",
         ooo_col_letter="AC",
         deduct_cell="B7",
-        ooo_sum_start_row=1, ooo_sum_end_row=5,     
-        total_ooo_end_row=5,                        
-        activity_header_row=1,                       
+        ooo_sum_start_row=1, ooo_sum_end_row=5,
+        total_ooo_end_row=5,
+        activity_header_row=1,
         activity_start_col_letter="C",
         activity_end_col_letter="AB",
         week=week,
+        total_nonwip_cell="AI20",   # NEW
     )
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
@@ -2122,14 +2162,54 @@ def main():
         raise FileNotFoundError(f"Missing NS_WIP.csv: {NS_WIP_PATH}")
     if not NS_METRICS_PATH.exists():
         raise FileNotFoundError(f"Missing NS_metrics.csv: {NS_METRICS_PATH}")
+
     wip_df = load_csv(NS_WIP_PATH)
     metrics_df = load_metrics(NS_METRICS_PATH)
+
     built: List[pd.DataFrame] = []
     for team, src in TEAM_SOURCES.items():
         df_team = build_team_rows(src, wip_df=wip_df, metrics_df=metrics_df)
         if not df_team.empty:
             built.append(df_team)
+
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
+
+    # See ET team-level total_non_wip_hours by week BEFORE ET is rolled up
+    et_weekly = (
+        new_df.loc[
+            new_df["team"].isin(ENABLE_TEAMS),
+            ["period_date", "team", "total_non_wip_hours"]
+        ]
+        .copy()
+    )
+    et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
+    et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
+
+    print("\n=== ET total_non_wip_hours by team by week ===")
+    print(et_weekly.to_string(index=False))
+
+    # Optional: pivot view
+    et_pivot = (
+        et_weekly.pivot_table(
+            index="period_date",
+            columns="team",
+            values="total_non_wip_hours",
+            aggfunc="sum"
+        )
+        .fillna(0)
+        .sort_index()
+    )
+
+    print("\n=== ET total_non_wip_hours pivot ===")
+    print(et_pivot.to_string())
+
+    # Optional export
+    et_weekly.to_csv(
+        r"C:\heijunka-dev\et_total_non_wip_hours_by_week.csv",
+        index=False,
+        encoding="utf-8-sig"
+    )
+
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
         old_df = old_df[
@@ -2141,6 +2221,7 @@ def main():
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     else:
         combined = new_df
+
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
