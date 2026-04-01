@@ -885,19 +885,15 @@ def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     if df is None or df.empty:
         print(f"[DEBUG][{label}] no rows", flush=True)
         return
-
     tmp = df.copy()
     tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
     tmp["total_non_wip_hours"] = pd.to_numeric(tmp.get("total_non_wip_hours"), errors="coerce").fillna(0.0)
     tmp["OOO Hours"] = pd.to_numeric(tmp.get("OOO Hours"), errors="coerce").fillna(0.0)
-
     tmp = tmp[tmp["team"].isin(["PH", "PH MEIC"])].copy()
     if tmp.empty:
         print(f"[DEBUG][{label}] no PH / PH MEIC rows", flush=True)
         return
-
     tmp = tmp.sort_values(["period_date", "team"])
-
     for _, r in tmp.iterrows():
         print(
             f"[DEBUG][{label}] "
@@ -2028,6 +2024,8 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
             "B": float(expected),
             "OOO": float(ooo),
         })
+    print(f"[DEBUG][Spine] people_rows names: {[r['name'] for r in people_rows]}", flush=True)
+    print(f"[DEBUG][Spine] unique count: {len(set(r['name'] for r in people_rows))}", flush=True)
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
     team_hours_available = safe_float0(
