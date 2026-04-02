@@ -5048,3 +5048,16 @@ TypeError: unhashable type: 'dict'
 2026-04-02 11:56:56,023 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-02 11:56:56,089 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 337 rows
 2026-04-02 11:56:56,090 | INFO | === NS Metrics Run END ===
+2026-04-02 11:57:47,232 | INFO | === NS Metrics Run START ===
+2026-04-02 11:57:47,233 | INFO | Selected team: all
+2026-04-02 11:57:47,235 | INFO | [Spine] START
+2026-04-02 11:58:02,052 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:14.816826
+2026-04-02 11:58:02,052 | INFO | [Spine] START
+2026-04-02 11:58:21,900 | INFO | [Spine] DONE | rows=4 | elapsed=0:00:19.848915
+2026-04-02 11:58:21,900 | INFO | [PH] START
+2026-04-02 11:59:11,172 | INFO | [PH] DONE | rows=542 | elapsed=0:00:49.271118
+2026-04-02 11:59:11,173 | INFO | [PH Cell 17] START
+2026-04-02 11:59:11,290 | INFO | [PH Cell 17] DONE | rows=1 | elapsed=0:00:00.116962
+2026-04-02 11:59:11,291 | INFO | [SCS Cell 1] START
+2026-04-02 11:59:32,062 | INFO | [SCS Cell 1] DONE | rows=284 | elapsed=0:00:20.771347
+2026-04-02 11:59:32,063 | INFO | [MEIC PH] START
