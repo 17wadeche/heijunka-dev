@@ -37,6 +37,174 @@ def _meic_team_for_person(name: str) -> Optional[str]:
     if nm in SCS_MEIC_NAMES:
         return "SCS MEIC"
     return None
+def build_pss_intern_capacity_row(
+    team: str,
+    ws: pd.DataFrame,
+    week: Optional[pd.Timestamp] = None,
+) -> Dict:
+    def _cell(r: int, c: int):
+        if r < 0 or c < 0:
+            return None
+        if r >= ws.shape[0] or c >= ws.shape[1]:
+            return None
+        return ws.iat[r, c]
+
+    def _norm(x) -> str:
+        return norm_name(x).casefold()
+
+    def _find_header_col(possible_labels: list[str], header_rows: list[int]) -> Optional[int]:
+        targets = {_norm(x) for x in possible_labels}
+        for r in header_rows:
+            if r >= ws.shape[0]:
+                continue
+            for c in range(ws.shape[1]):
+                txt = _norm(_cell(r, c))
+                if txt in targets:
+                    return c
+        return None
+
+    def _find_total_row(name_col: int = 0, start_row: int = 0) -> Optional[int]:
+        for r in range(start_row, ws.shape[0]):
+            txt = _norm(_cell(r, name_col))
+            if txt == "total":
+                return r
+        return None
+
+    def _find_first_people_row(name_col: int = 0, start_row: int = 0) -> int:
+        for r in range(start_row, ws.shape[0]):
+            nm = norm_name(_cell(r, name_col))
+            if is_real_person(nm):
+                return r
+        return start_row
+
+    # In this workbook, merged headers may place values on row 4 or row 5.
+    # Search both.
+    HEADER_ROWS = [3, 4]   # Excel rows 4 and 5
+
+    NAME_COL = _find_header_col(["Team Member"], HEADER_ROWS)
+    EXPECTED_WIP_COL = _find_header_col(
+        ["Expected Number of WIP Hours Per Week"], HEADER_ROWS
+    )
+    OOO_COL = _find_header_col(["Out of office", "Out of Office", "OOO"], HEADER_ROWS)
+
+    if NAME_COL is None:
+        NAME_COL = 0
+    if EXPECTED_WIP_COL is None:
+        EXPECTED_WIP_COL = 1
+
+    # Find total row and people start dynamically
+    total_row = _find_total_row(name_col=NAME_COL, start_row=4)
+    if total_row is None:
+        total_row = ws.shape[0] - 1
+
+    people_start_row = _find_first_people_row(name_col=NAME_COL, start_row=4)
+
+    # Build activity columns dynamically from headers
+    skip_headers = {
+        "team member",
+        "expected number of wip hours per week",
+        "out of office",
+        "ooo",
+        "",
+    }
+
+    activity_cols: list[tuple[int, str]] = []
+    for c in range(ws.shape[1]):
+        label = ""
+        for r in HEADER_ROWS:
+            txt = norm_name(_cell(r, c))
+            if txt:
+                label = txt
+                break
+        if not label:
+            continue
+        if label.casefold() in skip_headers:
+            continue
+        activity_cols.append((c, label))
+
+    people_rows: List[dict] = []
+    for i in range(people_start_row, total_row):
+        name = norm_name(_cell(i, NAME_COL))
+        if not is_real_person(name):
+            continue
+
+        expected_wip = safe_float0(_cell(i, EXPECTED_WIP_COL))
+        ooo = safe_float0(_cell(i, OOO_COL)) if OOO_COL is not None else 0.0
+
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "B": float(expected_wip),
+            "OOO": float(ooo),
+        })
+
+    nonwip_by_person: Dict[str, float] = {}
+    activities: List[dict] = []
+    ooo_map: Dict[str, float] = {}
+
+    for pr in people_rows:
+        i = pr["row_i"]
+        name = pr["name"]
+        person_nonwip_total = 0.0
+
+        for c, label in activity_cols:
+            hrs = safe_float(_cell(i, c))
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+
+            hrs = float(round(float(hrs), 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
+            person_nonwip_total += hrs
+
+        person_ooo = float(round(pr["OOO"], 2))
+        if person_ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": person_ooo,
+            })
+
+        if person_nonwip_total > 0:
+            nonwip_by_person[name] = float(round(person_nonwip_total, 2))
+
+        ooo_map[name] = person_ooo
+
+    people_count = len({r["name"] for r in people_rows})
+    total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
+    ooo_hours = float(round(sum(ooo_map.values()), 2))
+
+    # debug totals from total row
+    total_row_nonwip = 0.0
+    if total_row is not None:
+        for c, _label in activity_cols:
+            total_row_nonwip += safe_float0(_cell(total_row, c))
+        total_row_nonwip = float(round(total_row_nonwip, 2))
+
+    print(
+        f"[DEBUG][PSS Intern] week={pd.Timestamp(week).date().isoformat() if week is not None else 'unknown'} "
+        f"name_col={NAME_COL} expected_col={EXPECTED_WIP_COL} ooo_col={OOO_COL} "
+        f"people_start_row={people_start_row} total_row={total_row} "
+        f"activity_cols={[label for _, label in activity_cols]} "
+        f"people_count={people_count} "
+        f"builder_nonwip={total_nonwip_hours:.2f} "
+        f"sheet_row_total_nonwip={total_row_nonwip:.2f} "
+        f"ooo_hours={ooo_hours:.2f}",
+        flush=True,
+    )
+
+    return {
+        "people_rows": people_rows,
+        "people_count": people_count,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": ooo_map,
+    }
 def build_meic_rows_from_non_d2d_log(
     xlsx_path: Path,
     wip_df: pd.DataFrame,
@@ -2104,7 +2272,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         team="PSS Intern",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm"),
         week_from_sheet=week_from_pss_meic_tab,
-        custom_builder=build_pss_meic_dated_row,
+        custom_builder=build_pss_intern_capacity_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
