@@ -28,8 +28,6 @@ MEIC_NON_D2D_LOG_SHEET = "Non-D2D WIP Time Log"
 def _week_start_monday(dt_series: pd.Series) -> pd.Series:
     dt = pd.to_datetime(dt_series, errors="coerce").dt.normalize()
     return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
-
-
 def _meic_team_for_person(name: str) -> Optional[str]:
     nm = norm_name(name)
     if nm in DBS_MEIC_NAMES:
@@ -39,8 +37,6 @@ def _meic_team_for_person(name: str) -> Optional[str]:
     if nm in SCS_MEIC_NAMES:
         return "SCS MEIC"
     return None
-
-
 def build_meic_rows_from_non_d2d_log(
     xlsx_path: Path,
     wip_df: pd.DataFrame,
@@ -50,52 +46,41 @@ def build_meic_rows_from_non_d2d_log(
     if not xlsx_path.exists():
         print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}", flush=True)
         return pd.DataFrame()
-
     ws = pd.read_excel(
         xlsx_path,
         sheet_name=MEIC_NON_D2D_LOG_SHEET,
         header=None,
         engine="openpyxl",
     )
-
-    # B=date, C=task, F=minutes, I=name
     raw = pd.DataFrame({
         "date": ws.iloc[:, 1] if ws.shape[1] > 1 else pd.Series(dtype="object"),
         "task": ws.iloc[:, 2] if ws.shape[1] > 2 else pd.Series(dtype="object"),
-        "minutes": ws.iloc[:, 5] if ws.shape[1] > 5 else pd.Series(dtype="object"),
+        "hours": ws.iloc[:, 6] if ws.shape[1] > 5 else pd.Series(dtype="object"),
         "name": ws.iloc[:, 8] if ws.shape[1] > 8 else pd.Series(dtype="object"),
     })
-
     raw["name"] = raw["name"].map(norm_name)
     raw["task"] = raw["task"].map(norm_name)
-    raw["minutes"] = pd.to_numeric(raw["minutes"], errors="coerce")
+    raw["hours"] = pd.to_numeric(raw["hours"], errors="coerce")
     raw["date"] = pd.to_datetime(raw["date"], errors="coerce").dt.normalize()
-
     raw = raw.dropna(subset=["date"])
-    raw = raw[raw["minutes"].notna() & (raw["minutes"] > 0)].copy()
+    raw = raw[raw["hours"].notna() & (raw["hours"] > 0)].copy()
     raw = raw[raw["name"].map(is_real_person)].copy()
     raw = raw[raw["task"].astype(str).str.strip() != ""].copy()
-
     raw["team"] = raw["name"].map(_meic_team_for_person)
     raw = raw[raw["team"].notna()].copy()
-
     if team_filter:
         raw = raw[raw["team"] == team_filter].copy()
-
     if raw.empty:
         print(f"[DEBUG][MEIC LOG] no rows after filtering for team_filter={team_filter!r}", flush=True)
         return pd.DataFrame()
-
     raw["period_date"] = _week_start_monday(raw["date"])
-    raw["hours"] = raw["minutes"] / 60.0
-
+    raw["hours"] = raw["hours"]
     raw["is_ooo"] = raw["task"].str.casefold().isin({
         "ooo",
         "out of office",
         "pto",
         "vacation",
     })
-
     dbg = (
         raw.groupby(["team", "period_date"], dropna=False)["hours"]
         .sum()
@@ -110,19 +95,15 @@ def build_meic_rows_from_non_d2d_log(
             f"hours={float(r['hours']):.2f}",
             flush=True,
         )
-
     out_rows: List[dict] = []
-
     for (team_name, week), grp in raw.groupby(["team", "period_date"], dropna=False):
         week = pd.Timestamp(week).normalize()
-
         nonwip_by_person = (
             grp.groupby("name")["hours"]
             .sum()
             .round(2)
             .to_dict()
         )
-
         activities = []
         for (person, task), sub in grp.groupby(["name", "task"], dropna=False):
             hrs = float(round(sub["hours"].sum(), 2))
@@ -132,7 +113,6 @@ def build_meic_rows_from_non_d2d_log(
                     "activity": task,
                     "hours": hrs,
                 })
-
         ooo_by_person = (
             grp.loc[grp["is_ooo"], ["name", "hours"]]
             .groupby("name")["hours"]
@@ -140,10 +120,8 @@ def build_meic_rows_from_non_d2d_log(
             .round(2)
             .to_dict()
         )
-
         ooo_hours = float(round(sum(ooo_by_person.values()), 2))
         total_nonwip_hours = float(round(grp["hours"].sum(), 2))
-
         completed_match = metrics_df[
             (metrics_df.get("team") == team_name) &
             (metrics_df["period_date"] == week)
@@ -152,12 +130,10 @@ def build_meic_rows_from_non_d2d_log(
             pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
             if not completed_match.empty else np.nan
         )
-
         pct_in_wip = np.nan
         if pd.notna(completed_hours):
             denom = float(completed_hours) + float(total_nonwip_hours)
             pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
-
         wip_match = metrics_df[
             (metrics_df.get("team") == team_name) &
             (metrics_df["period_date"] == week)
@@ -165,14 +141,12 @@ def build_meic_rows_from_non_d2d_log(
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_by_person.get(n, 0.0)) for n in wip_workers), 2))
-
         people_count_final = get_people_count_from_wip(
             wip_df=wip_df,
             team=team_name,
             week=week,
             fallback=grp["name"].nunique(),
         )
-
         out_rows.append({
             "team": team_name,
             "period_date": week.date().isoformat(),
@@ -188,14 +162,12 @@ def build_meic_rows_from_non_d2d_log(
             "wip_workers_count": int(wip_workers_count),
             "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
         })
-
         print(
             f"[DEBUG][MEIC LOG] team={team_name} week={week.date().isoformat()} "
             f"rows={len(grp)} people={grp['name'].nunique()} "
             f"non_wip={total_nonwip_hours:.2f} ooo={ooo_hours:.2f}",
             flush=True,
         )
-
     df = pd.DataFrame(out_rows)
     if not df.empty:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
@@ -2167,7 +2139,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         team="PH",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Other\PH Non-D2D WIP.xlsx"),
         layout=StandardLayout(
-            people_start_row=2, totals_row=16,
+            people_start_row=2, totals_row=17,
             activity_header_row=1, activity_start_col=3, activity_end_col=37,
             min_rows=17, min_cols=3,
         ),
