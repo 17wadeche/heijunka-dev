@@ -1465,7 +1465,9 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
-            if parent_team in {"DBS", "SCS", "PH"}:
+            if parent_team == "PH":
+                people_count_final = 18
+            elif parent_team in {"DBS", "SCS"}:
                 people_count_final = fallback_people_count
             else:
                 people_count_final = get_people_count_from_wip(
