@@ -48,10 +48,8 @@ def build_pss_intern_capacity_row(
         if r >= ws.shape[0] or c >= ws.shape[1]:
             return None
         return ws.iat[r, c]
-
     def _norm(x) -> str:
         return norm_name(x).casefold()
-
     def _find_header_col(possible_labels: list[str], header_rows: list[int]) -> Optional[int]:
         targets = {_norm(x) for x in possible_labels}
         for r in header_rows:
@@ -62,44 +60,32 @@ def build_pss_intern_capacity_row(
                 if txt in targets:
                     return c
         return None
-
     def _find_total_row(name_col: int = 0, start_row: int = 0) -> Optional[int]:
         for r in range(start_row, ws.shape[0]):
             txt = _norm(_cell(r, name_col))
             if txt == "total":
                 return r
         return None
-
     def _find_first_people_row(name_col: int = 0, start_row: int = 0) -> int:
         for r in range(start_row, ws.shape[0]):
             nm = norm_name(_cell(r, name_col))
             if is_real_person(nm):
                 return r
         return start_row
-
-    # In this workbook, merged headers may place values on row 4 or row 5.
-    # Search both.
-    HEADER_ROWS = [3, 4]   # Excel rows 4 and 5
-
+    HEADER_ROWS = [2, 3, 4]
     NAME_COL = _find_header_col(["Team Member"], HEADER_ROWS)
     EXPECTED_WIP_COL = _find_header_col(
         ["Expected Number of WIP Hours Per Week"], HEADER_ROWS
     )
     OOO_COL = _find_header_col(["Out of office", "Out of Office", "OOO"], HEADER_ROWS)
-
     if NAME_COL is None:
         NAME_COL = 0
     if EXPECTED_WIP_COL is None:
         EXPECTED_WIP_COL = 1
-
-    # Find total row and people start dynamically
     total_row = _find_total_row(name_col=NAME_COL, start_row=4)
     if total_row is None:
         total_row = ws.shape[0] - 1
-
     people_start_row = _find_first_people_row(name_col=NAME_COL, start_row=4)
-
-    # Build activity columns dynamically from headers
     skip_headers = {
         "team member",
         "expected number of wip hours per week",
@@ -107,7 +93,6 @@ def build_pss_intern_capacity_row(
         "ooo",
         "",
     }
-
     activity_cols: list[tuple[int, str]] = []
     for c in range(ws.shape[1]):
         label = ""
@@ -858,22 +843,27 @@ def build_selector_rows_from_capacity_workbook(
     pythoncom.CoInitialize()
     excel = None
     wb = None
+    temp_dir = None  # FIX: temp copy so we can open writable without locking original
     try:
         excel = _dyn(_start_excel_app())
         excel.Visible = False
         excel.DisplayAlerts = False
         excel.AskToUpdateLinks = False
-        excel.EnableEvents = False
+        excel.EnableEvents = True
         try:
-            excel.AutomationSecurity = 3
+            excel.AutomationSecurity = 1
         except Exception:
             pass
+        import tempfile
+        temp_dir = tempfile.mkdtemp(prefix="selector_wb_")
+        temp_path = Path(temp_dir) / xlsx_path.name
+        shutil.copy2(xlsx_path, temp_path)
         try:
             workbooks = _dyn(excel.Workbooks)
             wb = _com_call(lambda: _dyn(workbooks.Open(
-                str(xlsx_path),
+                str(temp_path),
                 UpdateLinks=0,
-                ReadOnly=True,
+                ReadOnly=False,   # FIX: must be writable for formula recalc to fire
                 IgnoreReadOnlyRecommended=True,
                 Notify=False,
                 AddToMru=False,
@@ -907,31 +897,14 @@ def build_selector_rows_from_capacity_workbook(
             except Exception:
                 pass
         if not all_dates:
-            print(
-                f"[WARN] No selector dates found for {team_src.team} "
-                f"using cells {selector_candidates}",
-                flush=True,
-            )
+            print(f"[WARN] No selector dates found for {team_src.team} using cells {selector_candidates}", flush=True)
             return pd.DataFrame()
         today_cutoff = pd.Timestamp.today().normalize()
         all_dates = [d for d in all_dates if pd.Timestamp(d).normalize() <= today_cutoff]
         if not all_dates:
-            print(
-                f"[WARN] No selector dates on or before today for {team_src.team}. "
-                f"today={today_cutoff.date().isoformat()}",
-                flush=True,
-            )
+            print(f"[WARN] No selector dates on or before today for {team_src.team}.", flush=True)
             return pd.DataFrame()
-        print(
-            f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} "
-            f"with dates {[d.date().isoformat() for d in all_dates]}",
-            flush=True,
-        )
-        print(
-            f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} "
-            f"with dates {[d.date().isoformat() for d in all_dates]}",
-            flush=True,
-        )
+        print(f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} with dates {[d.date().isoformat() for d in all_dates]}", flush=True)
         for week in all_dates:
             try:
                 selector_range = _dyn(ws_com.Range(chosen_selector_cell))
@@ -940,29 +913,65 @@ def build_selector_rows_from_capacity_workbook(
                     selector_range.NumberFormat = "yyyy/mm/dd"
                 except Exception:
                     pass
-                try:
-                    _com_call(lambda: ws_com.Calculate(), tries=10, sleep_s=0.2)
-                except Exception:
-                    pass
-                try:
-                    _com_call(lambda: wb.RefreshAll(), tries=10, sleep_s=0.2)
-                except Exception:
-                    pass
-                try:
-                    _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=10, sleep_s=0.2)
-                except Exception:
-                    pass
-                try:
-                    _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
-                except Exception:
-                    pass
+                for _recalc_pass in range(3):
+                    try:
+                        _com_call(lambda: ws_com.Calculate(), tries=5, sleep_s=0.2)
+                    except Exception:
+                        pass
+                    try:
+                        _com_call(lambda: wb.RefreshAll(), tries=5, sleep_s=0.2)
+                    except Exception:
+                        pass
+                    try:
+                        _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=5, sleep_s=0.2)
+                    except Exception:
+                        pass
+                    try:
+                        _com_call(lambda: excel.CalculateFullRebuild(), tries=5, sleep_s=0.3)
+                    except Exception:
+                        pass
+                    time.sleep(0.5)
                 print(f"[DEBUG] {team_src.team} -> refreshing/recalculating for {week.date()}", flush=True)
-                used = ws_com.UsedRange.Value
+                used = None
+                for _snap_attempt in range(6):
+                    _raw = ws_com.UsedRange.Value
+                    if _raw is None:
+                        time.sleep(0.75)
+                        continue
+                    if not isinstance(_raw, tuple):
+                        _raw = ((_raw,),)
+                    _nonzero = any(
+                        col_i >= 2
+                        and v is not None
+                        and isinstance(v, (int, float))
+                        and float(v) != 0.0
+                        for row_i, row in enumerate(_raw)
+                        for col_i, v in enumerate(row if isinstance(row, tuple) else (row,))
+                        if row_i >= 5
+                    )
+                    if _nonzero:
+                        used = _raw
+                        break
+                    print(
+                        f"[DEBUG] {team_src.team} week={week.date()} snap attempt {_snap_attempt+1}: "
+                        f"activity cols all-zero, retrying...",
+                        flush=True,
+                    )
+                    time.sleep(1.0)
+                    try:
+                        _com_call(lambda: excel.CalculateFullRebuild(), tries=3, sleep_s=0.3)
+                    except Exception:
+                        pass
                 if used is None:
+                    print(f"[WARN] {team_src.team} week={week.date()}: activity cols still zero after retries", flush=True)
                     continue
                 if not isinstance(used, tuple):
                     used = ((used,),)
                 ws_df = pd.DataFrame(list(used))
+                print(f"[DEBUG][RAW SNAPSHOT] shape={ws_df.shape}", flush=True)
+                for _dbg_row in range(5, min(9, ws_df.shape[0])):
+                    _dbg_vals = [ws_df.iat[_dbg_row, c] for c in range(min(ws_df.shape[1], 30))]
+                    print(f"[DEBUG][RAW SNAPSHOT] row {_dbg_row}: {_dbg_vals}", flush=True)
                 if team_src.custom_builder is None:
                     raise ValueError(f"No custom_builder configured for {team_src.team}")
                 built = team_src.custom_builder(team_src.team, ws_df, week)
@@ -1042,6 +1051,148 @@ def build_selector_rows_from_capacity_workbook(
             pythoncom.CoUninitialize()
         except Exception:
             pass
+        try:
+            if temp_dir and Path(temp_dir).exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
+PSS_INTERN_USER_DATA_SHEET = "User Data"
+def build_pss_intern_from_user_data(
+    xlsx_path: Path,
+    wip_df: pd.DataFrame,
+    metrics_df: pd.DataFrame,
+) -> pd.DataFrame:
+    if not xlsx_path.exists():
+        print(f"[WARN][PSS Intern] Missing file: {xlsx_path}", flush=True)
+        return pd.DataFrame()
+    try:
+        ws = pd.read_excel(
+            xlsx_path,
+            sheet_name=PSS_INTERN_USER_DATA_SHEET,
+            header=0,          # row 1 is the header
+            engine="openpyxl",
+        )
+    except Exception as e:
+        print(f"[WARN][PSS Intern] Could not read User Data sheet: {e}", flush=True)
+        return pd.DataFrame()
+    print(f"[DEBUG][PSS Intern User Data] shape={ws.shape}", flush=True)
+    print(f"[DEBUG][PSS Intern User Data] columns={list(ws.columns)}", flush=True)
+    WEEK_COL = ws.columns[0]   # "FY Week"
+    NAME_COL = ws.columns[5]   # "User"
+    ACTIVITY_START_IDX = 18
+    skip_col_fragments = {
+        "wp1", "wp2", "wip", "output", "hours", "hour", "daily",
+        "weekly", "predicted", "comment", "non-d2d", "non d2d",
+        "ref", "weekday", "date", "fy week", "user",
+    }
+    activity_col_names = []
+    for col in ws.columns[ACTIVITY_START_IDX:]:
+        lc = str(col).strip().casefold()
+        if not lc or lc in {"nan", "none"}:
+            continue
+        if any(frag in lc for frag in skip_col_fragments):
+            continue
+        activity_col_names.append(col)
+    print(f"[DEBUG][PSS Intern User Data] activity cols: {activity_col_names}", flush=True)
+    ws[WEEK_COL] = pd.to_datetime(ws[WEEK_COL], errors="coerce").dt.normalize()
+    ws[NAME_COL] = ws[NAME_COL].map(norm_name)
+    ws = ws[ws[WEEK_COL].notna()].copy()
+    ws = ws[ws[NAME_COL].map(is_real_person)].copy()
+    if ws.empty:
+        print(f"[WARN][PSS Intern User Data] No valid rows after filtering", flush=True)
+        return pd.DataFrame()
+    for col in activity_col_names:
+        ws[col] = pd.to_numeric(ws[col], errors="coerce").fillna(0.0)
+    ooo_col = None
+    for col in reversed(activity_col_names):
+        if "out of office" in str(col).casefold() or str(col).strip().casefold() == "ooo":
+            ooo_col = col
+            break
+    if ooo_col is None and activity_col_names:
+        ooo_col = activity_col_names[-1]
+    non_ooo_act_cols = [c for c in activity_col_names if c != ooo_col]
+    today_cutoff = pd.Timestamp.today().normalize()
+    out_rows = []
+    for week, grp in ws.groupby(WEEK_COL, dropna=False):
+        week = pd.Timestamp(week).normalize()
+        if week > today_cutoff:
+            continue
+        people_names = sorted(grp[NAME_COL].dropna().unique().tolist())
+        people_count = len(people_names)
+        nonwip_by_person: Dict[str, float] = {}
+        ooo_map: Dict[str, float] = {}
+        activities: List[dict] = []
+        for name, person_grp in grp.groupby(NAME_COL, dropna=False):
+            name = norm_name(name)
+            if not is_real_person(name):
+                continue
+            person_nonwip = 0.0
+            for col in non_ooo_act_cols:
+                hrs = float(round(person_grp[col].sum(), 2))
+                if hrs > 0:
+                    activities.append({"name": name, "activity": str(col), "hours": hrs})
+                    person_nonwip += hrs
+            person_nonwip = float(round(person_nonwip, 2))
+            if person_nonwip > 0:
+                nonwip_by_person[name] = person_nonwip
+            ooo = float(round(person_grp[ooo_col].sum(), 2)) if ooo_col else 0.0
+            ooo_map[name] = ooo
+            if ooo > 0:
+                activities.append({"name": name, "activity": "OOO", "hours": ooo})
+        total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
+        ooo_hours = float(round(sum(ooo_map.values()), 2))
+        print(
+            f"[DEBUG][PSS Intern User Data] week={week.date()} "
+            f"people={people_count} nonwip={total_nonwip_hours:.2f} ooo={ooo_hours:.2f}",
+            flush=True,
+        )
+        completed_match = metrics_df[
+            (metrics_df.get("team") == "PSS Intern") &
+            (metrics_df["period_date"] == week)
+        ]
+        completed_hours = (
+            pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
+            if not completed_match.empty else np.nan
+        )
+        pct_in_wip = np.nan
+        if pd.notna(completed_hours) and total_nonwip_hours > 0:
+            denom = float(completed_hours) + float(total_nonwip_hours)
+            pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
+        wip_match = metrics_df[
+            (metrics_df.get("team") == "PSS Intern") &
+            (metrics_df["period_date"] == week)
+        ]
+        wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
+        wip_workers_ooo_hours = float(round(
+            sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2
+        ))
+        people_count_final = get_people_count_from_wip(
+            wip_df=wip_df,
+            team="PSS Intern",
+            week=week,
+            fallback=people_count,
+        )
+        out_rows.append({
+            "team": "PSS Intern",
+            "period_date": week.date().isoformat(),
+            "source_file": str(xlsx_path),
+            "people_count": int(people_count_final),
+            "team_member_names": json.dumps(people_names, ensure_ascii=False),
+            "total_non_wip_hours": total_nonwip_hours,
+            "OOO Hours": ooo_hours,
+            "% in WIP": float(round(pct_in_wip, 6)) if pd.notna(pct_in_wip) else np.nan,
+            "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
+            "non_wip_activities": json.dumps(activities, ensure_ascii=False),
+            "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+            "wip_workers_count": int(len(wip_workers)),
+            "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+        })
+    df = pd.DataFrame(out_rows)
+    if not df.empty:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+        df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
+        df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return df
 def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     if df is None or df.empty:
         print(f"[DEBUG][{label}] no rows", flush=True)
@@ -2428,12 +2579,10 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
             team_filter=team_src.team,
         )
     if team_src.team in {"PSS Intern"}:
-        return build_selector_rows_from_capacity_workbook(
-            team_src,
+        return build_pss_intern_from_user_data(
+            team_src.xlsx,
             wip_df=wip_df,
             metrics_df=metrics_df,
-            sheet_name="Capacity mgmt",
-            selector_cell="A2",
         )
     if team_src.team in {""}:
         return build_selector_rows_from_capacity_workbook(
