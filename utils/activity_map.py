@@ -1524,6 +1524,8 @@ ACTIVITY_MAP = {
     "q's/event review":"Question",
     "ng/uat, meetings, collaboration/event reviews, email/admin, tech issue":"Next Gen",
     "cornersone":"Cornerstone",
+    "meetings, cornerstone, yellow belt work":"Meeting",
+    "affera ftq presentation prep":"Project Work",
     "cas report query":"Report Query",
     "pvh report query":"Report Query",
     "vig training call": "Training/Mentoring",
