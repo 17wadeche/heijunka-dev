@@ -2344,59 +2344,101 @@ def main():
         if not df_team.empty:
             built.append(df_team)
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
+    if not new_df.empty:
+        new_df["team"] = new_df["team"].astype(str).str.strip()
+        new_df["period_date"] = pd.to_datetime(new_df["period_date"], errors="coerce").dt.normalize()
+        for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
+            if col in new_df.columns:
+                new_df[col] = new_df[col].fillna("").astype(str)
+        new_df = new_df[new_df["team"] != ""].copy()
+        new_df = new_df[new_df["period_date"].notna()].copy()
+        new_df = new_df.drop_duplicates(subset=["team", "period_date"], keep="last")
+        new_df = new_df.sort_values(["team", "period_date"]).reset_index(drop=True)
     et_weekly = (
         new_df.loc[
             new_df["team"].isin(ENABLE_TEAMS),
             ["period_date", "team", "people_count", "total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"]
         ]
         .copy()
+        if not new_df.empty
+        else pd.DataFrame(columns=[
+            "period_date", "team", "people_count", "total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"
+        ])
     )
-    et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
-    et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
-    print("\n=== ET hours by team by week ===")
-    print(et_weekly.to_string(index=False))
-    for d in sorted(et_weekly["period_date"].dropna().unique()):
-        week_rows = et_weekly[et_weekly["period_date"] == d]
-        parts = []
-        for team in sorted(ENABLE_TEAMS):
-            team_row = week_rows[week_rows["team"] == team]
-            people = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum())
-            non_wip = float(pd.to_numeric(team_row["total_non_wip_hours"], errors="coerce").fillna(0).sum())
-            ooo = float(pd.to_numeric(team_row["OOO Hours"], errors="coerce").fillna(0).sum())
-            wip_ooo = float(pd.to_numeric(team_row["wip_workers_ooo_hours"], errors="coerce").fillna(0).sum())
-            parts.append(
-                f"{team}: people={people}, non_wip={non_wip:.2f}, ooo={ooo:.2f}, wip_workers_ooo={wip_ooo:.2f}"
+    if not et_weekly.empty:
+        et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
+        et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
+        print("\n=== ET hours by team by week ===")
+        print(et_weekly.to_string(index=False))
+        for d in sorted(et_weekly["period_date"].dropna().unique()):
+            week_rows = et_weekly[et_weekly["period_date"] == d]
+            parts = []
+            for team in sorted(ENABLE_TEAMS):
+                team_row = week_rows[week_rows["team"] == team]
+                people = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum())
+                non_wip = float(pd.to_numeric(team_row["total_non_wip_hours"], errors="coerce").fillna(0).sum())
+                ooo = float(pd.to_numeric(team_row["OOO Hours"], errors="coerce").fillna(0).sum())
+                wip_ooo = float(pd.to_numeric(team_row["wip_workers_ooo_hours"], errors="coerce").fillna(0).sum())
+                parts.append(
+                    f"{team}: people={people}, non_wip={non_wip:.2f}, ooo={ooo:.2f}, wip_workers_ooo={wip_ooo:.2f}"
+                )
+            print(f"{pd.Timestamp(d).date()} | " + " | ".join(parts), flush=True)
+        et_pivot = (
+            et_weekly.pivot_table(
+                index="period_date",
+                columns="team",
+                values="total_non_wip_hours",
+                aggfunc="sum"
             )
-        print(f"{pd.Timestamp(d).date()} | " + " | ".join(parts), flush=True)
-    et_pivot = (
-        et_weekly.pivot_table(
-            index="period_date",
-            columns="team",
-            values="total_non_wip_hours",
-            aggfunc="sum"
+            .fillna(0)
+            .sort_index()
         )
-        .fillna(0)
-        .sort_index()
-    )
-    print("\n=== ET total_non_wip_hours pivot ===")
-    print(et_pivot.to_string())
+        print("\n=== ET total_non_wip_hours pivot ===")
+        print(et_pivot.to_string())
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
-        combined = pd.concat([old_df, new_df], ignore_index=True)
     else:
+        old_df = pd.DataFrame(columns=new_df.columns if not new_df.empty else None)
+    if old_df is None or old_df.empty:
         combined = new_df.copy()
-    combined["team"] = combined["team"].astype(str).str.strip()
-    combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
-    for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
-        if col in combined.columns:
-            combined[col] = combined[col].fillna("").astype(str)
-    combined = combined[combined["team"] != ""].copy()
-    combined = combined[combined["period_date"].notna()].copy()
-    combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
-    combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+    elif new_df is None or new_df.empty:
+        combined = old_df.copy()
+    else:
+        old_df["team"] = old_df["team"].astype(str).str.strip()
+        old_df["period_date"] = pd.to_datetime(old_df["period_date"], errors="coerce").dt.normalize()
+        for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
+            if col in old_df.columns:
+                old_df[col] = old_df[col].fillna("").astype(str)
+        old_df = old_df[old_df["team"] != ""].copy()
+        old_df = old_df[old_df["period_date"].notna()].copy()
+        combined = pd.concat([old_df, new_df], ignore_index=True)
+    if not combined.empty:
+        combined["team"] = combined["team"].astype(str).str.strip()
+        combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+        for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
+            if col in combined.columns:
+                combined[col] = combined[col].fillna("").astype(str)
+        combined = combined[combined["team"] != ""].copy()
+        combined = combined[combined["period_date"].notna()].copy()
+        combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
+        combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
+    if not combined.empty:
+        combined["team"] = combined["team"].astype(str).str.strip()
+        combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+        for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
+            if col in combined.columns:
+                combined[col] = combined[col].fillna("").astype(str)
+        combined = combined[combined["team"] != ""].copy()
+        combined = combined[combined["period_date"].notna()].copy()
+        combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
+        combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+        dupes = combined[combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
+        if not dupes.empty:
+            print("\n[DEBUG] DUPLICATE team/week rows before write:")
+            print(dupes.sort_values(["team", "period_date"]).to_string(index=False))
     log_weekly_ph_summary(combined, "POST-ROLLUP")
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
