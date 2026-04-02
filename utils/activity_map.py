@@ -1511,7 +1511,7 @@ ACTIVITY_MAP = {
     "fu questions pre-work":"Question",
     "investigation call":"Meeting",
     "mfg response call":"Meeting",
-    "cornsone":"Cornerstone",
+    "cornersone":"Cornerstone",
     "cas report query":"Report Query",
     "pvh report query":"Report Query",
     "vig training call": "Training/Mentoring",
