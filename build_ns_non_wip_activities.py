@@ -643,7 +643,36 @@ def _unique_people_names_from_people_rows(people_rows) -> list[str]:
         seen.add(key)
         names.append(name)
     return names
-
+import os
+import shutil
+import win32com.client
+import win32com.client.dynamic
+def _start_excel_app():
+    try:
+        return win32com.client.DispatchEx("Excel.Application")
+    except AttributeError as e:
+        msg = str(e)
+        if ("CLSIDToClassMap" not in msg) and ("CLSIDToPackageMap" not in msg):
+            raise
+        print(
+            "[WARN] win32com gen_py cache appears corrupted; falling back to dynamic dispatch",
+            flush=True,
+        )
+        try:
+            gen_path = win32com.client.gencache.GetGeneratePath()
+            if gen_path and os.path.isdir(gen_path):
+                shutil.rmtree(gen_path, ignore_errors=True)
+                print(f"[WARN] Cleared win32com cache at: {gen_path}", flush=True)
+        except Exception as cleanup_err:
+            print(f"[WARN] Could not clear win32com cache: {cleanup_err}", flush=True)
+        return win32com.client.dynamic.Dispatch("Excel.Application")
+def _dyn(obj):
+    if obj is None:
+        return None
+    try:
+        return win32com.client.dynamic.Dispatch(obj)
+    except Exception:
+        return obj
 def build_selector_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
@@ -659,20 +688,21 @@ def build_selector_rows_from_capacity_workbook(
         return pd.DataFrame()
     out_rows: List[dict] = []
     pythoncom.CoInitialize()
-    excel = win32com.client.DispatchEx("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
-    excel.AskToUpdateLinks = False
-    excel.EnableEvents = False
-    try:
-        excel.AutomationSecurity = 3
-    except Exception:
-        pass
+    excel = None
     wb = None
-    temp_dir = None
     try:
+        excel = _dyn(_start_excel_app())
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        excel.AskToUpdateLinks = False
+        excel.EnableEvents = False
         try:
-            wb = _com_call(lambda: excel.Workbooks.Open(
+            excel.AutomationSecurity = 3
+        except Exception:
+            pass
+        try:
+            workbooks = _dyn(excel.Workbooks)
+            wb = _com_call(lambda: _dyn(workbooks.Open(
                 str(xlsx_path),
                 UpdateLinks=0,
                 ReadOnly=True,
@@ -680,20 +710,21 @@ def build_selector_rows_from_capacity_workbook(
                 Notify=False,
                 AddToMru=False,
                 CorruptLoad=0,
-            ))
+            )))
         except pywintypes.com_error as e:
             print(f"[WARN] Could not open workbook for {team_src.team}: {xlsx_path}", flush=True)
             print(f"[WARN] Excel open error for {team_src.team}: {e}", flush=True)
             return pd.DataFrame()
-        ws_com = _get_matching_worksheet(wb, sheet_name)
-        _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
+        ws_com = _dyn(_get_matching_worksheet(wb, sheet_name))
+        try:
+            _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
         selector_candidates = ["A2", "B1", "B2", "A1"]
         if selector_cell and selector_cell not in selector_candidates:
             selector_candidates = [selector_cell] + selector_candidates
-
         chosen_selector_cell = None
         all_dates: List[pd.Timestamp] = []
-
         for cand in selector_candidates:
             try:
                 cand_dates = _resolve_validation_list_values(wb, ws_com, cand)
@@ -701,18 +732,25 @@ def build_selector_rows_from_capacity_workbook(
                     current_dt = _excel_date_to_timestamp(ws_com.Range(cand).Value)
                     if current_dt is not None:
                         cand_dates = [current_dt]
-
                 if cand_dates:
                     chosen_selector_cell = cand
                     all_dates = cand_dates
                     break
             except Exception:
                 pass
-
         if not all_dates:
             print(
                 f"[WARN] No selector dates found for {team_src.team} "
                 f"using cells {selector_candidates}",
+                flush=True,
+            )
+            return pd.DataFrame()
+        today_cutoff = pd.Timestamp.today().normalize()
+        all_dates = [d for d in all_dates if pd.Timestamp(d).normalize() <= today_cutoff]
+        if not all_dates:
+            print(
+                f"[WARN] No selector dates on or before today for {team_src.team}. "
+                f"today={today_cutoff.date().isoformat()}",
                 flush=True,
             )
             return pd.DataFrame()
@@ -721,15 +759,19 @@ def build_selector_rows_from_capacity_workbook(
             f"with dates {[d.date().isoformat() for d in all_dates]}",
             flush=True,
         )
+        print(
+            f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} "
+            f"with dates {[d.date().isoformat() for d in all_dates]}",
+            flush=True,
+        )
         for week in all_dates:
             try:
-                selector_range = ws_com.Range(chosen_selector_cell)
+                selector_range = _dyn(ws_com.Range(chosen_selector_cell))
                 selector_range.Value = week.to_pydatetime()
                 try:
                     selector_range.NumberFormat = "yyyy/mm/dd"
                 except Exception:
                     pass
-
                 try:
                     _com_call(lambda: ws_com.Calculate(), tries=10, sleep_s=0.2)
                 except Exception:
@@ -742,32 +784,28 @@ def build_selector_rows_from_capacity_workbook(
                     _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=10, sleep_s=0.2)
                 except Exception:
                     pass
-                _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
-
-                print(f"[DEBUG] {team_src.team} -> refreshing/recalculating for {week.date()}")
-
+                try:
+                    _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
+                except Exception:
+                    pass
+                print(f"[DEBUG] {team_src.team} -> refreshing/recalculating for {week.date()}", flush=True)
                 used = ws_com.UsedRange.Value
                 if used is None:
                     continue
                 if not isinstance(used, tuple):
                     used = ((used,),)
                 ws_df = pd.DataFrame(list(used))
-
                 if team_src.custom_builder is None:
                     raise ValueError(f"No custom_builder configured for {team_src.team}")
-
                 built = team_src.custom_builder(team_src.team, ws_df, week)
-
                 people_rows = built.get("people_rows", [])
                 people_names = _unique_people_names_from_people_rows(people_rows)
-
                 people_count = built["people_count"]
                 total_nonwip_hours = built["total_nonwip_hours"]
                 ooo_hours = built["ooo_hours"]
                 nonwip_by_person = built["nonwip_by_person"]
                 nonwip_activities = built["nonwip_activities"]
                 ooo_map = built["ooo_map"]
-
                 completed_src_df = metrics_df if team_src.completed_hours_from == "NS_metrics" else wip_df
                 completed_match = completed_src_df[
                     (completed_src_df.get("team") == team_src.team) &
@@ -777,12 +815,10 @@ def build_selector_rows_from_capacity_workbook(
                     pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
                     if not completed_match.empty else np.nan
                 )
-
                 pct_in_wip = np.nan
                 if pd.notna(completed_hours) and pd.notna(total_nonwip_hours):
                     denom = float(completed_hours) + float(total_nonwip_hours)
                     pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
-
                 wip_source_df = metrics_df if team_src.wip_workers_from == "NS_metrics" else wip_df
                 wip_match = wip_source_df[
                     (wip_source_df.get("team") == team_src.team) &
@@ -791,7 +827,6 @@ def build_selector_rows_from_capacity_workbook(
                 wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
                 wip_workers_count = len(wip_workers)
                 wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers), 2))
-
                 if team_src.team in ENABLE_TEAMS or team_src.team == "ENT":
                     people_count_final = int(people_count)
                 else:
@@ -801,16 +836,6 @@ def build_selector_rows_from_capacity_workbook(
                         week=week,
                         fallback=people_count,
                     )
-
-                if team_src.team in ENABLE_TEAMS:
-                    print(
-                        f"[DEBUG][ET][{team_src.team}] {week.date()} "
-                        f"people_count_from_builder={people_count} "
-                        f"people_count_written={people_count_final} "
-                        f"names={people_names}",
-                        flush=True,
-                    )
-
                 out_rows.append({
                     "team": team_src.team,
                     "period_date": week.date().isoformat(),
@@ -826,33 +851,29 @@ def build_selector_rows_from_capacity_workbook(
                     "wip_workers_count": int(wip_workers_count),
                     "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
                 })
-
             except Exception as e:
                 print(f"[WARN] Failed {team_src.team} week {week}: {e}", flush=True)
-
+        df = pd.DataFrame(out_rows)
+        if not df.empty:
+            df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+            df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
+            df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
+        return df
     finally:
         try:
             if wb is not None:
-                _com_call(lambda: wb.Close(SaveChanges=False), tries=10, sleep_s=0.3)
+                wb.Close(SaveChanges=False)
         except Exception:
             pass
         try:
-            _com_call(lambda: excel.Quit(), tries=10, sleep_s=0.3)
+            if excel is not None:
+                excel.Quit()
         except Exception:
             pass
         try:
             pythoncom.CoUninitialize()
         except Exception:
             pass
-        if temp_dir and Path(temp_dir).exists():
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-    df = pd.DataFrame(out_rows)
-    if not df.empty:
-        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-        df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
-        df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
-    return df
 def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     if df is None or df.empty:
         print(f"[DEBUG][{label}] no rows", flush=True)
@@ -2237,6 +2258,14 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
             wip_df=wip_df,
             metrics_df=metrics_df,
             team_filter=team_src.team,
+        )
+    if team_src.team in {"PSS Intern"}:
+        return build_selector_rows_from_capacity_workbook(
+            team_src,
+            wip_df=wip_df,
+            metrics_df=metrics_df,
+            sheet_name="Capacity mgmt",
+            selector_cell="A2",
         )
     if team_src.team in {""}:
         return build_selector_rows_from_capacity_workbook(
