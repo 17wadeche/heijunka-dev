@@ -242,11 +242,23 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
     out_rows.sort(key=sort_key_wip)
     return out_rows
 def write_csv_wip(rows: list[dict], out_path: str) -> None:
-    with open(out_path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=WIP_HEADERS)
-        w.writeheader()
-        for r in rows:
-            w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
+    out_dir = os.path.dirname(os.path.abspath(out_path)) or "."
+    tmp_path = os.path.join(out_dir, f".{os.path.basename(out_path)}.tmp")
+    try:
+        with open(tmp_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=WIP_HEADERS)
+            w.writeheader()
+            for r in rows:
+                w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, out_path)
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 def setup_logging(log_path: str = "NS_metrics.log") -> logging.Logger:
     logger = logging.getLogger("ns_metrics")
     logger.setLevel(logging.INFO)
@@ -2287,6 +2299,15 @@ def scrape_spine_previous_weeks_xlsm(
     try:
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+        try:
+            _com_call(lambda: wb.RefreshAll())
+        except Exception:
+            pass
+        try:
+            _com_call(lambda: excel.CalculateFullRebuild())
+        except Exception:
+            _com_call(lambda: excel.Calculate())
+        time.sleep(5)
         dd = _com_call(lambda: ws.Range("A2"))
         dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
         seen = set()
