@@ -84,6 +84,7 @@ ACTIVITY_MAP = {
     "computer update":"IT Issue/Update",
     "udi da task":"UDI",
     "crdn t":"Meeting",
+    "email; meeting; collaboration":"Email & IM",
     "cornerstone (30)":"Cornerstone",
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
