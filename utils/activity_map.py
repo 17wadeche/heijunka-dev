@@ -82,6 +82,8 @@ ACTIVITY_MAP = {
     "liberant emails and video organization":"Email & IM",
     "tickets for s drive access":"IT Issue/Update",
     "computer update":"IT Issue/Update",
+    "udi da task":"UDI",
+    "crdn t":"Meeting",
     "cornerstone (30)":"Cornerstone",
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
