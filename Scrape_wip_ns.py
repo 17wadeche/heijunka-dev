@@ -630,6 +630,16 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         max_pd = safe_str(cfg.get("max_period_date"))
         if max_pd and period_date > max_pd:
             continue
+        if cfg.get("team") == "Spine" and safe_str(cfg.get("min_period_date")) == "2026-02-24":
+            print(
+                f"[SPINE NEW DEBUG] tab={ws.title!r} period_date={period_date} "
+                f"W53={ws['W53'].value!r} W54={ws['W54'].value!r} W55={ws['W55'].value!r} "
+                f"W63={ws['W63'].value!r} W64={ws['W64'].value!r} W65={ws['W65'].value!r}"
+            )
+            print(
+                f"[SPINE NEW DEBUG] completed_hours cell={cfg['cells']['completed_hours']!r} "
+                f"value={ws[cfg['cells']['completed_hours']].value!r}"
+            )
         taa_spec = cfg["cells"]["total_available_hours"]
         if isinstance(taa_spec, str):
             total_available_hours = safe_float(ws[taa_spec].value)
@@ -2329,20 +2339,46 @@ def scrape_spine_previous_weeks_xlsm(
                 continue
             if period_date > today_iso:
                 continue
-            total_available_hours = safe_float(_com_call(lambda: ws.Range("W64").Value))
-            completed_hours = safe_float(_com_call(lambda: ws.Range("X55").Value))
-            wp1_tgt = safe_float(_com_call(lambda: ws.Range("AD10").Value))
-            wp2_tgt = safe_float(_com_call(lambda: ws.Range("AF10").Value))
-            wp1_out = safe_float(_com_call(lambda: ws.Range("AD5").Value))
-            wp2_out = safe_float(_com_call(lambda: ws.Range("AF5").Value))
+            print(
+                f"[SPINE NEW DEBUG] choice={choice!r} period_date={period_date} "
+                f"W53={_com_call(lambda: ws.Range('W53').Value)!r} "
+                f"W54={_com_call(lambda: ws.Range('W54').Value)!r} "
+                f"W55={_com_call(lambda: ws.Range('W55').Value)!r} "
+                f"W63={_com_call(lambda: ws.Range('W63').Value)!r} "
+                f"W64={_com_call(lambda: ws.Range('W64').Value)!r} "
+                f"W65={_com_call(lambda: ws.Range('W65').Value)!r} "
+                f"X55={_com_call(lambda: ws.Range('X55').Value)!r}"
+            )
+            total_available_hours = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value)
+            )
+            completed_hours = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["completed_hours"]).Value)
+            )
+            wp1_tgt = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["wp1_target"]).Value)
+            )
+            wp2_tgt = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["wp2_target"]).Value)
+            )
+            wp1_out = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["wp1_output"]).Value)
+            )
+            wp2_out = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["wp2_output"]).Value)
+            )
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
             if target_output < 0:
                 continue
             target_uplh = safe_div(target_output, completed_hours)
             actual_uplh = safe_div(actual_output, completed_hours)
-            uplh_wp1 = safe_float(_com_call(lambda: ws.Range("AD8").Value))
-            uplh_wp2 = safe_float(_com_call(lambda: ws.Range("AF8").Value))
+            uplh_wp1 = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["uplh_wp1"]).Value)
+            )
+            uplh_wp2 = safe_float(
+                _com_call(lambda: ws.Range(cfg["cells"]["uplh_wp2"]).Value)
+            )
             hc_in_wip = 0
             for c in cols:
                 if safe_float(_com_call(lambda c=c: ws.Cells(28, c).Value)) != 0.0:
