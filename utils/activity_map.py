@@ -74,6 +74,9 @@ ACTIVITY_MAP = {
     "training, lab analysi": "Training/Mentoring",
     "spiderfx literature/previous investigation reading": "Reading File/Document Information",
     "document reading": "Reading File/Document Information",
+    "laboratory write up for protege rx additional testing": "Reading File/Document Information",
+    "laboratory write up": "Reading File/Document Information",
+    "reading through heli-fx doc": "Reading File/Document Information",
     "project measure phase":"Problem Solving",
     "training with eoin on launcher (60)": "Training/Mentoring",
     "liberant emails and video organization":"Email & IM",
@@ -1532,7 +1535,6 @@ ACTIVITY_MAP = {
     "cas report query":"Report Query",
     "pvh report query":"Report Query",
     "vig training call": "Training/Mentoring",
-    
     "practiciting loading harmony valve": "Training/Mentoring",
     "practicing loading harmony device": "Training/Mentoring",
     "grad project measure":"Project Work",
