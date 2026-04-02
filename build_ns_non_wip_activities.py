@@ -2382,15 +2382,18 @@ def main():
     print(et_pivot.to_string())
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
-        old_df = old_df[
-            ~old_df["team"].isin({ENABLE_TEAM_NAME, "PH", "DBS", "SCS", *ENABLE_TEAMS})
-        ].copy()
         combined = pd.concat([old_df, new_df], ignore_index=True)
-        combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
-        combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
-        combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     else:
-        combined = new_df
+        combined = new_df.copy()
+    combined["team"] = combined["team"].astype(str).str.strip()
+    combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+    for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
+        if col in combined.columns:
+            combined[col] = combined[col].fillna("").astype(str)
+    combined = combined[combined["team"] != ""].copy()
+    combined = combined[combined["period_date"].notna()].copy()
+    combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
+    combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
