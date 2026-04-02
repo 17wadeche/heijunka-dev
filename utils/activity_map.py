@@ -86,6 +86,7 @@ ACTIVITY_MAP = {
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
+    "practicing loading harmony valve": "Training/Mentoring",
     "line tour, training": "Training/Mentoring",
     "working on a3 dmaic":"Problem Solving",
     "emails, set up in the lab and cornerstone":"Email & IM",
