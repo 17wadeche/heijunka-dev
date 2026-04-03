@@ -1597,7 +1597,13 @@ with tabs[0]:
             scoped_df = scoped_week[
                 scoped_week[filter_col].astype(str) == str(selected_value)
             ].copy()
-            row = scoped_df.iloc[0] if len(scoped_df) == 1 else None
+            history_df = lookup_df[
+                lookup_df[filter_col].astype(str) == str(selected_value)
+            ].copy()
+            history_df["week_start"] = pd.to_datetime(
+                history_df["week_start"], errors="coerce"
+            ).dt.normalize()
+            history_df = history_df.dropna(subset=["week_start"]).sort_values("week_start")
             def _safe_metric(v, pct: bool = False):
                 if pd.isna(v):
                     return "—"
@@ -1623,6 +1629,17 @@ with tabs[0]:
             _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
             p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
             p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
+            if float(pd.to_numeric(scoped_df["unaccounted_pct"].iloc[0], errors="coerce") or 0.0) > 0.25:
+                st.error("❗ Unaccounted hours are high for this selection (>25%).")
+            st.divider()
+            st.subheader(f"{label} WIP % trend")
+            if history_df.empty:
+                st.info("No historical WIP % data available for this selection.")
+            else:
+                chart_df = history_df.loc[:, ["week_start", "wip_pct"]].copy()
+                chart_df = chart_df.rename(columns={"week_start": "Week Start", "wip_pct": "WIP %"})
+                chart_df = chart_df.set_index("Week Start")
+                st.line_chart(chart_df)
             st.divider()
             st.subheader("Selected rows")
             st.dataframe(scoped_df, use_container_width=True, hide_index=True)
