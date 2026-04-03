@@ -2482,7 +2482,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
             totals_row=20,           
             activity_header_row=1,   
             activity_start_col=3,    
-            activity_end_col=34,     
+            activity_end_col=36,     
             min_rows=21,
             min_cols=35,
         ),
