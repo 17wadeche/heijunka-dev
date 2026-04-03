@@ -907,65 +907,11 @@ data = load_common_data(str(repo_root))
 enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
-with st.sidebar:
-    st.subheader(org.org_name)
-    all_portfolios = sorted(
-        {
-            str((t.meta or {}).get("portfolio")).strip()
-            for t in org.teams
-            if (t.meta or {}).get("portfolio") is not None
-        }
-    )
-    portfolio_filter = st.multiselect(
-        "Portfolio",
-        options=all_portfolios,
-        default=all_portfolios,
-    )
-    teams_after_portfolio = (
-        [
-            t
-            for t in org.teams
-            if str((t.meta or {}).get("portfolio")).strip() in set(portfolio_filter)
-        ]
-        if portfolio_filter
-        else []
-    )
-    all_ous = sorted(
-        {
-            str((t.meta or {}).get("ou")).strip()
-            for t in teams_after_portfolio
-            if (t.meta or {}).get("ou") is not None
-        }
-    )
-    ou_filter = st.multiselect(
-        "OU",
-        options=all_ous,
-        default=all_ous,
-    )
-    teams_after_ou = (
-        [
-            t
-            for t in teams_after_portfolio
-            if str((t.meta or {}).get("ou")).strip() in set(ou_filter)
-        ]
-        if ou_filter
-        else []
-    )
-    team_key = "enterprise_team_filter"
-    team_options = [t.name for t in teams_after_ou]
-    default_teams = [t for t in enabled_team_names if t in team_options] or team_options
-    prev_options_key = "enterprise_prev_team_options"
-    prev_team_options = st.session_state.get(prev_options_key)
-    if prev_team_options != team_options:
-        st.session_state[team_key] = default_teams
-        st.session_state[prev_options_key] = team_options
-    elif team_key not in st.session_state:
-        st.session_state[team_key] = default_teams
-    team_filter = st.multiselect(
-        "Teams",
-        options=team_options,
-        key=team_key,
-    )
+team_filter = enabled_team_names or all_team_names
+st.caption(f"Showing {len(team_filter)} team(s)")
+if not team_filter:
+    st.warning("No teams selected.")
+    st.stop()
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -1126,7 +1072,7 @@ def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end
     return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
 def filter_df(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
     return filter_by_date_range(filter_by_team(df), start_ts, end_ts)
-st.markdown(f"**Selected teams:** {len(team_filter)}")
+st.caption(f"Loaded {len(team_filter)} enabled team(s)")
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
@@ -1594,7 +1540,10 @@ with tabs[0]:
     if team_lookup.empty:
         st.info("No overview data available.")
     else:
-        control_cols = st.columns([1.25, 1.0, 1.25])
+        filter_card = st.container(border=True)
+    with filter_card:
+        st.markdown("#### Overview filters")
+        control_cols = st.columns([1.15, 1.0, 1.25])
         week_options = sorted(
             team_lookup["week_start"].dropna().unique(),
             reverse=True,
@@ -1625,7 +1574,9 @@ with tabs[0]:
             lookup_df = team_lookup.copy()
             filter_col = "team"
             label = "Team"
-        lookup_df["week_start"] = pd.to_datetime(lookup_df["week_start"], errors="coerce").dt.normalize()
+        lookup_df["week_start"] = pd.to_datetime(
+            lookup_df["week_start"], errors="coerce"
+        ).dt.normalize()
         scoped_week = lookup_df[
             lookup_df["week_start"] == pd.Timestamp(selected_week).normalize()
         ].copy()
@@ -1641,6 +1592,7 @@ with tabs[0]:
                 options=options,
                 index=0,
                 key=f"overview_selected_{filter_col}",
+                placeholder=f"Select {label.lower()}",
             )
             scoped_df = scoped_week[
                 scoped_week[filter_col].astype(str) == str(selected_value)
@@ -1942,6 +1894,68 @@ with tabs[2]:
         org,
         export_factor_out_ooo,
     )
+    export_scope_df = team_export.copy()
+    export_filter_col = "team"
+    export_filter_label = "Team"
+    if not team_export.empty:
+        export_filter_card = st.container(border=True)
+        with export_filter_card:
+            st.markdown("#### Export filters")
+            export_cols = st.columns([1.15, 1.0, 1.4])
+            export_week_options = sorted(
+                team_export["week_start"].dropna().unique(),
+                reverse=True,
+            )
+            export_selected_week = export_cols[0].selectbox(
+                "Week",
+                options=export_week_options,
+                index=0,
+                format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
+                key="export_selected_week",
+            )
+            export_filter_level = export_cols[1].radio(
+                "Filter by",
+                options=["Portfolio", "OU", "Team"],
+                index=0,
+                horizontal=True,
+                key="export_filter_level",
+            )
+            if export_filter_level == "Portfolio":
+                export_scope_df = portfolio_export.copy()
+                export_filter_col = "portfolio"
+                export_filter_label = "Portfolio"
+            elif export_filter_level == "OU":
+                export_scope_df = ou_export.copy()
+                export_filter_col = "ou"
+                export_filter_label = "OU"
+            else:
+                export_scope_df = team_export.copy()
+                export_filter_col = "team"
+                export_filter_label = "Team"
+            export_scope_df["week_start"] = pd.to_datetime(
+                export_scope_df["week_start"], errors="coerce"
+            ).dt.normalize()
+            export_scoped_week = export_scope_df[
+                export_scope_df["week_start"] == pd.Timestamp(export_selected_week).normalize()
+            ].copy()
+            export_options = sorted(
+                x for x in export_scoped_week[export_filter_col].dropna().astype(str).unique()
+                if str(x).strip()
+            )
+            export_selected_values = export_cols[2].multiselect(
+                export_filter_label,
+                options=export_options,
+                default=export_options,
+                key=f"export_selected_{export_filter_col}",
+                placeholder=f"Select one or more {export_filter_label.lower()} values",
+            )
+        if export_selected_values:
+            export_scope_df = export_scope_df[
+                (export_scope_df["week_start"] == pd.Timestamp(export_selected_week).normalize())
+                & (export_scope_df[export_filter_col].astype(str).isin(export_selected_values))
+            ].copy()
+        else:
+            export_scope_df = export_scope_df.iloc[0:0].copy()
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -2097,26 +2111,50 @@ with tabs[2]:
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
-        st.markdown("#### Team weekly")
-        st.dataframe(_format_export_display_team(team_export), width="stretch", hide_index=True)
-        st.markdown("#### OU weekly")
-        st.dataframe(_format_export_display_ou(ou_export), width="stretch", hide_index=True)
-        st.markdown("#### Portfolio weekly")
-        st.dataframe(_format_export_display_portfolio(portfolio_export), width="stretch", hide_index=True)
-        try:
-            team_export_display = _display_export_team_df(team_export)
-            ou_export_display = _display_export_ou_df(ou_export)
-            portfolio_export_display = _display_export_portfolio_df(portfolio_export)
-            xlsx_bytes = _cached_excel_bytes(
-                team_export_display,
-                ou_export_display,
-                portfolio_export_display,
-            )
-            st.download_button(
-                label="Download Excel export",
-                data=xlsx_bytes,
-                file_name="enterprise_weekly_export.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        except Exception as e:
-            st.error(f"Excel export failed: {e}")
+        if export_scope_df.empty:
+            st.info("No export rows match the selected filters.")
+        else:
+            if export_filter_level == "Team":
+                st.markdown("#### Team weekly")
+                st.dataframe(
+                    _format_export_display_team(export_scope_df),
+                    width="stretch",
+                    hide_index=True,
+                )
+                team_export_display = _display_export_team_df(export_scope_df)
+                ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
+                portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
+            elif export_filter_level == "OU":
+                st.markdown("#### OU weekly")
+                st.dataframe(
+                    _format_export_display_ou(export_scope_df),
+                    width="stretch",
+                    hide_index=True,
+                )
+                team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
+                ou_export_display = _display_export_ou_df(export_scope_df)
+                portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
+            else:
+                st.markdown("#### Portfolio weekly")
+                st.dataframe(
+                    _format_export_display_portfolio(export_scope_df),
+                    width="stretch",
+                    hide_index=True,
+                )
+                team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
+                ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
+                portfolio_export_display = _display_export_portfolio_df(export_scope_df)
+            try:
+                xlsx_bytes = _cached_excel_bytes(
+                    team_export_display,
+                    ou_export_display,
+                    portfolio_export_display,
+                )
+                st.download_button(
+                    label="Download Excel export",
+                    data=xlsx_bytes,
+                    file_name="enterprise_weekly_export.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            except Exception as e:
+                st.error(f"Excel export failed: {e}")
