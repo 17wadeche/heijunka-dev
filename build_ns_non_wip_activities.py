@@ -2056,7 +2056,28 @@ def build_capacity_fixed_row(
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
-OOO_LABELS = {"OUT OF OFFICE", "HOLIDAY", "OOO"}
+OTHER_TEAM_WIP_LABELS = {
+    "WORKING MNAV",
+    "FLEX TEAM SUPPORT DBS",
+    "FLEX TEAM SUPPORT- DBS",
+}
+OOO_LABELS = {
+    "OOO",
+    "OUT OF OFFICE",
+    "HOLIDAY",
+    "PTO",
+    "VACATION",
+    "OUT OF OFFICE (PTO, HOLIDAY, SICK DAY)",
+}
+def norm_activity_label(x: str) -> str:
+    return " ".join(str(x or "").strip().upper().split())
+def classify_activity(label: str) -> str:
+    lbl = norm_activity_label(label)
+    if lbl in OOO_LABELS:
+        return "OOO"
+    if lbl in OTHER_TEAM_WIP_LABELS:
+        return "OTHER_TEAM_WIP"
+    return "OTHER_NON_WIP"
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2    # Excel row 3
     PEOPLE_END   = 25   # Excel row 26
