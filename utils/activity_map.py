@@ -86,6 +86,8 @@ ACTIVITY_MAP = {
     "crdn t":"Meeting",
     "email; meeting; collaboration":"Email & IM",
     "cornerstone (30)":"Cornerstone",
+    "cqxm/pmq meeting": "Meeting",
+    "cqzm/pmq meeting": "Meeting",
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
