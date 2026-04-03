@@ -1546,32 +1546,18 @@ def _concat_frames(frames: list[pd.DataFrame]) -> Optional[pd.DataFrame]:
     if len(frames) == 1:
         return frames[0]
     return pd.concat(frames, ignore_index=True, sort=False)
-def _filter_to_selected_teams(df: pd.DataFrame, selected_teams: list[str]) -> pd.DataFrame:
-    if df is None or df.empty:
-        return pd.DataFrame()
-    tc = _get_team_col(df)
-    if not tc:
-        return df.copy()
-    return df[df[tc].astype(str).isin(set(selected_teams))].copy()
-shared_export_team_filter = st.sidebar.multiselect(
-    "Overview / Export Teams",
-    options=all_team_names,
-    default=all_team_names,
-    key="shared_export_team_filter",
-)
-selected_teams = shared_export_team_filter
 metrics_frames = []
 for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
     if key in data:
-        d = _filter_to_selected_teams(data[key], selected_teams)
+        d = data[key].copy()
         if not d.empty:
             metrics_frames.append(d)
 nonwip_frames = []
 for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
     if key in data:
-        d = _filter_to_selected_teams(data[key], selected_teams)
+        d = _normalize_df_columns(data[key].copy())
         if not d.empty:
-            nonwip_frames.append(_normalize_df_columns(d))
+            nonwip_frames.append(d)
 shared_metrics_df = _concat_frames(metrics_frames)
 shared_nonwip_df = _concat_frames(nonwip_frames)
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
