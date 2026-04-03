@@ -119,8 +119,6 @@ def _build_export_lookup_tables_cached(
         (
             pd.to_numeric(team_export["completed_hours"], errors="coerce").fillna(0.0)
             + pd.to_numeric(team_export["non_wip_hours"], errors="coerce").fillna(0.0)
-            + pd.to_numeric(team_export["ooo_hours"], errors="coerce").fillna(0.0)
-            + pd.to_numeric(team_export["unaccounted_hours"], errors="coerce").fillna(0.0)
         ) > 0
     ].reset_index(drop=True)
     if team_export.empty:
