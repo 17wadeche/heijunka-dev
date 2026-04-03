@@ -1575,18 +1575,19 @@ shared_export_team_filter = st.sidebar.multiselect(
     default=all_team_names,
     key="shared_export_team_filter",
 )
-team_export_lookup, ou_export_lookup, portfolio_export_lookup = _build_export_lookup_tables_cached(
-    shared_metrics_df,
-    shared_nonwip_df,
+@st.cache_data(show_spinner=False)
+def _get_export_lookup_bundle(
+    shared_metrics_df: Optional[pd.DataFrame],
+    shared_nonwip_df: Optional[pd.DataFrame],
     org,
-    factor_out_ooo=False,
-)
-team_export_lookup_ooo, ou_export_lookup_ooo, portfolio_export_lookup_ooo = _build_export_lookup_tables_cached(
-    shared_metrics_df,
-    shared_nonwip_df,
-    org,
-    factor_out_ooo=True,
-)
+    factor_out_ooo: bool,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    return _build_export_lookup_tables_cached(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        factor_out_ooo=factor_out_ooo,
+    )
 with tabs[0]:
     st.subheader("Summary")
     overview_factor_out_ooo = st.toggle(
@@ -1595,9 +1596,12 @@ with tabs[0]:
         key="overview_factor_out_ooo",
         help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
-    overview_team_export = team_export_lookup_ooo if overview_factor_out_ooo else team_export_lookup
-    overview_ou_export = ou_export_lookup_ooo if overview_factor_out_ooo else ou_export_lookup
-    overview_portfolio_export = portfolio_export_lookup_ooo if overview_factor_out_ooo else portfolio_export_lookup
+    overview_team_export, overview_ou_export, overview_portfolio_export = _get_export_lookup_bundle(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        overview_factor_out_ooo,
+    )
     team_lookup = overview_team_export
     ou_lookup = overview_ou_export
     portfolio_lookup = overview_portfolio_export
@@ -1946,9 +1950,12 @@ with tabs[2]:
         key="export_factor_out_ooo",
         help="When on, OOO is removed from the denominator for export percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
-    team_export = team_export_lookup_ooo if export_factor_out_ooo else team_export_lookup
-    ou_export = ou_export_lookup_ooo if export_factor_out_ooo else ou_export_lookup
-    portfolio_export = portfolio_export_lookup_ooo if export_factor_out_ooo else portfolio_export_lookup
+    team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        export_factor_out_ooo,
+    )
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
