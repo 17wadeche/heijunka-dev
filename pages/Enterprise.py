@@ -1859,11 +1859,9 @@ with tabs[0]:
     overview_team_export = team_export_lookup_ooo if overview_factor_out_ooo else team_export_lookup
     overview_ou_export = ou_export_lookup_ooo if overview_factor_out_ooo else ou_export_lookup
     overview_portfolio_export = portfolio_export_lookup_ooo if overview_factor_out_ooo else portfolio_export_lookup
-    team_lookup, ou_lookup, portfolio_lookup = _build_export_lookup_tables(
-        org=org,
-        export_team_filter=shared_export_team_filter,
-        factor_out_ooo=overview_factor_out_ooo,
-    )
+    team_lookup = overview_team_export
+    ou_lookup = overview_ou_export
+    portfolio_lookup = overview_portfolio_export
     if team_lookup.empty:
         st.info("No overview data available.")
     else:
