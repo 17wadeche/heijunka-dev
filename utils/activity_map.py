@@ -100,6 +100,7 @@ ACTIVITY_MAP = {
     "scrum, collaboration, question":"Scrum & Action",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
     "practiciting loading harmony valve": "Training/Mentoring",
+    "scrum email":"Scrum & Action",
     "racticiting loading harmory valve": "Training/Mentoring",
     "line tour, training": "Training/Mentoring",
     "working on a3 dmaic":"Problem Solving",
