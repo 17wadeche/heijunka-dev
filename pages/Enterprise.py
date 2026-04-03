@@ -2183,7 +2183,6 @@ with tabs[2]:
                 team_export["completed_hours"].fillna(0)
                 + team_export["non_wip_hours"].fillna(0)
                 + team_export["ooo_hours"].fillna(0)
-                + team_export["unaccounted_hours"].fillna(0)
             ) > 0
         ].reset_index(drop=True)
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
