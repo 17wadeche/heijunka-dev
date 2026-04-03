@@ -66,14 +66,14 @@ def parse_sheet_date_requires_year(sheet_name: str) -> str:
     raw = re.sub(r"(\d{1,2})(st|nd|rd|th)\b", r"\1", raw, flags=re.IGNORECASE)
     raw = re.sub(r"\s+", " ", raw).strip()
     fmts = [
-        "%b %d, %Y",   # Jun 02, 2025
-        "%B %d, %Y",   # June 02, 2025
-        "%b %d,%Y",    # Jun 02,2025
-        "%B %d,%Y",    # June 02,2025
-        "%b %d %Y",    # Jun 02 2025
-        "%B %d %Y",    # June 02 2025
-        "%Y-%m-%d",    # 2025-06-02
-        "%m/%d/%Y",    # 06/02/2025
+        "%b %d, %Y",
+        "%B %d, %Y",
+        "%b %d,%Y",
+        "%B %d,%Y",
+        "%b %d %Y",
+        "%B %d %Y",
+        "%Y-%m-%d",
+        "%m/%d/%Y",
     ]
     for fmt in fmts:
         try:
@@ -201,8 +201,8 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
                 errs.append(er)
         target_uplh = safe_div(tgt_out, ch)
         actual_uplh = safe_div(act_out, ch)
-        uplh_wp1 = safe_div(wp1_uplh_weighted_sum, wp1_out_total)  # weighted avg
-        uplh_wp2 = safe_div(wp2_uplh_weighted_sum, wp2_out_total)  # weighted avg
+        uplh_wp1 = safe_div(wp1_uplh_weighted_sum, wp1_out_total) 
+        uplh_wp2 = safe_div(wp2_uplh_weighted_sum, wp2_out_total) 
         actual_hc_used = safe_div(ch, 32.5)
         uplh_by_cell_person = _recalc_uplh_by_cell_person(hours_by_cell_person, out_by_cell_person)
         out_rows.append({
@@ -290,7 +290,7 @@ def run_team(logger: logging.Logger, team_name: str, fn):
     start = datetime.now()
     logger.info(f"[{team_name}] START")
     try:
-        with heartbeat(logger, team_name, every_seconds=180):  # adjust heartbeat
+        with heartbeat(logger, team_name, every_seconds=180): 
             rows = fn()
         elapsed = datetime.now() - start
         logger.info(f"[{team_name}] DONE | rows={len(rows)} | elapsed={elapsed}")
