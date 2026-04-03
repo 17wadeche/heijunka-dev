@@ -2242,13 +2242,16 @@ with tabs[2]:
     export_bounds_df = export_metrics_frames[0] if export_metrics_frames else (
         export_nonwip_frames[0] if export_nonwip_frames else None
     )
+    today = pd.Timestamp.now().normalize()
     ex_start, ex_end = section_date_range(
         "Export date range",
         export_bounds_df,
         key="dr_export",
         min_floor_ts=None,
-        allow_future_dates=True,
+        allow_future_dates=False,
     )
+    if ex_end is not None:
+        ex_end = min(pd.Timestamp(ex_end), today)
     export_factor_out_ooo = st.toggle(
         "Factor out OOO from export calculations",
         value=False,
@@ -2282,6 +2285,9 @@ with tabs[2]:
         org,
         factor_out_ooo=export_factor_out_ooo,
     )
+    if not team_export.empty and "week_start" in team_export.columns:
+        team_export["week_start"] = pd.to_datetime(team_export["week_start"], errors="coerce").dt.normalize()
+        team_export = team_export[team_export["week_start"] <= today].copy()
     if not team_export.empty:
         team_export = team_export[
             (
