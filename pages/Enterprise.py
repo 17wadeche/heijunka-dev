@@ -1736,7 +1736,7 @@ with tabs[1]:
     top_n = st.number_input(
         "Number of activities to show",
         min_value=1,
-        max_value=50,
+        max_value=100,
         value=15,
         step=1,
         key="nonwip_top_n",
