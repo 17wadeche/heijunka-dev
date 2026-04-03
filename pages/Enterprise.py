@@ -1754,25 +1754,21 @@ shared_export_team_filter = st.sidebar.multiselect(
 )
 with tabs[0]:
     st.subheader("Summary")
-
     overview_factor_out_ooo = st.toggle(
         "Factor out OOO from overview calculations",
         value=False,
         key="overview_factor_out_ooo",
         help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
-
     team_lookup, ou_lookup, portfolio_lookup = _build_export_lookup_tables(
         org=org,
         export_team_filter=shared_export_team_filter,
         factor_out_ooo=overview_factor_out_ooo,
     )
-
     if team_lookup.empty:
         st.info("No overview data available.")
     else:
         control_cols = st.columns([1.25, 1.0, 1.25])
-
         week_options = sorted(
             team_lookup["week_start"].dropna().unique(),
             reverse=True,
@@ -1784,7 +1780,6 @@ with tabs[0]:
             format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
             key="overview_selected_week",
         )
-
         filter_level = control_cols[1].radio(
             "Filter by",
             options=["Portfolio", "OU", "Team"],
@@ -1792,7 +1787,6 @@ with tabs[0]:
             horizontal=True,
             key="overview_filter_level",
         )
-
         if filter_level == "Portfolio":
             lookup_df = portfolio_lookup.copy()
             filter_col = "portfolio"
@@ -1805,17 +1799,14 @@ with tabs[0]:
             lookup_df = team_lookup.copy()
             filter_col = "team"
             label = "Team"
-
         lookup_df["week_start"] = pd.to_datetime(lookup_df["week_start"], errors="coerce").dt.normalize()
         scoped_week = lookup_df[
             lookup_df["week_start"] == pd.Timestamp(selected_week).normalize()
         ].copy()
-
         options = sorted(
             x for x in scoped_week[filter_col].dropna().astype(str).unique()
             if str(x).strip()
         )
-
         if not options:
             st.info(f"No {label} values available for the selected week.")
         else:
@@ -1825,18 +1816,14 @@ with tabs[0]:
                 index=0,
                 key=f"overview_selected_{filter_col}",
             )
-
             scoped_df = scoped_week[
                 scoped_week[filter_col].astype(str) == str(selected_value)
             ].copy()
-
             row = scoped_df.iloc[0] if len(scoped_df) == 1 else None
-
             def _safe_metric(v, pct: bool = False):
                 if pd.isna(v):
                     return "—"
                 return f"{float(v):.1%}" if pct else f"{float(v):.2f}"
-
             st.markdown("""
             <style>
             div[data-testid="stMetric"]{ text-align: center; }
@@ -1845,25 +1832,19 @@ with tabs[0]:
             div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
             </style>
             """, unsafe_allow_html=True)
-
             _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
             c1.metric("Avg Per Person **WIP** Daily Hours", _safe_metric(scoped_df["wip_avg_hours_day"].iloc[0]))
             c2.metric("Avg Per Person **Non-WIP** Daily Hours", _safe_metric(scoped_df["non_wip_avg_hours_day"].iloc[0]))
-
             _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
             p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
             p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
-
             st.divider()
-
             _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
             c3.metric("Avg **OOO** Weekly Hours", _safe_metric(scoped_df["ooo_hours"].iloc[0]))
             c4.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
-
             _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
             p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
             p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
-
             st.divider()
             st.subheader("Selected rows")
             st.dataframe(scoped_df, use_container_width=True, hide_index=True)
@@ -1884,13 +1865,10 @@ with tabs[1]:
             cand = filter_by_team(data[key])
             if not cand.empty:
                 available_frames.append(_normalize_df_columns(cand.copy()))
-
     if not available_frames:
         st.info("No non-WIP activity CSVs found.")
         st.stop()
-
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
-
     top_n = st.number_input(
         "Number of activities to show",
         min_value=1,
@@ -1899,23 +1877,18 @@ with tabs[1]:
         step=1,
         key="nonwip_top_n",
     )
-
     raw_dc = _get_date_col(source_raw)
     if not raw_dc:
         st.info("No date column found for Non-WIP activity data.")
         st.stop()
-
     source_raw = source_raw.copy()
     source_raw[raw_dc] = pd.to_datetime(source_raw[raw_dc], errors="coerce")
     source_raw = source_raw.dropna(subset=[raw_dc])
-
     if source_raw.empty:
         st.info("No dated Non-WIP activity data available.")
         st.stop()
-
     nonwip_min_d = source_raw[raw_dc].min().date()
     nonwip_max_d = source_raw[raw_dc].max().date()
-
     nw_dates = st.date_input(
         "Non-WIP date range",
         value=(nonwip_min_d, nonwip_max_d),
@@ -1924,7 +1897,6 @@ with tabs[1]:
         key="dr_nonwip_dates_only",
         help="Filters only this section.",
     )
-
     if isinstance(nw_dates, tuple):
         if len(nw_dates) == 2:
             nw_start_d, nw_end_d = nw_dates
@@ -1934,55 +1906,42 @@ with tabs[1]:
             nw_start_d, nw_end_d = nonwip_min_d, nonwip_max_d
     else:
         nw_start_d, nw_end_d = nw_dates, nw_dates
-
     nw_start = pd.to_datetime(nw_start_d)
     nw_end = pd.to_datetime(nw_end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
-
     source_df = filter_by_date_range(source_raw, nw_start, nw_end)
-
     if source_df.empty:
         st.info("No Non-WIP activity data available in this date range.")
         st.stop()
-
     source_df = _normalize_df_columns(source_df.copy())
     dc = _get_date_col(source_df)
     json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
-
     if not (dc and json_col):
         st.info("Need `Week/period_date` and `Non-WIP Activities` (JSON list) to roll up activities.")
         st.stop()
-
     tmp = source_df.copy()
     tmp[dc] = _safe_to_datetime(tmp, dc)
     tmp = tmp.dropna(subset=[dc]).sort_values(dc)
-
     rows: List[Dict[str, Any]] = []
     for _, r in tmp.iterrows():
         wk = r[dc]
         payload = _loads_json_maybe(r[json_col])
-
         if not payload:
             continue
         if isinstance(payload, dict):
             payload = [payload]
         if not isinstance(payload, list):
             continue
-
         for item in payload:
             if not isinstance(item, dict):
                 continue
-
             act = item.get("activity") or item.get("Activity") or item.get("type")
             hrs = item.get("hours") or item.get("Hours")
-
             if act is None or hrs is None:
                 continue
-
             try:
                 hrs_val = float(hrs)
             except Exception:
                 hrs_val = 0.0
-
             rows.append(
                 {
                     "week": wk,
@@ -1990,47 +1949,38 @@ with tabs[1]:
                     "hours": hrs_val,
                 }
             )
-
     if not rows:
         st.info("No parsable activity rows found in the JSON column.")
         st.stop()
-
     act_df = pd.DataFrame(rows)
     act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
     act_df = act_df.dropna(subset=["week"])
     act_df["week_start"] = _weekly_start(act_df["week"])
-
     weekly_raw = (
         act_df.groupby(["week_start", "activity"], as_index=False)
         .agg(hours=("hours", "sum"))
     )
-
     normalised_chunks: List[pd.DataFrame] = []
     for wk_val, grp in weekly_raw.groupby("week_start"):
         cat = grp[["activity", "hours"]].rename(columns={"activity": "Activity", "hours": "Hours"})
         cat_norm = split_nonwip_activity_minutes(cat)
         cat_norm["week_start"] = wk_val
         normalised_chunks.append(cat_norm)
-
     if not normalised_chunks:
         st.info("No activity data available after normalization.")
         st.stop()
-
     rolled = pd.concat(normalised_chunks, ignore_index=True)
     rolled = rolled.rename(columns={"Activity": "activity", "Hours": "hours"})
     rolled["activity_norm"] = rolled["activity"].map(_norm_activity_name)
     rolled = rolled[~rolled["activity_norm"].isin(EXCLUDED_NON_WIP)].copy()
-
     if rolled.empty:
         st.info('No activity data available after excluding "OOO" and "Non-WIP".')
         st.stop()
-
     weekly_by_activity = (
         rolled.groupby(["week_start", "activity"], as_index=False)
         .agg(hours=("hours", "sum"))
         .sort_values(["week_start", "hours"], ascending=[True, False])
     )
-
     total_hours = (
         weekly_by_activity.groupby("activity", as_index=False)
         .agg(total_hours=("hours", "sum"))
@@ -2038,20 +1988,15 @@ with tabs[1]:
         .head(int(top_n))
         .reset_index(drop=True)
     )
-
     if total_hours.empty:
         st.info("No chartable Non-WIP activity data available after exclusions.")
         st.stop()
-
     import matplotlib.pyplot as plt
-
     def _short_label(s: Any, max_len: int = 22) -> str:
         s = str(s).strip()
         return s if len(s) <= max_len else s[: max_len - 3] + "..."
-
     chart_df = total_hours.copy()
     chart_df["label"] = chart_df["activity"].map(lambda x: _short_label(x, 22))
-
     fig, ax = plt.subplots(figsize=(14, 5.5))
     bars = ax.bar(chart_df["label"], chart_df["total_hours"])
     ax.set_ylabel("Total Hours")
@@ -2059,7 +2004,6 @@ with tabs[1]:
     ax.set_title(f"Top {int(top_n)} Non-WIP Activities by Total Hours")
     ax.tick_params(axis="x", rotation=45, labelsize=9)
     plt.setp(ax.get_xticklabels(), ha="right")
-
     for bar, val in zip(bars, chart_df["total_hours"]):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
@@ -2069,17 +2013,14 @@ with tabs[1]:
             va="bottom",
             fontsize=9,
         )
-
     fig.tight_layout()
     st.pyplot(fig)
     st.caption(
         f"Top {int(top_n)} activities by total hours for the selected period, "
         "sorted highest to lowest from left to right."
     )
-
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
-
     pie_dates = st.date_input(
         "Pie chart date range",
         value=(nonwip_min_d, nonwip_max_d),
@@ -2088,7 +2029,6 @@ with tabs[1]:
         key="dr_nonwip_pie_dates_only",
         help="Filters only the pie chart.",
     )
-
     if isinstance(pie_dates, tuple):
         if len(pie_dates) == 2:
             pie_start_d, pie_end_d = pie_dates
@@ -2098,62 +2038,48 @@ with tabs[1]:
             pie_start_d, pie_end_d = nonwip_min_d, nonwip_max_d
     else:
         pie_start_d, pie_end_d = pie_dates, pie_dates
-
     pie_start = pd.to_datetime(pie_start_d)
     pie_end = pd.to_datetime(pie_end_d) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
-
     pie_source_df = filter_by_date_range(source_raw, pie_start, pie_end)
-
     if pie_source_df.empty:
         st.info("No Non-WIP activity data in the selected pie chart date range.")
         st.stop()
-
     pie_source_df = _normalize_df_columns(pie_source_df.copy())
     pie_dc = _get_date_col(pie_source_df)
     pie_json_col = _first_col(pie_source_df, ["non_wip_activities", "non-wip_activities"])
-
     pie_rows: List[Dict[str, Any]] = []
     if pie_dc and pie_json_col:
         pie_tmp = pie_source_df.copy()
         pie_tmp[pie_dc] = _safe_to_datetime(pie_tmp, pie_dc)
         pie_tmp = pie_tmp.dropna(subset=[pie_dc]).sort_values(pie_dc)
-
         for _, r in pie_tmp.iterrows():
             payload = _loads_json_maybe(r[pie_json_col])
-
             if not payload:
                 continue
             if isinstance(payload, dict):
                 payload = [payload]
             if not isinstance(payload, list):
                 continue
-
             for item in payload:
                 if not isinstance(item, dict):
                     continue
-
                 act = item.get("activity") or item.get("Activity") or item.get("type")
                 hrs = item.get("hours") or item.get("Hours")
-
                 if act is None or hrs is None:
                     continue
-
                 try:
                     hrs_val = float(hrs)
                 except Exception:
                     hrs_val = 0.0
-
                 pie_rows.append(
                     {
                         "activity": str(act).strip(),
                         "hours": hrs_val,
                     }
                 )
-
     if not pie_rows:
         st.info("No parsable activity rows found for the selected pie chart date range.")
         st.stop()
-
     pie_act_df = pd.DataFrame(pie_rows)
     pie_cat = pie_act_df.rename(columns={"activity": "Activity", "hours": "Hours"})
     pie_cat_norm = split_nonwip_activity_minutes(pie_cat)
@@ -2162,13 +2088,10 @@ with tabs[1]:
     pie_rolled = pie_rolled[
         ~pie_rolled["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
     ].sort_values("hours", ascending=False)
-
     if pie_rolled.empty:
         st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
         st.stop()
-
     pie_df = pie_rolled.head(int(top_n)).reset_index(drop=True)
-
     fig, ax = plt.subplots()
     ax.pie(
         pie_df["hours"],
