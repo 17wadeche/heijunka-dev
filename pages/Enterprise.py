@@ -1640,9 +1640,6 @@ with tabs[0]:
                 chart_df = chart_df.rename(columns={"week_start": "Week Start", "wip_pct": "WIP %"})
                 chart_df = chart_df.set_index("Week Start")
                 st.line_chart(chart_df)
-            st.divider()
-            st.subheader("Selected rows")
-            st.dataframe(scoped_df, use_container_width=True, hide_index=True)
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
