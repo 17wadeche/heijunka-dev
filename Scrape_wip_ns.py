@@ -2960,10 +2960,11 @@ def main():
         },
         "outputs_by_person_output": {"type": "row", "row": 73},
     }
-    SCS_CELL1_CFG = {
+    SCS_CELL1_OLD_CFG = {
         "team": "SCS Cell 1",
         "person_cols": ("B", "R"),
-        "date_parser": parse_sheet_date_scs_missing_year,  # <--- key part
+        "date_parser": parse_sheet_date_scs_missing_year,
+        "max_period_date": "2026-03-23",
         "cells": {
             "total_available_hours": "S111",
             "completed_hours": {"type": "sum_cells", "cells": ["T4", "V4"]},
@@ -2977,7 +2978,7 @@ def main():
             "wp2_hours": "V4",
         },
         "rows": {
-            "hc_row": 25,  # count non-zero in row 25, B..R
+            "hc_row": 25,
             "person_name_row_for_person_hours": 30,
             "person_actual_row_for_person_hours": 50,
             "person_available_row_for_person_hours": 111,
@@ -2992,10 +2993,44 @@ def main():
         },
         "outputs_by_person_output": {"type": "row", "row": 73},
     }
-    SCS_SUPER_CFG = {
+    SCS_CELL1_NEW_CFG = {
+        "team": "SCS Cell 1",
+        "person_cols": ("B", "L"),
+        "date_parser": parse_sheet_date_scs_missing_year,
+        "min_period_date": "2026-03-30",
+        "cells": {
+            "total_available_hours": "T61",
+            "completed_hours": {"type": "sum_cells", "cells": ["Z4", "AB4"]},
+            "wp1_output": "Z2",
+            "wp1_target": "Z7",
+            "wp2_output": "AB2",
+            "wp2_target": "AB7",
+            "uplh_wp1": "Z5",
+            "uplh_wp2": "AB5",
+            "wp1_hours": "Z4",
+            "wp2_hours": "AB4",
+        },
+        "rows": {
+            "hc_row": 25,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 61,
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "row", "row": 25},
+    }
+    SCS_SUPER_OLD_CFG = {
         "team": "SCS Super Cell",
         "person_cols": ("B", "V"),
         "date_parser": parse_sheet_date_scs_missing_year, 
+        "max_period_date": "2026-02-23",
         "cells": {
             "total_available_hours": {"type": "sum_range", "range": "B60:V60"},
             "completed_hours": {"type": "sum_range", "range": "B60:V60"},
@@ -3018,6 +3053,40 @@ def main():
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 35, 39, 43, 47],
             "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "person_name_row_for_output_by_cell_by_person": 10,
+            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
+            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
+        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
+    }
+    SCS_SUPER_NEW_CFG = {
+        "team": "SCS Super Cell",
+        "person_cols": ("B", "Y"),
+        "date_parser": parse_sheet_date_scs_missing_year, 
+        "min_period_date": "2026-03-01",
+        "cells": {
+            "total_available_hours": {"type": "sum_range", "range": "B61:Y61"},
+            "completed_hours": "Z50",
+            "wp1_output": "AH2",
+            "wp1_target": "AH7",
+            "wp2_output": "AJ2",
+            "wp2_target": "AJ7",
+            "uplh_wp1": "AH5",
+            "uplh_wp2": "AJ5",
+            "wp1_hours": "AH4",
+            "wp2_hours": "AJ4",
+        },
+        "rows": {
+            "hc_row": 25,
+            "person_name_row_for_person_hours": 30,
+            "person_actual_row_for_person_hours": 50,
+            "person_available_row_for_person_hours": 61,
+            "person_name_row_for_outputs_by_person": 10,
+            "person_target_row_for_outputs_by_person": 25,
+            "person_name_row_for_hours_by_cell_by_person": 30,
+            "wp1_hour_rows": [31, 35, 39, 43, 47],
+            "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "wp3_hour_rows": [33, 37, 41, 45, 49],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
@@ -3128,7 +3197,12 @@ def main():
     if should_run("PH Cell 17"):
         extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
     if should_run("SCS Cell 1"):
-        extend_team("SCS Cell 1", lambda: scrape_workbook_with_config(scs_source_file, SCS_CELL1_CFG))
+        extend_team(
+            "SCS Cell 1",
+            lambda:
+                scrape_workbook_with_config(scs_source_file, SCS_CELL1_OLD_CFG)
+                + scrape_workbook_with_config(scs_source_file, SCS_CELL1_NEW_CFG)
+        )
     meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
     dbs_c13_rows = run_team(
@@ -3212,7 +3286,14 @@ def main():
     cos_rows = [r for r in cos_rows if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()]
     logger.info(f"[TDD COS 1] filter >= {cutoff_cos.isoformat()}: {before} -> {len(cos_rows)}")
     rows.extend(cos_rows)
-    scs_super_rows = run_team(logger, "SCS Super Cell", lambda: scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_CFG))
+    scs_super_rows = run_team(
+        logger,
+        "SCS Super Cell",
+        lambda: (
+            scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_OLD_CFG)
+            + scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_NEW_CFG)
+        ),
+    )
     logger.info(f"[SCS Super Cell] rows scraped (pre-filter): {len(scs_super_rows)}")
     cutoff_super = date.fromisoformat("2025-06-30")
     before = len(scs_super_rows)
