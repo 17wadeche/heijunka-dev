@@ -1670,43 +1670,35 @@ def _weekly_rollup_summary(
 with tabs[0]:
     dfm = _get_metrics_df()
     dfnw = _get_nonwip_df()
-
     st.subheader("Summary")
-
     overview_factor_out_ooo = st.toggle(
         "Factor out OOO from overview calculations",
         value=False,
         key="overview_factor_out_ooo",
         help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
-
     overview_team_export = _weekly_team_export_df(
         dfm,
         dfnw,
         org,
         factor_out_ooo=overview_factor_out_ooo,
     )
-
     if overview_team_export is None or overview_team_export.empty:
         st.info("No overview data available.")
     else:
         overview_team_export = overview_team_export.copy()
-
         week_col = "week_start" if "week_start" in overview_team_export.columns else "period_date"
         overview_team_export[week_col] = pd.to_datetime(
             overview_team_export[week_col], errors="coerce"
         )
         overview_team_export = overview_team_export.dropna(subset=[week_col])
-
         if overview_team_export.empty:
             st.info("No overview data available.")
         else:
-            # Keep only rows with some actual weekly signal
             required_cols = ["completed_hours", "non_wip_hours", "ooo_hours", "unaccounted_hours"]
             for col in required_cols:
                 if col not in overview_team_export.columns:
                     overview_team_export[col] = 0.0
-
             overview_team_export = overview_team_export[
                 (
                     pd.to_numeric(overview_team_export["completed_hours"], errors="coerce").fillna(0.0)
@@ -1715,13 +1707,10 @@ with tabs[0]:
                     + pd.to_numeric(overview_team_export["unaccounted_hours"], errors="coerce").fillna(0.0)
                 ) > 0
             ].reset_index(drop=True)
-
             if overview_team_export.empty:
                 st.info("No overview data available.")
             else:
-                # --- controls: one week + one hierarchy filter ---
                 control_cols = st.columns([1.25, 1.0, 1.25])
-
                 week_options = sorted(
                     overview_team_export[week_col].dt.normalize().dropna().unique(),
                     reverse=True,
@@ -1733,7 +1722,6 @@ with tabs[0]:
                     format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
                     key="overview_selected_week",
                 )
-
                 filter_level = control_cols[1].radio(
                     "Filter by",
                     options=["Portfolio", "OU", "Team"],
@@ -1741,11 +1729,9 @@ with tabs[0]:
                     horizontal=True,
                     key="overview_filter_level",
                 )
-
                 week_df = overview_team_export[
                     overview_team_export[week_col].dt.normalize() == pd.Timestamp(selected_week).normalize()
                 ].copy()
-
                 if filter_level == "Portfolio":
                     filter_col = "portfolio"
                     label = "Portfolio"
@@ -1755,14 +1741,11 @@ with tabs[0]:
                 else:
                     filter_col = "team"
                     label = "Team"
-
                 if filter_col not in week_df.columns:
                     week_df[filter_col] = ""
-
                 filter_options = sorted(
                     x for x in week_df[filter_col].dropna().astype(str).unique() if str(x).strip()
                 )
-
                 if not filter_options:
                     st.info(f"No {label} values available for the selected week.")
                 else:
@@ -1772,16 +1755,13 @@ with tabs[0]:
                         index=0,
                         key=f"overview_selected_{filter_col}",
                     )
-
                     scoped_df = week_df[
                         week_df[filter_col].astype(str) == str(selected_value)
                     ].copy()
-
                     def _safe_sum(df: pd.DataFrame, col: str) -> float:
                         if col not in df.columns:
                             return 0.0
                         return float(pd.to_numeric(df[col], errors="coerce").fillna(0.0).sum())
-
                     def _overview_summary_from_scope(df: pd.DataFrame, factor_out_ooo: bool) -> tuple[
                         Optional[float],
                         Optional[float],
@@ -1794,29 +1774,24 @@ with tabs[0]:
                     ]:
                         if df is None or df.empty:
                             return (None, None, None, None, None, None, None, None)
-
                         completed = _safe_sum(df, "completed_hours")
                         non_wip = _safe_sum(df, "non_wip_hours")
                         ooo = _safe_sum(df, "ooo_hours")
                         unaccounted = _safe_sum(df, "unaccounted_hours")
                         capacity = _safe_sum(df, "capacity_hours")
-
                         if factor_out_ooo:
                             denom = max(capacity - ooo, 0.0)
                             pct_ooo = 0.0 if denom > 0 or capacity > 0 else None
                         else:
                             denom = capacity
                             pct_ooo = (ooo / denom) if denom > 0 else None
-
                         pct_wip = (completed / denom) if denom > 0 else None
                         pct_nonwip = (non_wip / denom) if denom > 0 else None
                         pct_unacct = (unaccounted / denom) if denom > 0 else None
-
                         avg_daily_wip_per_person = (pct_wip * 8.0) if pct_wip is not None else None
                         avg_daily_nonwip_per_person = (pct_nonwip * 8.0) if pct_nonwip is not None else None
                         avg_weekly_ooo_hours = ooo
                         avg_weekly_unacct_hours = unaccounted
-
                         return (
                             avg_daily_wip_per_person,
                             avg_daily_nonwip_per_person,
@@ -1827,7 +1802,6 @@ with tabs[0]:
                             pct_ooo,
                             pct_unacct,
                         )
-
                     (
                         avg_daily_wip_per_person,
                         avg_daily_nonwip_per_person,
@@ -1838,7 +1812,6 @@ with tabs[0]:
                         pct_ooo,
                         pct_unacct,
                     ) = _overview_summary_from_scope(scoped_df, overview_factor_out_ooo)
-
                     st.markdown(
                         """
                         <style>
@@ -1850,7 +1823,6 @@ with tabs[0]:
                         """,
                         unsafe_allow_html=True,
                     )
-
                     _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
                     c1.metric(
                         "Avg Per Person **WIP** Daily Hours",
@@ -1860,7 +1832,6 @@ with tabs[0]:
                         "Avg Per Person **Non-WIP** Daily Hours",
                         f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—",
                     )
-
                     _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
                     p1.metric(
                         "**WIP** Ratio",
@@ -1870,9 +1841,7 @@ with tabs[0]:
                         "**Non-WIP** Ratio",
                         f"{pct_nonwip:.1%}" if pct_nonwip is not None else "—",
                     )
-
                     st.divider()
-
                     _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
                     c3.metric(
                         "Avg **OOO** Weekly Hours",
@@ -1882,7 +1851,6 @@ with tabs[0]:
                         "Avg **Unaccounted** Weekly Hours",
                         f"{avg_weekly_unacct_hours:.2f}" if avg_weekly_unacct_hours is not None else "—",
                     )
-
                     _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
                     p3.metric(
                         "**OOO** % of week",
@@ -1892,10 +1860,8 @@ with tabs[0]:
                         "**Unaccounted** % remaining",
                         f"{pct_unacct:.1%}" if pct_unacct is not None else "—",
                     )
-
                     st.divider()
                     st.subheader("Selected rows")
-
                     display_cols = [
                         c for c in [
                             week_col,
@@ -1914,13 +1880,10 @@ with tabs[0]:
                         ]
                         if c in scoped_df.columns
                     ]
-
                     display_df = scoped_df[display_cols].copy()
-
                     pct_cols = [c for c in ["wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct"] if c in display_df.columns]
                     for col in pct_cols:
                         display_df[col] = pd.to_numeric(display_df[col], errors="coerce")
-
                     st.dataframe(
                         display_df.sort_values(
                             [c for c in ["portfolio", "ou", "team"] if c in display_df.columns]
