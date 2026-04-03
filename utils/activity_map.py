@@ -90,7 +90,7 @@ ACTIVITY_MAP = {
     "crdn t2": "Meeting",
     "sorting shipping issue":"Shipment",
     "pmpa /r&d meeting":"PMPA",
-    "emails 10":"Email & IM",
+    "emails 10":"Email & IM", 
     "tickets for s drive access":"IT Issue/Update",
     "computer update":"IT Issue/Update",
     "udi da task":"UDI",
