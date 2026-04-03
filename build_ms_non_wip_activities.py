@@ -114,7 +114,6 @@ def json_load_safe(v: Any) -> Any:
         except Exception:
             return {}
     return {}
-
 def safe_float2(v: Any) -> float:
     if v is None or v == "":
         return 0.0
@@ -129,11 +128,9 @@ def safe_float2(v: Any) -> float:
         except ValueError:
             return 0.0
     return 0.0
-
 def _sum_simple_map(dst: dict, src: dict) -> None:
     for k, v in (src or {}).items():
         dst[k] = safe_float2(dst.get(k)) + safe_float2(v)
-
 def _merge_unique_list_of_dicts(items: list[dict]) -> list[dict]:
     seen = set()
     out = []
@@ -153,80 +150,61 @@ def _merge_unique_list_of_dicts(items: list[dict]) -> list[dict]:
                 "hours": key[2],
             })
     return out
-
 def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    # Map INV/AST-GST rows into one final team label
     team_rollup_map = {
         "Surgical AST-GST": "Surgical AST-GST",
         "Surgical INV MEIC": "Surgical AST-GST",
         "Surgical INV US": "Surgical AST-GST",
     }
-
     buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
-
     for row in rows:
         raw_team = (row.get("team", "") or "").strip()
         period_date = (row.get("period_date", "") or "").strip()
         team = team_rollup_map.get(raw_team, raw_team)
-
         r = dict(row)
         r["team"] = team
-
         key = (team, period_date)
         buckets.setdefault(key, []).append(r)
-
     out_rows: List[Dict[str, Any]] = []
-
     for (team, period_date), group in buckets.items():
-        # Preserve blank undated rows as-is unless they truly need merging
         if not team or not period_date:
             if len(group) == 1:
                 out_rows.extend(group)
             else:
                 out_rows.append(group[0])
             continue
-
         people_count = 0.0
         total_non_wip_hours = 0.0
         total_ooo_hours = 0.0
         wip_workers_count = 0.0
         wip_workers_ooo_hours = 0.0
-
         pct_values: List[float] = []
-
         non_wip_by_person: Dict[str, float] = {}
         non_wip_activities_all: List[dict] = []
         wip_workers_set = set()
-
         for row in group:
             people_count += safe_float2(row.get("people_count"))
             total_non_wip_hours += safe_float2(row.get("total_non_wip_hours"))
             total_ooo_hours += safe_float2(row.get("OOO Hours"))
             wip_workers_count += safe_float2(row.get("wip_workers_count"))
             wip_workers_ooo_hours += safe_float2(row.get("wip_workers_ooo_hours"))
-
             pct = row.get("% in WIP")
             if pct not in ("", None):
                 pct_values.append(safe_float2(pct))
-
             _sum_simple_map(non_wip_by_person, json_load_safe(row.get("non_wip_by_person")))
-
             nwa = json_load_safe(row.get("non_wip_activities"))
             if isinstance(nwa, list):
                 non_wip_activities_all.extend(nwa)
-
             ww = json_load_safe(row.get("wip_workers"))
             if isinstance(ww, list):
                 for person in ww:
                     name = str(person).strip()
                     if name:
                         wip_workers_set.add(name)
-
         pct_in_wip_avg = (
             sum(pct_values) / len(pct_values)
             if pct_values else ""
         )
-
         out_rows.append({
             "team": team,
             "period_date": period_date,
@@ -240,15 +218,11 @@ def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "wip_workers_count": int(wip_workers_count) if float(wip_workers_count).is_integer() else wip_workers_count,
             "wip_workers_ooo_hours": wip_workers_ooo_hours,
         })
-
     out_rows.sort(key=lambda r: (
         (r.get("team", "") or "").lower(),
         r.get("period_date", "") or "9999-12-31",
     ))
     return out_rows
-
-
-
 def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: int) -> List[str]:
     people: List[str] = []
     seen = set()
@@ -260,7 +234,7 @@ def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: in
         if not current_person:
             continue
         norm = _norm_name(current_person)
-        if norm in {"X", "0", "USER1", "USER2", "USER3", "USER4"}:
+        if norm in {"X", "0", "USER1", "USER2", "USER3", "USER4", "USER10", "USER11"}:
             continue
         if norm not in seen:
             seen.add(norm)
