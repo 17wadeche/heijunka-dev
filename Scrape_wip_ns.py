@@ -3093,44 +3093,10 @@ def main():
         },
         "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
     }
-    TDD_COS1_OLD_CFG = {
+    TDD_COS1_CFG = {
         "team": "TDD COS 1",
-        "person_cols": ("B", "P"),
+        "person_cols": ("B", "T"),
         "date_parser": parse_sheet_date_scs_missing_year,
-        "max_period_date": "2026-03-02",
-        "cells": {
-            "total_available_hours": "R59",
-            "completed_hours": "Q50",
-            "wp1_output": "X2",
-            "wp1_target": "X7",
-            "wp2_output": "Z2",
-            "wp2_target": "Z7",
-            "uplh_wp1": "X5",
-            "uplh_wp2": "Z5",
-            "wp1_hours": "X4",
-            "wp2_hours": "Z4",
-        },
-        "rows": {
-            "hc_row": 50,
-            "person_name_row_for_person_hours": 30,
-            "person_actual_row_for_person_hours": 50,
-            "person_available_row_for_person_hours": 59,
-            "person_name_row_for_outputs_by_person": 10,
-            "person_target_row_for_outputs_by_person": 25,
-            "person_name_row_for_hours_by_cell_by_person": 30,
-            "wp1_hour_rows": [31, 35, 39, 43, 47],
-            "wp2_hour_rows": [32, 36, 40, 44, 48],
-            "person_name_row_for_output_by_cell_by_person": 10,
-            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
-            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
-        },
-        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
-    }
-    TDD_COS1_NEW_CFG = {
-        "team": "TDD COS 1",
-        "person_cols": ("B", "S"),
-        "date_parser": parse_sheet_date_scs_missing_year,
-        "min_period_date": "2026-03-09",
         "cells": {
             "total_available_hours": "V64",
             "completed_hours": "U55",
@@ -3153,6 +3119,7 @@ def main():
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 36, 41, 46, 51],
             "wp2_hour_rows": [32, 37, 42, 47, 52],
+            "wp2_hour_rows": [33, 38, 43, 48, 53],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
@@ -3276,10 +3243,7 @@ def main():
     cos_rows = run_team(
         logger,
         "TDD COS 1",
-        lambda: (
-            scrape_workbook_with_config(cos_source_file, TDD_COS1_OLD_CFG)
-            + scrape_workbook_with_config(cos_source_file, TDD_COS1_NEW_CFG)
-        ),
+        lambda: (scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)),
     )
     cutoff_cos = date.fromisoformat("2025-06-02")
     before = len(cos_rows)
