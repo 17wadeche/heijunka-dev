@@ -1668,163 +1668,266 @@ def _weekly_rollup_summary(
         pct_wip, pct_nonwip, pct_ooo, pct_unacct
     )
 with tabs[0]:
-    dfm_raw = _get_metrics_df()
-    dfnw_raw = _get_nonwip_df()
-    bounds_df = dfm_raw if (dfm_raw is not None and not dfm_raw.empty) else dfnw_raw
-    ov_start, ov_end = section_date_range(
-        "Overview date range",
-        bounds_df,
-        key="dr_overview",
-        min_floor_ts=selected_nonwip_floor,
-    )
-    dfm = filter_by_date_range(dfm_raw, ov_start, ov_end) if dfm_raw is not None else None
-    dfnw = filter_by_date_range(dfnw_raw, ov_start, ov_end) if dfnw_raw is not None else None
+    dfm = _get_metrics_df()
+    dfnw = _get_nonwip_df()
+
     st.subheader("Summary")
+
     overview_factor_out_ooo = st.toggle(
         "Factor out OOO from overview calculations",
         value=False,
         key="overview_factor_out_ooo",
         help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
+
     overview_team_export = _weekly_team_export_df(
         dfm,
         dfnw,
         org,
         factor_out_ooo=overview_factor_out_ooo,
     )
-    if not overview_team_export.empty:
-        overview_team_export = overview_team_export[
-            (
-                overview_team_export["completed_hours"].fillna(0)
-                + overview_team_export["non_wip_hours"].fillna(0)
-                + overview_team_export["ooo_hours"].fillna(0)
-                + overview_team_export["unaccounted_hours"].fillna(0)
-            ) > 0
-        ].reset_index(drop=True)
-    def _overview_summary_from_export_df(df: pd.DataFrame) -> tuple[
-        Optional[float], Optional[float], Optional[float], Optional[float],
-        Optional[float], Optional[float], Optional[float], Optional[float],
-    ]:
-        if df is None or df.empty:
-            return (None, None, None, None, None, None, None, None)
-        wk = df.copy()
-        avg_daily_wip_per_person = (
-            float(pd.to_numeric(wk["wip_avg_hours_day"], errors="coerce").dropna().mean())
-            if "wip_avg_hours_day" in wk.columns and wk["wip_avg_hours_day"].notna().any()
-            else None
-        )
-        avg_daily_nonwip_per_person = (
-            float(pd.to_numeric(wk["non_wip_avg_hours_day"], errors="coerce").dropna().mean())
-            if "non_wip_avg_hours_day" in wk.columns and wk["non_wip_avg_hours_day"].notna().any()
-            else None
-        )
-        avg_weekly_ooo_hours = (
-            float(pd.to_numeric(wk["ooo_hours"], errors="coerce").dropna().mean())
-            if "ooo_hours" in wk.columns and wk["ooo_hours"].notna().any()
-            else None
-        )
-        avg_weekly_unacct_hours = (
-            float(pd.to_numeric(wk["unaccounted_hours"], errors="coerce").dropna().mean())
-            if "unaccounted_hours" in wk.columns and wk["unaccounted_hours"].notna().any()
-            else None
-        )
-        pct_wip = (
-            float(pd.to_numeric(wk["wip_pct"], errors="coerce").dropna().mean())
-            if "wip_pct" in wk.columns and wk["wip_pct"].notna().any()
-            else None
-        )
-        pct_nonwip = (
-            float(pd.to_numeric(wk["non_wip_pct"], errors="coerce").dropna().mean())
-            if "non_wip_pct" in wk.columns and wk["non_wip_pct"].notna().any()
-            else None
-        )
-        pct_ooo = (
-            float(pd.to_numeric(wk["ooo_pct"], errors="coerce").dropna().mean())
-            if "ooo_pct" in wk.columns and wk["ooo_pct"].notna().any()
-            else None
-        )
-        pct_unacct = (
-            float(pd.to_numeric(wk["unaccounted_pct"], errors="coerce").dropna().mean())
-            if "unaccounted_pct" in wk.columns and wk["unaccounted_pct"].notna().any()
-            else None
-        )
-        return (
-            avg_daily_wip_per_person,
-            avg_daily_nonwip_per_person,
-            avg_weekly_ooo_hours,
-            avg_weekly_unacct_hours,
-            pct_wip,
-            pct_nonwip,
-            pct_ooo,
-            pct_unacct,
-        )
-    (
-        avg_daily_wip_per_person,
-        avg_daily_nonwip_per_person,
-        avg_weekly_ooo_hours,
-        avg_weekly_unacct_hours,
-        pct_wip,
-        pct_nonwip,
-        pct_ooo,
-        pct_unacct,
-    ) = _overview_summary_from_export_df(overview_team_export)
-    st.markdown("""
-    <style>
-    div[data-testid="stMetric"]{ text-align: center; }
-    label[data-testid="stMetricLabel"]{ display: block; width: 100%; text-align: center; margin: 0; }
-    label[data-testid="stMetricLabel"] p{ text-align: center !important; margin: 0 !important; }
-    div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
-    </style>
-    """, unsafe_allow_html=True)
-    _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-    c1.metric("Avg Per Person **WIP** Daily Hours", f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—")
-    c2.metric("Avg Per Person **Non-WIP** Daily Hours", f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—")
-    _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-    p1.metric("**WIP** Ratio", f"{pct_wip:.1f}%" if pct_wip is not None else "—")
-    p2.metric("**Non-WIP** Ratio", f"{pct_nonwip:.1f}%" if pct_nonwip is not None else "—")
-    st.divider()
-    _, _, c3, c4,_, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-    c3.metric("Avg **OOO** Weekly Hours", f"{avg_weekly_ooo_hours:.2f}" if avg_weekly_ooo_hours is not None else "—")
-    c4.metric("Avg **Unaccounted** Weekly Hours", f"{avg_weekly_unacct_hours:.2f}" if avg_weekly_unacct_hours is not None else "—")
-    _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-    p3.metric("**OOO** % of week", f"{pct_ooo:.1f}%" if pct_ooo is not None else "—")
-    p4.metric("**Unaccounted** % remaining", f"{pct_unacct:.1f}%" if pct_unacct is not None else "—")
-    st.divider()
-    st.subheader("Trend: avg daily WIP hours (week over week)")
-    if overview_team_export is not None and not overview_team_export.empty:
-        wk = overview_team_export.copy()
-        if "period_date" in wk.columns:
-            wk["period_date"] = pd.to_datetime(wk["period_date"], errors="coerce")
-            wk = wk.dropna(subset=["period_date"]).sort_values("period_date")
-        today = pd.Timestamp.now()
-        current_week_start = today.to_period("W-MON").start_time
-        wk = wk[wk["period_date"] <= current_week_start].copy()
-        if wk.empty:
-            st.info("No overview trend data available for the selected range.")
-        else:
-            if "wip_avg_hours_day" not in wk.columns and "wip_pct" in wk.columns:
-                wk["wip_avg_hours_day"] = pd.to_numeric(wk["wip_pct"], errors="coerce") * 8.0
-            team_total_col = None
-            per_person_col = None
-            if "wip_avg_hours_day" in wk.columns:
-                team_total_col = "wip_avg_hours_day"
-                per_person_col = "wip_avg_hours_day"
-            if team_total_col is None:
-                st.info("No WIP trend data available for the selected range.")
-            else:
-                wk["team_total_up_only"] = pd.to_numeric(
-                    wk[team_total_col], errors="coerce"
-                ).cummax()
-                wk["per_person_up_only"] = pd.to_numeric(
-                    wk[per_person_col], errors="coerce"
-                ).cummax()
-                view = st.selectbox("Trend view", ["Group total", "Per person"], index=1)
-                if view == "Group total":
-                    st.line_chart(wk.set_index("period_date")["team_total_up_only"])
-                else:
-                    st.line_chart(wk.set_index("period_date")["per_person_up_only"])
+
+    if overview_team_export is None or overview_team_export.empty:
+        st.info("No overview data available.")
     else:
-        st.info("No overview trend data available for the selected range.")
+        overview_team_export = overview_team_export.copy()
+
+        week_col = "week_start" if "week_start" in overview_team_export.columns else "period_date"
+        overview_team_export[week_col] = pd.to_datetime(
+            overview_team_export[week_col], errors="coerce"
+        )
+        overview_team_export = overview_team_export.dropna(subset=[week_col])
+
+        if overview_team_export.empty:
+            st.info("No overview data available.")
+        else:
+            # Keep only rows with some actual weekly signal
+            required_cols = ["completed_hours", "non_wip_hours", "ooo_hours", "unaccounted_hours"]
+            for col in required_cols:
+                if col not in overview_team_export.columns:
+                    overview_team_export[col] = 0.0
+
+            overview_team_export = overview_team_export[
+                (
+                    pd.to_numeric(overview_team_export["completed_hours"], errors="coerce").fillna(0.0)
+                    + pd.to_numeric(overview_team_export["non_wip_hours"], errors="coerce").fillna(0.0)
+                    + pd.to_numeric(overview_team_export["ooo_hours"], errors="coerce").fillna(0.0)
+                    + pd.to_numeric(overview_team_export["unaccounted_hours"], errors="coerce").fillna(0.0)
+                ) > 0
+            ].reset_index(drop=True)
+
+            if overview_team_export.empty:
+                st.info("No overview data available.")
+            else:
+                # --- controls: one week + one hierarchy filter ---
+                control_cols = st.columns([1.25, 1.0, 1.25])
+
+                week_options = sorted(
+                    overview_team_export[week_col].dt.normalize().dropna().unique(),
+                    reverse=True,
+                )
+                selected_week = control_cols[0].selectbox(
+                    "Week",
+                    options=week_options,
+                    index=0,
+                    format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
+                    key="overview_selected_week",
+                )
+
+                filter_level = control_cols[1].radio(
+                    "Filter by",
+                    options=["Portfolio", "OU", "Team"],
+                    index=0,
+                    horizontal=True,
+                    key="overview_filter_level",
+                )
+
+                week_df = overview_team_export[
+                    overview_team_export[week_col].dt.normalize() == pd.Timestamp(selected_week).normalize()
+                ].copy()
+
+                if filter_level == "Portfolio":
+                    filter_col = "portfolio"
+                    label = "Portfolio"
+                elif filter_level == "OU":
+                    filter_col = "ou"
+                    label = "OU"
+                else:
+                    filter_col = "team"
+                    label = "Team"
+
+                if filter_col not in week_df.columns:
+                    week_df[filter_col] = ""
+
+                filter_options = sorted(
+                    x for x in week_df[filter_col].dropna().astype(str).unique() if str(x).strip()
+                )
+
+                if not filter_options:
+                    st.info(f"No {label} values available for the selected week.")
+                else:
+                    selected_value = control_cols[2].selectbox(
+                        label,
+                        options=filter_options,
+                        index=0,
+                        key=f"overview_selected_{filter_col}",
+                    )
+
+                    scoped_df = week_df[
+                        week_df[filter_col].astype(str) == str(selected_value)
+                    ].copy()
+
+                    def _safe_sum(df: pd.DataFrame, col: str) -> float:
+                        if col not in df.columns:
+                            return 0.0
+                        return float(pd.to_numeric(df[col], errors="coerce").fillna(0.0).sum())
+
+                    def _overview_summary_from_scope(df: pd.DataFrame, factor_out_ooo: bool) -> tuple[
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                        Optional[float],
+                    ]:
+                        if df is None or df.empty:
+                            return (None, None, None, None, None, None, None, None)
+
+                        completed = _safe_sum(df, "completed_hours")
+                        non_wip = _safe_sum(df, "non_wip_hours")
+                        ooo = _safe_sum(df, "ooo_hours")
+                        unaccounted = _safe_sum(df, "unaccounted_hours")
+                        capacity = _safe_sum(df, "capacity_hours")
+
+                        if factor_out_ooo:
+                            denom = max(capacity - ooo, 0.0)
+                            pct_ooo = 0.0 if denom > 0 or capacity > 0 else None
+                        else:
+                            denom = capacity
+                            pct_ooo = (ooo / denom) if denom > 0 else None
+
+                        pct_wip = (completed / denom) if denom > 0 else None
+                        pct_nonwip = (non_wip / denom) if denom > 0 else None
+                        pct_unacct = (unaccounted / denom) if denom > 0 else None
+
+                        avg_daily_wip_per_person = (pct_wip * 8.0) if pct_wip is not None else None
+                        avg_daily_nonwip_per_person = (pct_nonwip * 8.0) if pct_nonwip is not None else None
+                        avg_weekly_ooo_hours = ooo
+                        avg_weekly_unacct_hours = unaccounted
+
+                        return (
+                            avg_daily_wip_per_person,
+                            avg_daily_nonwip_per_person,
+                            avg_weekly_ooo_hours,
+                            avg_weekly_unacct_hours,
+                            pct_wip,
+                            pct_nonwip,
+                            pct_ooo,
+                            pct_unacct,
+                        )
+
+                    (
+                        avg_daily_wip_per_person,
+                        avg_daily_nonwip_per_person,
+                        avg_weekly_ooo_hours,
+                        avg_weekly_unacct_hours,
+                        pct_wip,
+                        pct_nonwip,
+                        pct_ooo,
+                        pct_unacct,
+                    ) = _overview_summary_from_scope(scoped_df, overview_factor_out_ooo)
+
+                    st.markdown(
+                        """
+                        <style>
+                        div[data-testid="stMetric"]{ text-align: center; }
+                        label[data-testid="stMetricLabel"]{ display: block; width: 100%; text-align: center; margin: 0; }
+                        label[data-testid="stMetricLabel"] p{ text-align: center !important; margin: 0 !important; }
+                        div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
+                        </style>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
+                    c1.metric(
+                        "Avg Per Person **WIP** Daily Hours",
+                        f"{avg_daily_wip_per_person:.2f}" if avg_daily_wip_per_person is not None else "—",
+                    )
+                    c2.metric(
+                        "Avg Per Person **Non-WIP** Daily Hours",
+                        f"{avg_daily_nonwip_per_person:.2f}" if avg_daily_nonwip_per_person is not None else "—",
+                    )
+
+                    _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
+                    p1.metric(
+                        "**WIP** Ratio",
+                        f"{pct_wip:.1%}" if pct_wip is not None else "—",
+                    )
+                    p2.metric(
+                        "**Non-WIP** Ratio",
+                        f"{pct_nonwip:.1%}" if pct_nonwip is not None else "—",
+                    )
+
+                    st.divider()
+
+                    _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                    c3.metric(
+                        "Avg **OOO** Weekly Hours",
+                        f"{avg_weekly_ooo_hours:.2f}" if avg_weekly_ooo_hours is not None else "—",
+                    )
+                    c4.metric(
+                        "Avg **Unaccounted** Weekly Hours",
+                        f"{avg_weekly_unacct_hours:.2f}" if avg_weekly_unacct_hours is not None else "—",
+                    )
+
+                    _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                    p3.metric(
+                        "**OOO** % of week",
+                        f"{pct_ooo:.1%}" if pct_ooo is not None else "—",
+                    )
+                    p4.metric(
+                        "**Unaccounted** % remaining",
+                        f"{pct_unacct:.1%}" if pct_unacct is not None else "—",
+                    )
+
+                    st.divider()
+                    st.subheader("Selected rows")
+
+                    display_cols = [
+                        c for c in [
+                            week_col,
+                            "portfolio",
+                            "ou",
+                            "team",
+                            "completed_hours",
+                            "non_wip_hours",
+                            "ooo_hours",
+                            "unaccounted_hours",
+                            "capacity_hours",
+                            "wip_pct",
+                            "non_wip_pct",
+                            "ooo_pct",
+                            "unaccounted_pct",
+                        ]
+                        if c in scoped_df.columns
+                    ]
+
+                    display_df = scoped_df[display_cols].copy()
+
+                    pct_cols = [c for c in ["wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct"] if c in display_df.columns]
+                    for col in pct_cols:
+                        display_df[col] = pd.to_numeric(display_df[col], errors="coerce")
+
+                    st.dataframe(
+                        display_df.sort_values(
+                            [c for c in ["portfolio", "ou", "team"] if c in display_df.columns]
+                        ).reset_index(drop=True),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
