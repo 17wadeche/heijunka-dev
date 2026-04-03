@@ -2201,54 +2201,6 @@ with tabs[1]:
     st.pyplot(fig)
 with tabs[2]:
     st.subheader("Export")
-    export_team_filter = st.multiselect(
-        "Export — Teams",
-        options=all_team_names,
-        default=all_team_names,
-        key="export_team_filter",
-    )
-    def filter_by_export_team(df: pd.DataFrame) -> pd.DataFrame:
-        if not export_team_filter:
-            return df.iloc[0:0]
-        tc = _get_team_col(df)
-        if not tc:
-            return df
-        return df[df[tc].astype(str).isin(set(export_team_filter))]
-    def filter_by_export_date(df: pd.DataFrame, start_ts, end_ts) -> pd.DataFrame:
-        if start_ts is None or end_ts is None:
-            return df
-        dc = _get_date_col(df)
-        if not dc:
-            return df
-        tmp = df.copy()
-        tmp[dc] = pd.to_datetime(tmp[dc], errors="coerce")
-        tmp = tmp.dropna(subset=[dc])
-        return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
-    export_metrics_frames = []
-    for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
-        if key in data:
-            d = filter_by_export_team(data[key].copy())
-            if not d.empty:
-                export_metrics_frames.append(d)
-    export_nonwip_frames = []
-    for key in ["ns_non_wip_activities", "ms_non_wip_activities","crm_non_wip_activities", "non_wip_activities", "non_wip"]:
-        if key in data:
-            d = filter_by_export_team(data[key].copy())
-            if not d.empty:
-                export_nonwip_frames.append(_normalize_df_columns(d))
-    export_bounds_df = export_metrics_frames[0] if export_metrics_frames else (
-        export_nonwip_frames[0] if export_nonwip_frames else None
-    )
-    today = pd.Timestamp.now().normalize()
-    ex_start, ex_end = section_date_range(
-        "Export date range",
-        export_bounds_df,
-        key="dr_export",
-        min_floor_ts=None,
-        allow_future_dates=False,
-    )
-    if ex_end is not None:
-        ex_end = min(pd.Timestamp(ex_end), today)
     export_factor_out_ooo = st.toggle(
         "Factor out OOO from export calculations",
         value=False,
@@ -2258,43 +2210,6 @@ with tabs[2]:
     team_export = team_export_lookup_ooo if export_factor_out_ooo else team_export_lookup
     ou_export = ou_export_lookup_ooo if export_factor_out_ooo else ou_export_lookup
     portfolio_export = portfolio_export_lookup_ooo if export_factor_out_ooo else portfolio_export_lookup
-    def _concat_frames(frames):
-        if not frames:
-            return None
-        if len(frames) == 1:
-            return frames[0]
-        base_cols = set(frames[0].columns)
-        compatible = [f for f in frames if set(f.columns) == base_cols]
-        other = [f for f in frames if set(f.columns) != base_cols]
-        result_frames = []
-        if compatible:
-            result_frames.append(pd.concat(compatible, ignore_index=True))
-        result_frames.extend(other)
-        if len(result_frames) == 1:
-            return result_frames[0]
-        return pd.concat(result_frames, ignore_index=True, sort=False)
-    export_metrics_filtered = _concat_frames(
-        [filter_by_export_date(f, ex_start, ex_end) for f in export_metrics_frames]
-    ) if export_metrics_frames else None
-    export_nonwip_filtered = _concat_frames(
-        [filter_by_export_date(f, ex_start, ex_end) for f in export_nonwip_frames]
-    ) if export_nonwip_frames else None
-    team_export = _weekly_team_export_df(
-        export_metrics_filtered,
-        export_nonwip_filtered,
-        org,
-        factor_out_ooo=export_factor_out_ooo,
-    )
-    if not team_export.empty and "week_start" in team_export.columns:
-        team_export["week_start"] = pd.to_datetime(team_export["week_start"], errors="coerce").dt.normalize()
-        team_export = team_export[team_export["week_start"] <= today].copy()
-    if not team_export.empty:
-        team_export = team_export[
-            (
-                team_export["completed_hours"].fillna(0)
-                + team_export["non_wip_hours"].fillna(0)
-            ) > 0
-        ].reset_index(drop=True)
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -2450,16 +2365,6 @@ with tabs[2]:
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
-        ou_export = _rollup_export_level(
-            team_export,
-            "ou",
-            factor_out_ooo=export_factor_out_ooo,
-        )
-        portfolio_export = _rollup_export_level(
-            team_export,
-            "portfolio",
-            factor_out_ooo=export_factor_out_ooo,
-        )
         st.markdown("#### Team weekly")
         st.dataframe(_format_export_display_team(team_export), width="stretch", hide_index=True)
         st.markdown("#### OU weekly")
