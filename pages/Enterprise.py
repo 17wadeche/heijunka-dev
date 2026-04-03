@@ -1737,6 +1737,7 @@ with tabs[1]:
         "Number of activities to show",
         min_value=1,
         max_value=100,
+        
         value=15,
         step=1,
         key="nonwip_top_n",
