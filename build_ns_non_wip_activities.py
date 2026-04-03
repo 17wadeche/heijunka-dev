@@ -755,10 +755,38 @@ def _get_matching_worksheet(wb, preferred_name: str):
         f"Could not find worksheet matching '{preferred_name}'. "
         f"Available sheets: {available}"
     )
+def log_weekly_scs_breakdown(df: pd.DataFrame, label: str = "SCS SPLIT") -> None:
+    if df is None or df.empty:
+        print(f"[DEBUG][{label}] no rows", flush=True)
+        return
+    tmp = df.copy()
+    tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
+    tmp["total_non_wip_hours"] = pd.to_numeric(
+        tmp.get("total_non_wip_hours"), errors="coerce"
+    ).fillna(0.0)
+    tmp = tmp[tmp["team"].isin(["SCS", "SCS MEIC"])].copy()
+    if tmp.empty:
+        print(f"[DEBUG][{label}] no SCS / SCS MEIC rows", flush=True)
+        return
+    for week, g in tmp.groupby("period_date", dropna=False):
+        meic_hours = float(
+            g.loc[g["team"] == "SCS MEIC", "total_non_wip_hours"].sum()
+        )
+        other_scs_hours = float(
+            g.loc[g["team"] == "SCS", "total_non_wip_hours"].sum()
+        )
+        total_hours = meic_hours + other_scs_hours
+        print(
+            f"[DEBUG][{label}] "
+            f"week={pd.Timestamp(week).date().isoformat()} "
+            f"SCS_MEIC_non_wip={meic_hours:.2f} "
+            f"other_SCS_non_wip={other_scs_hours:.2f} "
+            f"total_SCS_non_wip={total_hours:.2f}",
+            flush=True,
+        )
 def _debug_print_et_people(team: str, week, people_rows) -> None:
     if str(team).strip() not in {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}:
         return
-
     names = []
     seen = set()
     for r in (people_rows or []):
@@ -770,19 +798,16 @@ def _debug_print_et_people(team: str, week, people_rows) -> None:
             continue
         seen.add(key)
         names.append(name)
-
     week_txt = ""
     try:
         week_txt = pd.Timestamp(week).date().isoformat() if week is not None else "unknown"
     except Exception:
         week_txt = str(week)
-
     print(
         f"[DEBUG][ET][{team}] week={week_txt} count={len(names)} names={names}",
         flush=True,
     )
 ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
-
 def _unique_people_names_from_people_rows(people_rows) -> list[str]:
     names = []
     seen = set()
@@ -1955,13 +1980,11 @@ def build_capacity_fixed_row(
     col_ooo = _col_letter_to_idx(ooo_col_letter)
     act_start = _col_letter_to_idx(activity_start_col_letter)
     act_end   = _col_letter_to_idx(activity_end_col_letter)
-
     m = re.fullmatch(r"([A-Za-z]+)(\d+)", deduct_cell.strip())
     if not m:
         raise ValueError(f"Bad deduct_cell: {deduct_cell}")
     deduct_col = _col_letter_to_idx(m.group(1))
     deduct_row = int(m.group(2)) - 1
-
     people_rows: List[dict] = []
     for i in range(people_start_row, people_end_row + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1979,16 +2002,12 @@ def build_capacity_fixed_row(
             "B": float(b),
             "OOO": float(ooo),
         })
-
     people_count = len(set(r["name"] for r in people_rows))
-
     ooo_hours = 0.0
     for r in range(ooo_sum_start_row, ooo_sum_end_row + 1):
         val = ws.iat[r, col_ooo] if ws.shape[0] > r and ws.shape[1] > col_ooo else 0.0
         ooo_hours += safe_float0(val)
     ooo_hours = float(round(ooo_hours, 2))
-
-    # CHANGED: allow direct read from AI20 (or any supplied total cell)
     if total_nonwip_cell:
         total_nonwip_hours = float(round(_read_excel_cell_value(ws, total_nonwip_cell), 2))
     else:
@@ -1997,13 +2016,11 @@ def build_capacity_fixed_row(
             if ws.shape[0] > deduct_row and ws.shape[1] > deduct_col else 0.0
         )
         total_nonwip_hours = float(round((people_count * 40.0) - deduct_val - ooo_hours, 2))
-
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
         v = float(round(40.0 - float(r["B"]) - float(r["OOO"]), 2))
         if v != 0.0:
             nonwip_by_person[r["name"]] = v
-
     activities: List[dict] = []
     max_act_col = min(act_end, ws.shape[1] - 1)
     for pr in people_rows:
@@ -2030,7 +2047,6 @@ def build_capacity_fixed_row(
                 "activity": "OOO",
                 "hours": ooo,
             })
-
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -2060,7 +2076,6 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
         aa = safe_float0(ws.iat[i, COL_AA] if ws.shape[1] > COL_AA else 0.0)
         zaa_ooo = float(round(z + aa, 2))
-
         people_rows.append({
             "row_i": i,
             "name": name,
@@ -2769,6 +2784,7 @@ def main():
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
+    log_weekly_scs_breakdown(combined, "PRE-MERGE")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     if not combined.empty:
