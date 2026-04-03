@@ -10,6 +10,7 @@ import streamlit as st
 import numpy as np
 import io
 from utils.activity_map import ACTIVITY_MAP
+import altair as alt
 def _candidate_repo_roots(start: Path) -> List[Path]:
     roots: List[Path] = []
     p = start.resolve()
@@ -402,6 +403,19 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
         out = out.drop_duplicates(subset=["team", "period_date", "person"])
+    return out
+def _high_unaccounted_flag_series(df: pd.DataFrame, pct_col: str = "unaccounted_pct") -> pd.Series:
+    if pct_col not in df.columns:
+        return pd.Series([""] * len(df), index=df.index, dtype="string")
+    vals = pd.to_numeric(df[pct_col], errors="coerce").fillna(0.0)
+    return vals.map(lambda v: "❗" if float(v) > 0.25 else "").astype("string")
+def _append_export_alert_column(
+    df: pd.DataFrame,
+    pct_col: str = "unaccounted_pct",
+    alert_col_name: str = "Alert",
+) -> pd.DataFrame:
+    out = df.copy()
+    out[alert_col_name] = _high_unaccounted_flag_series(out, pct_col=pct_col)
     return out
 def merged_people_count_for_week(
     team: str,
@@ -1637,9 +1651,61 @@ with tabs[0]:
                 st.info("No historical WIP % data available for this selection.")
             else:
                 chart_df = history_df.loc[:, ["week_start", "wip_pct"]].copy()
-                chart_df = chart_df.rename(columns={"week_start": "Week Start", "wip_pct": "WIP %"})
-                chart_df = chart_df.set_index("Week Start")
-                st.line_chart(chart_df)
+                chart_df["week_start"] = pd.to_datetime(chart_df["week_start"], errors="coerce")
+                chart_df["wip_pct"] = pd.to_numeric(chart_df["wip_pct"], errors="coerce")
+                chart_df = chart_df.dropna(subset=["week_start", "wip_pct"]).sort_values("week_start")
+                if chart_df.empty:
+                    st.info("No historical WIP % data available for this selection.")
+                else:
+                    chart_df["week_label"] = chart_df["week_start"].dt.strftime("%Y-%m-%d")
+                    chart_df["wip_label"] = chart_df["wip_pct"].map(lambda v: f"{v:.1%}")
+                    latest_week = chart_df["week_start"].max()
+                    latest_df = chart_df[chart_df["week_start"] == latest_week].copy()
+                    base = alt.Chart(chart_df).encode(
+                        x=alt.X(
+                            "week_start:T",
+                            title="Week",
+                            axis=alt.Axis(format="%Y-%m-%d", labelAngle=-35),
+                        ),
+                        y=alt.Y(
+                            "wip_pct:Q",
+                            title="WIP %",
+                            axis=alt.Axis(format=".0%"),
+                            scale=alt.Scale(domain=[0, max(1.0, float(chart_df["wip_pct"].max()) * 1.1)]),
+                        ),
+                        tooltip=[
+                            alt.Tooltip("week_label:N", title="Week"),
+                            alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
+                        ],
+                    )
+                    line = base.mark_line(strokeWidth=3).encode()
+                    points = base.mark_circle(size=80).encode()
+                    latest_point = alt.Chart(latest_df).mark_circle(size=180, filled=True).encode(
+                        x="week_start:T",
+                        y="wip_pct:Q",
+                        tooltip=[
+                            alt.Tooltip("week_label:N", title="Week"),
+                            alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
+                        ],
+                    )
+                    latest_text = alt.Chart(latest_df).mark_text(
+                        align="left",
+                        dx=8,
+                        dy=-8,
+                        fontSize=12,
+                        fontWeight="bold",
+                    ).encode(
+                        x="week_start:T",
+                        y="wip_pct:Q",
+                        text="wip_label:N",
+                    )
+                    rule = alt.Chart(pd.DataFrame({"y": [0.80]})).mark_rule(strokeDash=[6, 4]).encode(y="y:Q")
+                    trend_chart = (
+                        alt.layer(rule, line, points, latest_point, latest_text)
+                        .properties(height=360)
+                        .interactive()
+                    )
+                    st.altair_chart(trend_chart, use_container_width=True)
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
@@ -2006,8 +2072,12 @@ with tabs[2]:
         ]
         cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
         out = df[cols].copy().rename(columns=rename_map)
+        out = _append_export_alert_column(out, pct_col="Unaccounted %", alert_col_name="")
         if "Week Start" in out.columns:
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+        leading_cols = [c for c in ["", "team", "ou", "portfolio", "Week Start"] if c in out.columns]
+        remaining_cols = [c for c in out.columns if c not in leading_cols]
+        out = out[leading_cols + remaining_cols]
         fmt = {}
         for c in [
             "Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours",
