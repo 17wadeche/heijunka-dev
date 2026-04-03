@@ -1553,7 +1553,13 @@ def _filter_to_selected_teams(df: pd.DataFrame, selected_teams: list[str]) -> pd
     if not tc:
         return df.copy()
     return df[df[tc].astype(str).isin(set(selected_teams))].copy()
-selected_teams = team_filter 
+shared_export_team_filter = st.sidebar.multiselect(
+    "Overview / Export Teams",
+    options=all_team_names,
+    default=all_team_names,
+    key="shared_export_team_filter",
+)
+selected_teams = shared_export_team_filter
 metrics_frames = []
 for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
     if key in data:
@@ -1569,12 +1575,6 @@ for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activ
 shared_metrics_df = _concat_frames(metrics_frames)
 shared_nonwip_df = _concat_frames(nonwip_frames)
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
-shared_export_team_filter = st.sidebar.multiselect(
-    "Overview / Export Teams",
-    options=all_team_names,
-    default=all_team_names,
-    key="shared_export_team_filter",
-)
 @st.cache_data(show_spinner=False)
 def _get_export_lookup_bundle(
     shared_metrics_df: Optional[pd.DataFrame],
