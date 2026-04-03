@@ -1247,7 +1247,7 @@ def _weekly_team_export_df(
             people_count = float(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
-        if team in {"NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD"}:
+        if team in {"NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM"}:
             capacity_hours = float(people_count) * 40.0
         elif team == "ENT":
             capacity_hours = ent_capacity_hours_for_week(
@@ -1830,14 +1830,12 @@ def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 with tabs[1]:
     st.markdown("### Non-WIP activities")
-
     activity_keys = [
         "ns_non_wip_activities",
         "ms_non_wip_activities",
         "crm_non_wip_activities",
         "non_wip_activities",
     ]
-
     available_frames = []
     for key in activity_keys:
         if key in data:
