@@ -1664,8 +1664,12 @@ with tabs[0]:
                     base = alt.Chart(chart_df).encode(
                         x=alt.X(
                             "week_start:T",
-                            title="Week",
-                            axis=alt.Axis(format="%Y-%m-%d", labelAngle=-35),
+                            title="Week of",
+                            axis=alt.Axis(
+                                format="%Y-%m-%d",
+                                labelAngle=-35,
+                                values=chart_df["week_start"].drop_duplicates().sort_values().tolist(),
+                            ),
                         ),
                         y=alt.Y(
                             "wip_pct:Q",
