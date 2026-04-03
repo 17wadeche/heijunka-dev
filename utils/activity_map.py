@@ -89,6 +89,7 @@ ACTIVITY_MAP = {
     "cqxm/pmq meeting": "Meeting",
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
+    "affera training 30": "Training/Mentoring",
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
