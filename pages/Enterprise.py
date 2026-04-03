@@ -89,6 +89,111 @@ def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
             except Exception:
                 pass
     return None, attempted
+@st.cache_data(show_spinner=False)
+def _build_export_lookup_tables_cached(
+    metrics_df: Optional[pd.DataFrame],
+    nonwip_df: Optional[pd.DataFrame],
+    org,
+    factor_out_ooo: bool,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    team_export = _weekly_team_export_df(
+        metrics_df,
+        nonwip_df,
+        org,
+        factor_out_ooo=factor_out_ooo,
+    )
+    if team_export is None or team_export.empty:
+        empty = pd.DataFrame()
+        return empty, empty, empty
+    team_export = team_export.copy()
+    today = pd.Timestamp.now().normalize()
+    if "week_start" in team_export.columns:
+        team_export["week_start"] = pd.to_datetime(
+            team_export["week_start"], errors="coerce"
+        ).dt.normalize()
+        team_export = team_export[team_export["week_start"] <= today].copy()
+    for col in ["completed_hours", "non_wip_hours", "ooo_hours", "unaccounted_hours"]:
+        if col not in team_export.columns:
+            team_export[col] = 0.0
+    team_export = team_export[
+        (
+            pd.to_numeric(team_export["completed_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["non_wip_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["ooo_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["unaccounted_hours"], errors="coerce").fillna(0.0)
+        ) > 0
+    ].reset_index(drop=True)
+    if team_export.empty:
+        empty = pd.DataFrame()
+        return empty, empty, empty
+    ou_export = _rollup_export_level(
+        team_export,
+        "ou",
+        factor_out_ooo=factor_out_ooo,
+    )
+    portfolio_export = _rollup_export_level(
+        team_export,
+        "portfolio",
+        factor_out_ooo=factor_out_ooo,
+    )
+    return team_export, ou_export, portfolio_export
+@st.cache_data(show_spinner=False)
+def _prepare_nonwip_activity_source(source_raw: pd.DataFrame) -> pd.DataFrame:
+    if source_raw is None or source_raw.empty:
+        return pd.DataFrame()
+    source_df = _normalize_df_columns(source_raw.copy())
+    dc = _get_date_col(source_df)
+    json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
+    if not (dc and json_col):
+        return pd.DataFrame()
+    source_df[dc] = _safe_to_datetime(source_df, dc)
+    source_df = source_df.dropna(subset=[dc]).sort_values(dc)
+    rows: list[dict] = []
+    for _, r in source_df.iterrows():
+        wk = r[dc]
+        payload = _loads_json_maybe(r[json_col])
+        if not payload:
+            continue
+        if isinstance(payload, dict):
+            payload = [payload]
+        if not isinstance(payload, list):
+            continue
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            act = item.get("activity") or item.get("Activity") or item.get("type")
+            hrs = item.get("hours") or item.get("Hours")
+            if act is None or hrs is None:
+                continue
+            try:
+                hrs_val = float(hrs)
+            except Exception:
+                hrs_val = 0.0
+            rows.append(
+                {
+                    "week": wk,
+                    "activity": str(act).strip(),
+                    "hours": hrs_val,
+                }
+            )
+    if not rows:
+        return pd.DataFrame()
+    act_df = pd.DataFrame(rows)
+    act_df["week"] = pd.to_datetime(act_df["week"], errors="coerce")
+    act_df = act_df.dropna(subset=["week"])
+    act_df["week_start"] = _weekly_start(act_df["week"])
+    return act_df
+@st.cache_data(show_spinner=False)
+def _cached_excel_bytes(
+    team_export_display: pd.DataFrame,
+    ou_export_display: pd.DataFrame,
+    portfolio_export_display: pd.DataFrame,
+) -> bytes:
+    return _excel_bytes_from_export_dfs(
+        team_export_display,
+        ou_export_display,
+        portfolio_export_display,
+    )
 @dataclass(frozen=True)
 class TeamConfig:
     name: str
@@ -1439,6 +1544,34 @@ def _excel_bytes_from_export_dfs(
     raise RuntimeError(
         f"Excel export requires openpyxl or xlsxwriter to be installed. Last error: {last_err}"
     )
+def _concat_frames(frames: list[pd.DataFrame]) -> Optional[pd.DataFrame]:
+    if not frames:
+        return None
+    if len(frames) == 1:
+        return frames[0]
+    return pd.concat(frames, ignore_index=True, sort=False)
+def _filter_to_selected_teams(df: pd.DataFrame, selected_teams: list[str]) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+    tc = _get_team_col(df)
+    if not tc:
+        return df.copy()
+    return df[df[tc].astype(str).isin(set(selected_teams))].copy()
+selected_teams = team_filter 
+metrics_frames = []
+for key in ["metrics", "metrics_aggregate_dev", "NS_WIP", "CRM_WIP", "MS_WIP"]:
+    if key in data:
+        d = _filter_to_selected_teams(data[key], selected_teams)
+        if not d.empty:
+            metrics_frames.append(d)
+nonwip_frames = []
+for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activities", "non_wip_activities", "non_wip"]:
+    if key in data:
+        d = _filter_to_selected_teams(data[key], selected_teams)
+        if not d.empty:
+            nonwip_frames.append(_normalize_df_columns(d))
+shared_metrics_df = _concat_frames(metrics_frames)
+shared_nonwip_df = _concat_frames(nonwip_frames)
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 def _get_metrics_df() -> Optional[pd.DataFrame]:
     frames = []
@@ -1703,6 +1836,18 @@ shared_export_team_filter = st.sidebar.multiselect(
     default=all_team_names,
     key="shared_export_team_filter",
 )
+team_export_lookup, ou_export_lookup, portfolio_export_lookup = _build_export_lookup_tables_cached(
+    shared_metrics_df,
+    shared_nonwip_df,
+    org,
+    factor_out_ooo=False,
+)
+team_export_lookup_ooo, ou_export_lookup_ooo, portfolio_export_lookup_ooo = _build_export_lookup_tables_cached(
+    shared_metrics_df,
+    shared_nonwip_df,
+    org,
+    factor_out_ooo=True,
+)
 with tabs[0]:
     st.subheader("Summary")
     overview_factor_out_ooo = st.toggle(
@@ -1711,6 +1856,9 @@ with tabs[0]:
         key="overview_factor_out_ooo",
         help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
+    overview_team_export = team_export_lookup_ooo if overview_factor_out_ooo else team_export_lookup
+    overview_ou_export = ou_export_lookup_ooo if overview_factor_out_ooo else ou_export_lookup
+    overview_portfolio_export = portfolio_export_lookup_ooo if overview_factor_out_ooo else portfolio_export_lookup
     team_lookup, ou_lookup, portfolio_lookup = _build_export_lookup_tables(
         org=org,
         export_team_filter=shared_export_team_filter,
@@ -1820,6 +1968,7 @@ with tabs[1]:
         st.info("No non-WIP activity CSVs found.")
         st.stop()
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
+    parsed_nonwip = _prepare_nonwip_activity_source(source_raw)
     top_n = st.number_input(
         "Number of activities to show",
         min_value=1,
@@ -2108,6 +2257,9 @@ with tabs[2]:
         key="export_factor_out_ooo",
         help="When on, OOO is removed from the denominator for export percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
     )
+    team_export = team_export_lookup_ooo if export_factor_out_ooo else team_export_lookup
+    ou_export = ou_export_lookup_ooo if export_factor_out_ooo else ou_export_lookup
+    portfolio_export = portfolio_export_lookup_ooo if export_factor_out_ooo else portfolio_export_lookup
     def _concat_frames(frames):
         if not frames:
             return None
@@ -2320,7 +2472,7 @@ with tabs[2]:
             team_export_display = _display_export_team_df(team_export)
             ou_export_display = _display_export_ou_df(ou_export)
             portfolio_export_display = _display_export_portfolio_df(portfolio_export)
-            xlsx_bytes = _excel_bytes_from_export_dfs(
+            xlsx_bytes = _cached_excel_bytes(
                 team_export_display,
                 ou_export_display,
                 portfolio_export_display,
