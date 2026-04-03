@@ -1668,8 +1668,9 @@ with tabs[0]:
                             axis=alt.Axis(
                                 format="%Y-%m-%d",
                                 labelAngle=-35,
-                                values=chart_df["week_start"].drop_duplicates().sort_values().tolist(),
+                                tickCount="week",
                             ),
+                            timeUnit="yearmonthdate",
                         ),
                         y=alt.Y(
                             "wip_pct:Q",
