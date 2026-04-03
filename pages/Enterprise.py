@@ -642,18 +642,6 @@ def _first_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
         if cand in cols:
             return cols[cand]
     return None
-def _coalesce_matching_cols(df: pd.DataFrame, candidates: List[str]) -> pd.Series:
-    matches = []
-    wanted = set(candidates)
-    for c in df.columns:
-        if _norm(c) in wanted:
-            matches.append(c)
-    if not matches:
-        return pd.Series([pd.NA] * len(df), index=df.index)
-    out = df[matches[0]]
-    for c in matches[1:]:
-        out = out.where(out.notna() & (out.astype(str).str.strip() != ""), df[c])
-    return out
 def _get_team_col(df: pd.DataFrame) -> Optional[str]:
     return _first_col(df, ["team", "team_name", "org_team", "squad"])
 def _get_date_col(df: pd.DataFrame) -> Optional[str]:
@@ -678,8 +666,6 @@ def _loads_json_maybe(v: Any) -> Any:
         except Exception:
             return None
     return None
-def _workdays_per_week_assumption() -> int:
-    return 5
 def _canon_activity(label: str) -> str:
     s_orig = str(label or "").strip()
     if not s_orig:
@@ -879,41 +865,6 @@ with st.sidebar:
         options=team_options,
         key=team_key,
     )
-def _format_export_display(df: pd.DataFrame) -> pd.io.formats.style.Styler:
-    rename_map = {
-        "team": "Team",
-        "week_start": "Week Start",
-        "completed_hours": "Completed Hours",
-        "people_count": "People Count",
-        "non_wip_hours": "Non-WIP Hours",
-        "ooo_hours": "OOO Hours",
-        "ou": "OU",
-        "portfolio": "Portfolio",
-        "capacity_hours": "Capacity Hours",
-        "unaccounted_hours": "Unaccounted Hours",
-        "wip_pct": "WIP %",
-        "non_wip_pct": "Non-WIP %",
-        "ooo_pct": "OOO %",
-        "unaccounted_pct": "Unaccounted %",
-    }
-    out = df.copy().rename(columns=rename_map)
-    if "Week Start" in out.columns:
-        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-    fmt = {}
-    for c in [
-        "Completed Hours",
-        "People Count",
-        "Non-WIP Hours",
-        "OOO Hours",
-        "Capacity Hours",
-        "Unaccounted Hours",
-    ]:
-        if c in out.columns:
-            fmt[c] = "{:,.2f}"
-    for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
-        if c in out.columns:
-            fmt[c] = "{:.1%}"
-    return out.style.format(fmt)
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
