@@ -87,6 +87,7 @@ ACTIVITY_MAP = {
     "email; meeting; collaboration":"Email & IM",
     "cornerstone (30)":"Cornerstone",
     "cqxm/pmq meeting": "Meeting",
+    "set u":"Set Up",
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
     "affera training 30": "Training/Mentoring",
