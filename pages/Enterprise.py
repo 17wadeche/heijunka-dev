@@ -1920,12 +1920,13 @@ with tabs[2]:
                 team_export["week_start"].dropna().unique(),
                 reverse=True,
             )
-            export_selected_week = export_cols[0].selectbox(
-                "Week",
+            export_selected_weeks = export_cols[0].multiselect(
+                "Weeks",
                 options=export_week_options,
-                index=0,
+                default=export_week_options[:8] if len(export_week_options) > 8 else export_week_options,
                 format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
-                key="export_selected_week",
+                key="export_selected_weeks",
+                placeholder="Select one or more weeks",
             )
             export_filter_level = export_cols[1].radio(
                 "Filter by",
@@ -1949,11 +1950,15 @@ with tabs[2]:
             export_scope_df["week_start"] = pd.to_datetime(
                 export_scope_df["week_start"], errors="coerce"
             ).dt.normalize()
-            export_scoped_week = export_scope_df[
-                export_scope_df["week_start"] == pd.Timestamp(export_selected_week).normalize()
+            selected_week_set = {
+                pd.Timestamp(x).normalize()
+                for x in export_selected_weeks
+            }
+            export_scoped_weeks = export_scope_df[
+                export_scope_df["week_start"].isin(selected_week_set)
             ].copy()
             export_options = sorted(
-                x for x in export_scoped_week[export_filter_col].dropna().astype(str).unique()
+                x for x in export_scoped_weeks[export_filter_col].dropna().astype(str).unique()
                 if str(x).strip()
             )
             export_selected_values = export_cols[2].multiselect(
@@ -1963,10 +1968,10 @@ with tabs[2]:
                 key=f"export_selected_{export_filter_col}",
                 placeholder=f"Select one or more {export_filter_label.lower()} values",
             )
-        if export_selected_values:
+        if export_selected_weeks and export_selected_values:
             export_scope_df = export_scope_df[
-                (export_scope_df["week_start"] == pd.Timestamp(export_selected_week).normalize())
-                & (export_scope_df[export_filter_col].astype(str).isin(export_selected_values))
+                export_scope_df["week_start"].isin(selected_week_set)
+                & export_scope_df[export_filter_col].astype(str).isin(export_selected_values)
             ].copy()
         else:
             export_scope_df = export_scope_df.iloc[0:0].copy()
