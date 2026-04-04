@@ -669,6 +669,7 @@ ACTIVITY_MAP = {
     "capa prep":"CAPA",
     "weekly status meeting": "Meeting",
     "staff meeting": "Meeting",
+    "apni career day":"Career Development",
     "admin (reading emails, opening tools, etc.)":"Admin",
     "sme improvement projects/ problem solving":"Problem Solving",
     "aems + townhall": "Meeting",
