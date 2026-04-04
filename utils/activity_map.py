@@ -30,6 +30,7 @@ ACTIVITY_MAP = {
     "scrum & ri meeting for update":"Scrum & Action",
     "pmpa date request":"PMPA",
     "(investigaion training spider)":"Training/Mentoring",
+    "skills lab":"Training/Mentoring",
     "quality-day prep meeting": "Meeting",
     "shipping to plexus (liberant)":"Shipment",
     "pmpa & lab meeting":"PMPA",
