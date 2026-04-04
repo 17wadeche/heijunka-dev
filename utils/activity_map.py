@@ -669,6 +669,7 @@ ACTIVITY_MAP = {
     "weekly status meeting": "Meeting",
     "staff meeting": "Meeting",
     "admin (reading emails, opening tools, etc.)":"Admin",
+    "sme improvement projects/ problem solving":"Problem Solving",
     "aems + townhall": "Meeting",
     "aem +town hall": "Meeting",
     "aems +town hall": "Meeting",
