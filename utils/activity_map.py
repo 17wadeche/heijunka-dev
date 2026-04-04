@@ -666,6 +666,7 @@ ACTIVITY_MAP = {
     "cross functional meeting": "Meeting",
     "daily scrum":"Scrum & Action",
     "weekly ttvr/tmvr meeting": "Meeting",
+    "weekly status meeting": "Meeting",
     "staff meeting": "Meeting",
     "admin (reading emails, opening tools, etc.)":"Admin",
     "aems + townhall": "Meeting",
