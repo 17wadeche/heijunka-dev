@@ -215,7 +215,6 @@ def parse_prod_analysis(
                     total_comment_mins = sum(nums)
                 else:
                     total_comment_mins = 0.0
-
                 if total_comment_mins > 0:
                     hrs = total_comment_mins / 60.0
                 else:
