@@ -223,14 +223,26 @@ def parse_prod_analysis(
                     if hrs_f > 0:
                         hrs = hrs_f
             if hrs > 0:
-                if name:
-                    b["non_wip_by_person"][name] += hrs
-                label = "Other Team WIP" if is_other_team_wip else (act or "Non-WIP")
-                b["non_wip_activities"].append({
-                    "name": name,
-                    "activity": label,
-                    "hours": round(hrs, 2),
-                })
+                act_lower = act.lower()
+                is_ooo_activity = any(kw in act_lower for kw in ("medical leave", " sl", "sl ")) or act_lower == "sl"
+                if is_ooo_activity:
+                    b["ooo_hours"] += hrs
+                    if name:
+                        b["ooo_by_person"][name] += hrs
+                    b["non_wip_activities"].append({
+                        "name": name,
+                        "activity": "OOO",
+                        "hours": round(hrs, 2),
+                    })
+                else:
+                    if name:
+                        b["non_wip_by_person"][name] += hrs
+                    label = "Other Team WIP" if is_other_team_wip else (act or "Non-WIP")
+                    b["non_wip_activities"].append({
+                        "name": name,
+                        "activity": label,
+                        "hours": round(hrs, 2),
+                    })
     for wk, b in buckets.items():
         b["ooo_hours"] = round(b["ooo_hours"], 2)
         b["ooo_by_person"] = {k: round(v, 2) for k, v in b["ooo_by_person"].items()}
