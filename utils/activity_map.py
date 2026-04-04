@@ -672,6 +672,7 @@ ACTIVITY_MAP = {
     "scrum, question, collaboration": "Scrum & Action",
     "capa prep":"CAPA",
     "weekly status meeting": "Meeting",
+    "mdsap audit (tuesday to thursday)":"Audit",
     "staff meeting": "Meeting",
     "apni career day":"Career Development",
     "admin (reading emails, opening tools, etc.)":"Admin",
