@@ -2077,6 +2077,7 @@ ACTIVITY_MAP = {
     "ftq affera":"Project Work",
     "questions/collaboration":"Question",
     "sh letter querie":"Question",
+    "precedent event review":"Precedent Event",
     "call after scrum":"Scrum & Action",
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
