@@ -663,6 +663,7 @@ ACTIVITY_MAP = {
     "independent training": "Training/Mentoring",
     "idenpendent training": "Training/Mentoring",
     "new joiner training": "Training/Mentoring",
+    "cornerstone training revision": "Training/Mentoring",
     "cross functional meeting": "Meeting",
     "daily scrum":"Scrum & Action",
     "weekly ttvr/tmvr meeting": "Meeting",
