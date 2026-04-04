@@ -675,6 +675,7 @@ ACTIVITY_MAP = {
     "weekly ttvr/tmvr meeting": "Meeting",
     "training collaboration, other collaboration/questions, scrum": "Training/Mentoring",
     "meetings, training, question": "Meeting",
+    "erg commercial meeting":"ERG Meeting",
     "scrum, question, collaboration": "Scrum & Action",
     "tl activitie":"Admin",
     "collaboration with other groups (i.e. s&r, regions, pats)":"Collaboration",
