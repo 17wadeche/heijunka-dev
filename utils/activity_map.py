@@ -1630,6 +1630,7 @@ ACTIVITY_MAP = {
     "sh call": "Meeting",
     "sh vig meeting": "Meeting",
     "eu mdr call": "Meeting",
+    "project support":"Project Work",
     "other emails & im":"Email & IM",
     "emails & im":"Email & IM",
     "pmq mfg assessment call": "PMQ Meeting",
