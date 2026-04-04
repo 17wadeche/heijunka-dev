@@ -645,6 +645,7 @@ ACTIVITY_MAP = {
     "knowledge sharing meeting/prep": "Meeting",
     "aged file/gemba review": "Gemba",
     "it issue": "IT Issue/Update",
+    "complaint wizard": "IT Issue/Update",
     "pmq pre-meeting review q's":"PMQ Meeting",
     "pmq cr meeting":"PMQ Meeting",
     "pmq cr post-meeting action":"PMQ Meeting",
