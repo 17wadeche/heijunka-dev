@@ -662,6 +662,7 @@ ACTIVITY_MAP = {
     "training w/ natalie": "Training/Mentoring",
     "independent training": "Training/Mentoring",
     "idenpendent training": "Training/Mentoring",
+    "new joiner training": "Training/Mentoring",
     "cross functional meeting": "Meeting",
     "weekly ttvr/tmvr meeting": "Meeting",
     "staff meeting": "Meeting",
