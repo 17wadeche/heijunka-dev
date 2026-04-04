@@ -1099,6 +1099,17 @@ def _capacity_subtext(hours_val, capacity_val) -> str | None:
     return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
 def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
+    if nw_frame is not None and not nw_frame.empty:
+        raw_nw = nw_frame.copy()
+        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            team_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
+                "people_count",
+            ]
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
     a = explode_non_wip_by_person(nw_frame)
     b = explode_person_hours(metrics_frame)
     c = explode_people_in_wip(metrics_frame)

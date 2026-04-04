@@ -122,6 +122,42 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def merged_people_count_for_week(
+    team: str,
+    week,
+    nw_frame: pd.DataFrame,
+    person_hours: pd.DataFrame,
+    people_in_wip: pd.DataFrame,
+) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    if nw_frame is not None and not nw_frame.empty:
+        raw_nw = nw_frame.copy()
+        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            team_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
+                "people_count",
+            ]
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
+    names = set()
+    long_nw = explode_non_wip_by_person(nw_frame)
+    for df_, person_col in [
+        (long_nw, "person"),
+        (person_hours, "person"),
+        (people_in_wip, "person"),
+    ]:
+        if df_ is None or df_.empty:
+            continue
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col],
+        ].copy()
+        if not sub.empty:
+            vals = sub[person_col].astype(str).str.strip()
+            names.update(x for x in vals if x)
+    return len(names)
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\MS_WIP.csv")
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
@@ -1090,6 +1126,17 @@ def _capacity_subtext(hours_val, capacity_val) -> str | None:
     return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
 def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
+    if nw_frame is not None and not nw_frame.empty:
+        raw_nw = nw_frame.copy()
+        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            team_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
+                "people_count",
+            ]
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
     a = explode_non_wip_by_person(nw_frame)
     b = explode_person_hours(metrics_frame)
     c = explode_people_in_wip(metrics_frame)

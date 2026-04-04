@@ -114,6 +114,42 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+def merged_people_count_for_week(
+    team: str,
+    week,
+    nw_frame: pd.DataFrame,
+    person_hours: pd.DataFrame,
+    people_in_wip: pd.DataFrame,
+) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    if nw_frame is not None and not nw_frame.empty:
+        raw_nw = nw_frame.copy()
+        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            team_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
+                "people_count",
+            ]
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
+    names = set()
+    long_nw = explode_non_wip_by_person(nw_frame)
+    for df_, person_col in [
+        (long_nw, "person"),
+        (person_hours, "person"),
+        (people_in_wip, "person"),
+    ]:
+        if df_ is None or df_.empty:
+            continue
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col],
+        ].copy()
+        if not sub.empty:
+            vals = sub[person_col].astype(str).str.strip()
+            names.update(x for x in vals if x)
+    return len(names)
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
@@ -1152,9 +1188,17 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    people_count_val = pd.to_numeric(row.get("people_count", np.nan), errors="coerce")
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    _ppl_hours_kpi = explode_person_hours(df)
+    _ppl_in_wip_kpi = explode_people_in_wip(df)
+    people_count_merged = merged_people_count_for_week(
+        team=team_nw,
+        week=week_nw,
+        nw_frame=nw,
+        person_hours=_ppl_hours_kpi,
+        people_in_wip=_ppl_in_wip_kpi,
+    )
     wk_people_kpi = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
@@ -1165,15 +1209,15 @@ if nonwip_mode:
         irl_people=team_irl_people,
     )
     if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
-        capacity_val = float(pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum())
-    else:
+        capacity_val = float(
+            pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum()
+        )
+    elif people_count_merged > 0:
         irl_count = len(team_irl_people)
-        total_people = float(people_count_val) if pd.notna(people_count_val) and float(people_count_val) > 0 else np.nan
-        if pd.notna(total_people):
-            non_irl_count = max(total_people - irl_count, 0.0)
-            capacity_val = (irl_count * 39.0) + (non_irl_count * 40.0)
-        else:
-            capacity_val = np.nan
+        non_irl_count = max(people_count_merged - irl_count, 0)
+        capacity_val = float((irl_count * 39.0) + (non_irl_count * 40.0))
+    else:
+        capacity_val = np.nan
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
     ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
