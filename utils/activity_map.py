@@ -678,6 +678,7 @@ ACTIVITY_MAP = {
     "scrum, question, collaboration": "Scrum & Action",
     "tl activitie":"Admin",
     "collaboration with other groups (i.e. s&r, regions, pats)":"Collaboration",
+    "collaboration with other groups (i.e. regions, pats)":"Collaboration",
     "capa prep":"CAPA",
     "coding updates and next gen updates":"Next Gen",
     "gap and internal qa":"QA",
