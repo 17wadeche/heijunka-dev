@@ -45,6 +45,7 @@ ACTIVITY_MAP = {
     "monthly precedent events":"Precedent Event",
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
     "metrics, tuesday schedule": "Metrics & Schedule",
+    "christmas lunch":"Break",
     "scrum & audit meeting":"Scrum & Action",
     "srum":"Scrum & Action",
     "walk in pink(120)":"Erg Meeting",
