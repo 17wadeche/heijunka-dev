@@ -672,6 +672,7 @@ ACTIVITY_MAP = {
     "scrum, question, collaboration": "Scrum & Action",
     "tl activitie":"Admin",
     "capa prep":"CAPA",
+    "gap and internal qa":"QA",
     "weekly status meeting": "Meeting",
     "mdsap audit (tuesday to thursday)":"Audit",
     "staff meeting": "Meeting",
