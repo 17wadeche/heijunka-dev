@@ -1645,6 +1645,7 @@ ACTIVITY_MAP = {
     "vig training": "Training/Mentoring",
     "laptop update": "IT Issue/Update",
     "laptop setup": "IT Issue/Update",
+    "cw support": "IT Issue/Update",
     "ivanti connection issue": "IT Issue/Update",
     "call with it":"IT Issue/Update",
     "it call":"IT Issue/Update",
