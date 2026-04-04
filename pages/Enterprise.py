@@ -1520,6 +1520,12 @@ for key in ["ns_non_wip_activities", "ms_non_wip_activities", "crm_non_wip_activ
             nonwip_frames.append(d)
 shared_metrics_df = _concat_frames(metrics_frames)
 shared_nonwip_df = _concat_frames(nonwip_frames)
+factor_out_ooo = st.toggle(
+    "Factor out OOO from calculations",
+    value=False,
+    key="factor_out_ooo",
+    help="When on, OOO is removed from the denominator for percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO. Applies to both Overview and Export tabs.",
+)
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 @st.cache_data(show_spinner=False)
 def _get_export_lookup_bundle(
@@ -1536,17 +1542,8 @@ def _get_export_lookup_bundle(
     )
 with tabs[0]:
     st.subheader("Summary")
-    overview_factor_out_ooo = st.toggle(
-        "Factor out OOO from overview calculations",
-        value=False,
-        key="overview_factor_out_ooo",
-        help="When on, OOO is removed from the denominator for overview percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
-    )
     overview_team_export, overview_ou_export, overview_portfolio_export = _get_export_lookup_bundle(
-        shared_metrics_df,
-        shared_nonwip_df,
-        org,
-        overview_factor_out_ooo,
+        shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
     )
     team_lookup = overview_team_export
     ou_lookup = overview_ou_export
@@ -1968,17 +1965,8 @@ with tabs[1]:
     st.pyplot(fig)
 with tabs[2]:
     st.subheader("Export")
-    export_factor_out_ooo = st.toggle(
-        "Factor out OOO from export calculations",
-        value=False,
-        key="export_factor_out_ooo",
-        help="When on, OOO is removed from the denominator for export percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO.",
-    )
     team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
-        shared_metrics_df,
-        shared_nonwip_df,
-        org,
-        export_factor_out_ooo,
+        shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,  # ← new
     )
     export_scope_df = team_export.copy()
     export_filter_col = "team"
