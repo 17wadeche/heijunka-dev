@@ -45,6 +45,7 @@ ACTIVITY_MAP = {
     "precedent event capa":"CAPA",
     "monthly precedent events":"Precedent Event",
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
+    "run wr/ heijunka": "Metrics & Schedule",
     "metrics, tuesday schedule": "Metrics & Schedule",
     "christmas lunch":"Break",
     "scrum & audit meeting":"Scrum & Action",
