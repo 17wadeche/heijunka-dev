@@ -190,7 +190,8 @@ def parse_prod_analysis(
         if not (flag or mins or name or act):
             continue
         b = buckets[wk]
-        if flag == "ooo" and mins > 0:
+        OOO_FLAGS = {"ooo", "medical leave", "sl"}
+        if flag in OOO_FLAGS and mins > 0:
             hrs = mins / 60.0
             b["ooo_hours"] += hrs
             if name:
