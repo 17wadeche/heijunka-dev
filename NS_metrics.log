@@ -540,3 +540,8 @@
 2026-04-03 18:54:09,070 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-03 18:54:09,138 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 301 rows
 2026-04-03 18:54:09,153 | INFO | === NS Metrics Run END ===
+2026-04-03 19:12:12,758 | INFO | === NS Metrics Run START ===
+2026-04-03 19:12:12,760 | INFO | Selected team: all
+2026-04-03 19:12:12,770 | INFO | [Spine] START
+2026-04-03 19:12:21,807 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:09.036394
+2026-04-03 19:12:21,807 | INFO | [Spine] START
