@@ -608,6 +608,7 @@ ACTIVITY_MAP = {
     "fw tool, email": "Email & IM",
     "pmpa meeting":"PMPA",
     "email and information about prevail file": "Email & IM",
+    "email and im": "Email & IM",
     "email fwt": "Email & IM",
     "discussion with fola on nellcor returne":"Collaboration",
     "deco training": "Training/Mentoring",
