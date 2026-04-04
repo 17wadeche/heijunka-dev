@@ -673,6 +673,7 @@ ACTIVITY_MAP = {
     "tl activitie":"Admin",
     "collaboration with other groups (i.e. s&r, regions, pats)":"Collaboration",
     "capa prep":"CAPA",
+    "coding updates and next gen updates":"Next Gen",
     "gap and internal qa":"QA",
     "weekly status meeting": "Meeting",
     "mdsap audit (tuesday to thursday)":"Audit",
