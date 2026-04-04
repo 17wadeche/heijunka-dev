@@ -1631,6 +1631,7 @@ ACTIVITY_MAP = {
     "sh vig meeting": "Meeting",
     "eu mdr call": "Meeting",
     "other emails & im":"Email & IM",
+    "emails & im":"Email & IM",
     "pmq mfg assessment call": "PMQ Meeting",
     "sh vig review/querie": "Question",
     "aged wip review": "Aged WIP Review",
