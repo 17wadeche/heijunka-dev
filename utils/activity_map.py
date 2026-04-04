@@ -671,6 +671,7 @@ ACTIVITY_MAP = {
     "staff meeting": "Meeting",
     "apni career day":"Career Development",
     "admin (reading emails, opening tools, etc.)":"Admin",
+    "admin, (emails, opening docs, etc)":"Admin",
     "sme improvement projects/ problem solving":"Problem Solving",
     "aems + townhall": "Meeting",
     "aem +town hall": "Meeting",
