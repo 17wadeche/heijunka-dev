@@ -427,6 +427,7 @@ ACTIVITY_MAP = {
     "town halls/aem" : "Meeting",
     "tl heijunka": "Metrics & Schedule",
     "schedule": "Metrics & Schedule",
+    "time spent on innovation ideas/discussions":"Problem Solving",
     "metric": "Metrics & Schedule",
     "ri support":"RI",
     "tier-tue" : "Meeting",
