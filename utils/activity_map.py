@@ -1574,7 +1574,7 @@ ACTIVITY_MAP = {
     "ng, collaboration, event review, meetings, lates, email/admin":"Next Gen",
     "ng, gb, coding, meetings, collaboration, rrtt review":"Next Gen",
     "meetings, questions, recoding events, cornerstone":"Meeting",
-    "meetings, question":"Meetings",
+    "meetings, question":"Meeting",
     "team meeting, training meeting w jyn":"Training/Mentoring",
     "scrum, cornerstone, collaboration, email":"Scrum & Action",
     "meeting, cornerstone, training prep, email":"Meeting",
