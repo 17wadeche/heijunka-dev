@@ -4,7 +4,7 @@ import sys
 from datetime import date
 PYTHON_BIN = sys.executable
 commands = [
-    [PYTHON_BIN, "get_timeliness.py"],
+    ##[PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "heijunka_new_layout.py", "--all"],
     [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "metrics.csv", "--all", "--out", "non_wip.csv"],
     [PYTHON_BIN, "collect_metrics_dev.py"],
@@ -32,6 +32,7 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-03-16"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-03-23"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-03-30"],
+    [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-04-06"],
     [PYTHON_BIN, "Scrape_wip_ns.py"],
     [PYTHON_BIN, "build_ns_non_wip_activities.py"],
     [PYTHON_BIN, "scrape_wip_crm.py"],

@@ -1696,6 +1696,7 @@ ACTIVITY_MAP = {
     "emails/discussion":"Email & IM",
     "mtgs 2 hrs": "Meeting",
     "sales rep training": "Training/Mentoring",
+    "training event": "Training/Mentoring",
     "mir training": "Training/Mentoring",
     "catching up on email from being ooo for":"Email & IM",
     "rs pxm sh inbox":"RS Inbox",
