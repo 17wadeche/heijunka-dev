@@ -583,6 +583,8 @@ ACTIVITY_MAP = {
     "power out": "IT Issue/Update",
     "qa review/correction": "QA",
     "qa review/update": "QA",
+    "one note update":"Notes",
+    "note":"Notes",
     "risk management knowledge sharing call": "Risk Management Knowledge Sharing Call",
     "risk mangement knowledge sharing call": "Risk Management Knowledge Sharing Call",
     "risk mgmt kniwledge session": "Risk Management Knowledge Sharing Call",
