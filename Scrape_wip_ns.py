@@ -524,6 +524,10 @@ def scrape_dbs_dated_tabs_xlsx(
         cell_station_hours = {
             "WP1": safe_float(ws["Z4"].value),
             "WP2": safe_float(ws["AB4"].value),
+            "WP3": sum(
+                safe_float(ws[cell].value)
+                for cell in ["T33", "T37", "T41", "T45", "T49"]
+            ),
         }
         hours_by_cell_by_person = {"WP1": {}, "WP2": {}, "WP3": {}}
         wp1_hour_rows = [31, 35, 39, 43, 47]
@@ -714,7 +718,16 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
             "WP1": safe_float(ws[cfg["cells"]["wp1_hours"]].value),
             "WP2": safe_float(ws[cfg["cells"]["wp2_hours"]].value),
         }
+        wp3_total_cells = cfg.get("cells", {}).get("wp3_hours_sum_cells")
+        if wp3_total_cells:
+            cell_station_hours["WP3"] = sum(
+                safe_float(ws[cell].value)
+                for cell in wp3_total_cells
+            )
         hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        wp3_hour_rows = cfg.get("rows", {}).get("wp3_hour_rows")
+        if wp3_hour_rows:
+            hours_by_cell_by_person["WP3"] = {}
         name_row_hc = cfg["rows"]["person_name_row_for_hours_by_cell_by_person"]
         wp1_hour_rows = cfg["rows"]["wp1_hour_rows"]
         wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
@@ -728,6 +741,10 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 hours_by_cell_by_person["WP1"][name] = wp1_hrs
             if wp2_hrs != 0.0:
                 hours_by_cell_by_person["WP2"][name] = wp2_hrs
+            if wp3_hour_rows:
+                wp3_hrs = sum_rows(ws, wp3_hour_rows, c)
+                if wp3_hrs != 0.0:
+                    hours_by_cell_by_person["WP3"][name] = wp3_hrs
         output_by_cell_by_person = {"WP1": {}, "WP2": {}}
         name_row_oc = cfg["rows"]["person_name_row_for_output_by_cell_by_person"]
         wp1_out_rows = cfg["rows"]["wp1_output_rows_by_person"]
@@ -2877,6 +2894,7 @@ def main():
             "uplh_wp2": "AB5",
             "wp1_hours": "Z4",
             "wp2_hours": "AB4",
+            "wp3_hours_sum_cells": ["T33", "T37", "T41", "T45", "T49"],
         },
         "rows": {
             "hc_row": 50,
@@ -2888,7 +2906,7 @@ def main():
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 35, 39, 43, 47],
             "wp2_hour_rows": [32, 36, 40, 44, 48],
-            "wp2_hour_rows": [33, 37, 41, 45, 49],
+            "wp3_hour_rows": [33, 37, 41, 45, 49],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
@@ -2911,6 +2929,7 @@ def main():
             "uplh_wp2": "U5",
             "wp1_hours": "T4",
             "wp2_hours": "U4",
+            "wp3_hours_sum_cells": ["M33", "M37", "M41", "M45", "M49"],
         },
         "rows": {
             "hc_row": 76,
@@ -3009,6 +3028,7 @@ def main():
             "uplh_wp2": "AB5",
             "wp1_hours": "Z4",
             "wp2_hours": "AB4",
+            "wp3_hours_sum_cells": ["T33", "T37", "T41", "T45", "T49"],
         },
         "rows": {
             "hc_row": 25,
@@ -3020,6 +3040,7 @@ def main():
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 35, 39, 43, 47],
             "wp2_hour_rows": [32, 36, 40, 44, 48],
+            "wp3_hour_rows": [33, 37, 41, 45, 49],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
@@ -3075,6 +3096,7 @@ def main():
             "uplh_wp2": "AJ5",
             "wp1_hours": "AH4",
             "wp2_hours": "AJ4",
+            "wp3_hours_sum_cells": ["Z33", "Z37", "Z41", "Z45", "Z49"],
         },
         "rows": {
             "hc_row": 25,
@@ -3108,6 +3130,7 @@ def main():
             "uplh_wp2": "AD5",
             "wp1_hours": "AB4",
             "wp2_hours": "AD4",
+            "wp3_hours_sum_cells": ["U33", "U38", "U43", "U48", "U53"],
         },
         "rows": {
             "hc_row": 25,
@@ -3119,7 +3142,7 @@ def main():
             "person_name_row_for_hours_by_cell_by_person": 30,
             "wp1_hour_rows": [31, 36, 41, 46, 51],
             "wp2_hour_rows": [32, 37, 42, 47, 52],
-            "wp2_hour_rows": [33, 38, 43, 48, 53],
+            "wp3_hour_rows": [33, 38, 43, 48, 53],
             "person_name_row_for_output_by_cell_by_person": 10,
             "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
             "wp2_output_rows_by_person": [12, 15, 18, 21, 24],

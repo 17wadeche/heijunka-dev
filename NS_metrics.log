@@ -884,3 +884,60 @@
 2026-04-06 11:54:24,117 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-06 11:54:24,228 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 308 rows
 2026-04-06 11:54:24,229 | INFO | === NS Metrics Run END ===
+2026-04-06 12:56:31,094 | INFO | === NS Metrics Run START ===
+2026-04-06 12:56:31,094 | INFO | Selected team: all
+2026-04-06 12:56:31,094 | INFO | [Spine] START
+2026-04-06 12:56:39,999 | ERROR | [Spine] FAIL | elapsed=0:00:08.904729 | error='wp3_hour_rows'
+2026-04-06 12:56:40,002 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3156, in <lambda>
+    extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 725, in scrape_workbook_with_config
+    wp3_hour_rows = cfg["rows"]["wp3_hour_rows"]
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'wp3_hour_rows'
+
+2026-04-06 12:56:40,002 | INFO | [Spine] START
+2026-04-06 12:57:10,753 | INFO | [Spine] DONE | rows=5 | elapsed=0:00:30.751436
+2026-04-06 12:57:10,754 | INFO | [PH] START
+2026-04-06 12:57:41,991 | INFO | === NS Metrics Run START ===
+2026-04-06 12:57:41,993 | INFO | Selected team: all
+2026-04-06 12:57:41,995 | INFO | [Spine] START
+2026-04-06 12:58:02,708 | ERROR | [Spine] FAIL | elapsed=0:00:20.712830 | error='wp3_hour_rows'
+2026-04-06 12:58:02,708 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3156, in <lambda>
+    extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 725, in scrape_workbook_with_config
+    wp3_hour_rows = cfg["rows"]["wp3_hour_rows"]
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'wp3_hour_rows'
+
+2026-04-06 12:58:02,708 | INFO | [Spine] START
+2026-04-06 12:58:44,039 | INFO | [Spine] DONE | rows=5 | elapsed=0:00:41.331072
+2026-04-06 12:58:44,042 | INFO | [PH] START
+2026-04-06 12:58:50,061 | INFO | === NS Metrics Run START ===
+2026-04-06 12:58:50,062 | INFO | Selected team: all
+2026-04-06 12:58:50,065 | INFO | [Spine] START
+2026-04-06 12:59:03,128 | ERROR | [Spine] FAIL | elapsed=0:00:13.062943 | error='wp3_hour_rows'
+2026-04-06 12:59:03,128 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3156, in <lambda>
+    extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 725, in scrape_workbook_with_config
+    wp3_hour_rows = cfg["rows"]["wp3_hour_rows"]
+                    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'wp3_hour_rows'
+
+2026-04-06 12:59:03,128 | INFO | [Spine] START
+2026-04-06 12:59:40,765 | INFO | [Spine] DONE | rows=5 | elapsed=0:00:37.637344
+2026-04-06 12:59:40,765 | INFO | [PH] START
