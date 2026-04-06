@@ -687,6 +687,7 @@ ACTIVITY_MAP = {
     "coding updates and next gen updates":"Next Gen",
     "gap and internal qa":"QA",
     "weekly status meeting": "Meeting",
+    "standard breaks (i.e. two 15 min per day)":"Break",
     "mdsap audit (tuesday to thursday)":"Audit",
     "staff meeting": "Meeting",
     "apni career day":"Career Development",
