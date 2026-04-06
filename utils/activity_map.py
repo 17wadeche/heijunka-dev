@@ -1686,6 +1686,7 @@ ACTIVITY_MAP = {
     "sh vig review/querie": "Question",
     "aged wip review":"WIP/Event Review",
     "file review":"WIP/Event Review",
+    "review":"WIP/Event Review",
     "rpa meeting": "RPA Meeting/Action",
     "rpa meeting and action": "RPA Meeting/Action",
     "fer capa report/review": "CAPA",
