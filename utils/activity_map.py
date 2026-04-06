@@ -1570,6 +1570,7 @@ ACTIVITY_MAP = {
     "fu questions meeting":"Meeting",
     "fu questions pre-work":"Question",
     "investigation call":"Meeting",
+    "working mnav":"Other Team WIP",
     "mfg response call":"Meeting",
     "ng, collaboration, event review, meetings, lates, email/admin":"Next Gen",
     "ng, gb, coding, meetings, collaboration, rrtt review":"Next Gen",
