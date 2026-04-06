@@ -776,6 +776,7 @@ ACTIVITY_MAP = {
     "other-please specify":"Other",
     "other- please specify":"Other",
     "code gov":"Coding/Code Gov",
+    "coding/code gov":"Coding/Code Gov",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
