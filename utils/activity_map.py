@@ -62,6 +62,7 @@ ACTIVITY_MAP = {
     "scrum & audit meeting":"Scrum & Action",
     "run & post gap report (gap owners)":"Gap Report",
     "mc3 / dexter":"MC3",
+    "agile change order":"Change Order",
     "mc3/vital flow":"MC3",
     "mc3/dexter":"MC3",
     "srum":"Scrum & Action",
