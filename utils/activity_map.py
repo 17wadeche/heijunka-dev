@@ -2123,4 +2123,13 @@ ACTIVITY_MAP = {
     "pvh matrix":"Reportability Matrix",
     "reportability matrix":"Reportability Matrix",
     "agile qch/reportability matrix":"Reportability Matrix",
+    "gpt ed training": "Training/Mentoring",
+    "gpt rd training": "Training/Mentoring",
+    "mdtgpt": "MDTGPT Reveiw",
+    "gpt review": "MDTGPT Reveiw",
+    "gpt report review": "MDTGPT Reveiw",
+    "gpt ed": "MDTGPT Reveiw",
+    "mdt gpt rd checker": "MDTGPT Reveiw",
+    "mdt gpt event descriptions": "MDTGPT Reveiw",
+    "medtronic gpt rd check": "MDTGPT Reveiw",
 }
