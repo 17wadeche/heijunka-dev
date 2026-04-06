@@ -1707,7 +1707,7 @@ with tabs[0]:
                         .interactive()
                     )
                     st.altair_chart(trend_chart, use_container_width=True)
-EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip"}
+EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 with tabs[1]:
