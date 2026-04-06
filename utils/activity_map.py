@@ -434,6 +434,7 @@ ACTIVITY_MAP = {
     "admin (emails, etc)":"Admin",
     "mainenance of cq tools (coding, odc, inv)":"Project Work",
     "late review + rrtt":"RRTT",
+    "rrtt":"RRTT",
     "wip schedule, setting up metrics table": "Metrics & Schedule",
     "audit checkin" : "Audit",
     "heijunka review/update" : "Metrics & Schedule",
