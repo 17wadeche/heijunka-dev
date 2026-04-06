@@ -1268,7 +1268,7 @@ ACTIVITY_MAP = {
     "update std instr for final vig":"Admin",
     "quality check":"QA",
     "quality checks":"QA",
-    "quality check/enterprise q":"QA",
+    "quality check/enterprise qa":"QA",
     "2 paid 15 minute breaks":"Break",
     "2 paid 15 minute break":"Break",
     "meeting letter generation":"Meeting",
