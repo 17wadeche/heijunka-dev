@@ -12,12 +12,14 @@ from zipfile import BadZipFile
 TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm": "MCS",
     r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived Heijunka\2026": "CDS",
+    r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB": "DS",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
 }
 MCS_ROOT_HINT = _norm_mcs = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling")
 CDS_ROOT_HINT = _norm_cds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived Heijunka\2026")
+DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB")
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
 _PROD_PAT = re.compile(r"\b(production|product)\s+analysis\b", re.IGNORECASE)
 _MONTH_MAP = {
@@ -40,6 +42,8 @@ def team_for_source(path: str) -> str:
     np = _norm_path(path)
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
+    if np.startswith(DS_ROOT_HINT):
+        return "DS"
     if np.startswith(CDS_ROOT_HINT):
         return "CDS"
     if np.startswith(MCS_ROOT_HINT):
@@ -52,24 +56,30 @@ def parse_period_date_from_text(text: str, *, default_year: Optional[int] = None
     s = (text or "").strip()
     if not s:
         return None
-    m = re.search(r"(\d{1,2})\s*[-/ ]\s*([A-Za-z]{3,9})(?:\s*[-/ ]\s*(\d{2,4}))?", s)
-    if not m:
-        return None
-    day = int(m.group(1))
-    mon_raw = m.group(2).strip().lower()
-    year_raw = m.group(3)
-    if mon_raw not in _MONTH_MAP:
-        return None
-    month = _MONTH_MAP[mon_raw]
-    year = default_year
-    if year_raw:
-        year = int(year_raw)
-        if year < 100:
-            year += 2000
-    try:
-        return _dt.date(year, month, day)
-    except ValueError:
-        return None
+    patterns = [
+        r"(\d{1,2})\s*[-/ ]\s*([A-Za-z]{3,9})(?:\s*[-/ ]\s*(\d{2,4}))?",
+        r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})\b",
+    ]
+    for pat in patterns:
+        m = re.search(pat, s)
+        if not m:
+            continue
+        day = int(m.group(1))
+        mon_raw = m.group(2).strip().lower()
+        year_raw = m.group(3)
+        if mon_raw not in _MONTH_MAP:
+            continue
+        month = _MONTH_MAP[mon_raw]
+        year = default_year
+        if year_raw:
+            year = int(year_raw)
+            if year < 100:
+                year += 2000
+        try:
+            return _dt.date(year, month, day)
+        except ValueError:
+            return None
+    return None
 def parse_period_date_from_sheetname(sheet_name: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
     return parse_period_date_from_text(sheet_name, default_year=default_year)
 def parse_period_date_from_filename(path: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
@@ -381,6 +391,191 @@ def compute_output_by_station_by_person_cds(ws_prod: Worksheet) -> Dict[str, Dic
         out.setdefault(cell_station, {})
         out[cell_station][person] = out[cell_station].get(person, 0.0) + output
     return out
+def _sheet_ci(wb, name: str) -> Optional[str]:
+    want = name.strip().lower()
+    for sheet_name in wb.sheetnames:
+        if sheet_name.strip().lower() == want:
+            return sheet_name
+    return None
+def _is_ds_excluded_category(v: Any) -> bool:
+    s = str(v).strip().lower() if v is not None else ""
+    return s in {"non-wip", "essential non-wip"}
+def _iter_rows_ds_pab(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float], Optional[float]]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        person = ws_pab[f"C{r}"].value
+        category = ws_pab[f"D{r}"].value
+        cell_station = ws_pab[f"E{r}"].value
+        target = _cell_number(ws_pab[f"G{r}"].value)
+        hours_i = _cell_number(ws_pab[f"I{r}"].value)
+        actual_j = _cell_number(ws_pab[f"J{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        cat = str(category).strip() if category is not None else ""
+        cs = str(cell_station).strip() if cell_station is not None else ""
+        if p == "" and cat == "" and cs == "" and target is None and hours_i is None and actual_j is None:
+            continue
+        yield (r, p, cat, cs, target, hours_i, actual_j)
+def compute_total_available_hours_ds(ws_wip_plan: Worksheet) -> Optional[float]:
+    return _cell_number(ws_wip_plan["EG3"].value)
+def compute_completed_hours_ds(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    total = _cell_number(ws_perf["R46"].value)
+    actual_by_person: Dict[str, float] = {}
+    people_in_wip: List[str] = []
+    seen = set()
+    for r in range(5, 46):
+        person = ws_perf[f"A{r}"].value
+        actual = _cell_number(ws_perf[f"R{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or actual is None or actual == 0:
+            continue
+        actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        if p not in seen:
+            seen.add(p)
+            people_in_wip.append(p)
+    return total, actual_by_person, people_in_wip
+def compute_person_available_hours_ds(ws_perf: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in range(5, 46):
+        person = ws_perf[f"A{r}"].value
+        available = _cell_number(ws_perf[f"Q{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or available is None:
+            continue
+        out[p] = out.get(p, 0.0) + available
+    return out
+def compute_target_actual_output_ds(ws_pab: Worksheet) -> Tuple[float, float]:
+    targ = 0.0
+    act = 0.0
+    for _, _, _, _, target, _, actual in _iter_rows_ds_pab(ws_pab):
+        if target is not None:
+            targ += target
+        if actual is not None:
+            act += actual
+    return targ, act
+def compute_outputs_by_person_ds(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, _, _, target, _, actual in _iter_rows_ds_pab(ws_pab):
+        if not person or is_excluded_person(person):
+            continue
+        out.setdefault(person, {"output": 0.0, "target": 0.0})
+        if target is not None:
+            out[person]["target"] += target
+        if actual is not None:
+            out[person]["output"] += actual
+    return out
+def compute_outputs_by_station_ds(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, _, category, cell_station, target, _, actual in _iter_rows_ds_pab(ws_pab):
+        if not cell_station or _is_ds_excluded_category(category):
+            continue
+        out.setdefault(cell_station, {"output": 0.0, "target": 0.0})
+        if target is not None:
+            out[cell_station]["target"] += target
+        if actual is not None:
+            out[cell_station]["output"] += actual
+    return out
+def compute_station_hours_ds(ws_pab: Worksheet) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    for _, person, category, cell_station, _, hours_i, actual_j in _iter_rows_ds_pab(ws_pab):
+        if not cell_station or _is_ds_excluded_category(category):
+            continue
+        if hours_i is not None:
+            station_hours[cell_station] = station_hours.get(cell_station, 0.0) + hours_i
+        if not person or is_excluded_person(person):
+            continue
+        hours_by_person_val = actual_j
+        if hours_by_person_val is None:
+            continue
+        station_hours_by_person.setdefault(cell_station, {})
+        station_hours_by_person[cell_station][person] = station_hours_by_person[cell_station].get(person, 0.0) + hours_by_person_val
+    return station_hours, station_hours_by_person
+def compute_output_by_station_by_person_ds(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, category, cell_station, _, hours_i, _ in _iter_rows_ds_pab(ws_pab):
+        if not person or not cell_station or is_excluded_person(person) or _is_ds_excluded_category(category):
+            continue
+        if hours_i is None:
+            continue
+        out.setdefault(cell_station, {})
+        out[cell_station][person] = out[cell_station].get(person, 0.0) + hours_i
+    return out
+def scrape_one_workbook_ds(path: str) -> List[Dict[str, Any]]:
+    team = team_for_source(path)
+    wb = load_workbook(path, data_only=True)
+    err_msgs: List[str] = []
+    ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
+    ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
+    ws_perf = wb[_sheet_ci(wb, "#5 Performance WIP Time")] if _sheet_ci(wb, "#5 Performance WIP Time") else None
+    if ws_wip_plan is None:
+        err_msgs.append("missing_#1_wip_plan_sheet")
+    if ws_pab is None:
+        err_msgs.append("missing_#2_pab_sheet")
+    if ws_perf is None:
+        err_msgs.append("missing_#5_performance_wip_time_sheet")
+    period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        return []
+    total_available = None
+    completed_hours = None
+    actual_hours_by_person: Dict[str, float] = {}
+    people: List[str] = []
+    person_avail: Dict[str, float] = {}
+    target_output = None
+    actual_output = None
+    outputs_by_person: Dict[str, Dict[str, float]] = {}
+    outputs_by_station: Dict[str, Dict[str, float]] = {}
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    output_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    try:
+        if ws_wip_plan is not None:
+            total_available = compute_total_available_hours_ds(ws_wip_plan)
+        if ws_perf is not None:
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_ds(ws_perf)
+            person_avail = compute_person_available_hours_ds(ws_perf)
+        if ws_pab is not None:
+            target_output, actual_output = compute_target_actual_output_ds(ws_pab)
+            outputs_by_person = compute_outputs_by_person_ds(ws_pab)
+            outputs_by_station = compute_outputs_by_station_ds(ws_pab)
+            station_hours, station_hours_by_person = compute_station_hours_ds(ws_pab)
+            output_by_station_by_person = compute_output_by_station_by_person_ds(ws_pab)
+            uplh_by_station_by_person = compute_uplh_by_station_by_person(output_by_station_by_person, station_hours_by_person)
+    except Exception as e:
+        err_msgs.append(f"ds_parse_error: {e!r}")
+    target_uplh = safe_div(float(target_output or 0.0), float(completed_hours or 0.0))
+    actual_uplh = safe_div(float(actual_output or 0.0), float(completed_hours or 0.0))
+    hc_in_wip = len(people) if ws_perf is not None else ""
+    actual_hc_used = safe_div(float(completed_hours or 0.0), 32.5)
+    return [{
+        "team": team,
+        "period_date": iso_date(period),
+        "source_file": path,
+        "Total Available Hours": float(total_available) if total_available is not None else "",
+        "Completed Hours": float(completed_hours) if completed_hours is not None else "",
+        "Target Output": float(target_output) if target_output is not None else "",
+        "Actual Output": float(actual_output) if actual_output is not None else "",
+        "Target UPLH": float(target_uplh) if target_uplh is not None else "",
+        "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
+        "UPLH WP1": "",
+        "UPLH WP2": "",
+        "HC in WIP": hc_in_wip,
+        "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
+        "People in WIP": dumps_json(people) if ws_perf is not None else "",
+        "Person Hours": build_person_hours_json(person_avail, actual_hours_by_person) if (ws_perf is not None) else "",
+        "Outputs by Person": dumps_json(outputs_by_person) if ws_pab is not None else "",
+        "Outputs by Cell/Station": dumps_json(outputs_by_station) if ws_pab is not None else "",
+        "Cell/Station Hours": dumps_json(station_hours) if ws_pab is not None else "",
+        "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
+        "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
+        "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
+        "Open Complaint Timeliness": "",
+        "error": "; ".join(err_msgs) if err_msgs else "",
+        "Closures": "",
+        "Opened": "",
+    }]
+
+
 def build_person_hours_json(available_by_person: Dict[str, float], actual_by_person: Dict[str, float]) -> str:
     all_people = sorted(set(available_by_person.keys()) | set(actual_by_person.keys()))
     payload = {}
@@ -549,6 +744,8 @@ def scrape_one_workbook_cds(path: str) -> List[Dict[str, Any]]:
 def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
     try:
+        if team == "DS":
+            return scrape_one_workbook_ds(path)
         if team == "CDS":
             return scrape_one_workbook_cds(path)
         return scrape_one_workbook_mcs(path)
@@ -608,6 +805,7 @@ def main() -> int:
     default_paths = [
         r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived Heijunka\2026",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")
