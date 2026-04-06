@@ -435,6 +435,7 @@ ACTIVITY_MAP = {
     "mainenance of cq tools (coding, odc, inv)":"Project Work",
     "late review + rrtt":"RRTT",
     "rrtt":"RRTT",
+    "ae support":"Other Team WIP",
     "wip schedule, setting up metrics table": "Metrics & Schedule",
     "audit checkin" : "Audit",
     "heijunka review/update" : "Metrics & Schedule",
