@@ -1406,6 +1406,7 @@ ACTIVITY_MAP = {
     "ad hoc ri data request from pmpa": "PMPA",
     "emails/adming":"Email & IM",
     "meetings other": "Meeting",
+    "meetings": "Meeting",
     "tm trainer":"Training/Mentoring",
     "emails qa scrumb":"Email & IM",
     "pmpa question/update": "PMPA",
