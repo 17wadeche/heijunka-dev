@@ -2117,5 +2117,10 @@ ACTIVITY_MAP = {
     "meeting & action": "Meeting",
     "cornerston":"Cornerstone",
     "team lead meeting & action": "Meeting",
-    "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",        
+    "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",     
+    "reportability matrix update":"Reportability Matrix",
+    "aortic matrix":"Reportability Matrix",
+    "pvh matrix":"Reportability Matrix",
+    "reportability matrix":"Reportability Matrix",
+    "agile qch/reportability matrix":"Reportability Matrix",
 }
