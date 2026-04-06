@@ -1553,6 +1553,7 @@ ACTIVITY_MAP = {
     "workday":"Career Development",
     "holiday program":"Meeting",
     "letter a3":"Problem Solving",
+    "letter a":"Problem Solving",
     "rfai call": "Meeting",
     "iris project and meeting":"Project Work",
     "mail":"Email & IM",
