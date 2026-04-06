@@ -778,6 +778,7 @@ ACTIVITY_MAP = {
     "code gov":"Coding/Code Gov",
     "coding/code gov":"Coding/Code Gov",
     "coding":"Coding/Code Gov",
+    "run wr/ heijunka / filtering inbox": "Metrics & Schedule",
     "out of office":"OOO",
     "2 paid 15 min":"Break",
     "classroom training (d2d, emea, etc)":"Training/Mentoring",
