@@ -436,6 +436,7 @@ ACTIVITY_MAP = {
     "late review + rrtt":"RRTT",
     "rrtt":"RRTT",
     "ae support":"Other Team WIP",
+    "sl":"OOO",
     "wip schedule, setting up metrics table": "Metrics & Schedule",
     "audit checkin" : "Audit",
     "heijunka review/update" : "Metrics & Schedule",
