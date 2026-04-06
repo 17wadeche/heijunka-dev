@@ -1524,7 +1524,6 @@ factor_out_ooo = st.toggle(
     "Factor out OOO from calculations",
     value=False,
     key="factor_out_ooo",
-    help="When on, OOO is removed from the denominator for percentages, OOO Hours/OOO % are shown as 0, and Unaccounted is recalculated against capacity excluding OOO. Applies to both Overview and Export tabs.",
 )
 tabs = st.tabs(["Overview", "Non-WIP", "Export"])
 @st.cache_data(show_spinner=False)
