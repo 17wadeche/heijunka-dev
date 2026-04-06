@@ -770,6 +770,7 @@ ACTIVITY_MAP = {
     "signal review":"Technical Assessment",
     "technical assessment and post market meetings, peic update":"Technical Assessment",
     "technical assessment review":"Technical Assessment",
+    "tech assessment review":"Technical Assessment",
     "technical assessment and post market meetings, peic updates, signal review":"Technical Assessment",
     "other-please specify":"Other",
     "other- please specify":"Other",
