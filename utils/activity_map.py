@@ -43,6 +43,7 @@ ACTIVITY_MAP = {
     "scrum, collaboration":"Scrum & Action",
     "monthly precedent event meeting":"Precedent Event",
     "monthly precedent events review":"Precedent Event",
+    "monthly precedent event review":"Precedent Event",
     "precedent event capa":"CAPA",
     "monthly precedent events":"Precedent Event",
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
