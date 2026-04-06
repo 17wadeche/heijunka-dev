@@ -1958,6 +1958,12 @@ def _col_letter_to_idx(letter: str) -> int:
             continue
         n = n * 26 + (ord(ch) - ord("A") + 1)
     return n - 1
+def find_total_row(ws: pd.DataFrame, name_col: int = 0, start_row: int = 0) -> int:
+    for i in range(start_row, len(ws)):
+        name = norm_name(ws.iat[i, name_col] if ws.shape[1] > name_col else "")
+        if name.casefold() in {"total", "totals"}:
+            return i
+    return len(ws) - 1
 def build_capacity_fixed_row(
     team: str,
     ws: pd.DataFrame,
@@ -2489,7 +2495,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\SCS Non-D2D WIP Tracker 2026.xlsx"),
         layout=StandardLayout(
             people_start_row=2, totals_row=27,
-            activity_header_row=1, activity_start_col=3, activity_end_col=36,
+            activity_header_row=1, activity_start_col=3, activity_end_col=38,
             min_rows=26, min_cols=3,
         ),
         week_from_sheet=week_from_sheetname_date,
@@ -2517,7 +2523,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Other\PH Non-D2D WIP.xlsx"),
         layout=StandardLayout(
             people_start_row=2, totals_row=17,
-            activity_header_row=1, activity_start_col=3, activity_end_col=37,
+            activity_header_row=1, activity_start_col=3, activity_end_col=38,
             min_rows=17, min_cols=3,
         ),
         week_from_sheet=week_from_sheetname_date,
@@ -2660,17 +2666,34 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 continue
             if ws.shape[0] < cfg.min_rows or ws.shape[1] < cfg.min_cols:
                 continue
-            people_rows = read_people_block(
-                ws,
-                start_row_i=cfg.people_start_row,
-                end_row_i=cfg.totals_row - 1,
-                team=team_src.team,
-                sheet_name=sheet_name,
-                week=week,
-            )
-            people_count = len(set(r["name"] for r in people_rows))
-            b = safe_float(ws.iat[cfg.totals_row, 1] if ws.shape[1] > 1 else np.nan)
-            c = safe_float(ws.iat[cfg.totals_row, 2] if ws.shape[1] > 2 else np.nan)
+            if team_src.team == "SCS":
+                actual_totals_row = find_total_row(ws, name_col=0, start_row=cfg.people_start_row)
+                people_rows = read_people_block(
+                    ws,
+                    start_row_i=cfg.people_start_row,
+                    end_row_i=actual_totals_row - 1,
+                    team=team_src.team,
+                    sheet_name=sheet_name,
+                    week=week,
+                )
+                people_count = len(set(
+                    r["name"] for r in people_rows
+                    if is_real_person(r["name"])
+                ))
+                b = safe_float(ws.iat[actual_totals_row, 1] if ws.shape[1] > 1 else np.nan)
+                c = safe_float(ws.iat[actual_totals_row, 2] if ws.shape[1] > 2 else np.nan)
+            else:
+                people_rows = read_people_block(
+                    ws,
+                    start_row_i=cfg.people_start_row,
+                    end_row_i=cfg.totals_row - 1,
+                    team=team_src.team,
+                    sheet_name=sheet_name,
+                    week=week,
+                )
+                people_count = len(set(r["name"] for r in people_rows))
+                b = safe_float(ws.iat[cfg.totals_row, 1] if ws.shape[1] > 1 else np.nan)
+                c = safe_float(ws.iat[cfg.totals_row, 2] if ws.shape[1] > 2 else np.nan)
             total_nonwip_hours = (b - c) if pd.notna(b) and pd.notna(c) else np.nan
             ooo_hours = c if pd.notna(c) else np.nan
             nonwip_by_person = build_nonwip_by_person_b_minus_c(people_rows)
