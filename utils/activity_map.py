@@ -1557,6 +1557,7 @@ ACTIVITY_MAP = {
     "rfai call": "Meeting",
     "iris project and meeting":"Project Work",
     "mail":"Email & IM",
+    "emails/im":"Email & IM",
     "morning admin": "Admin",
     "lab monthly meeting project work":"Project Work",
     "meetings voyager transfer":"Meeting",
