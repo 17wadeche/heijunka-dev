@@ -2156,6 +2156,8 @@ ACTIVITY_MAP = {
     "call after scrum":"Scrum & Action",
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
+    "daily scrum & monthly problem solving  meeting":"Scrum & Action",
+    "daily scrum & mfg/exp date updates":"Scrum & Action",
     "rs inbox":"RS Inbox",
     "aortic ri report":"RI",
     "next gen call":"Next Gen",
