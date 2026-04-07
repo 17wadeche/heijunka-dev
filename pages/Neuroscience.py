@@ -211,6 +211,7 @@ NAME_ALIASES = {
     "rick kennedy":"Rick",
     "surekha raju anantarapu":"Surekha Raju",
     "anwar, mohd faiz":"Mohd Faiz Anwar",
+    "mohd anwar":"Mohd Faiz Anwar",
     "dominick olaes":"Dominick",
     "tabitha robertson":"Tabitha",
     "mariyadas, abhish":"Abhish Mariyadas",
