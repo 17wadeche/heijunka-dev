@@ -1490,6 +1490,8 @@ ACTIVITY_MAP = {
     "gch masterdata/tech mtg":"Data Request/Review",
     "archeive boxe":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
+    "precedent event monthly review & weekly list":"Precedent Event",
+    "precedent event monthly review":"Precedent Event",
     "imdrf code call": "Meeting",
     "escalations on external dependencies":"Escalations",
     "file escalations/sr":"Escalations",
