@@ -221,7 +221,7 @@ NAME_ALIASES = {
     "kasi":"Kasi M",
     "divya, netti":"Netti",
     "patil, shankar":"Shankar",
-    "M G":"MG",
+    "m g":"MG",
     "nath, koushik":"Koushik Nath",
     "iligiri, gopikalyani":"Gopikalyani Iligiri",
     "gowda, manjunath":"Manjunath Gowda",
