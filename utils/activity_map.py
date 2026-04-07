@@ -1529,6 +1529,7 @@ ACTIVITY_MAP = {
     "meeting with tm":"Meeting",
     "emails admin scrumber":"Email & IM",
     "meetings, training":"Meeting",
+    "meeting minute":"Meeting",
     "scrum prim":"Prism",
     "scrum prism":"Prism",
     "lab requests, scrum, question":"Scrum & Action",
