@@ -1527,6 +1527,8 @@ ACTIVITY_MAP = {
     "traing":"Training/Mentoring",
     "complex/consult training":"Training/Mentoring",
     "meeting with tm":"Meeting",
+    "emails admin scrumber":"Email & IM",
+    "training/collaboration":"Training/Mentoring",
     "sme improvement projects/ problem solving":"Problem Solving",
     "sme improvement projects/ problem solving/ cw updates":"Problem Solving",
     "training, scrum":"Training/Mentoring",
