@@ -618,6 +618,8 @@ def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     period = parse_period_date_from_filename(path, default_year=2026)
     if period is None:
         return []
+    if period < _dt.date(2026, 4, 1):
+        return []
     total_available = None
     completed_hours = None
     actual_hours_by_person: Dict[str, float] = {}
