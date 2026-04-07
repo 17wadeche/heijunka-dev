@@ -1490,6 +1490,7 @@ ACTIVITY_MAP = {
     "gch masterdata/tech mtg":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
+    "escalations on external dependencies":"Escalations",
     "pvh tier": "Meeting",
     "pmpa meeting 30": "Meeting",
     "quality town hall viewing": "Meeting",
