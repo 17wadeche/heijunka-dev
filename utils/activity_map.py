@@ -1695,6 +1695,7 @@ ACTIVITY_MAP = {
     "pmq mfg assessment call": "PMQ Meeting",
     "sh vig review/querie": "Question",
     "aged wip review":"WIP/Event Review",
+    "pvh open wip report":"WIP/Event Review",
     "file review":"WIP/Event Review",
     "review":"WIP/Event Review",
     "mc3 integration":"MC3",
