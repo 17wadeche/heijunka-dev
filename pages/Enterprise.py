@@ -236,19 +236,28 @@ def _build_nonwip_activity_summary(
     df = df[
         ~df["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
     ].copy()
-
     if df.empty:
         return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    df["activity_norm"] = df["activity"].map(_norm_activity_name)
+    label_map = (
+        df.assign(activity_len=df["activity"].astype(str).str.len())
+        .sort_values(["activity_norm", "activity_len", "activity"], ascending=[True, False, True])
+        .drop_duplicates(subset=["activity_norm"])
+        .loc[:, ["activity_norm", "activity"]]
+        .rename(columns={"activity": "Activity"})
+    )
     summary = (
-        df.groupby("activity", as_index=False)
+        df.groupby("activity_norm", as_index=False)
         .agg(
             occurrence_count=("activity", "size"),
             total_hours=("hours", "sum"),
         )
-        .sort_values(["total_hours", "occurrence_count", "activity"], ascending=[False, False, True])
+        .merge(label_map, on="activity_norm", how="left")
+        .sort_values(["total_hours", "occurrence_count", "Activity"], ascending=[False, False, True])
         .head(int(top_n))
         .reset_index(drop=True)
     )
+    summary = summary[["Activity", "occurrence_count", "total_hours"]]
     summary.insert(0, "Rank", range(1, len(summary) + 1))
     summary = summary.rename(
         columns={
@@ -1921,20 +1930,26 @@ with tabs[1]:
     rolled = rolled.rename(columns={"Activity": "activity", "Hours": "hours"})
     rolled["activity_norm"] = rolled["activity"].map(_norm_activity_name)
     rolled = rolled[~rolled["activity_norm"].isin(EXCLUDED_NON_WIP)].copy()
-    if rolled.empty:
-        st.info('No activity data available after excluding "OOO" and "Non-WIP".')
-        st.stop()
+    label_map = (
+        rolled.assign(activity_len=rolled["activity"].astype(str).str.len())
+        .sort_values(["activity_norm", "activity_len", "activity"], ascending=[True, False, True])
+        .drop_duplicates(subset=["activity_norm"])
+        .loc[:, ["activity_norm", "activity"]]
+        .rename(columns={"activity": "display_activity"})
+    )
     weekly_by_activity = (
-        rolled.groupby(["week_start", "activity"], as_index=False)
+        rolled.groupby(["week_start", "activity_norm"], as_index=False)
         .agg(hours=("hours", "sum"))
+        .merge(label_map, on="activity_norm", how="left")
         .sort_values(["week_start", "hours"], ascending=[True, False])
     )
     total_hours = (
-        weekly_by_activity.groupby("activity", as_index=False)
+        weekly_by_activity.groupby(["activity_norm", "display_activity"], as_index=False)
         .agg(total_hours=("hours", "sum"))
         .sort_values("total_hours", ascending=False)
         .head(int(top_n))
         .reset_index(drop=True)
+        .rename(columns={"display_activity": "activity"})
     )
     if total_hours.empty:
         st.info("No chartable Non-WIP activity data available after exclusions.")
