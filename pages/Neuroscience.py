@@ -238,6 +238,14 @@ def normalize_person_name(name: str) -> str:
     s = " ".join(s.split())
     key = s.lower()
     return NAME_ALIASES.get(key, s)
+PERSON_WEEKLY_HOURS = {
+    "Chelsey": 16.0,
+    "MG": 36.0,
+    "Lindsey": 32.0,
+}
+def weekly_hours_for_person(name: str, default: float = 40.0) -> float:
+    person = normalize_person_name(name)
+    return float(PERSON_WEEKLY_HOURS.get(person, default))
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     _NA_STRINGS = {
         "": np.nan, "-": np.nan, "–": np.nan, "—": np.nan,
@@ -775,10 +783,19 @@ def build_person_weekly_accounting(
     )
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
-    out["Expected Hours"] = np.where(
-        out["person_key"].isin(irl_people_norm),
-        39.0,
-        float(week_hours),
+    PERSON_WEEKLY_HOURS = {
+        "chelsey": 16.0,
+        "mg": 36.0,
+        "lindsey": 32.0,
+    }
+    def get_expected_hours(person_key: str, default_hours: float, irl_people_norm: set[str]) -> float:
+        if person_key in PERSON_WEEKLY_HOURS:
+            return PERSON_WEEKLY_HOURS[person_key]
+        if person_key in irl_people_norm:
+            return 39.0
+        return float(default_hours)
+    out["Expected Hours"] = out["person_key"].apply(
+        lambda p: get_expected_hours(p, week_hours, irl_people_norm)
     )
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
