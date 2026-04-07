@@ -8,9 +8,16 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 import numpy as np
+from datetime import datetime
 import io
 from utils.activity_map import ACTIVITY_MAP
 import altair as alt
+def get_page_last_updated_label() -> str:
+    try:
+        ts = datetime.fromtimestamp(Path(__file__).stat().st_mtime)
+        return f"Last updated: {ts.strftime('%Y-%m-%d %I:%M %p')}"
+    except Exception:
+        return "Last updated: Unknown"
 def _candidate_repo_roots(start: Path) -> List[Path]:
     roots: List[Path] = []
     p = start.resolve()
@@ -995,6 +1002,8 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     out["Activity"] = out["Activity"].map(_canon_activity)
     return out.groupby("Activity", as_index=False)["Hours"].sum()
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
+with st.sidebar:
+    st.caption(get_page_last_updated_label())
 _maybe_apply_styles()
 st.title("Enterprise Dashboard")
 org, org_err, attempted_paths, cfg_path_str = load_org_config()
