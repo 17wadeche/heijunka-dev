@@ -8,8 +8,10 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
+DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 TEAM_BY_SOURCE: Dict[str, str] = {
-    r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm": "MCS",
+    os.path.normpath(MCS_DEFAULT_PATH): "MCS",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
@@ -43,14 +45,26 @@ CSV_COLUMNS = [
     "wip_workers_count",
     "wip_workers_ooo_hours",
 ]
+DS_PAB_SHEET = "#2 PAB"
+DS_WIP_PLAN_SHEET = "# 1 WIP plan"
+DS_PERF_WIP_SHEET = "#5 Performance WIP Time"
+DS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
+DS_PEOPLE_COUNT = 41
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
+    ds_root = _norm_path(DS_DEFAULT_DIR)
+    if np.startswith(ds_root + os.sep) or np == ds_root:
+        return "DS"
     base = os.path.basename(np)
-    return TEAM_BY_BASENAME.get(base, "")
+    if base in TEAM_BY_BASENAME:
+        return TEAM_BY_BASENAME[base]
+    if "defibrillation solutions" in np.lower():
+        return "DS"
+    return ""
 def _norm_text(x: str) -> str:
     return re.sub(r"\s+", " ", (x or "").strip()).lower()
 def _collapse_ws(x: str) -> str:
@@ -60,6 +74,8 @@ def normalize_person_name(name: str) -> str:
     if not s:
         return ""
     return s.title()
+def normalize_person_key(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", _norm_text(name))
 def is_excluded_person(name: str) -> bool:
     n = _norm_text(name)
     return n in {"", "do not use", "team member(s)"}
@@ -86,6 +102,40 @@ def parse_period_date_from_sheetname(sheet_name: str, *, default_year: Optional[
         return _dt.date(year, month, day)
     except ValueError:
         return None
+def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
+    base = os.path.basename(filename)
+    stem, _ = os.path.splitext(base)
+    patterns = [
+        r"(?<!\d)(\d{1,2})([A-Za-z]{3,9})(\d{4})(?!\d)",            # 06APR2026
+        r"(?<!\d)(\d{1,2})[\s\-_]+([A-Za-z]{3,9})[\s\-_]+(\d{4})(?!\d)",  # 06 APR 2026
+        r"(?<!\d)(\d{4})[\s\-_]+(\d{1,2})[\s\-_]+(\d{1,2})(?!\d)",  # 2026-04-06
+        r"(?<!\d)(\d{1,2})[\s\-_\/]+(\d{1,2})[\s\-_\/]+(\d{4})(?!\d)",  # 04-06-2026
+    ]
+    for pat in patterns:
+        m = re.search(pat, stem)
+        if not m:
+            continue
+        try:
+            if pat == patterns[0] or pat == patterns[1]:
+                day = int(m.group(1))
+                mon_raw = m.group(2).lower()
+                year = int(m.group(3))
+                if mon_raw not in _MONTH_MAP:
+                    continue
+                return _dt.date(year, _MONTH_MAP[mon_raw], day)
+            if pat == patterns[2]:
+                year = int(m.group(1))
+                month = int(m.group(2))
+                day = int(m.group(3))
+                return _dt.date(year, month, day)
+            if pat == patterns[3]:
+                month = int(m.group(1))
+                day = int(m.group(2))
+                year = int(m.group(3))
+                return _dt.date(year, month, day)
+        except ValueError:
+            continue
+    return None
 def iso_date(d: Optional[_dt.date]) -> str:
     return d.isoformat() if isinstance(d, _dt.date) else ""
 def _cell_number(v: Any) -> Optional[float]:
@@ -94,9 +144,14 @@ def _cell_number(v: Any) -> Optional[float]:
     if isinstance(v, (int, float)):
         return float(v)
     if isinstance(v, str):
-        vs = v.strip()
+        vs = v.strip().replace(",", "")
         if vs == "":
             return None
+        if vs.endswith("%"):
+            try:
+                return float(vs[:-1]) / 100.0
+            except ValueError:
+                return None
         try:
             return float(vs)
         except ValueError:
@@ -142,7 +197,7 @@ def iter_prod_rows(ws_prod: Worksheet, start_row: int = 7, end_row: int = 406) -
         yield (r, p, s, target, output)
 def wip_workers_from_prod(ws_prod: Worksheet) -> List[str]:
     seen = set()
-    for r, person, station, target, output in iter_prod_rows(ws_prod, start_row=7):
+    for _, person, station, target, output in iter_prod_rows(ws_prod, start_row=7):
         if output is None:
             continue
         if is_excluded_person(person):
@@ -153,16 +208,16 @@ def wip_workers_from_prod(ws_prod: Worksheet) -> List[str]:
         seen.add(norm_person)
     return sorted(seen)
 NON_WIP_SPECS = [
-    ("A13", ("B18", "F21"), "A", ("B17", "F17")),  # top-left block (often Do Not Use)
-    ("A23", ("B28", "F31"), "A", ("B27", "F27")),  # left block lower
-    ("H3",  ("I8", "M11"), "H", ("I7", "M7")),     # middle top
-    ("H23", ("I28", "M31"), "H", ("I27", "M27")),  # middle
-    ("H33", ("I38", "M41"), "H", ("I37", "M37")),  # middle lower
-    ("O3",  ("P8", "T11"), "O", ("P7", "T7")),     # right top
-    ("O13", ("P18", "T21"), "O", ("P17", "T17")),  # right
-    ("O23", ("P28", "T31"), "O", ("P27", "T27")),  # right
-    ("O43", ("P48", "T51"), "O", ("P47", "T47")),  # right lower
-    ("O53", ("P58", "T61"), "O", ("P57", "T57")),  # right lower
+    ("A13", ("B18", "F21"), "A", ("B17", "F17")),
+    ("A23", ("B28", "F31"), "A", ("B27", "F27")),
+    ("H3",  ("I8", "M11"), "H", ("I7", "M7")),
+    ("H23", ("I28", "M31"), "H", ("I27", "M27")),
+    ("H33", ("I38", "M41"), "H", ("I37", "M37")),
+    ("O3",  ("P8", "T11"), "O", ("P7", "T7")),
+    ("O13", ("P18", "T21"), "O", ("P17", "T17")),
+    ("O23", ("P28", "T31"), "O", ("P27", "T27")),
+    ("O43", ("P48", "T51"), "O", ("P47", "T47")),
+    ("O53", ("P58", "T61"), "O", ("P57", "T57")),
 ]
 def compute_total_non_wip_hours(ws_av: Worksheet) -> float:
     total = 0.0
@@ -250,6 +305,56 @@ def load_completed_hours_from_crm_wip(crm_wip_csv: str) -> Dict[Tuple[str, str],
             if team and period and val is not None:
                 out[(team, period)] = val
     return out
+def parse_people_in_wip_value(value: Any) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        raw_items = value
+    else:
+        s = str(value).strip()
+        if not s:
+            return []
+        try:
+            parsed = json.loads(s)
+            raw_items = parsed if isinstance(parsed, list) else [parsed]
+        except Exception:
+            raw_items = re.split(r"[;,|\n]+", s)
+    out: List[str] = []
+    seen = set()
+    for item in raw_items:
+        name = normalize_person_name(str(item))
+        if not name:
+            continue
+        key = normalize_person_key(name)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+    return out
+def load_people_in_wip_from_crm_wip(crm_wip_csv: str) -> Dict[Tuple[str, str], List[str]]:
+    out: Dict[Tuple[str, str], List[str]] = {}
+    if not os.path.exists(crm_wip_csv):
+        return out
+    with open(crm_wip_csv, "r", encoding="utf-8-sig", newline="") as fp:
+        r = csv.DictReader(fp)
+        for row in r:
+            team = (row.get("team") or "").strip()
+            period = (row.get("period_date") or "").strip()
+            if not team or not period:
+                continue
+            people = parse_people_in_wip_value(row.get("People in WIP"))
+            if not people:
+                continue
+            key = (team, period)
+            existing = out.get(key, [])
+            seen = {normalize_person_key(x) for x in existing}
+            for person in people:
+                pkey = normalize_person_key(person)
+                if pkey not in seen:
+                    existing.append(person)
+                    seen.add(pkey)
+            out[key] = existing
+    return out
 def safe_div(n: float, d: float) -> Optional[float]:
     if d == 0:
         return None
@@ -292,20 +397,132 @@ def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str],
         }
         rows.append(row)
     return rows
+def _get_required_sheet(wb, sheet_name: str) -> Worksheet:
+    if sheet_name not in wb.sheetnames:
+        raise KeyError(f"Missing required sheet: {sheet_name}")
+    return wb[sheet_name]
+def iter_ds_non_wip_rows(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[str, str, float]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        category = _norm_text(str(ws_pab[f"D{r}"].value or ""))
+        if category not in DS_NON_WIP_TYPES:
+            continue
+        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
+        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or ""))
+        hours = _cell_number(ws_pab[f"I{r}"].value)
+        if not person or hours is None:
+            continue
+        yield person, activity, float(hours)
+def compute_ds_total_non_wip_hours(ws_pab: Worksheet) -> float:
+    return float(sum(hours for _, _, hours in iter_ds_non_wip_rows(ws_pab)))
+def compute_ds_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for person, _, hours in iter_ds_non_wip_rows(ws_pab):
+        out[person] = out.get(person, 0.0) + float(hours)
+    return out
+def compute_ds_non_wip_activities(ws_pab: Worksheet) -> List[Dict[str, Any]]:
+    agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in iter_ds_non_wip_rows(ws_pab):
+        key = (person, activity)
+        agg[key] = agg.get(key, 0.0) + float(hours)
+
+    return [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower()))
+    ]
+def compute_ds_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[str]) -> float:
+    worker_keys = {normalize_person_key(x) for x in wip_workers if x}
+    if not worker_keys:
+        return 0.0
+    total = 0.0
+    for r in range(1, ws_wip_plan.max_row + 1):
+        name = str(ws_wip_plan[f"DL{r}"].value or "").strip()
+        if not name:
+            continue
+        if normalize_person_key(name) not in worker_keys:
+            continue
+        val = _cell_number(ws_wip_plan[f"EF{r}"].value)
+        if val is not None:
+            total += float(val)
+    return float(total)
+def scrape_one_ds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
+    period = parse_period_date_from_filename(path)
+    if period is None:
+        return []
+    period_iso = iso_date(period)
+    team = "DS"
+    wb = load_workbook(path, data_only=True)
+    ws_pab = _get_required_sheet(wb, DS_PAB_SHEET)
+    ws_wip_plan = _get_required_sheet(wb, DS_WIP_PLAN_SHEET)
+    ws_perf = _get_required_sheet(wb, DS_PERF_WIP_SHEET)
+    total_non_wip_hours = compute_ds_total_non_wip_hours(ws_pab)
+    ooo_hours = float(_cell_number(ws_wip_plan["EF2"].value) or 0.0)
+    pct_in_wip = _cell_number(ws_perf["J2"].value)
+    non_wip_by_person = compute_ds_non_wip_by_person(ws_pab)
+    non_wip_activities = compute_ds_non_wip_activities(ws_pab)
+    wip_workers = people_in_wip_lookup.get((team, period_iso), [])
+    wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
+    wip_workers_ooo_hours = compute_ds_wip_workers_ooo_hours(ws_wip_plan, wip_workers)
+    row = {
+        "team": team,
+        "period_date": period_iso,
+        "people_count": DS_PEOPLE_COUNT,
+        "total_non_wip_hours": float(total_non_wip_hours),
+        "OOO Hours": float(ooo_hours),
+        "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
+        "non_wip_by_person": json.dumps(non_wip_by_person, ensure_ascii=False),
+        "non_wip_activities": json.dumps(non_wip_activities, ensure_ascii=False),
+        "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+        "wip_workers_count": int(wip_workers_count),
+        "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+    }
+    return [row]
+def expand_input_paths(paths: List[str]) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    def add_file(fp: str) -> None:
+        np = _norm_path(fp)
+        if np in seen:
+            return
+        if not os.path.isfile(np):
+            return
+        ext = os.path.splitext(np)[1].lower()
+        if ext not in {".xlsx", ".xlsm"}:
+            return
+        seen.add(np)
+        out.append(np)
+    for p in paths:
+        np = _norm_path(p)
+        if os.path.isdir(np):
+            for name in sorted(os.listdir(np)):
+                add_file(os.path.join(np, name))
+        else:
+            add_file(np)
+    return out
 def main() -> int:
-    default_path = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
     ap = argparse.ArgumentParser()
-    ap.add_argument("files", nargs="*", help="Excel workbook(s) to scrape (.xlsx/.xlsm).")
+    ap.add_argument(
+        "files",
+        nargs="*",
+        help="Excel workbook(s) or directory/directories to scrape (.xlsx/.xlsm).",
+    )
     ap.add_argument("--crm_wip", default="CRM_WIP.csv", help="Path to CRM_WIP.csv (default: CRM_WIP.csv).")
     ap.add_argument("--out", default="crm_non_wip_activities.csv", help="Output CSV path.")
     args = ap.parse_args()
-    files = args.files or [default_path]
+    inputs = args.files or [MCS_DEFAULT_PATH, DS_DEFAULT_DIR]
+    files = expand_input_paths(inputs)
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
+    people_in_wip_lookup = load_people_in_wip_from_crm_wip(args.crm_wip)
     all_rows: List[Dict[str, Any]] = []
     for f in files:
-        if not os.path.exists(f):
-            continue
-        all_rows.extend(scrape_one_workbook(f, completed_hours_lookup))
+        team = team_for_source(f)
+        try:
+            if team == "DS":
+                all_rows.extend(scrape_one_ds_workbook(f, people_in_wip_lookup))
+            else:
+                all_rows.extend(scrape_one_workbook(f, completed_hours_lookup))
+        except Exception as exc:
+            print(f"Skipping {f}: {exc}")
+    all_rows.sort(key=lambda r: (str(r.get("team", "")), str(r.get("period_date", ""))))
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         w = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         w.writeheader()
