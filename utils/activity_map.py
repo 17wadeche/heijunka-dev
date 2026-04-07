@@ -1492,6 +1492,7 @@ ACTIVITY_MAP = {
     "rdn files data":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "precedent event monthly review & weekly list":"Precedent Event",
+    "adjusting file per team leader request":"Adjust File",
     "precedent event monthly review":"Precedent Event",
     "imdrf code call": "Meeting",
     "escalations on external dependencies":"Escalations",
