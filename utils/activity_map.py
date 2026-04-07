@@ -1488,6 +1488,7 @@ ACTIVITY_MAP = {
     "revalve data review":"Data Request/Review",
     "boxi/gch report":"Data Request/Review",
     "gch masterdata/tech mtg":"Data Request/Review",
+    "archeive boxe":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "escalations on external dependencies":"Escalations",
