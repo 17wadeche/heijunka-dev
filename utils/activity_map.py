@@ -1484,6 +1484,7 @@ ACTIVITY_MAP = {
     "aged gfe escalation to commercial org":"Escalations",
     "gpt rd":"MDTGPT Review",
     "bo report request":"Data Request/Review",
+    "revalve data review":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "pvh tier": "Meeting",
