@@ -1491,6 +1491,7 @@ ACTIVITY_MAP = {
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "escalations on external dependencies":"Escalations",
+    "file escalations/sr":"Escalations",
     "pvh tier": "Meeting",
     "pmpa meeting 30": "Meeting",
     "quality town hall viewing": "Meeting",
