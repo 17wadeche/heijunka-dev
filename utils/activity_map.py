@@ -1476,6 +1476,7 @@ ACTIVITY_MAP = {
     "aged wip review":"WIP/Event Review",
     "master data update":"Data Request/Review",
     "master data":"Data Request/Review",
+    "gpt rd":"MDTGPT Review",
     "bo report request":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
