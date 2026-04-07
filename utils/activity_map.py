@@ -1474,6 +1474,8 @@ ACTIVITY_MAP = {
     "wip review":"WIP/Event Review",
     "event review":"WIP/Event Review",
     "aged wip review":"WIP/Event Review",
+    "master data update":"Master Data",
+    "master data":"Master Data",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "pvh tier": "Meeting",
