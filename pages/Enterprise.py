@@ -1967,6 +1967,23 @@ with tabs[1]:
         f"Top {int(top_n)} activities by total hours for the selected period, "
         "sorted highest to lowest from left to right."
     )
+    activity_export_df = _build_nonwip_activity_summary(
+        source_raw=source_raw,
+        start_date=nw_start,
+        end_date=nw_end,
+        top_n=int(top_n),
+    )
+    if not activity_export_df.empty:
+        st.markdown("#### Export top Non-WIP activities")
+        st.dataframe(activity_export_df, use_container_width=True)
+        activity_excel = _nonwip_activity_excel_bytes(activity_export_df)
+        st.download_button(
+            label=f"Download Top {int(top_n)} Non-WIP Activities (.xlsx)",
+            data=activity_excel,
+            file_name=f"top_{int(top_n)}_non_wip_activities.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="download_top_nonwip_activities_xlsx",
+        )
     st.divider()
     st.markdown("#### Activity breakdown — pie chart")
     pie_dates = st.date_input(
