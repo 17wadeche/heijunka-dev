@@ -194,8 +194,8 @@ def load_data(data_path: str | None, data_url: str | None):
         return pd.DataFrame()
     return _postprocess(df)
 NAME_ALIASES = {
-    "mirlay": "Mirlay Morin",
-    "nikita": "Nikita Schazenbach",
+    "mirlay morin": "Mirlay",
+    "nikita schazenbach": "Nikita",
     "jacob": "Jacob Woolley",
     "madison": "Madison Moeller",
     "pavani uppari":"Uppari Pavani",
