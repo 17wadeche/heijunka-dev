@@ -1486,6 +1486,7 @@ ACTIVITY_MAP = {
     "gpt rd":"MDTGPT Review",
     "bo report request":"Data Request/Review",
     "revalve data review":"Data Request/Review",
+    "boxi/gch report":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "pvh tier": "Meeting",
