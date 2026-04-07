@@ -1448,6 +1448,7 @@ ACTIVITY_MAP = {
     "pmpa question/update": "PMPA",
     "cos1 training":"Training/Mentoring",
     "ooo for appt": "OOO",
+    "desk":"Admin",
     "emails/question": "Question",
     "questions/discussion": "Question",
     "training product training team meeting cross functional meeting aems + townhall":"Training/Mentoring",
