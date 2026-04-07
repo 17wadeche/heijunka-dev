@@ -213,6 +213,7 @@ NAME_ALIASES = {
     "anwar, mohd faiz":"Mohd Faiz Anwar",
     "dominick olaes":"Dominick",
     "tabitha robertson":"Tabitha",
+    "mariyadas, abhish":"Abhish Mariyadas",
     "divya, netti":"Netti",
     "patil, shankar":"Shankar",
     "nath, koushik":"Koushik Nath",
