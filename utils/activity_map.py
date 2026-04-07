@@ -2146,6 +2146,7 @@ ACTIVITY_MAP = {
     "sh letter querie":"Question",
     "precedent event review":"Precedent Event",
     "call after scrum":"Scrum & Action",
+    "wip/event reveiw":"WIP/Event Review",
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
     "rs inbox":"RS Inbox",
