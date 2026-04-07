@@ -12,10 +12,14 @@ from datetime import datetime
 import io
 from utils.activity_map import ACTIVITY_MAP
 import altair as alt
+from zoneinfo import ZoneInfo
 def get_page_last_updated_label() -> str:
     try:
-        ts = datetime.fromtimestamp(Path(__file__).stat().st_mtime)
-        return f"Last updated: {ts.strftime('%Y-%m-%d %I:%M %p')}"
+        ts = datetime.fromtimestamp(
+            Path(__file__).stat().st_mtime,
+            tz=ZoneInfo("America/Chicago"),
+        )
+        return f"Last updated: {ts.strftime('%Y-%m-%d %I:%M %p %Z')}"
     except Exception:
         return "Last updated: Unknown"
 def _candidate_repo_roots(start: Path) -> List[Path]:
