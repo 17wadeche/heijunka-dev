@@ -1487,6 +1487,7 @@ ACTIVITY_MAP = {
     "bo report request":"Data Request/Review",
     "revalve data review":"Data Request/Review",
     "boxi/gch report":"Data Request/Review",
+    "gch masterdata/tech mtg":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "imdrf code call": "Meeting",
     "pvh tier": "Meeting",

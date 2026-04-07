@@ -1146,3 +1146,16 @@ KeyError: 'wp3_hour_rows'
 2026-04-06 18:57:00,304 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-06 18:57:00,365 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 308 rows
 2026-04-06 18:57:00,366 | INFO | === NS Metrics Run END ===
+2026-04-06 19:42:59,365 | INFO | === NS Metrics Run START ===
+2026-04-06 19:42:59,365 | INFO | Selected team: all
+2026-04-06 19:42:59,381 | INFO | [Spine] START
+2026-04-06 19:43:08,939 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:09.558763
+2026-04-06 19:43:08,941 | INFO | [Spine] START
+2026-04-06 19:43:47,374 | INFO | [Spine] DONE | rows=5 | elapsed=0:00:38.433639
+2026-04-06 19:43:47,375 | INFO | [PH] START
+2026-04-06 19:45:15,767 | INFO | [PH] DONE | rows=544 | elapsed=0:01:28.391625
+2026-04-06 19:45:15,767 | INFO | [PH Cell 17] START
+2026-04-06 19:45:16,058 | INFO | [PH Cell 17] DONE | rows=2 | elapsed=0:00:00.290868
+2026-04-06 19:45:16,059 | INFO | [SCS Cell 1] START
+2026-04-06 19:46:02,622 | INFO | [SCS Cell 1] DONE | rows=285 | elapsed=0:00:46.561184
+2026-04-06 19:46:02,622 | INFO | [MEIC PH] START
