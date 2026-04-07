@@ -1489,6 +1489,7 @@ ACTIVITY_MAP = {
     "boxi/gch report":"Data Request/Review",
     "gch masterdata/tech mtg":"Data Request/Review",
     "archeive boxe":"Data Request/Review",
+    "rdn files data":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
     "precedent event monthly review & weekly list":"Precedent Event",
     "precedent event monthly review":"Precedent Event",
