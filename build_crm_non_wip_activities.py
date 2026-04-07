@@ -418,16 +418,23 @@ def compute_ds_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for person, _, hours in iter_ds_non_wip_rows(ws_pab):
         out[person] = out.get(person, 0.0) + float(hours)
-    return out
+    return {
+        person: float(total)
+        for person, total in out.items()
+        if total != 0
+    }
 def compute_ds_non_wip_activities(ws_pab: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for person, activity, hours in iter_ds_non_wip_rows(ws_pab):
         key = (person, activity)
         agg[key] = agg.get(key, 0.0) + float(hours)
-
     return [
         {"name": person, "activity": activity, "hours": float(hours)}
-        for (person, activity), hours in sorted(agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower()))
+        for (person, activity), hours in sorted(
+            agg.items(),
+            key=lambda x: (x[0][0].lower(), x[0][1].lower())
+        )
+        if hours != 0
     ]
 def compute_ds_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[str]) -> float:
     worker_keys = {normalize_person_key(x) for x in wip_workers if x}
