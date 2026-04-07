@@ -183,6 +183,94 @@ def _prepare_nonwip_activity_source(source_raw: pd.DataFrame) -> pd.DataFrame:
     act_df["week_start"] = _weekly_start(act_df["week"])
     return act_df
 @st.cache_data(show_spinner=False)
+def _build_nonwip_activity_summary(
+    source_raw: pd.DataFrame,
+    start_date,
+    end_date,
+    top_n: int,
+) -> pd.DataFrame:
+    if source_raw is None or source_raw.empty:
+        return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    source_df = filter_by_date_range(source_raw, pd.to_datetime(start_date), pd.to_datetime(end_date))
+    if source_df.empty:
+        return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    source_df = _normalize_df_columns(source_df.copy())
+    dc = _get_date_col(source_df)
+    json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
+    if not (dc and json_col):
+        return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    source_df[dc] = _safe_to_datetime(source_df, dc)
+    source_df = source_df.dropna(subset=[dc]).sort_values(dc)
+    rows: list[dict] = []
+    for _, r in source_df.iterrows():
+        payload = _loads_json_maybe(r[json_col])
+        if not payload:
+            continue
+        if isinstance(payload, dict):
+            payload = [payload]
+        if not isinstance(payload, list):
+            continue
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            act = item.get("activity") or item.get("Activity") or item.get("type")
+            hrs = item.get("hours") or item.get("Hours")
+            if act is None or hrs is None:
+                continue
+            try:
+                hrs_val = float(hrs)
+            except Exception:
+                hrs_val = 0.0
+            rows.append(
+                {
+                    "activity": str(act).strip(),
+                    "hours": hrs_val,
+                }
+            )
+    if not rows:
+        return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    df = pd.DataFrame(rows)
+    df = df.rename(columns={"activity": "Activity", "hours": "Hours"})
+    df = split_nonwip_activity_minutes(df)
+    df = df.rename(columns={"Activity": "activity", "Hours": "hours"})
+    df = df[
+        ~df["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
+    ].copy()
+
+    if df.empty:
+        return pd.DataFrame(columns=["Rank", "Activity", "Occurrence Count", "Total Hours"])
+    summary = (
+        df.groupby("activity", as_index=False)
+        .agg(
+            occurrence_count=("activity", "size"),
+            total_hours=("hours", "sum"),
+        )
+        .sort_values(["total_hours", "occurrence_count", "activity"], ascending=[False, False, True])
+        .head(int(top_n))
+        .reset_index(drop=True)
+    )
+    summary.insert(0, "Rank", range(1, len(summary) + 1))
+    summary = summary.rename(
+        columns={
+            "activity": "Activity",
+            "occurrence_count": "Occurrence Count",
+            "total_hours": "Total Hours",
+        }
+    )
+    return summary
+@st.cache_data(show_spinner=False)
+def _nonwip_activity_excel_bytes(df: pd.DataFrame) -> bytes:
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        export_df = df.copy()
+        export_df.to_excel(writer, sheet_name="Top Non-WIP Activities", index=False)
+        ws = writer.book["Top Non-WIP Activities"]
+        for col in ws.columns:
+            max_len = max(len(str(cell.value)) if cell.value is not None else 0 for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max(max_len + 2, 12), 40)
+    output.seek(0)
+    return output.getvalue()
+@st.cache_data(show_spinner=False)
 def _cached_excel_bytes(
     team_export_display: pd.DataFrame,
     ou_export_display: pd.DataFrame,
@@ -1732,8 +1820,7 @@ with tabs[1]:
     top_n = st.number_input(
         "Number of activities to show",
         min_value=1,
-        max_value=150,
-        
+        max_value=200,
         value=15,
         step=1,
         key="nonwip_top_n",
