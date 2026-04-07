@@ -207,6 +207,7 @@ NAME_ALIASES = {
     "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
     "shanmugasundaram, naveenkumar":"Naveen Shanmugasundaram",
     "s, giridhar":"Giridhar S",
+    "vemulapalli, reshmita":"Reshmita",
     "surekha raju anantarapu":"Surekha Raju",
     "anwar, mohd faiz":"Mohd Faiz Anwar",
     "nath, koushik":"Koushik Nath",
