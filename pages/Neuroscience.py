@@ -1253,16 +1253,33 @@ if nonwip_mode:
         week_hours=40.0,
         irl_people=team_irl_people,
     )
-    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
-        capacity_val = float(pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum())
+    wk_people_kpi = wk_people_kpi.copy()
+    if "Expected Hours" in wk_people_kpi.columns:
+        wk_people_kpi["Expected Hours"] = pd.to_numeric(
+            wk_people_kpi["Expected Hours"], errors="coerce"
+        ).fillna(0.0)
+    if "OOO Hours" in wk_people_kpi.columns:
+        wk_people_kpi["OOO Hours"] = pd.to_numeric(
+            wk_people_kpi["OOO Hours"], errors="coerce"
+        ).fillna(0.0)
+    if people_count_val is None or float(people_count_val) <= 0:
+        people_count_val = float(
+            wk_people_kpi["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
+        ) if not wk_people_kpi.empty and "person" in wk_people_kpi.columns else np.nan
+    if team_nw in {"NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD", "ACM"}:
+        capacity_val = float(people_count_val) * 40.0 if pd.notna(people_count_val) else np.nan
+    elif team_nw == "ENT":
+        capacity_val = ent_capacity_hours_for_week(
+            team=team_nw,
+            week=week_nw,
+            nw_frame=nw,
+        )
     else:
-        irl_count = len(team_irl_people)
-        total_people = float(people_count_val) if pd.notna(people_count_val) and float(people_count_val) > 0 else np.nan
-        if pd.notna(total_people):
-            non_irl_count = max(total_people - irl_count, 0.0)
-            capacity_val = (irl_count * 39.0) + (non_irl_count * 40.0)
-        else:
-            capacity_val = np.nan
+        capacity_val = (
+            float(wk_people_kpi["Expected Hours"].sum())
+            if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns
+            else np.nan
+        )
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
     ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
