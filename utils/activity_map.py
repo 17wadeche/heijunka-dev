@@ -1527,6 +1527,7 @@ ACTIVITY_MAP = {
     "traing":"Training/Mentoring",
     "complex/consult training":"Training/Mentoring",
     "meeting with tm":"Meeting",
+    "rpa/email/collaboration":"RPA Meeting/Action",
     "emails admin scrumber":"Email & IM",
     "meetings, training":"Meeting",
     "meeting minute":"Meeting",
