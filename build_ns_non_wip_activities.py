@@ -1671,7 +1671,7 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
     total_nonwip_hours = float(round(sum(r["NONWIP"] for r in people_rows), 2))
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
-        v = float(round(float(r["NONWIP"]) - float(r["OOO"]), 2))
+        v = float(round(float(r["NONWIP"]), 2))
         if v != 0.0:
             nonwip_by_person[r["name"]] = v
     activities: List[dict] = []
