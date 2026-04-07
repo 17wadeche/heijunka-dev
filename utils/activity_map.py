@@ -1547,7 +1547,9 @@ ACTIVITY_MAP = {
     "training, practice, cornerstone":"Training/Mentoring",
     "ri meeting": "RI",
     "team meetings aems team building":"Meeting",
-    "file escalations/ corrections (gap findings, fer escalations)":"WIP Review",
+    "file escalations/ corrections (gap findings, fer escalations)":"WIP/Event Review",
+    "late review":"WIP/Event Review",
+    
     "collaboration (i.e. file discussion)": "Collaboration",
     "fill out capacity management tools (heijunka, non-wip)": "Metrics & Schedule",
     "fill out capacity management tools (heijunka, non-wip chart)": "Metrics & Schedule",
@@ -1569,6 +1571,7 @@ ACTIVITY_MAP = {
     "gch crashe": "IT Issue/Update",
     "pc restart": "IT Issue/Update",
     "gch slow and crashing": "IT Issue/Update",
+    "late mdr/enterprise qa, rca":"WIP/Event Review",
     "call with tl on file":"Meeting",
     "tl call on file":"Meeting",
     "it issues/restart": "IT Issue/Update",
