@@ -6,7 +6,7 @@ BASE = Path(r"C:\heijunka-dev")
 METRICS_CSV  = BASE / "metrics_aggregate_dev.csv"
 METRICS_XLSX = BASE / "metrics_aggregate_dev.xlsx"
 CLOSURES_CSV = BASE / "closures.csv"
-SHEET_NAME = "All Metrics"   # your dashboard reads this sheet
+SHEET_NAME = "All Metrics"
 def _norm_date(s):
     dt = pd.to_datetime(s, errors="coerce")
     return pd.to_datetime(dt.dt.date)
@@ -19,7 +19,7 @@ def main():
     if not need.issubset(c.columns):
         missing = need - set(c.columns)
         raise ValueError(f"closures.csv is missing columns: {sorted(missing)}")
-    has_opened = "Opened" in c.columns  # NEW
+    has_opened = "Opened" in c.columns
     m["_team"] = m["team"].astype(str).str.strip()
     m["_date"] = _norm_date(m["period_date"])
     c["_team"] = c["team"].astype(str).str.strip()
@@ -30,11 +30,11 @@ def main():
          .copy()
     )
     c["Closures"] = pd.to_numeric(c["Closures"], errors="coerce")
-    if has_opened:  # NEW
+    if has_opened:  
         c["Opened"] = pd.to_numeric(c["Opened"], errors="coerce")
     have_before_closures = "Closures" in m.columns
-    have_before_opened   = "Opened" in m.columns  # NEW
-    merge_cols = ["_team", "_date", "Closures"] + (["Opened"] if has_opened else [])  # NEW
+    have_before_opened   = "Opened" in m.columns
+    merge_cols = ["_team", "_date", "Closures"] + (["Opened"] if has_opened else []) 
     out = m.merge(
         c[merge_cols],
         on=["_team", "_date"],

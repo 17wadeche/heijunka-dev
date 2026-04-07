@@ -106,10 +106,10 @@ def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
     base = os.path.basename(filename)
     stem, _ = os.path.splitext(base)
     patterns = [
-        r"(?<!\d)(\d{1,2})([A-Za-z]{3,9})(\d{4})(?!\d)",            # 06APR2026
-        r"(?<!\d)(\d{1,2})[\s\-_]+([A-Za-z]{3,9})[\s\-_]+(\d{4})(?!\d)",  # 06 APR 2026
-        r"(?<!\d)(\d{4})[\s\-_]+(\d{1,2})[\s\-_]+(\d{1,2})(?!\d)",  # 2026-04-06
-        r"(?<!\d)(\d{1,2})[\s\-_\/]+(\d{1,2})[\s\-_\/]+(\d{4})(?!\d)",  # 04-06-2026
+        r"(?<!\d)(\d{1,2})([A-Za-z]{3,9})(\d{4})(?!\d)",           
+        r"(?<!\d)(\d{1,2})[\s\-_]+([A-Za-z]{3,9})[\s\-_]+(\d{4})(?!\d)", 
+        r"(?<!\d)(\d{4})[\s\-_]+(\d{1,2})[\s\-_]+(\d{1,2})(?!\d)",  
+        r"(?<!\d)(\d{1,2})[\s\-_\/]+(\d{1,2})[\s\-_\/]+(\d{4})(?!\d)", 
     ]
     for pat in patterns:
         m = re.search(pat, stem)
