@@ -1645,6 +1645,7 @@ ACTIVITY_MAP = {
     "eail & im": "Email & IM",
     "/ email": "Email & IM",
     "aortic meeting" :"Meeting",
+    "other (hours)":"Other",
     "mid-week huddle" :"Meeting",
     "it": "IT Issue/Update",
     "pc update": "IT Issue/Update",
