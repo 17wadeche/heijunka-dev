@@ -1641,6 +1641,7 @@ ACTIVITY_MAP = {
     "pvh report": "Team Report",
     "pmpa":"PMPA",
     "pmq querie": "PMQ Meeting",
+    "pmq": "PMQ Meeting",
     "next gen meeting":"Next Gen",
     "new ri":"RI",
     "it support": "IT Issue/Update",
