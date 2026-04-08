@@ -349,6 +349,56 @@ def parse_people_in_wip_value(value: Any) -> List[str]:
         seen.add(key)
         out.append(name)
     return out
+def compute_ds_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in range(1, ws_wip_plan.max_row + 1):
+        person = normalize_person_name(str(ws_wip_plan[f"DL{r}"].value or ""))
+        if not person or is_excluded_person(person):
+            continue
+        hours = _cell_number(ws_wip_plan[f"EF{r}"].value)
+        if hours is None or hours == 0:
+            continue
+        out[person] = out.get(person, 0.0) + float(hours)
+    return out
+def compute_ds_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> List[Dict[str, Any]]:
+    agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in iter_ds_non_wip_rows(ws_pab):
+        key = (person, activity)
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    for person, hours in compute_ds_ooo_by_person(ws_wip_plan).items():
+        key = (person, "OOO")
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    return [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower()))
+        if hours != 0
+    ]
+def compute_cpt_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in range(1, ws_wip_plan.max_row + 1):
+        person = normalize_person_name(str(ws_wip_plan[f"DB{r}"].value or ""))
+        if not person or is_excluded_person(person):
+            continue
+        hours = _cell_number(ws_wip_plan[f"DT{r}"].value)
+        if hours is None or hours == 0:
+            continue
+        out[person] = out.get(person, 0.0) + float(hours)
+    return out
+def compute_cpt_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> List[Dict[str, Any]]:
+    agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in iter_cpt_non_wip_rows(ws_pab):
+        key = (person, activity)
+        agg[key] = agg.get(key, 0.0) + float(hours)
+
+    for person, hours in compute_cpt_ooo_by_person(ws_wip_plan).items():
+        key = (person, "OOO")
+        agg[key] = agg.get(key, 0.0) + float(hours)
+
+    return [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower()))
+        if hours != 0
+    ]
 def load_people_in_wip_from_crm_wip(crm_wip_csv: str) -> Dict[Tuple[str, str], List[str]]:
     out: Dict[Tuple[str, str], List[str]] = {}
     if not os.path.exists(crm_wip_csv):
@@ -519,7 +569,7 @@ def scrape_one_ds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str]
     ooo_hours = float(_cell_number(ws_wip_plan["EF2"].value) or 0.0)
     pct_in_wip = _cell_number(ws_perf["J2"].value)
     non_wip_by_person = compute_ds_non_wip_by_person(ws_pab)
-    non_wip_activities = compute_ds_non_wip_activities(ws_pab)
+    non_wip_activities = compute_ds_non_wip_activities(ws_pab, ws_wip_plan)
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
     wip_workers_ooo_hours = compute_ds_wip_workers_ooo_hours(ws_wip_plan, wip_workers)
@@ -553,7 +603,7 @@ def scrape_one_cpt_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
     ooo_hours = float(_cell_number(ws_wip_plan["DT2"].value) or 0.0)
     pct_in_wip = _cell_number(ws_perf["J2"].value)
     non_wip_by_person = compute_cpt_non_wip_by_person(ws_pab)
-    non_wip_activities = compute_cpt_non_wip_activities(ws_pab)
+    non_wip_activities = compute_cpt_non_wip_activities(ws_pab, ws_wip_plan)
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
     wip_workers_ooo_hours = compute_cpt_wip_workers_ooo_hours(ws_wip_plan, wip_workers)
