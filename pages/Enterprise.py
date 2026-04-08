@@ -1675,6 +1675,12 @@ with tabs[0]:
             format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
             key="overview_selected_week",
         )
+        current_week_start = pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).normalize()
+        current_week_start = current_week_start - pd.Timedelta(days=current_week_start.weekday())
+        if pd.Timestamp(selected_week).normalize() == current_week_start:
+            st.warning(
+                "You’re viewing the current week. Data for this week may still be incomplete or still being added."
+            )
         filter_level = control_cols[1].radio(
             "Filter by",
             options=["Portfolio", "OU", "Team"],
