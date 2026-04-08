@@ -377,3 +377,15 @@
 [2026-04-08 08:55:20] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
 [2026-04-08 08:55:21] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
 [2026-04-08 08:55:21] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-08 09:15:08] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-08 09:15:08] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-08 09:15:30] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-08 09:15:30] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-08 09:17:39] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-08 09:17:39] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
+[2026-04-08 09:18:58] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
+[2026-04-08 09:18:58] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ms.py
+[2026-04-08 09:19:13] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ms.py
+[2026-04-08 09:19:13] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
+[2026-04-08 09:19:29] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
+[2026-04-08 09:19:29] Running: git add -A
