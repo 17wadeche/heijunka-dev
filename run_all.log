@@ -1,0 +1,4 @@
+[2026-04-07 19:40:37] === Starting run_all.py ===
+[2026-04-07 19:40:37] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-07 19:41:29] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-07 19:41:29] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
