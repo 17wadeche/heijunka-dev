@@ -1,10 +1,14 @@
 #!/usr/bin/env python
+import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+LOG_FILE = os.path.join(SCRIPT_DIR, "run_all.log")
 PYTHON_BIN = sys.executable
 commands = [
-    [PYTHON_BIN, "get_timeliness.py"],
+    ##[PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "heijunka_new_layout.py", "--all"],
     [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "metrics.csv", "--all", "--out", "non_wip.csv"],
     [PYTHON_BIN, "collect_metrics_dev.py"],
@@ -40,9 +44,15 @@ commands = [
     [PYTHON_BIN, "scrape_wip_ms.py"],
     [PYTHON_BIN, "build_ms_non_wip_activities.py"],
 ]
+def log(msg: str) -> None:
+    line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
+    print(line)
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
 def run(cmd, *, cwd=None):
-    print(f"Running: {' '.join(cmd)}")
+    log(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd, cwd=cwd, check=True)
+    log(f"Finished: {' '.join(cmd)}")
 def has_git_changes(*, cwd=None) -> bool:
     r = subprocess.run(["git", "diff", "--quiet"], cwd=cwd)
     if r.returncode == 1:
@@ -50,8 +60,9 @@ def has_git_changes(*, cwd=None) -> bool:
     r = subprocess.run(["git", "diff", "--quiet", "--staged"], cwd=cwd)
     return r.returncode == 1
 def main():
-    repo_root = None
+    repo_root = SCRIPT_DIR
     try:
+        log("=== Starting run_all.py ===")
         for cmd in commands:
             run(cmd, cwd=repo_root)
         run(["git", "add", "-A"], cwd=repo_root)
@@ -59,12 +70,12 @@ def main():
             msg = f"Automated update ({date.today().isoformat()})"
             run(["git", "commit", "-m", msg], cwd=repo_root)
             run(["git", "push"], cwd=repo_root)
-            print("✅ Committed and pushed.")
+            log("Committed and pushed.")
         else:
-            print("ℹ️ No git changes to commit. Skipping commit/push.")
-        print("✅ All scripts completed successfully.")
+            log("No git changes to commit. Skipping commit/push.")
+        log("All scripts completed successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"❌ Command failed (exit {e.returncode}): {e.cmd}")
+        log(f"Command failed (exit {e.returncode}): {e.cmd}")
         sys.exit(e.returncode)
 if __name__ == "__main__":
     main()
