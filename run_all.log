@@ -617,3 +617,13 @@
 [2026-04-08 11:36:17] Finished: git push
 [2026-04-08 11:36:17] Committed and pushed.
 [2026-04-08 11:36:17] All scripts completed successfully.
+[2026-04-08 12:42:24] === Starting run_all.py ===
+[2026-04-08 12:42:24] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-08 12:45:24] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-08 12:45:24] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-08 12:46:30] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-08 12:46:30] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
+[2026-04-08 12:48:50] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
+[2026-04-08 12:48:50] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_metrics_dev.py
+[2026-04-08 12:54:53] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_metrics_dev.py
+[2026-04-08 12:54:53] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe ect_non_wip_extract.py
