@@ -701,14 +701,29 @@ def build_person_weekly_accounting(
     if ooo_df.empty:
         ooo_df = pd.DataFrame(columns=["person", "OOO Hours"])
     people = pd.DataFrame({
-        "person": sorted(set(
-            nw_people["person"].astype(str).tolist()
-            + wip_people["person"].astype(str).tolist()
-            + other_df["person"].astype(str).tolist()
-            + acct_df["person"].astype(str).tolist()
-            + ooo_df["person"].astype(str).tolist()
-        ))
+        "person": pd.Series(
+            sorted(set(
+                nw_people["person"].astype(str).tolist()
+                + wip_people["person"].astype(str).tolist()
+                + other_df["person"].astype(str).tolist()
+                + acct_df["person"].astype(str).tolist()
+                + ooo_df["person"].astype(str).tolist()
+            )),
+            dtype="string",   # force string dtype even if empty
+        )
     })
+    for df_ in (people, nw_people, wip_people, other_df, acct_df, ooo_df):
+        if "person" in df_.columns:
+            df_["person"] = df_["person"].astype("string").str.strip()
+    for df_ in (people, nw_people, wip_people, other_df, acct_df, ooo_df):
+        if "person" in df_.columns:
+            df_.dropna(subset=["person"], inplace=True)
+            df_ = df_[df_["person"] != ""]
+    if people.empty:
+        return pd.DataFrame(columns=[
+            "person", "Non-WIP Hours", "Completed Hours", "Other Team WIP",
+            "Accounted Non-WIP", "OOO Hours", "Expected Hours"
+        ])
     out = (
         people.merge(nw_people, on="person", how="left")
             .merge(wip_people, on="person", how="left")

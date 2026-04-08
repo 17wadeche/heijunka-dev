@@ -228,3 +228,19 @@
 [2026-04-07 21:56:37] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
 [2026-04-07 21:56:52] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
 [2026-04-07 21:56:52] Running: git add -A
+[2026-04-07 21:56:52] Finished: git add -A
+[2026-04-07 21:56:52] Running: git commit -m Automated update (2026-04-07)
+[2026-04-07 21:56:53] Finished: git commit -m Automated update (2026-04-07)
+[2026-04-07 21:56:53] Running: git push
+[2026-04-07 21:56:59] Finished: git push
+[2026-04-07 21:56:59] Committed and pushed.
+[2026-04-07 21:56:59] All scripts completed successfully.
+[2026-04-08 05:00:02] === Starting run_all.py ===
+[2026-04-08 05:00:02] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-08 05:00:03] Command failed (exit 1): ['C:\\Users\\wadec8\\AppData\\Local\\Programs\\Python\\Python3\\python.exe', 'get_timeliness.py']
+[2026-04-08 07:40:43] === Starting run_all.py ===
+[2026-04-08 07:40:43] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-08 07:43:45] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-08 07:43:45] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-08 07:44:26] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-08 07:44:26] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
