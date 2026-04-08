@@ -1191,14 +1191,14 @@ if nonwip_mode:
         week_hours=40.0,
         irl_people=team_irl_people,
     )
-    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
+    if people_count_merged > 0:
+        irl_count = min(len(team_irl_people), people_count_merged)
+        non_irl_count = max(people_count_merged - irl_count, 0)
+        capacity_val = float((irl_count * 39.0) + (non_irl_count * 40.0))
+    elif not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
         capacity_val = float(
             pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum()
         )
-    elif people_count_merged > 0:
-        irl_count = len(team_irl_people)
-        non_irl_count = max(people_count_merged - irl_count, 0)
-        capacity_val = float((irl_count * 39.0) + (non_irl_count * 40.0))
     else:
         capacity_val = np.nan
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
