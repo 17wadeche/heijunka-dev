@@ -1684,7 +1684,7 @@ with tabs[0]:
         current_week_start_date = current_week_start.date()
         if selected_week_date == current_week_start_date:
             st.warning(
-                "You’re viewing the current week. Data for this week may still be incomplete or still being added."
+                "Current week in view; data may not be final yet."
             )
         filter_level = control_cols[1].radio(
             "Filter by",
