@@ -1640,6 +1640,8 @@ ACTIVITY_MAP = {
     "sh report": "Team Report",
     "pvh report": "Team Report",
     "scrum, ri, collaboration, file clean-up":"Scrum & Action",
+    "wip/event review": "WIP/Event Review",
+    "wip / event review": "WIP/Event Review",
     "scrum, questions, yellow belt work":"Scrum & Action",
     "scrum, questions, collaboration":"Scrum & Action",
     "emails, collaboration": "Email & IM",
