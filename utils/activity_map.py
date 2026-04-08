@@ -1657,6 +1657,7 @@ ACTIVITY_MAP = {
     "sh report": "Team Report",
     "pvh report": "Team Report",
     "60 minute training meeting w ruth": "Training/Mentoring",
+    "refresher training": "Training/Mentoring",
     "rfr event":"Coding/Code Gov",
     "emails co-op plainning meeting": "Email & IM",
     "recode":"Coding/Code Gov",
