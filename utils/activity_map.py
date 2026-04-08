@@ -1643,6 +1643,7 @@ ACTIVITY_MAP = {
     "scrum, questions, email":"Scrum & Action",
     "colloboration, emails, question":"Collaboration",
     "eail & im": "Email & IM",
+    "/ email": "Email & IM",
     "aortic meeting" :"Meeting",
     "it": "IT Issue/Update",
     "pc update": "IT Issue/Update",
