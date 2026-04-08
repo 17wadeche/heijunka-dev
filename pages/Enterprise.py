@@ -1728,6 +1728,8 @@ with tabs[0]:
                 if pd.isna(v):
                     return "—"
                 return f"{float(v):.1%}" if pct else f"{float(v):.2f}"
+            if float(pd.to_numeric(scoped_df["unaccounted_pct"].iloc[0], errors="coerce") or 0.0) > 0.25:
+                st.error("❗ Unaccounted hours are high for this selection (>25%).")
             st.markdown("""
             <style>
             div[data-testid="stMetric"]{ text-align: center; }
@@ -1749,8 +1751,6 @@ with tabs[0]:
             _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
             p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
             p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
-            if float(pd.to_numeric(scoped_df["unaccounted_pct"].iloc[0], errors="coerce") or 0.0) > 0.25:
-                st.error("❗ Unaccounted hours are high for this selection (>25%).")
             st.divider()
             st.subheader(f"{label} WIP % trend")
             if history_df.empty:
