@@ -264,6 +264,13 @@ def process_workbook(path: Path) -> dict[str, Any]:
         if normalized_activity == "ooo":
             ooo_minutes += minutes
             ooo_minutes_by_person[person] += minutes
+            non_wip_activities.append(
+                {
+                    "name": person,
+                    "activity": activity_detail if activity_detail else "OOO",
+                    "hours": round_hours(minutes / 60.0),
+                }
+            )
     wip_workers: list[str] = []
     for person, activity_types in person_activity_types.items():
         if activity_types and activity_types.issubset({"non-wip", "ooo"}):
