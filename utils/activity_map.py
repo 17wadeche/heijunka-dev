@@ -1637,6 +1637,8 @@ ACTIVITY_MAP = {
     "aortic meeting" :"Meeting",
     "it": "IT Issue/Update",
     "aortic report": "Team Report",
+    "/ pmpa meeting":"PMPA",
+    "ems/querie":"Question",
     "sh report": "Team Report",
     "pvh report": "Team Report",
     "scrum, ri, collaboration, file clean-up":"Scrum & Action",
