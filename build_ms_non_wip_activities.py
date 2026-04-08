@@ -8,8 +8,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 TEAM_BY_SOURCE: Dict[str, str] = {
-    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
+    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
+    r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm":"ACM MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm":"VSS MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
     r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical INV MEIC",
@@ -18,18 +22,26 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - Legal Mesh -- Shared Folder\WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm":"Surgical Legal",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
-    "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
+    "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     "RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
+    "RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
     "WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     "AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
     "ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
     "WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm":"Surgical Legal",
     "Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical INV MEIC",
     "Surgical Inv (US)-Heijunka.xlsm":"Surgical INV US",
+    "Heijunka v1.0- ACM - In Use.xlsm":"ACM MEIC",
+    "Heijunka v1.0- VSS.xlsm":"VSS MEIC",
+    "Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
 }
 DEFAULT_FILES: List[str] = [
-    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm"
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(MEIC)-Heijunka Surgical.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\ACM Documents - General\ACM INV (US)-Heijunka v1.0 (002).xlsm",
@@ -155,6 +167,10 @@ def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "Surgical AST-GST": "Surgical AST-GST",
         "Surgical INV MEIC": "Surgical AST-GST",
         "Surgical INV US": "Surgical AST-GST",
+        "Surgical Robotics MEIC":"Surgical Robotics",
+        "ACM MEIC":"ACM",
+        "VSS MEIC":"VSS",
+        "Endo MEIC":"Endoscopy",
     }
     buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
     for row in rows:

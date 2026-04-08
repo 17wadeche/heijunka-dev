@@ -12,28 +12,36 @@ from collections import defaultdict
 import json
 from typing import Any, Dict, List, Optional, Tuple
 TEAM_BY_SOURCE: Dict[str, str] = {
-    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
+    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
-    r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST",
+    r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST MEIC",
     r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (US)-Heijunka.xlsm":"Surgical AST-GST",
     r"C:\Users\wadec8\Medtronic PLC\ACM Documents - General\ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - Legal Mesh -- Shared Folder\WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm":"Surgical Legal",
+    r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm":"ACM MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm":"VSS MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
     
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
-    "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm": "VSS",
+    "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     "RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     "WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     "AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
     "ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
     "WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm":"Surgical Legal",
-    "Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST",
+    "Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST MEIC",
     "Surgical Inv (US)-Heijunka.xlsm":"Surgical AST-GST",
+    "Heijunka v1.0- ACM - In Use.xlsm":"ACM MEIC",
+    "Heijunka v1.0- VSS.xlsm":"VSS MEIC",
+    "Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
+    "RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
 }
 DEFAULT_FILES: List[str] = [
-    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03 .xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm",
@@ -41,6 +49,10 @@ DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - Legal Mesh -- Shared Folder\WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (MEIC) - Heijunka.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (US)-Heijunka.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(MEIC)-Heijunka Surgical.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm",
 ]
 CSV_COLUMNS = [
     "team",
@@ -147,25 +159,39 @@ def _recalc_uplh_by_station_by_person(
                 out.setdefault(station, {})
                 out[station][person] = outv / hrs
     return out
+TEAM_ROLLUP_MAP: Dict[str, str] = {
+    "VSS": "VSS",
+    "VSS MEIC": "VSS",
+    "ACM": "ACM",
+    "ACM MEIC": "ACM",
+    "Endoscopy": "Endoscopy",
+    "Endo MEIC": "Endoscopy",
+    "Surgical Robotics": "Surgical Robotics",
+    "Surgical Robotics MEIC": "Surgical Robotics",
+    "Surgical AST-GST": "Surgical AST-GST",
+    "Surgical AST-GST MEIC": "Surgical AST-GST",
+    "Surgical Legal": "Surgical Legal",
+}
+def rollup_team_name(team: str) -> str:
+    t = (team or "").strip()
+    return TEAM_ROLLUP_MAP.get(t, t)
 def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        team = (row.get("team", "") or "").strip()
+        team = rollup_team_name((row.get("team", "") or "").strip())
         period_date = (row.get("period_date", "") or "").strip()
-        if team and period_date:
-            buckets[(team, period_date)].append(row)
-        else:
-            buckets[(team, period_date)].append(row)
+        buckets[(team, period_date)].append(row)
     out_rows: List[Dict[str, Any]] = []
     for (team, period_date), group in buckets.items():
         if len(group) == 1 or not team or not period_date:
-            out_rows.extend(group)
+            only = dict(group[0])
+            only["team"] = team
+            out_rows.append(only)
             continue
         total_available_hours = 0.0
         completed_hours = 0.0
         target_output = 0.0
         actual_output = 0.0
-        hc_in_wip = 0
         people_in_wip_set = set()
         person_hours: Dict[str, Dict[str, float]] = {}
         outputs_by_person: Dict[str, Dict[str, float]] = {}
@@ -183,16 +209,34 @@ def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any
             completed_hours += safe_float(row.get("Completed Hours"))
             target_output += safe_float(row.get("Target Output"))
             actual_output += safe_float(row.get("Actual Output"))
-            hc_in_wip += int(safe_float(row.get("HC in WIP")))
             people_in_wip = json_load_safe(row.get("People in WIP"))
             if isinstance(people_in_wip, list):
                 people_in_wip_set.update(str(x).strip() for x in people_in_wip if str(x).strip())
-            _sum_nested_person_map(person_hours, json_load_safe(row.get("Person Hours")), keys=("actual", "available"))
-            _sum_nested_output_target_map(outputs_by_person, json_load_safe(row.get("Outputs by Person")))
-            _sum_nested_output_target_map(outputs_by_station, json_load_safe(row.get("Outputs by Cell/Station")))
-            _sum_simple_map(station_hours, json_load_safe(row.get("Cell/Station Hours")))
-            _sum_cell_person_map(hours_by_station_by_person, json_load_safe(row.get("Hours by Cell/Station - by person")))
-            _sum_cell_person_map(output_by_station_by_person, json_load_safe(row.get("Output by Cell/Station - by person")))
+            _sum_nested_person_map(
+                person_hours,
+                json_load_safe(row.get("Person Hours")),
+                keys=("actual", "available"),
+            )
+            _sum_nested_output_target_map(
+                outputs_by_person,
+                json_load_safe(row.get("Outputs by Person")),
+            )
+            _sum_nested_output_target_map(
+                outputs_by_station,
+                json_load_safe(row.get("Outputs by Cell/Station")),
+            )
+            _sum_simple_map(
+                station_hours,
+                json_load_safe(row.get("Cell/Station Hours")),
+            )
+            _sum_cell_person_map(
+                hours_by_station_by_person,
+                json_load_safe(row.get("Hours by Cell/Station - by person")),
+            )
+            _sum_cell_person_map(
+                output_by_station_by_person,
+                json_load_safe(row.get("Output by Cell/Station - by person")),
+            )
             sf = (row.get("source_file", "") or "").strip()
             if sf:
                 source_files.append(sf)
@@ -230,7 +274,7 @@ def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any
             "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
             "UPLH WP1": float(uplh_wp1) if uplh_wp1 not in (None, "") else "",
             "UPLH WP2": float(uplh_wp2) if uplh_wp2 not in (None, "") else "",
-            "HC in WIP": hc_in_wip,
+            "HC in WIP": len(people_in_wip_set),
             "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
             "People in WIP": dumps_json(sorted(people_in_wip_set)),
             "Person Hours": dumps_json(person_hours),
