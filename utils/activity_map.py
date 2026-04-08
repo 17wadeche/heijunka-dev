@@ -1607,6 +1607,7 @@ ACTIVITY_MAP = {
     "training (review, couple qs), collab, scrum": "Training/Mentoring",
     "comm training": "Training/Mentoring",
     "collaboration, email":"Collaboration",
+    "tm's support":"Collaboration",
     "collaboration /training prep": "Training/Mentoring",
     "audit prep": "Audit",
     "audit support fda ri review": "Audit",
