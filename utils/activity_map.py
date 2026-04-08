@@ -1491,6 +1491,7 @@ ACTIVITY_MAP = {
     "archeive boxe":"Data Request/Review",
     "rdn files data":"Data Request/Review",
     "complex event consult":"WIP/Event Review",
+    "re-doing shipping job aid":"Admin",
     "precedent event monthly review & weekly list":"Precedent Event",
     "adjusting file per team leader request":"Adjust File",
     "precedent event monthly review":"Precedent Event",
