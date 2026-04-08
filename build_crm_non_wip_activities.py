@@ -351,7 +351,7 @@ def parse_people_in_wip_value(value: Any) -> List[str]:
     return out
 def compute_ds_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for r in range(1, ws_wip_plan.max_row + 1):
+    for r in range(3, ws_wip_plan.max_row + 1):
         person = normalize_person_name(str(ws_wip_plan[f"DL{r}"].value or ""))
         if not person or is_excluded_person(person):
             continue
@@ -375,7 +375,7 @@ def compute_ds_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> 
     ]
 def compute_cpt_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for r in range(1, ws_wip_plan.max_row + 1):
+    for r in range(3, ws_wip_plan.max_row + 1):
         person = normalize_person_name(str(ws_wip_plan[f"DB{r}"].value or ""))
         if not person or is_excluded_person(person):
             continue
@@ -487,17 +487,6 @@ def compute_ds_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
     for person, _, hours in iter_ds_non_wip_rows(ws_pab):
         out[person] = out.get(person, 0.0) + float(hours)
     return {person: float(total) for person, total in out.items() if total != 0}
-def compute_ds_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
-    out: Dict[str, float] = {}
-    for r in range(1, ws_wip_plan.max_row + 1):
-        person = normalize_person_name(str(ws_wip_plan[f"DL{r}"].value or ""))
-        if not person or is_excluded_person(person):
-            continue
-        hours = _cell_number(ws_wip_plan[f"EF{r}"].value)
-        if hours is None or hours == 0:
-            continue
-        out[person] = out.get(person, 0.0) + float(hours)
-    return out
 def compute_ds_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for person, activity, hours in iter_ds_non_wip_rows(ws_pab):
@@ -546,17 +535,6 @@ def compute_cpt_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
     for person, _, hours in iter_cpt_non_wip_rows(ws_pab):
         out[person] = out.get(person, 0.0) + float(hours)
     return {person: float(total) for person, total in out.items() if total != 0}
-def compute_cpt_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
-    out: Dict[str, float] = {}
-    for r in range(1, ws_wip_plan.max_row + 1):
-        person = normalize_person_name(str(ws_wip_plan[f"DB{r}"].value or ""))
-        if not person or is_excluded_person(person):
-            continue
-        hours = _cell_number(ws_wip_plan[f"DT{r}"].value)
-        if hours is None or hours == 0:
-            continue
-        out[person] = out.get(person, 0.0) + float(hours)
-    return out
 def compute_cpt_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for person, activity, hours in iter_cpt_non_wip_rows(ws_pab):
