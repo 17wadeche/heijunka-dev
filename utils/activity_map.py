@@ -1648,6 +1648,7 @@ ACTIVITY_MAP = {
     "recode":"Coding/Code Gov",
     "scrum, ri, collaboration, file clean-up":"Scrum & Action",
     "spyral replace catheter meeting" :"Meeting",
+    "fu ques meeting" :"Meeting",
     "sh mdr infold meeting" :"Meeting",
     "dmaic - measure phase" :"Problem Solving",
     "emails co-op planning meeting": "Email & IM",
