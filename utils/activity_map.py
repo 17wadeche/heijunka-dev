@@ -1662,6 +1662,7 @@ ACTIVITY_MAP = {
     "rfr event":"Coding/Code Gov",
     "emails co-op plainning meeting": "Email & IM",
     "recode":"Coding/Code Gov",
+    "sick":"OOO",
     "scrum, ri, collaboration, file clean-up":"Scrum & Action",
     "spyral replace catheter meeting" :"Meeting",
     "fu ques meeting" :"Meeting",
