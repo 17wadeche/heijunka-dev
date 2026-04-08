@@ -1032,7 +1032,6 @@ enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 team_filter = enabled_team_names or all_team_names
-st.caption(f"Showing {len(team_filter)} team(s)")
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
@@ -1196,7 +1195,6 @@ def filter_by_date_range(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end
     return tmp[(tmp[dc] >= start_ts) & (tmp[dc] <= end_ts)]
 def filter_df(df: pd.DataFrame, start_ts: Optional[pd.Timestamp], end_ts: Optional[pd.Timestamp]) -> pd.DataFrame:
     return filter_by_date_range(filter_by_team(df), start_ts, end_ts)
-st.caption(f"Loaded {len(team_filter)} enabled team(s)")
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
