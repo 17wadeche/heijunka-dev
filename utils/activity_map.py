@@ -1647,6 +1647,8 @@ ACTIVITY_MAP = {
     "emails, collaboration": "Email & IM",
     "email; boxi": "Email & IM",
     "cross-functional meeting": "Meeting",
+    "mfg review meeting": "Meeting",
+    "year end performance preperaration panel meeting":"Career Development",
     "pmpa":"PMPA",
     "pmq querie": "PMQ Meeting",
     "pmq": "PMQ Meeting",
