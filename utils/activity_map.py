@@ -1643,6 +1643,8 @@ ACTIVITY_MAP = {
     "scrum, questions, yellow belt work":"Scrum & Action",
     "scrum, questions, collaboration":"Scrum & Action",
     "emails, collaboration": "Email & IM",
+    "email; boxi": "Email & IM",
+    "cross-functional meeting": "Meeting",
     "pmpa":"PMPA",
     "pmq querie": "PMQ Meeting",
     "pmq": "PMQ Meeting",
