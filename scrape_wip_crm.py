@@ -520,7 +520,7 @@ def _iter_rows_cpt_pab(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[
 def compute_total_available_hours_cpt(ws_wip_plan: Worksheet) -> Optional[float]:
     return _cell_number(ws_wip_plan["DU3"].value)
 def compute_completed_hours_cpt(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    total = _cell_number(ws_perf["R52"].value)
+    total = _cell_number(ws_perf["R51"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
