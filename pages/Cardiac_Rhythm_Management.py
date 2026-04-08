@@ -1191,6 +1191,7 @@ if nonwip_mode:
         week_hours=40.0,
         irl_people=team_irl_people,
     )
+    
     if people_count_merged > 0:
         irl_count = min(len(team_irl_people), people_count_merged)
         non_irl_count = max(people_count_merged - irl_count, 0)
