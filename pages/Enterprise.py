@@ -1675,7 +1675,6 @@ with tabs[0]:
             format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
             key="overview_selected_week",
         )
-        st.caption("DEBUG: current-week check loaded")
         current_week_start = pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).normalize()
         current_week_start = current_week_start - pd.Timedelta(days=current_week_start.weekday())
         if pd.Timestamp(selected_week).normalize() == current_week_start:
