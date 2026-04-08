@@ -1675,9 +1675,16 @@ with tabs[0]:
             format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
             key="overview_selected_week",
         )
-        current_week_start = pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).normalize()
-        current_week_start = current_week_start - pd.Timedelta(days=current_week_start.weekday())
-        if pd.Timestamp(selected_week).normalize() == current_week_start:
+        st.caption("DEBUG: current-week check loaded")
+        current_week_start = (
+            pd.Timestamp.now(tz=ZoneInfo("America/Chicago"))
+            .normalize()
+            - pd.Timedelta(days=pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).weekday())
+        )
+        selected_week_date = pd.Timestamp(selected_week).date()
+        current_week_start_date = current_week_start.date()
+        st.caption(f"DEBUG selected={selected_week_date} current={current_week_start_date}")
+        if selected_week_date == current_week_start_date:
             st.warning(
                 "You’re viewing the current week. Data for this week may still be incomplete or still being added."
             )
