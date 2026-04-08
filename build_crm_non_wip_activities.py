@@ -69,7 +69,7 @@ NI_WIP_PLAN_SHEET = "# 1 WIP plan"
 NI_PERF_METRICS_SHEET = "#4 Performance Metrics"
 NI_PERF_WIP_SHEET = "#5 Performance WIP Time"
 NI_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
-NI_PEOPLE_COUNT = 8
+NI_PEOPLE_COUNT = 9
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
