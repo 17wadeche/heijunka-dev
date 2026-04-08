@@ -768,3 +768,5 @@
 [2026-04-08 18:34:25] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
 [2026-04-08 18:37:28] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
 [2026-04-08 18:37:28] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
+[2026-04-08 18:40:13] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
+[2026-04-08 18:40:13] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ms.py

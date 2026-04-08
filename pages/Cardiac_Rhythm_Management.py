@@ -838,8 +838,8 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
     col = _find_first_col(
         df,
         [
-            "Output by Cell/Station - by person",  # <- NEW: your per-person outputs column
-            "Outputs by Cell/Station",             # station totals
+            "Output by Cell/Station - by person",
+            "Outputs by Cell/Station",   
         ]
     )
     cols = ["team","period_date","cell_station","person","Actual","Target"]
@@ -1402,7 +1402,6 @@ if nonwip_mode:
         chart = (outline + ref + bars) \
             .properties(
                 height=300,
-                title=f"{team_nw} • Per-person Non-WIP Hours (Accounted vs Unaccounted)",
                 padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             ) \
             .configure_axis(labelOverlap=True) \
