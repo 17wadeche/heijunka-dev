@@ -464,8 +464,8 @@ def scrape_dbs_dated_tabs_xlsx(
     rows_out: list[dict] = []
     cols = _excel_col_range("B", "R")
     excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-    timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-    closures_path = os.path.join(excel_dir, "closures.csv")
+    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
     closures_lu, closures_err = read_lookup_csv(closures_path)
     today_iso = date.today().isoformat()
@@ -614,8 +614,8 @@ def scrape_dbs_dated_tabs_xlsx(
     return rows_out
 def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[dict]:
     excel_dir = os.path.dirname(os.path.abspath(source_file))
-    timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-    closures_path = os.path.join(excel_dir, "closures.csv")
+    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
     closures_lu, closures_err = read_lookup_csv(closures_path)
     wb = load_workbook(source_file, data_only=True)
@@ -931,8 +931,8 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "M")
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         for choice in dropdown_values:
@@ -1127,8 +1127,8 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "V")
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat() 
@@ -1332,8 +1332,8 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "P") 
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
@@ -1537,8 +1537,8 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
@@ -1769,8 +1769,8 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
@@ -2341,8 +2341,8 @@ def scrape_spine_previous_weeks_xlsm(
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "T")
         excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-        closures_path = os.path.join(excel_dir, "closures.csv")
+        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
         closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
@@ -3320,8 +3320,8 @@ def main():
     write_csv_wip(wip_rows, wip_out_file)
     logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
     excel_dir = os.path.dirname(os.path.abspath(wip_out_file))
-    timeliness_path = os.path.join(excel_dir, "timeliness.csv")
-    closures_path = os.path.join(excel_dir, "closures.csv")
+    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
+    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     append_missing_placeholders_from_wip(
         wip_csv_path=wip_out_file,
         closures_csv_path=closures_path,

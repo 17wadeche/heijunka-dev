@@ -655,6 +655,7 @@ def main() -> int:
     closures_lut = load_closures_lookup(closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     final_rows = rollup_rows_by_team_period(all_rows)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         writer.writeheader()

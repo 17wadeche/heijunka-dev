@@ -1270,6 +1270,7 @@ def main() -> int:
     closures_lut = load_closures_lookup(args.closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     all_rows.sort(key=lambda r: ((r.get("team") or ""), (r.get("period_date") or "")))
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         w = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
         w.writeheader()
