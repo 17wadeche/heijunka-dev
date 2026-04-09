@@ -1651,6 +1651,7 @@ ACTIVITY_MAP = {
     "pc update": "IT Issue/Update",
     "aortic report": "Team Report",
     "sh infold follow up meeting" :"Meeting",
+    "/ lab weekly call" :"Meeting",
     "sorting nellcor deliveries + crdn cell enquirie" :"Meeting",
     "/ pmpa meeting":"PMPA",
     "ems/querie":"Question",
