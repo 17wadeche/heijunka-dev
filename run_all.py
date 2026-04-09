@@ -10,9 +10,9 @@ PYTHON_BIN = sys.executable
 commands = [
     ##[PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "scrape_wip_iv.py", "--all"],
-    [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "IV_DATA\\metrics.csv", "--all", "--out", "IV_DATA\\non_wip.csv"],
-    [PYTHON_BIN, "collect_metrics_dev.py"],
-    [PYTHON_BIN, "ect_non_wip_extract.py"],
+    [PYTHON_BIN, "build_iv_non_wip_activities.py", "--config", "teams.json", "--metrics", "IV_DATA\\metrics.csv", "--all", "--out", "IV_DATA\\non_wip.csv"],
+    [PYTHON_BIN, "scrape_wip_ect.py"],
+    [PYTHON_BIN, "build_ect_non_wip_activities.py"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-10-27"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-11-03"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-11-10"],
