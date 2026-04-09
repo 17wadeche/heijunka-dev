@@ -534,8 +534,8 @@ TEAM_OOO_CFG = {
     "tct commercial":  {"sheet": "Commercial #12 Prod Analysis",      "flag_col": "L"},
 }
 REPO_DIR = Path(r"C:\heijunka-dev")
-REPO_CSV = REPO_DIR / "metrics_aggregate_dev.csv"
-OUT_CSV  = REPO_DIR / "non_wip_activities.csv"
+REPO_CSV = REPO_DIR / "IV_DATA\\metrics_aggregate_dev.csv"
+OUT_CSV  = REPO_DIR / "IV_DATA\\non_wip_activities.csv"
 WEEKLY_HOURS_DEFAULT = 40.0
 TEAM_CFG = {
     "aortic":         {"sheet_patterns": ["individual (wip non wip)"], "col": "A", "start": 1},

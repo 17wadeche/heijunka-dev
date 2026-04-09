@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
-NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\non_wip_activities.csv")
+NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\IV_DATA\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
     try:
@@ -150,7 +150,7 @@ def merged_people_count_for_week(
             vals = sub[person_col].astype(str).str.strip()
             names.update(x for x in vals if x)
     return len(names)
-DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\metrics_aggregate_dev.csv")
+DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\IV_DATA\metrics_aggregate_dev.csv")
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)

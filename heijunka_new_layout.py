@@ -725,12 +725,12 @@ def main():
     p.add_argument("--team-name", help="Team label to use when processing a single workbook without config")
     p.add_argument("--closures", help="Path to closures.csv to append as 'Closures'")
     p.add_argument("--timeliness", help="Path to timeliness.csv to append as 'Open Complaint Timeliness'")
-    p.add_argument("--out", help="CSV output path", default="metrics.csv")
+    p.add_argument("--out", help="CSV output path", default="IV_DATA\\metrics.csv")
     args = p.parse_args()
     if not args.config and os.path.exists("teams.json"):
         args.config = "teams.json"
     if not args.out:
-        args.out = "metrics.csv"
+        args.out = "IV_DATA\\metrics.csv"
     if not getattr(args, "closures", None) and os.path.exists("closures.csv"):
         args.closures = "closures.csv"
     if not getattr(args, "timeliness", None) and os.path.exists("timeliness.csv"):
