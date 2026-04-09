@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
-NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\ns_non_wip_activities.csv")
+NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\NS_DATA\ns_non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
     try:

@@ -338,10 +338,10 @@ DBS_MEIC_NAMES = {"Divya", "Reshmita", "Shankar"}
 PH_MEIC_NAMES = {"Sathya", "Arun", "Kavya"}
 SCS_MEIC_NAMES = {"Brajendra", "Nadeem", "Trisha", "Priyadarshini", "Sharavanan", "Raviteja", "Trilok", "Nitheesh", "Chaitanya", "Sinduja"}
 TEAM_TRACKER_SHEET = "Team Tracker"
-NS_WIP_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
-NS_METRICS_PATH = Path(r"C:\heijunka-dev\NS_metrics.csv")
-OUT_PATH = Path(r"C:\heijunka-dev\ns_non_wip_activities.csv")
-OUT_SPLIT_PATH = Path(r"C:\heijunka-dev\NS_NON_WIP_SPLIT.csv")
+NS_WIP_PATH = Path(r"C:\heijunka-dev\NS_DATA\NS_WIP.csv")
+NS_METRICS_PATH = Path(r"C:\heijunka-dev\NS_DATA\NS_metrics.csv")
+OUT_PATH = Path(r"C:\heijunka-dev\NS_DATA\ns_non_wip_activities.csv")
+OUT_SPLIT_PATH = Path(r"C:\heijunka-dev\NS_DATA\NS_NON_WIP_SPLIT.csv")
 BAD_NAMES = {
     "", "-", "–", "—", "nan", "NaN", "NAN",
     "n/a", "N/A", "na", "NA", "null", "NULL",
