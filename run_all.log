@@ -937,3 +937,9 @@
 [2026-04-09 05:15:54] All scripts completed successfully.
 [2026-04-09 08:02:17] === Starting run_all.py ===
 [2026-04-09 08:02:17] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-09 08:13:54] === Starting run_all.py ===
+[2026-04-09 08:13:54] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-09 08:16:05] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe get_timeliness.py
+[2026-04-09 08:16:05] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-09 08:17:13] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
+[2026-04-09 08:17:13] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv

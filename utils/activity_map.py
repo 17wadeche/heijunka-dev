@@ -1660,6 +1660,7 @@ ACTIVITY_MAP = {
     "refresher training": "Training/Mentoring",
     "other training": "Training/Mentoring",
     "rfr event":"Coding/Code Gov",
+    "pvh report update":"Team Report",
     "emails co-op plainning meeting": "Email & IM",
     "recode":"Coding/Code Gov",
     "sick":"OOO",
