@@ -95,6 +95,7 @@ ACTIVITY_MAP = {
     "cornerstone, meeeting":"Cornerstone",
     "training, lab analysi": "Training/Mentoring",
     "spiderfx literature/previous investigation reading": "Reading File/Document Information",
+    "reading info on sentrant": "Reading File/Document Information",
     "document reading": "Reading File/Document Information",
     "laboratory write up for protege rx additional testing": "Reading File/Document Information",
     "laboratory write up": "Reading File/Document Information",
