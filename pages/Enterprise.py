@@ -147,6 +147,18 @@ def _build_export_lookup_tables_cached(
         factor_out_ooo=factor_out_ooo,
     )
     return team_export, ou_export, portfolio_export
+@st.cache_resource
+def load_precomputed(repo_root_str: str):
+    data = load_common_data(repo_root_str)
+    metrics = data["metrics"]
+    nonwip = data["non_wip"]
+    exploded = {
+        "person_hours_long": explode_person_hours(metrics),
+        "nonwip_by_person_long": explode_non_wip_by_person(nonwip),
+        "people_in_wip_long": explode_people_in_wip(metrics),
+        "nonwip_activity_long": _prepare_nonwip_activity_source(nonwip),
+    }
+    return data, exploded
 @st.cache_data(show_spinner=False)
 def _prepare_nonwip_activity_source(source_raw: pd.DataFrame) -> pd.DataFrame:
     if source_raw is None or source_raw.empty:
