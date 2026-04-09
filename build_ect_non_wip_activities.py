@@ -14,7 +14,7 @@ FOLDERS = [
 ]
 START_DATE = date(2026, 1, 4)
 SCRIPT_DIR = Path(__file__).resolve().parent
-OUTPUT_CSV = SCRIPT_DIR / f"{TEAM.lower()}_non_wip_extract.csv"
+OUTPUT_CSV = SCRIPT_DIR / f"IV_DATA\\{TEAM.lower()}_non_wip_extract.csv"
 NON_WIP_CSV = SCRIPT_DIR / "IV_DATA\\non_wip.csv"
 NON_WIP_ACTIVITIES_CSV = SCRIPT_DIR / "IV_DATA\\non_wip_activities.csv"
 AVAILABLE_SHEET = "Available WIP Hours"

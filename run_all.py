@@ -8,7 +8,7 @@ os.chdir(SCRIPT_DIR)
 LOG_FILE = os.path.join(SCRIPT_DIR, "run_all.log")
 PYTHON_BIN = sys.executable
 commands = [
-    ##[PYTHON_BIN, "get_timeliness.py"],
+    [PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "scrape_wip_iv.py", "--all"],
     [PYTHON_BIN, "build_iv_non_wip_activities.py", "--config", "teams.json", "--metrics", "IV_DATA\\metrics.csv", "--all", "--out", "IV_DATA\\non_wip.csv"],
     [PYTHON_BIN, "scrape_wip_ect.py"],

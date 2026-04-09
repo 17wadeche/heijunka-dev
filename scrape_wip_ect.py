@@ -14,7 +14,7 @@ FOLDERS = [
 ]
 START_DATE = date(2026, 1, 4)
 SCRIPT_DIR = Path(__file__).resolve().parent
-OUTPUT_CSV = SCRIPT_DIR / f"{TEAM.lower()}_heijunka_extract.csv"
+OUTPUT_CSV = SCRIPT_DIR / f"IV_DATA\\{TEAM.lower()}_heijunka_extract.csv"
 TIMELINESS_CSV = SCRIPT_DIR / "timeliness.csv"
 CLOSURES_CSV = SCRIPT_DIR / "closures.csv"
 METRICS_AGGREGATE_CSV = SCRIPT_DIR / "IV_DATA\\metrics_aggregate_dev.csv"
