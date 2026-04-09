@@ -90,6 +90,7 @@ ACTIVITY_MAP = {
     "crdn and pvh tier": "Meeting",
     "pmpa meeting & lab meeting":"PMPA",
     "ri meeting & monthly problem solving":"RI",
+    "monring admin":"Admin",
     "training/mentoring": "Training/Mentoring",
     "training, graduate clinic": "Training/Mentoring",
     "cornerstone, checking agile files, changing password issue":"Cornerstone",
