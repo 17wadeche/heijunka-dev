@@ -86,6 +86,7 @@ ACTIVITY_MAP = {
     "1:1 with elaine": "Meeting",
     "shoebox appeal 12pm - 2pm": "Meeting",
     "sh r&d meeting": "Meeting",
+    "crdn weekly call (30)": "Meeting",
     "pmpa meeting & lab meeting":"PMPA",
     "ri meeting & monthly problem solving":"RI",
     "training/mentoring": "Training/Mentoring",
