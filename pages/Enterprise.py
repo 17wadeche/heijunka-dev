@@ -842,8 +842,8 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
         "Timeliness": repo_root / "Timeliness.csv",
         "NS_WIP": repo_root / "NS_DATA\\NS_WIP.csv",
         "ns_non_wip_activities": repo_root / "NS_DATA\ns_non_wip_activities.csv",
-        "CRM_WIP": repo_root / "CRM_WIP.csv",
-        "crm_non_wip_activities": repo_root / "crm_non_wip_activities.csv",
+        "CRM_WIP": repo_root / "CRM_DATA\\CRM_WIP.csv",
+        "crm_non_wip_activities": repo_root / "CRM_DATA\\crm_non_wip_activities.csv",
         "MS_WIP": repo_root / "MS_DATA\\MS_WIP.csv",
         "ms_non_wip_activities": repo_root / "MS_DATA\\ms_non_wip_activities.csv",
     }

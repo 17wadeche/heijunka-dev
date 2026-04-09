@@ -1255,7 +1255,7 @@ def main() -> int:
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")
-    ap.add_argument("--out", default="CRM_WIP.csv", help="Output CSV path (default: CRM_WIP.csv).")
+    ap.add_argument("--out", default="CRM_DATA\\CRM_WIP.csv", help="Output CSV path (default: CRM_WIP.csv).")
     ap.add_argument("--timeliness-csv", default="timeliness.csv", help="Path to timeliness.csv")
     ap.add_argument("--closures-csv", default="closures.csv", help="Path to closures.csv")
     args = ap.parse_args()

@@ -828,8 +828,8 @@ def main() -> int:
         nargs="*",
         help="Excel workbook(s) or directory/directories to scrape (.xlsx/.xlsm).",
     )
-    ap.add_argument("--crm_wip", default="CRM_WIP.csv", help="Path to CRM_WIP.csv (default: CRM_WIP.csv).")
-    ap.add_argument("--out", default="crm_non_wip_activities.csv", help="Output CSV path.")
+    ap.add_argument("--crm_wip", default="CRM_DATA\\CRM_WIP.csv", help="Path to CRM_WIP.csv (default: CRM_WIP.csv).")
+    ap.add_argument("--out", default="CRM_DATA\\crm_non_wip_activities.csv", help="Output CSV path.")
     args = ap.parse_args()
     inputs = args.files or [MCS_DEFAULT_PATH, DS_DEFAULT_DIR, CPT_DEFAULT_DIR, CDS_DEFAULT_DIR, NI_DEFAULT_DIR]
     files = expand_input_paths(inputs)
