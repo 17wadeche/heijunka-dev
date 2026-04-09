@@ -639,7 +639,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Optional workbook(s) to scrape. If omitted, uses DEFAULT_FILES in the script.")
-    ap.add_argument("--out", default="MS_WIP.csv", help="Output CSV path.")
+    ap.add_argument("--out", default="MS_DATA\\MS_WIP.csv", help="Output CSV path.")
     args = ap.parse_args()
     files = args.files or DEFAULT_FILES
     all_rows: List[Dict[str, Any]] = []

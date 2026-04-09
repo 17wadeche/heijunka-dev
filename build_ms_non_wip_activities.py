@@ -407,7 +407,7 @@ def load_wip_lookup(path: str) -> Dict[Tuple[str, str], Dict[str, Any]]:
 def find_wip_csv() -> Optional[str]:
     base = script_dir()
     candidates = [
-        os.path.join(base, "MS_WIP.csv")
+        os.path.join(base, "MS_DATA\\MS_WIP.csv")
     ]
     for path in candidates:
         if os.path.exists(path):
@@ -481,7 +481,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Optional workbook(s) to scrape. If omitted, uses DEFAULT_FILES in the script.")
-    ap.add_argument("--out", default="ms_non_wip_activities.csv", help="Output CSV path.")
+    ap.add_argument("--out", default="MS_DATA\\ms_non_wip_activities.csv", help="Output CSV path.")
     args = ap.parse_args()
     wip_csv = find_wip_csv()
     wip_lut: Dict[Tuple[str, str], Dict[str, Any]] = {}

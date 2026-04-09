@@ -259,7 +259,7 @@ def write_csv_wip(rows: list[dict], out_path: str) -> None:
                 os.remove(tmp_path)
             except OSError:
                 pass
-def setup_logging(log_path: str = "NS_DATA\NS_metrics.log") -> logging.Logger:
+def setup_logging(log_path: str = "NS_DATA\\NS_metrics.log") -> logging.Logger:
     logger = logging.getLogger("NS_DATA\ns_metrics")
     logger.setLevel(logging.INFO)
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
@@ -2606,7 +2606,7 @@ def append_missing_placeholders_from_wip(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
-    parser.add_argument("--log", default="NS_DATA\NS_metrics.log", help="Log file path")
+    parser.add_argument("--log", default="NS_DATA\\NS_metrics.log", help="Log file path")
     args = parser.parse_args()
     logger = setup_logging(args.log)
     logger.info("=== NS Metrics Run START ===")
@@ -2634,7 +2634,7 @@ def main():
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
     scs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\SCS\SCS_Data.csv"
     ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 New Heijunka.xlsx"
-    out_file = "NS_DATA\NS_metrics.csv"
+    out_file = "NS_DATA\\NS_metrics.csv"
     if not os.path.exists(ph_source_file):
         raise FileNotFoundError(f"Input file not found: {ph_source_file}")
     if not os.path.exists(meic_source_file):
@@ -3316,7 +3316,7 @@ def main():
     write_csv(rows, out_file)
     logger.info(f"Wrote {len(rows)} rows to {out_file}")
     wip_rows = build_ns_wip_rows(rows)
-    wip_out_file = "NS_DATA\NS_WIP.csv"
+    wip_out_file = "NS_DATA\\NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
     logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
     excel_dir = os.path.dirname(os.path.abspath(wip_out_file))
