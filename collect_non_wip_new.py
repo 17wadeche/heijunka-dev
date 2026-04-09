@@ -426,7 +426,7 @@ def main():
     ap.add_argument("--metrics", required=True, help="Path to metrics.csv produced by heijunka_new_layout.py")
     ap.add_argument("--team", action="append", help="Team name from teams.json (repeatable)")
     ap.add_argument("--all", action="store_true", help="Process all teams in config")
-    ap.add_argument("--out", default="non_wip.csv", help="Output CSV path (default: non_wip.csv)")
+    ap.add_argument("--out", default="IV_DATA\\non_wip.csv", help="Output CSV path (default: non_wip.csv)")
     args = ap.parse_args()
     try:
         rows = build_non_wip_rows(

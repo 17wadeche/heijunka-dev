@@ -835,7 +835,7 @@ def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
     candidates = {
         "metrics": repo_root / "metrics.csv",
         "metrics_aggregate_dev": repo_root / "metrics_aggregate_dev.csv",
-        "non_wip": repo_root / "non_wip.csv",
+        "non_wip": repo_root / "IV_DATA\\non_wip.csv",
         "non_wip_activities": repo_root / "non_wip_activities.csv",
         "closures": repo_root / "closures.csv",
         "timeliness": repo_root / "timeliness.csv",
