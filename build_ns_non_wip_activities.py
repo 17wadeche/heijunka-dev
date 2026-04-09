@@ -341,6 +341,7 @@ TEAM_TRACKER_SHEET = "Team Tracker"
 NS_WIP_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
 NS_METRICS_PATH = Path(r"C:\heijunka-dev\NS_metrics.csv")
 OUT_PATH = Path(r"C:\heijunka-dev\ns_non_wip_activities.csv")
+OUT_SPLIT_PATH = Path(r"C:\heijunka-dev\NS_NON_WIP_SPLIT.csv")
 BAD_NAMES = {
     "", "-", "–", "—", "nan", "NaN", "NAN",
     "n/a", "N/A", "na", "NA", "null", "NULL",
@@ -2829,7 +2830,9 @@ def main():
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
-    log_weekly_scs_breakdown(combined, "PRE-MERGE")
+    split_combined = combined.copy()
+    split_combined.to_csv(OUT_SPLIT_PATH, index=False, encoding="utf-8-sig")
+    print(f"Wrote {len(split_combined)} rows -> {OUT_SPLIT_PATH}")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     if not combined.empty:
