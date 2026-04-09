@@ -187,6 +187,7 @@ ACTIVITY_MAP = {
     "setting up in new desk":"Admin",
     "looking over dmaic training note":"Problem Solving",
     "admin & desk sorting (after movemnt by facilities)":"Admin",
+    "ng/coding, collaboration/event reviews, cornerstone, meetings, email/admin":"Next Gen",
     "meeting with cell/investigations about analysi": "Meeting",
     "sha tier": "Meeting",
     "sorting shipment":"Shipment",
