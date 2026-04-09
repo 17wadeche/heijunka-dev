@@ -192,6 +192,7 @@ ACTIVITY_MAP = {
     "sorting shipment":"Shipment",
     "crdn tier 2": "Meeting",
     "setting up devices to send":"Admin",
+    "cas report update":"Team Report",
     "relabelling archived device":"Admin",
     "desk set up":"Admin",
     "meeting in lab": "Meeting",
