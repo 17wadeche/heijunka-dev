@@ -1662,173 +1662,173 @@ with tabs[0]:
         st.info("No overview data available.")
     else:
         filter_card = st.container(border=True)
-    with filter_card:
-        st.markdown("#### Overview filters")
-        control_cols = st.columns([1.15, 1.0, 1.25])
-        week_options = sorted(
-            team_lookup["week_start"].dropna().unique(),
-            reverse=True,
-        )
-        selected_week = control_cols[0].selectbox(
-            "Week",
-            options=week_options,
-            index=0,
-            format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
-            key="overview_selected_week",
-        )
-        current_week_start = (
-            pd.Timestamp.now(tz=ZoneInfo("America/Chicago"))
-            .normalize()
-            - pd.Timedelta(days=pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).weekday())
-        )
-        selected_week_date = pd.Timestamp(selected_week).date()
-        current_week_start_date = current_week_start.date()
-        if selected_week_date == current_week_start_date:
-            st.warning(
-                "Current week in view; data may not be final yet."
+        with filter_card:
+            st.markdown("#### Overview filters")
+            control_cols = st.columns([1.15, 1.0, 1.25])
+            week_options = sorted(
+                team_lookup["week_start"].dropna().unique(),
+                reverse=True,
             )
-        filter_level = control_cols[1].radio(
-            "Filter by",
-            options=["Portfolio", "OU", "Team"],
-            index=0,
-            horizontal=True,
-            key="overview_filter_level",
-        )
-        if filter_level == "Portfolio":
-            lookup_df = portfolio_lookup.copy()
-            filter_col = "portfolio"
-            label = "Portfolio"
-        elif filter_level == "OU":
-            lookup_df = ou_lookup.copy()
-            filter_col = "ou"
-            label = "OU"
-        else:
-            lookup_df = team_lookup.copy()
-            filter_col = "team"
-            label = "Team"
-        lookup_df["week_start"] = pd.to_datetime(
-            lookup_df["week_start"], errors="coerce"
-        ).dt.normalize()
-        scoped_week = lookup_df[
-            lookup_df["week_start"] == pd.Timestamp(selected_week).normalize()
-        ].copy()
-        options = sorted(
-            x for x in scoped_week[filter_col].dropna().astype(str).unique()
-            if str(x).strip()
-        )
-        if not options:
-            st.info(f"No {label} values available for the selected week.")
-        else:
-            selected_value = control_cols[2].selectbox(
-                label,
-                options=options,
+            selected_week = control_cols[0].selectbox(
+                "Week",
+                options=week_options,
                 index=0,
-                key=f"overview_selected_{filter_col}",
-                placeholder=f"Select {label.lower()}",
+                format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
+                key="overview_selected_week",
             )
-            scoped_df = scoped_week[
-                scoped_week[filter_col].astype(str) == str(selected_value)
-            ].copy()
-            history_df = lookup_df[
-                lookup_df[filter_col].astype(str) == str(selected_value)
-            ].copy()
-            history_df["week_start"] = pd.to_datetime(
-                history_df["week_start"], errors="coerce"
-            ).dt.normalize()
-            history_df = history_df.dropna(subset=["week_start"]).sort_values("week_start")
-            def _safe_metric(v, pct: bool = False):
-                if pd.isna(v):
-                    return "—"
-                return f"{float(v):.1%}" if pct else f"{float(v):.2f}"
-            if float(pd.to_numeric(scoped_df["unaccounted_pct"].iloc[0], errors="coerce") or 0.0) > 0.25:
-                st.error("❗ Unaccounted hours are high for this selection (>25%).")
-            st.markdown("""
-            <style>
-            div[data-testid="stMetric"]{ text-align: center; }
-            label[data-testid="stMetricLabel"]{ display: block; width: 100%; text-align: center; margin: 0; }
-            label[data-testid="stMetricLabel"] p{ text-align: center !important; margin: 0 !important; }
-            div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
-            </style>
-            """, unsafe_allow_html=True)
-            _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-            c1.metric("Avg Per Person **WIP** Daily Hours", _safe_metric(scoped_df["wip_avg_hours_day"].iloc[0]))
-            c2.metric("Avg Per Person **Non-WIP** Daily Hours", _safe_metric(scoped_df["non_wip_avg_hours_day"].iloc[0]))
-            _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-            p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
-            p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
-            st.divider()
-            _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-            c3.metric("Avg **OOO** Weekly Hours", _safe_metric(scoped_df["ooo_hours"].iloc[0]))
-            c4.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
-            _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-            p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
-            p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
-            st.divider()
-            st.subheader(f"{label} WIP % trend")
-            if history_df.empty:
-                st.info("No historical WIP % data available for this selection.")
+            current_week_start = (
+                pd.Timestamp.now(tz=ZoneInfo("America/Chicago"))
+                .normalize()
+                - pd.Timedelta(days=pd.Timestamp.now(tz=ZoneInfo("America/Chicago")).weekday())
+            )
+            selected_week_date = pd.Timestamp(selected_week).date()
+            current_week_start_date = current_week_start.date()
+            if selected_week_date == current_week_start_date:
+                st.warning(
+                    "Current week in view; data may not be final yet."
+                )
+            filter_level = control_cols[1].radio(
+                "Filter by",
+                options=["Portfolio", "OU", "Team"],
+                index=0,
+                horizontal=True,
+                key="overview_filter_level",
+            )
+            if filter_level == "Portfolio":
+                lookup_df = portfolio_lookup.copy()
+                filter_col = "portfolio"
+                label = "Portfolio"
+            elif filter_level == "OU":
+                lookup_df = ou_lookup.copy()
+                filter_col = "ou"
+                label = "OU"
             else:
-                chart_df = history_df.loc[:, ["week_start", "wip_pct"]].copy()
-                chart_df["week_start"] = pd.to_datetime(chart_df["week_start"], errors="coerce")
-                chart_df["wip_pct"] = pd.to_numeric(chart_df["wip_pct"], errors="coerce")
-                chart_df = chart_df.dropna(subset=["week_start", "wip_pct"]).sort_values("week_start")
-                if chart_df.empty:
+                lookup_df = team_lookup.copy()
+                filter_col = "team"
+                label = "Team"
+            lookup_df["week_start"] = pd.to_datetime(
+                lookup_df["week_start"], errors="coerce"
+            ).dt.normalize()
+            scoped_week = lookup_df[
+                lookup_df["week_start"] == pd.Timestamp(selected_week).normalize()
+            ].copy()
+            options = sorted(
+                x for x in scoped_week[filter_col].dropna().astype(str).unique()
+                if str(x).strip()
+            )
+            if not options:
+                st.info(f"No {label} values available for the selected week.")
+            else:
+                selected_value = control_cols[2].selectbox(
+                    label,
+                    options=options,
+                    index=0,
+                    key=f"overview_selected_{filter_col}",
+                    placeholder=f"Select {label.lower()}",
+                )
+                scoped_df = scoped_week[
+                    scoped_week[filter_col].astype(str) == str(selected_value)
+                ].copy()
+                history_df = lookup_df[
+                    lookup_df[filter_col].astype(str) == str(selected_value)
+                ].copy()
+                history_df["week_start"] = pd.to_datetime(
+                    history_df["week_start"], errors="coerce"
+                ).dt.normalize()
+                history_df = history_df.dropna(subset=["week_start"]).sort_values("week_start")
+                def _safe_metric(v, pct: bool = False):
+                    if pd.isna(v):
+                        return "—"
+                    return f"{float(v):.1%}" if pct else f"{float(v):.2f}"
+                if float(pd.to_numeric(scoped_df["unaccounted_pct"].iloc[0], errors="coerce") or 0.0) > 0.25:
+                    st.error("❗ Unaccounted hours are high for this selection (>25%).")
+                st.markdown("""
+                <style>
+                div[data-testid="stMetric"]{ text-align: center; }
+                label[data-testid="stMetricLabel"]{ display: block; width: 100%; text-align: center; margin: 0; }
+                label[data-testid="stMetricLabel"] p{ text-align: center !important; margin: 0 !important; }
+                div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
+                </style>
+                """, unsafe_allow_html=True)
+                _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
+                c1.metric("Avg Per Person **WIP** Daily Hours", _safe_metric(scoped_df["wip_avg_hours_day"].iloc[0]))
+                c2.metric("Avg Per Person **Non-WIP** Daily Hours", _safe_metric(scoped_df["non_wip_avg_hours_day"].iloc[0]))
+                _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
+                p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
+                p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
+                st.divider()
+                _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                c3.metric("Avg **OOO** Weekly Hours", _safe_metric(scoped_df["ooo_hours"].iloc[0]))
+                c4.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
+                _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
+                p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
+                st.divider()
+                st.subheader(f"{label} WIP % trend")
+                if history_df.empty:
                     st.info("No historical WIP % data available for this selection.")
                 else:
-                    chart_df["week_label"] = chart_df["week_start"].dt.strftime("%Y-%m-%d")
-                    chart_df["wip_label"] = chart_df["wip_pct"].map(lambda v: f"{v:.1%}")
-                    latest_week = chart_df["week_start"].max()
-                    latest_df = chart_df[chart_df["week_start"] == latest_week].copy()
-                    base = alt.Chart(chart_df).encode(
-                        x=alt.X(
-                            "week_start:T",
-                            title="Week of",
-                            axis=alt.Axis(
-                                format="%Y-%m-%d",
-                                labelAngle=-35,
-                                tickCount="week",
+                    chart_df = history_df.loc[:, ["week_start", "wip_pct"]].copy()
+                    chart_df["week_start"] = pd.to_datetime(chart_df["week_start"], errors="coerce")
+                    chart_df["wip_pct"] = pd.to_numeric(chart_df["wip_pct"], errors="coerce")
+                    chart_df = chart_df.dropna(subset=["week_start", "wip_pct"]).sort_values("week_start")
+                    if chart_df.empty:
+                        st.info("No historical WIP % data available for this selection.")
+                    else:
+                        chart_df["week_label"] = chart_df["week_start"].dt.strftime("%Y-%m-%d")
+                        chart_df["wip_label"] = chart_df["wip_pct"].map(lambda v: f"{v:.1%}")
+                        latest_week = chart_df["week_start"].max()
+                        latest_df = chart_df[chart_df["week_start"] == latest_week].copy()
+                        base = alt.Chart(chart_df).encode(
+                            x=alt.X(
+                                "week_start:T",
+                                title="Week of",
+                                axis=alt.Axis(
+                                    format="%Y-%m-%d",
+                                    labelAngle=-35,
+                                    tickCount="week",
+                                ),
+                                timeUnit="yearmonthdate",
                             ),
-                            timeUnit="yearmonthdate",
-                        ),
-                        y=alt.Y(
-                            "wip_pct:Q",
-                            title="WIP %",
-                            axis=alt.Axis(format=".0%"),
-                            scale=alt.Scale(domain=[0, max(1.0, float(chart_df["wip_pct"].max()) * 1.1)]),
-                        ),
-                        tooltip=[
-                            alt.Tooltip("week_label:N", title="Week"),
-                            alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
-                        ],
-                    )
-                    line = base.mark_line(strokeWidth=3).encode()
-                    points = base.mark_circle(size=80).encode()
-                    latest_point = alt.Chart(latest_df).mark_circle(size=180, filled=True).encode(
-                        x="week_start:T",
-                        y="wip_pct:Q",
-                        tooltip=[
-                            alt.Tooltip("week_label:N", title="Week"),
-                            alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
-                        ],
-                    )
-                    latest_text = alt.Chart(latest_df).mark_text(
-                        align="left",
-                        dx=8,
-                        dy=-8,
-                        fontSize=12,
-                        fontWeight="bold",
-                    ).encode(
-                        x="week_start:T",
-                        y="wip_pct:Q",
-                        text="wip_label:N",
-                    )
-                    rule = alt.Chart(pd.DataFrame({"y": [0.80]})).mark_rule(strokeDash=[6, 4]).encode(y="y:Q")
-                    trend_chart = (
-                        alt.layer(rule, line, points, latest_point, latest_text)
-                        .properties(height=360)
-                        .interactive()
-                    )
-                    st.altair_chart(trend_chart, use_container_width=True)
+                            y=alt.Y(
+                                "wip_pct:Q",
+                                title="WIP %",
+                                axis=alt.Axis(format=".0%"),
+                                scale=alt.Scale(domain=[0, max(1.0, float(chart_df["wip_pct"].max()) * 1.1)]),
+                            ),
+                            tooltip=[
+                                alt.Tooltip("week_label:N", title="Week"),
+                                alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
+                            ],
+                        )
+                        line = base.mark_line(strokeWidth=3).encode()
+                        points = base.mark_circle(size=80).encode()
+                        latest_point = alt.Chart(latest_df).mark_circle(size=180, filled=True).encode(
+                            x="week_start:T",
+                            y="wip_pct:Q",
+                            tooltip=[
+                                alt.Tooltip("week_label:N", title="Week"),
+                                alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
+                            ],
+                        )
+                        latest_text = alt.Chart(latest_df).mark_text(
+                            align="left",
+                            dx=8,
+                            dy=-8,
+                            fontSize=12,
+                            fontWeight="bold",
+                        ).encode(
+                            x="week_start:T",
+                            y="wip_pct:Q",
+                            text="wip_label:N",
+                        )
+                        rule = alt.Chart(pd.DataFrame({"y": [0.80]})).mark_rule(strokeDash=[6, 4]).encode(y="y:Q")
+                        trend_chart = (
+                            alt.layer(rule, line, points, latest_point, latest_text)
+                            .properties(height=360)
+                            .interactive()
+                        )
+                        st.altair_chart(trend_chart, use_container_width=True)
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
