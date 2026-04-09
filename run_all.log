@@ -1062,3 +1062,5 @@
 [2026-04-09 09:30:02] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
 [2026-04-09 09:31:09] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe heijunka_new_layout.py --all
 [2026-04-09 09:31:09] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
+[2026-04-09 09:35:42] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_non_wip_new.py --config teams.json --metrics metrics.csv --all --out non_wip.csv
+[2026-04-09 09:35:42] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe collect_metrics_dev.py
