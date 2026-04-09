@@ -736,19 +736,19 @@ def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
 def load_common_data(repo_root_str: str) -> Dict[str, pd.DataFrame]:
     repo_root = Path(repo_root_str)
     candidates = {
-        "metrics": repo_root / "IV_DATA\\metrics.csv",
-        "metrics_aggregate_dev": repo_root / "IV_DATA\\metrics_aggregate_dev.csv",
-        "non_wip": repo_root / "IV_DATA\\non_wip.csv",
-        "non_wip_activities": repo_root / "IV_DATA\\non_wip_activities.csv",
+        "metrics": repo_root / "IV_DATA" / "metrics.csv",
+        "metrics_aggregate_dev": repo_root / "IV_DATA" / "metrics_aggregate_dev.csv",
+        "non_wip": repo_root / "IV_DATA" / "non_wip.csv",
+        "non_wip_activities": repo_root / "IV_DATA" / "non_wip_activities.csv",
         "closures": repo_root / "closures.csv",
         "timeliness": repo_root / "timeliness.csv",
         "Timeliness": repo_root / "Timeliness.csv",
-        "NS_WIP": repo_root / "NS_DATA\\NS_WIP.csv",
-        "ns_non_wip_activities": repo_root / "NS_DATA\ns_non_wip_activities.csv",
-        "CRM_WIP": repo_root / "CRM_DATA\\CRM_WIP.csv",
-        "crm_non_wip_activities": repo_root / "CRM_DATA\\crm_non_wip_activities.csv",
-        "MS_WIP": repo_root / "MS_DATA\\MS_WIP.csv",
-        "ms_non_wip_activities": repo_root / "MS_DATA\\ms_non_wip_activities.csv",
+        "NS_WIP": repo_root / "NS_DATA" / "NS_WIP.csv",
+        "ns_non_wip_activities": repo_root / "NS_DATA" / "ns_non_wip_activities.csv",
+        "CRM_WIP": repo_root / "CRM_DATA" / "CRM_WIP.csv",
+        "crm_non_wip_activities": repo_root / "CRM_DATA" / "crm_non_wip_activities.csv",
+        "MS_WIP": repo_root / "MS_DATA" / "MS_WIP.csv",
+        "ms_non_wip_activities": repo_root / "MS_DATA" / "ms_non_wip_activities.csv",
     }
     out: Dict[str, pd.DataFrame] = {}
     for key, p in candidates.items():
