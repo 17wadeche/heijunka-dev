@@ -8,7 +8,7 @@ os.chdir(SCRIPT_DIR)
 LOG_FILE = os.path.join(SCRIPT_DIR, "run_all.log")
 PYTHON_BIN = sys.executable
 commands = [
-    [PYTHON_BIN, "get_timeliness.py"],
+    ##[PYTHON_BIN, "get_timeliness.py"],
     [PYTHON_BIN, "heijunka_new_layout.py", "--all"],
     [PYTHON_BIN, "collect_non_wip_new.py", "--config", "teams.json", "--metrics", "metrics.csv", "--all", "--out", "non_wip.csv"],
     [PYTHON_BIN, "collect_metrics_dev.py"],
