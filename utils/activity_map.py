@@ -1661,6 +1661,8 @@ ACTIVITY_MAP = {
     "other training": "Training/Mentoring",
     "rfr event":"Coding/Code Gov",
     "pvh report update":"Team Report",
+    "pvh contego report":"Team Report",
+    "annex a/fdd review":"Coding/Code Gov",
     "emails co-op plainning meeting": "Email & IM",
     "recode":"Coding/Code Gov",
     "sick":"OOO",
