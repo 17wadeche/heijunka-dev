@@ -98,6 +98,7 @@ ACTIVITY_MAP = {
     "reading info on sentrant": "Reading File/Document Information",
     "document reading": "Reading File/Document Information",
     "laboratory write up for protege rx additional testing": "Reading File/Document Information",
+    "investigation reading": "Reading File/Document Information",
     "laboratory write up": "Reading File/Document Information",
     "reading through heli-fx doc": "Reading File/Document Information",
     "project measure phase":"Problem Solving",
