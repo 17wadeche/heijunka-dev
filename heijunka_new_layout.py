@@ -729,12 +729,13 @@ def main():
     args = p.parse_args()
     if not args.config and os.path.exists("teams.json"):
         args.config = "teams.json"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     if not args.out:
         args.out = "IV_DATA\\metrics.csv"
-    if not getattr(args, "closures", None) and os.path.exists("closures.csv"):
-        args.closures = "closures.csv"
-    if not getattr(args, "timeliness", None) and os.path.exists("timeliness.csv"):
-        args.timeliness = "timeliness.csv"
+    if not getattr(args, "closures", None):
+        args.closures = os.path.join(base_dir, "closures.csv")
+    if not getattr(args, "timeliness", None):
+        args.timeliness = os.path.join(base_dir, "timeliness.csv")
     if args.team and not args.config:
         print("Provide --config or place teams.json in the current folder.", file=sys.stderr)
         sys.exit(2)
@@ -829,6 +830,9 @@ def main():
     ) if getattr(args, "timeliness", None) else ({}, "Open Complaint Timeliness")
     if time_map:
         _apply_aux_column(merged_rows, merged_cols, time_map, "Open Complaint Timeliness")
+    out_dir = os.path.dirname(args.out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=merged_cols)
         w.writeheader()
