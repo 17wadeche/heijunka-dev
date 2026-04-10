@@ -15,7 +15,7 @@
     { "portfolio": "CRM", "team": "CDS", "ou": "CDS" },
     { "portfolio": "CRM", "team": "NI", "ou": "PCS" },
     { "portfolio": "CRM", "team": "PM-CTS", "ou": "PCS" },
-    { "portfolio": "CRM", "team": "MCS", "ou": "MCS" },
+    { "portfolio": "MCS", "team": "MCS", "ou": "MCS" },
     { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "PVH" },
     { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "SHA" },
     { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "SHA" },
