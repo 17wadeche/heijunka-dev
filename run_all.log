@@ -599,3 +599,9 @@
 [2026-04-10 10:30:52] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
 [2026-04-10 10:30:53] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
 [2026-04-10 10:30:53] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-10 10:51:12] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-10 10:51:12] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-10 10:51:36] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-10 10:51:36] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-10 10:53:52] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-10 10:53:52] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
