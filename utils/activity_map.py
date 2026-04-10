@@ -183,6 +183,7 @@ ACTIVITY_MAP = {
     "looking over past file":"WIP/Event Review",
     "looking at the communications on aged files to see if we have enough informatino to clsoe them":"WIP/Event Review",
     "sap bo/similar incidents data pull":"WIP/Event Review",
+    "ri, collaboration, scrum":"RI",
     "1:1 and verso meeting": "Meeting",
     "setting up in new desk":"Admin",
     "looking over dmaic training note":"Problem Solving",
