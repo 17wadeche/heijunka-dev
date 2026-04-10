@@ -24,7 +24,7 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm":"ACM MEIC",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm":"VSS MEIC",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
-    
+    r"C:\Users\wadec8\Medtronic PLC\Surgical MEIC RR team - General\MIR(MEIC)- Heijunka.xlsm":"MEIC MIR",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
@@ -39,6 +39,7 @@ TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka v1.0- VSS.xlsm":"VSS MEIC",
     "Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
     "RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
+    "MIR(MEIC)- Heijunka.xlsm":"MEIC MIR",
 }
 DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm",
@@ -53,6 +54,7 @@ DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\Surgical MEIC RR team - General\MIR(MEIC)- Heijunka.xlsm"
 ]
 CSV_COLUMNS = [
     "team",
