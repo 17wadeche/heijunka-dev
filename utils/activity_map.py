@@ -872,6 +872,7 @@ ACTIVITY_MAP = {
     "monthly meeting, admin, aortic meeting":"Meeting",
     "live case video, emails, sha meeting":"Reviewing Documents & Case Video",
     "cornerstone, live case video":"Cornerstone",
+    "updating pacing lead work instruction d01529191":"Admin",
     "emails, training":"Training/Mentoring",
     "talks with liberant r&d team":"Meeting",
     "re: 0708588931-30 germany- im's with doreen":"Email & IM",
