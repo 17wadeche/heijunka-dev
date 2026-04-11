@@ -1848,3 +1848,220 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-04-10 20:40:15,893 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-10 20:40:15,934 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 180 rows
 2026-04-10 20:40:15,934 | INFO | === NS Metrics Run END ===
+2026-04-11 05:09:05,467 | INFO | === NS Metrics Run START ===
+2026-04-11 05:09:05,467 | INFO | Selected team: all
+2026-04-11 05:09:05,467 | INFO | [Spine] START
+2026-04-11 05:09:13,228 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:07.760783
+2026-04-11 05:09:13,230 | INFO | [Spine] START
+2026-04-11 05:09:13,247 | ERROR | [Spine] FAIL | elapsed=0:00:00.017835 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:09:13,247 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3174, in <lambda>
+    lambda: scrape_spine_previous_weeks_xlsm(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2297, in scrape_spine_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:09:13,247 | INFO | [PH] START
+2026-04-11 05:09:53,017 | INFO | [PH] DONE | rows=544 | elapsed=0:00:39.769839
+2026-04-11 05:09:53,017 | INFO | [PH Cell 17] START
+2026-04-11 05:09:53,288 | INFO | [PH Cell 17] DONE | rows=3 | elapsed=0:00:00.271122
+2026-04-11 05:09:53,288 | INFO | [SCS Cell 1] START
+2026-04-11 05:10:30,155 | INFO | [SCS Cell 1] DONE | rows=285 | elapsed=0:00:36.867067
+2026-04-11 05:10:30,155 | INFO | [MEIC PH] START
+2026-04-11 05:10:37,727 | INFO | [MEIC PH] DONE | rows=89 | elapsed=0:00:07.571356
+2026-04-11 05:10:37,743 | INFO | [DBS C13] START
+2026-04-11 05:10:37,987 | INFO | [DBS C13] DONE | rows=3 | elapsed=0:00:00.243795
+2026-04-11 05:10:37,987 | INFO | [DBS C13] filter >= 2025-07-07: 3 -> 3
+2026-04-11 05:10:37,987 | INFO | [DBS C14] START
+2026-04-11 05:10:38,147 | INFO | [DBS C14] DONE | rows=3 | elapsed=0:00:00.160581
+2026-04-11 05:10:38,147 | INFO | [DBS C14] filter >= 2025-07-07: 3 -> 3
+2026-04-11 05:10:38,147 | INFO | [NV] START
+2026-04-11 05:10:38,155 | ERROR | [NV] FAIL | elapsed=0:00:00.008050 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,155 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3227, in <lambda>
+    lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV", ALL_MONDAYS_SINCE_2025_06_02),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 898, in scrape_dbs_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")  # new isolated Excel instance
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,155 | INFO | [NV] filter >= 2025-07-07: 0 -> 0
+2026-04-11 05:10:38,155 | INFO | [Nav] START
+2026-04-11 05:10:38,155 | ERROR | [Nav] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,155 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3234, in <lambda>
+    extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1092, in scrape_nav_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")  # isolated Excel instance
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,155 | INFO | [AE MEIC] START
+2026-04-11 05:10:38,155 | ERROR | [AE MEIC] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,155 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3236, in <lambda>
+    extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1297, in scrape_meic_ae_oarm_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,155 | INFO | [O-Arm MEIC] START
+2026-04-11 05:10:38,171 | ERROR | [O-Arm MEIC] FAIL | elapsed=0:00:00.015779 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,171 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3238, in <lambda>
+    extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1297, in scrape_meic_ae_oarm_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,171 | INFO | [Mazor] START
+2026-04-11 05:10:38,171 | ERROR | [Mazor] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,171 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3240, in <lambda>
+    extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1734, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,171 | INFO | [CSF] START
+2026-04-11 05:10:38,171 | ERROR | [CSF] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,171 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3242, in <lambda>
+    extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1734, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,171 | INFO | [PSS US] START
+2026-04-11 05:10:38,171 | ERROR | [PSS US] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,171 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3244, in <lambda>
+    extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1734, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,171 | INFO | [PSS MEIC] START
+2026-04-11 05:10:38,187 | ERROR | [PSS MEIC] FAIL | elapsed=0:00:00.016095 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,187 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3246, in <lambda>
+    extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1734, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,187 | INFO | [PSS MEIC Intern] START
+2026-04-11 05:10:38,187 | ERROR | [PSS MEIC Intern] FAIL | elapsed=0:00:00 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-11 05:10:38,187 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 294, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3248, in <lambda>
+    extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 1734, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-11 05:10:38,250 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-11 05:10:38,250 | INFO | [ENT] START
+2026-04-11 05:10:38,425 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.175331
+2026-04-11 05:10:38,425 | INFO | [DBS MEIC] START
+2026-04-11 05:10:38,441 | INFO | [DBS MEIC] DONE | rows=35 | elapsed=0:00:00.015754
+2026-04-11 05:10:38,441 | INFO | [SCS MEIC] START
+2026-04-11 05:10:38,457 | INFO | [SCS MEIC] DONE | rows=35 | elapsed=0:00:00.015873
+2026-04-11 05:10:38,457 | INFO | [TDD COS 1] START
+2026-04-11 05:10:54,598 | INFO | [TDD COS 1] DONE | rows=202 | elapsed=0:00:16.141518
+2026-04-11 05:10:54,598 | INFO | [TDD COS 1] filter >= 2025-06-02: 202 -> 45
+2026-04-11 05:10:54,598 | INFO | [SCS Super Cell] START
+2026-04-11 05:11:30,622 | INFO | [SCS Super Cell] DONE | rows=200 | elapsed=0:00:36.023045
+2026-04-11 05:11:30,622 | INFO | [SCS Super Cell] rows scraped (pre-filter): 200
+2026-04-11 05:11:30,622 | INFO | [SCS Super Cell] filter >= 2025-06-30: 200 -> 40
+2026-04-11 05:11:30,622 | INFO | [MEIC PH] filter >= 2025-09-01: 89 -> 34
+2026-04-11 05:11:30,625 | INFO | [PH Cell 17] rows before TAA filter = 3
+2026-04-11 05:11:30,625 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1109 -> 283
+2026-04-11 05:11:30,625 | INFO | [PH Cell 17] rows after TAA filter = 3
+2026-04-11 05:11:30,625 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1109 -> 283
+2026-04-11 05:11:30,625 | INFO | [ALL] drop period_date == 2023-11-06: 283 -> 282
+2026-04-11 05:11:30,625 | INFO | [ALL] drop period_date == 2026-09-07: 282 -> 281
+2026-04-11 05:11:30,659 | INFO | Wrote 281 rows to NS_DATA\NS_metrics.csv
+2026-04-11 05:11:30,736 | INFO | Wrote 182 rows to NS_DATA\NS_WIP.csv
+2026-04-11 05:11:30,768 | INFO | [POST] WIP weekly keys=182
+2026-04-11 05:11:30,768 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-04-11 05:11:30,768 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-04-11 05:11:30,816 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 180 rows
+2026-04-11 05:11:30,816 | INFO | === NS Metrics Run END ===
