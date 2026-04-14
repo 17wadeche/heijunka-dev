@@ -1285,6 +1285,7 @@ ACTIVITY_MAP = {
     "emails, fw, im'": "Email & IM",
     "emails and im regarding crdn tracker": "Email & IM",
     "emails, desk booking, admin etc": "Email & IM",
+    "team inclusion activitie":"Collaboration",
     "meeting, email": "Email & IM",
     "training file for eugene":"Training/Mentoring",
     "60 minute training call with ruth":"Training/Mentoring",
