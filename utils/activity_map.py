@@ -864,6 +864,8 @@ ACTIVITY_MAP = {
     "other meeting":"Meeting",
     "affera updates, code review and trainingg material review, collaboration":"Training/Mentoring",
     "affera mapping training w ruth":"Training/Mentoring",
+    "pvh product report":"Team Report",
+    "it issues in the office": "IT Issue/Update",
     "emails/teams - integer": "Email & IM",
     "scrum, collaboration, cornerstone":"Scrum & Action",
     "mmo tuv audit - complaint list prep":"Audit",
