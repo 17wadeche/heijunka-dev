@@ -851,6 +851,8 @@ ACTIVITY_MAP = {
     "r&d meeting":"Meeting",
     "/ email response": "Email & IM",
     "ordering it hardware": "IT Issue/Update",
+    "mfg complaints meeting":"Meeting",
+    "sh mfg call":"Meeting",
     "quality day prep meeting":"Meeting",
     "pvh - next gen check in":"Next Gen",
     "affera training for sean & golden":"Training/Mentoring",
