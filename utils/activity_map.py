@@ -1364,6 +1364,8 @@ ACTIVITY_MAP = {
     "scrum/ pmpa weekly call":"PMPA",
     "scrum, investigation training":"Training/Mentoring",
     "reassess rd training":"Training/Mentoring",
+    "rch updates from change analyst after re-open":"RCH Updates",
+    "rch updates from change analyst":"RCH Updates",
     "scrum/ corner stone training":"Scrum & Action",
     "ms call":"Meeting",
     "std work *":"Admin",
