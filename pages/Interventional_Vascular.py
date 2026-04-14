@@ -372,6 +372,9 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            .reset_index(drop=True)
     )
     return out
+def _is_excluded_nonwip_activity(x) -> bool:
+    s = str(x).strip()
+    return s in {"+", "/"}
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
     import numpy as np
@@ -1449,7 +1452,10 @@ if nonwip_mode:
                             .sum()
                             .rename(columns={"HoursRaw": "Hours"})
                 )
-                cat = cat[cat["Activity"].astype(str).str.strip().str.upper() != "OOO"].copy()
+                cat = cat[
+                    (cat["Activity"].astype(str).str.strip().str.upper() != "OOO")
+                    & (~cat["Activity"].map(_is_excluded_nonwip_activity))
+                ].copy()
                 cat = split_nonwip_activity_minutes(cat)
                 if not cat.empty:
                     cat = cat.sort_values("Hours", ascending=False)
