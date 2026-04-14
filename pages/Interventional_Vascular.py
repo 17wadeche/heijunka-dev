@@ -1457,6 +1457,9 @@ if nonwip_mode:
                     & (~cat["Activity"].map(_is_excluded_nonwip_activity))
                 ].copy()
                 cat = split_nonwip_activity_minutes(cat)
+                cat = cat[
+                    ~cat["Activity"].map(_is_excluded_nonwip_activity)
+                ].copy()
                 if not cat.empty:
                     cat = cat.sort_values("Hours", ascending=False)
                     order_acts = cat["Activity"].tolist()
