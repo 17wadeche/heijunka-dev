@@ -860,6 +860,7 @@ ACTIVITY_MAP = {
     "is tool meeting with judy":"Project Work",
     "training related activity":"Training/Mentoring",
     "communication w/ med safetly":"Medical Safety",
+    "job aid updates; email":"Admin",
     "pmpa questoins/update":"PMPA",
     "consult event consult":"WIP/Event Review",
     "venaseal documentation/investigation reading":"Reading File/Document Information",
