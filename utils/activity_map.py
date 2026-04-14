@@ -1510,6 +1510,8 @@ ACTIVITY_MAP = {
     "emails/adming":"Email & IM",
     "meetings other": "Meeting",
     "meetings": "Meeting",
+    "data analysis for grad project":"Project Work",
+    "looking at previous file":"WIP/Event Review",
     "tm trainer":"Training/Mentoring",
     "emails qa scrumb":"Email & IM",
     "pmpa question/update": "PMPA",
