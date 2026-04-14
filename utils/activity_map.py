@@ -1281,6 +1281,7 @@ ACTIVITY_MAP = {
     "emails, finding work tool, set up the lab": "Email & IM",
     "nelcor meeting":"Meeting",
     "follow up email": "Email & IM",
+    "document update":"Admin",
     "emails, heijunka ect": "Email & IM",
     "emails, fw, im'": "Email & IM",
     "emails and im regarding crdn tracker": "Email & IM",
