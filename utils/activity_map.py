@@ -1500,6 +1500,7 @@ ACTIVITY_MAP = {
     "training independent": "Training/Mentoring",
     "learning session": "Training/Mentoring",
     "*pmq cr post-meeting action":"Meeting",
+    "•pmq cr post-meeting action":"Meeting",
     "ad hoc ri data request from pmpa": "PMPA",
     "emails/adming":"Email & IM",
     "meetings other": "Meeting",
