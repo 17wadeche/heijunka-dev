@@ -861,6 +861,8 @@ ACTIVITY_MAP = {
     "training related activity":"Training/Mentoring",
     "communication w/ med safetly":"Medical Safety",
     "job aid updates; email":"Admin",
+    "ml/ai gap review":"Data Request/Review",
+    "ad hoc question":"Question",
     "pmpa questoins/update":"PMPA",
     "consult event consult":"WIP/Event Review",
     "venaseal documentation/investigation reading":"Reading File/Document Information",
