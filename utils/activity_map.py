@@ -854,6 +854,7 @@ ACTIVITY_MAP = {
     "training related activity":"Training/Mentoring",
     "reading investigation document":"Reading File/Document Information",
     "sh meeting (30) (calibrations docs & training paperwork (30)":"Meeting",
+    "tm call":"Meeting",
     "risk management recording":"Meeting",
     "quality day volunteering meeting":"Meeting",
     "training questions. comm/task/rr practice review":"Training/Mentoring",
