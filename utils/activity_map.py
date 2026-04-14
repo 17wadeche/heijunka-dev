@@ -1369,6 +1369,7 @@ ACTIVITY_MAP = {
     "std work *":"Admin",
     "uk ri call":"RI",
     "dt transfer (packing items for shipping)" :"Shipment",
+    "shipping to nellcor" :"Shipment",
     "15 (fw) 15 (emails) tl (30)":"Email & IM",
     "watching o how harmony work":"Training/Mentoring",
     "setting up laptop":"IT Issue/Update",
