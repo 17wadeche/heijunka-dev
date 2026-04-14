@@ -1287,6 +1287,7 @@ ACTIVITY_MAP = {
     "emails, desk booking, admin etc": "Email & IM",
     "meeting, email": "Email & IM",
     "training file for eugene":"Training/Mentoring",
+    "60 minute training call with ruth":"Training/Mentoring",
     "pulling fw tool and email": "Metrics & Schedule",
     "finding work, morning admin etc": "Metrics & Schedule",
     "traing file for laura":"Training/Mentoring",
