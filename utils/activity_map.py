@@ -1519,6 +1519,7 @@ ACTIVITY_MAP = {
     "ooo for appt": "OOO",
     "emails admin qa meeting":"Email & IM",
     "set up again":"Set Up",
+    "customer communication training":"Training/Mentoring",
     "e-mails/admin":"Email & IM",
     "desk":"Admin",
     "emails/question": "Question",
