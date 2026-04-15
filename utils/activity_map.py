@@ -45,6 +45,7 @@ ACTIVITY_MAP = {
     "tm meeting complex file":"Meeting",
     "call with tm":"Meeting",
     "meeting on complex clinical file, medical safety review and email to brianna":"Meeting",
+    "communication w/ med safety":"Meeting",
     "scrum, collaboration":"Scrum & Action",
     "monthly precedent event meeting":"Precedent Event",
     "monthly precedent events review":"Precedent Event",
