@@ -1524,6 +1524,7 @@ ACTIVITY_MAP = {
     "meeting with louise":"Meeting",
     "meeting with aurelie about doc review":"Meeting",
     "communication meeting":"Meeting",
+    "safety communication":"Meeting",
     "e-mails/admin":"Email & IM",
     "desk":"Admin",
     "pmpa man.exp dates smdr":"PMPA",
