@@ -11,32 +11,6 @@ from openpyxl.worksheet.worksheet import Worksheet
 from collections import defaultdict
 import json
 from typing import Any, Dict, List, Optional, Tuple
-ONEFLOW_ROOT = r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka"
-TEAM_BY_PREFIX = {
-    "ACM-PM": "ACM-PM-CTS",
-    "ACM-RI": "ACM-RI-CTS",
-    "CRL": "CRL-CTS",
-    "GIS": "Endoscopy-CTS",
-    "RR": "RR-CTS",
-    "SIBO": "Surgical SIBO-CTS",
-    "SINH": "Surgical SINH-CTS",
-    "Vents": "VSS-CTS",
-}
-def discover_oneflow_files(root: str = ONEFLOW_ROOT) -> List[str]:
-    matches: List[str] = []
-    if not os.path.exists(root):
-        return matches
-    for dirpath, _, filenames in os.walk(root):
-        for filename in filenames:
-            lower = filename.lower()
-            if not lower.endswith((".xlsx", ".xlsm")):
-                continue
-            if not lower.startswith("heijunka cognizant"):
-                continue
-            if filename.startswith("~$"):
-                continue
-            matches.append(os.path.join(dirpath, filename))
-    return sorted(matches)
 TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
@@ -51,6 +25,13 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm":"VSS MEIC",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
     r"C:\Users\wadec8\Medtronic PLC\Surgical MEIC RR team - General\MIR(MEIC)- Heijunka.xlsm":"MEIC MIR",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (ACM-PM).xlsm":"CTS-ACM-PM",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (ACM-RI).xlsm":"CTS-ACM-RI",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (GIS).xlsm":"CTS-GIS",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (RR).xlsm":"CTS-RR",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (SIBO).xlsm":"CTS-SIBO",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (SINH).xlsm":"CTS-SINH",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (Vents).xlsm":"CTS-Vents",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
@@ -66,6 +47,13 @@ TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka v1.0-ENDO.xlsm":"Endo MEIC",
     "RST(MEIC)-Heijunka Surgical.xlsm":"Surgical Robotics MEIC",
     "MIR(MEIC)- Heijunka.xlsm":"MEIC MIR",
+    "Heijunka Cognizant (ACM-PM).xlsm":"CTS-ACM-PM",
+    "Heijunka Cognizant (ACM-RI).xlsm":"CTS-ACM-RI",
+    "Heijunka Cognizant (GIS).xlsm":"CTS-GIS",
+    "Heijunka Cognizant (RR).xlsm":"CTS-RR",
+    "Heijunka Cognizant (SIBO).xlsm":"CTS-SIBO",
+    "Heijunka Cognizant (SINH).xlsm":"CTS-SINH",
+    "Heijunka Cognizant (Vents).xlsm":"CTS-Vents",
 }
 DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm",
@@ -80,7 +68,14 @@ DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- ACM - In Use.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0- VSS.xlsm",
     r"C:\Users\wadec8\Medtronic PLC\Heijunka -VSS,ENDO,ACM - Heijunka -VSS,ENDO,ACM\Heijunka v1.0-ENDO.xlsm",
-    r"C:\Users\wadec8\Medtronic PLC\Surgical MEIC RR team - General\MIR(MEIC)- Heijunka.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\Surgical MEIC RR team - General\MIR(MEIC)- Heijunka.xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (ACM-PM).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (ACM-RI).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (GIS).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (RR).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (SIBO).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (SINH).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\06 April\Heijunka Cognizant (Vents).xlsm",
 ]
 CSV_COLUMNS = [
     "team",
@@ -171,6 +166,7 @@ def _sum_cell_person_map(dst: dict, src: dict) -> None:
         dcell = dst.setdefault(cell, {})
         for person, val in people.items():
             dcell[person] = safe_float(dcell.get(person)) + safe_float(val)
+
 def _recalc_uplh_by_station_by_person(
     output_by_station_by_person: Dict[str, Dict[str, float]],
     hours_by_station_by_person: Dict[str, Dict[str, float]],
@@ -189,21 +185,21 @@ def _recalc_uplh_by_station_by_person(
 TEAM_ROLLUP_MAP: Dict[str, str] = {
     "VSS": "VSS",
     "VSS MEIC": "VSS",
-    "VSS-CTS": "VSS",
     "ACM": "ACM",
     "ACM MEIC": "ACM",
-    "ACM-PM-CTS": "ACM",
-    "ACM-RI-CTS": "ACM",
     "Endoscopy": "Endoscopy",
     "Endo MEIC": "Endoscopy",
-    "Endoscopy-CTS": "Endoscopy",
     "Surgical Robotics": "Surgical Robotics",
     "Surgical Robotics MEIC": "Surgical Robotics",
     "Surgical AST-GST": "Surgical AST-GST",
     "Surgical AST-GST MEIC": "Surgical AST-GST",
-    "Surgical SIBO-CTS": "Surgical AST-GST",
-    "Surgical SINH-CTS": "Surgical AST-GST",
     "Surgical Legal": "Surgical Legal",
+    "CTS-ACM-PM": "ACM",
+    "CTS-ACM-RI": "ACM",
+    "CTS-GIS": "Endoscopy",
+    "CTS-SIBO": "Surgical AST-GST",
+    "CTS-SINH": "Surgical AST-GST",
+    "CTS-Vents": "VSS",
 }
 def rollup_team_name(team: str) -> str:
     t = (team or "").strip()
@@ -332,13 +328,7 @@ def team_for_source(path: str) -> str:
     np = _norm_path(path)
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
-    basename = os.path.basename(np)
-    if basename in TEAM_BY_BASENAME:
-        return TEAM_BY_BASENAME[basename]
-    for key, team in TEAM_BY_PREFIX.items():
-        if f"({key})" in basename:
-            return team
-    return ""
+    return TEAM_BY_BASENAME.get(os.path.basename(np), "")
 def _cell_number(v: Any) -> Optional[float]:
     if v is None:
         return None
@@ -675,35 +665,12 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             "Opened": "",
         })
     return rows
-def merge_with_existing_csv(out_path: str, new_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    merged: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    if os.path.exists(out_path):
-        with open(out_path, "r", newline="", encoding="utf-8-sig") as fp:
-            reader = csv.DictReader(fp)
-            for row in reader:
-                key = (
-                    (row.get("team", "") or "").strip(),
-                    (row.get("period_date", "") or "").strip(),
-                )
-                if key[0] and key[1]:
-                    merged[key] = row
-    for row in new_rows:
-        key = (
-            (row.get("team", "") or "").strip(),
-            (row.get("period_date", "") or "").strip(),
-        )
-        if key[0] and key[1]:
-            merged[key] = row
-    return sorted(
-        merged.values(),
-        key=lambda r: ((r.get("team", "") or "").lower(), r.get("period_date", "") or "9999-12-31")
-    )
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Optional workbook(s) to scrape. If omitted, uses DEFAULT_FILES in the script.")
     ap.add_argument("--out", default="MS_DATA\\MS_WIP.csv", help="Output CSV path.")
     args = ap.parse_args()
-    files = args.files or discover_oneflow_files() or DEFAULT_FILES
+    files = args.files or DEFAULT_FILES
     all_rows: List[Dict[str, Any]] = []
     for path in files:
         if not os.path.exists(path):
@@ -716,8 +683,7 @@ def main() -> int:
     timeliness_lut = load_timeliness_lookup(timeliness_csv)
     closures_lut = load_closures_lookup(closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
-    new_rows = rollup_rows_by_team_period(all_rows)
-    final_rows = merge_with_existing_csv(args.out, new_rows)
+    final_rows = rollup_rows_by_team_period(all_rows)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
