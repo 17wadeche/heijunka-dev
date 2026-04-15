@@ -1520,6 +1520,7 @@ ACTIVITY_MAP = {
     "emails admin qa meeting":"Email & IM",
     "set up again":"Set Up",
     "customer communication training":"Training/Mentoring",
+    "doc review - cornerstone + tm":"Meeting",
     "e-mails/admin":"Email & IM",
     "desk":"Admin",
     "emails/question": "Question",
