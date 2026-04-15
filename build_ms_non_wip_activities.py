@@ -280,7 +280,7 @@ def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: in
         if not current_person:
             continue
         norm = _norm_name(current_person)
-        if norm in {"X", "0", "USER1", "USER2", "USER3", "USER4", "USER10", "USER11", "User10", "User11",  "user10", "user11"}:
+        if norm in {"X", "0", "USER1", "USER2", "USER3", "USER4", "USER10", "USER11", "User10", "User11",  "user10", "user11","TM1","TM2","TM3","TM4","TM5","TM6","TM7","TM8","TM9","TM10","TM11","TM12","TM13","TM14","TM15","TM16"}:
             continue
         if norm not in seen:
             seen.add(norm)
