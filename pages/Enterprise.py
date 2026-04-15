@@ -1295,11 +1295,7 @@ def _weekly_team_export_df(
             )
         else:
             capacity_hours = float(wk_people["Expected Hours"].sum())
-        ooo_col = _first_col(nw.to_frame().T, ["ooo_hours", "ooo hours", "total_ooo_hours"])
-        if ooo_col:
-            ooo_hours = float(pd.to_numeric(nw_row.get(ooo_col, 0.0), errors="coerce") or 0.0)
-        else:
-            ooo_hours = float(wk_people["OOO Hours"].sum())
+        ooo_hours = float(wk_people["OOO Hours"].sum())
         non_wip_hours = float(pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0)
         completed_match = metrics_team[
             (metrics_team["team"] == team) &
@@ -1314,18 +1310,9 @@ def _weekly_team_export_df(
             0.0,
         )
         if factor_out_ooo:
-            effective_capacity = max(capacity_hours - ooo_hours, 0.0)
-            unaccounted_hours = max(
-                effective_capacity - completed_hours - non_wip_hours,
-                0.0,
-            )
-            pct_denom = effective_capacity
+            pct_denom = max(capacity_hours - ooo_hours, 0.0)
             ooo_pct = 0.0
         else:
-            unaccounted_hours = max(
-                capacity_hours - completed_hours - non_wip_hours - ooo_hours,
-                0.0,
-            )
             pct_denom = capacity_hours
             ooo_pct = (ooo_hours / pct_denom) if pct_denom > 0 else pd.NA
         rows.append({
