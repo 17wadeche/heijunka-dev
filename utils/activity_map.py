@@ -1518,6 +1518,7 @@ ACTIVITY_MAP = {
     "cos1 training":"Training/Mentoring",
     "ooo for appt": "OOO",
     "emails admin qa meeting":"Email & IM",
+    
     "e-mails/admin":"Email & IM",
     "desk":"Admin",
     "emails/question": "Question",
