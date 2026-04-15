@@ -7,6 +7,8 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+import unicodedata
+import re
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
@@ -42,6 +44,18 @@ def load_team_config(config_path: str | None = None) -> dict:
         return obj if isinstance(obj, dict) else {}
     except Exception:
         return {}
+NAME_ALIASES = {
+    "-": "-",
+    "peter mchugh": "Peter McHugh",
+}
+def normalize_person_name(name: str) -> str:
+    s = str(name or "")
+    s = unicodedata.normalize("NFKC", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch)[0] != "C")
+    s = s.replace("\u00a0", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    key = s.casefold()
+    return NAME_ALIASES.get(key, s)
 def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(config, dict):
         return set()
@@ -1300,26 +1314,6 @@ if nonwip_mode:
             "Other Team WIP": "Accounted_Other",
             "Accounted Non-WIP": "Accounted_NonOther",
         })
-        wk_people["person"] = (
-            wk_people["person"]
-            .astype(str)
-            .str.replace("\u00a0", " ", regex=False)
-            .str.replace(r"\s+", " ", regex=True)
-            .str.strip()
-        )
-        wk_people = (
-            wk_people
-            .groupby("person", as_index=False)
-            .agg({
-                "period_date": "first",
-                "Non-WIP Hours": "sum",
-                "Completed Hours": "sum",
-                "OOO Hours": "sum",
-                "Accounted_Other": "sum",
-                "Accounted_NonOther": "sum",
-                "Unaccounted": "sum",
-            })
-        )
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
