@@ -1297,14 +1297,16 @@ def _weekly_team_export_df(
             capacity_hours = float(wk_people["Expected Hours"].sum())
         ooo_hours = float(wk_people["OOO Hours"].sum())
         non_wip_hours = float(pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0)
+        if team == "CPT":
+            non_wip_hours = max(non_wip_hours - ooo_hours, 0.0)
         completed_match = metrics_team[
             (metrics_team["team"] == team) &
             (pd.to_datetime(metrics_team["week_start"], errors="coerce").dt.normalize() == wk)
         ]
         completed_hours = float(completed_match["completed_hours"].sum()) if not completed_match.empty else 0.0
-
         if completed_hours == 0.0 and not wk_people.empty and "Completed Hours" in wk_people.columns:
             completed_hours = float(pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0).sum())
+        
         unaccounted_hours = max(
             capacity_hours - completed_hours - non_wip_hours - ooo_hours,
             0.0,
