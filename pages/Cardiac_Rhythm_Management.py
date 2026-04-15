@@ -1300,6 +1300,26 @@ if nonwip_mode:
             "Other Team WIP": "Accounted_Other",
             "Accounted Non-WIP": "Accounted_NonOther",
         })
+        wk_people["person"] = (
+            wk_people["person"]
+            .astype(str)
+            .str.replace("\u00a0", " ", regex=False)
+            .str.replace(r"\s+", " ", regex=True)
+            .str.strip()
+        )
+        wk_people = (
+            wk_people
+            .groupby("person", as_index=False)
+            .agg({
+                "period_date": "first",
+                "Non-WIP Hours": "sum",
+                "Completed Hours": "sum",
+                "OOO Hours": "sum",
+                "Accounted_Other": "sum",
+                "Accounted_NonOther": "sum",
+                "Unaccounted": "sum",
+            })
+        )
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
