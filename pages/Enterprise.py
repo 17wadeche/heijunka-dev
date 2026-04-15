@@ -1295,7 +1295,11 @@ def _weekly_team_export_df(
             )
         else:
             capacity_hours = float(wk_people["Expected Hours"].sum())
-        ooo_hours = float(wk_people["OOO Hours"].sum())
+        ooo_col = _first_col(nw.to_frame().T, ["ooo_hours", "ooo hours", "total_ooo_hours"])
+        if ooo_col:
+            ooo_hours = float(pd.to_numeric(nw_row.get(ooo_col, 0.0), errors="coerce") or 0.0)
+        else:
+            ooo_hours = float(wk_people["OOO Hours"].sum())
         non_wip_hours = float(pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0)
         completed_match = metrics_team[
             (metrics_team["team"] == team) &
