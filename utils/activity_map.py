@@ -1522,6 +1522,7 @@ ACTIVITY_MAP = {
     "customer communication training":"Training/Mentoring",
     "doc review - cornerstone + tm":"Meeting",
     "meeting with louise":"Meeting",
+    "meeting with aurelie about doc review":"Meeting",
     "e-mails/admin":"Email & IM",
     "desk":"Admin",
     "emails/question": "Question",
