@@ -311,7 +311,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
-        name = str(d.get("name", "")).strip()
+        name = normalize_person_name(d.get("name", ""))
         if not name:
             continue
         act_raw = str(d.get("activity", ""))
