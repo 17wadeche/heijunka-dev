@@ -46,6 +46,8 @@ ACTIVITY_MAP = {
     "call with tm":"Meeting",
     "meeting on complex clinical file, medical safety review and email to brianna":"Meeting",
     "communication w/ med safety":"Meeting",
+    "gfe meeting":"Meeting",
+    "training call": "Training/Mentoring",
     "scrum, collaboration":"Scrum & Action",
     "monthly precedent event meeting":"Precedent Event",
     "monthly precedent events review":"Precedent Event",
