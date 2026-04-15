@@ -1314,9 +1314,18 @@ def _weekly_team_export_df(
             0.0,
         )
         if factor_out_ooo:
-            pct_denom = max(capacity_hours - ooo_hours, 0.0)
+            effective_capacity = max(capacity_hours - ooo_hours, 0.0)
+            unaccounted_hours = max(
+                effective_capacity - completed_hours - non_wip_hours,
+                0.0,
+            )
+            pct_denom = effective_capacity
             ooo_pct = 0.0
         else:
+            unaccounted_hours = max(
+                capacity_hours - completed_hours - non_wip_hours - ooo_hours,
+                0.0,
+            )
             pct_denom = capacity_hours
             ooo_pct = (ooo_hours / pct_denom) if pct_denom > 0 else pd.NA
         rows.append({
