@@ -106,37 +106,30 @@ def build_pss_intern_capacity_row(
         if label.casefold() in skip_headers:
             continue
         activity_cols.append((c, label))
-
     people_rows: List[dict] = []
     for i in range(people_start_row, total_row):
         name = norm_name(_cell(i, NAME_COL))
         if not is_real_person(name):
             continue
-
         expected_wip = safe_float0(_cell(i, EXPECTED_WIP_COL))
         ooo = safe_float0(_cell(i, OOO_COL)) if OOO_COL is not None else 0.0
-
         people_rows.append({
             "row_i": i,
             "name": name,
             "B": float(expected_wip),
             "OOO": float(ooo),
         })
-
     nonwip_by_person: Dict[str, float] = {}
     activities: List[dict] = []
     ooo_map: Dict[str, float] = {}
-
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
         person_nonwip_total = 0.0
-
         for c, label in activity_cols:
             hrs = safe_float(_cell(i, c))
             if pd.isna(hrs) or hrs <= 0:
                 continue
-
             hrs = float(round(float(hrs), 2))
             activities.append({
                 "name": name,
@@ -144,7 +137,6 @@ def build_pss_intern_capacity_row(
                 "hours": hrs,
             })
             person_nonwip_total += hrs
-
         person_ooo = float(round(pr["OOO"], 2))
         if person_ooo > 0:
             activities.append({
@@ -152,17 +144,12 @@ def build_pss_intern_capacity_row(
                 "activity": "OOO",
                 "hours": person_ooo,
             })
-
         if person_nonwip_total > 0:
             nonwip_by_person[name] = float(round(person_nonwip_total, 2))
-
         ooo_map[name] = person_ooo
-
     people_count = len({r["name"] for r in people_rows})
     total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
     ooo_hours = float(round(sum(ooo_map.values()), 2))
-
-    # debug totals from total row
     total_row_nonwip = 0.0
     if total_row is not None:
         for c, _label in activity_cols:

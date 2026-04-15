@@ -353,6 +353,7 @@ ENT_NAME_REPLACEMENTS = {
     "Raju, Surekha": "Surekha Raju Anantarapu",
     "S, Selvarasu": "Selvarasu Sampathu",
     "Uppari, Pavani": "Uppari Pavani",
+    "Megan R":"Megan",
 }
 def normalize_ent_name(name: Any) -> str:
     s = safe_str(name)
