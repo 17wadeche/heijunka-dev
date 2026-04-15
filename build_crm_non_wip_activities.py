@@ -12,6 +12,7 @@ MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB 
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
+CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
 NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archive\April 2026 - PAB"
 TEAM_BY_SOURCE: Dict[str, str] = {
@@ -143,7 +144,7 @@ def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
     base = os.path.basename(filename)
     stem, _ = os.path.splitext(base)
     patterns = [
-        r"(?<!\d)(\d{1,2})\s*[-_ ]*\s*([A-Za-z]{3,9})\s*[-_ ]*\s*(\d{4})(?!\d)",
+        r"(?<!\d)(\d{1,2})\s*[-_ ]*\s*([A-Za-z]{3,9})(?:\s*[-_ ]*\s*(\d{2,4}))?(?!\d)",
         r"(?<!\d)(\d{4})[\s\-_]+(\d{1,2})[\s\-_]+(\d{1,2})(?!\d)",
         r"(?<!\d)(\d{1,2})[\s\-_\/]+(\d{1,2})[\s\-_\/]+(\d{4})(?!\d)",
     ]
@@ -155,7 +156,10 @@ def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
             if i == 0:
                 day = int(m.group(1))
                 mon_raw = m.group(2).lower()
-                year = int(m.group(3))
+                year_raw = m.group(3)
+                year = int(year_raw) if year_raw else 2026
+                if year < 100:
+                    year += 2000
                 if mon_raw not in _MONTH_MAP:
                     continue
                 return _dt.date(year, _MONTH_MAP[mon_raw], day)
@@ -836,6 +840,7 @@ def main() -> int:
         DS_DEFAULT_DIR,
         CPT_DEFAULT_DIR,
         CDS_DEFAULT_DIR,
+        CDS_ARCHIVE_PAB_DIR,
         NI_DEFAULT_DIR,
         NI_ARCHIVE_APRIL_2026_DIR,
     ]

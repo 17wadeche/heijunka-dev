@@ -1109,7 +1109,9 @@ def scrape_one_workbook_cds(path: str) -> List[Dict[str, Any]]:
     if ws_metrics is not None:
         period = compute_period_date_cds(ws_metrics)
     if period is None:
-        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3")
+        period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3_and_filename")
     total_available = None
     completed_hours = None
     actual_hours_by_person: Dict[str, float] = {}
