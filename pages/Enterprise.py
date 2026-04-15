@@ -1289,6 +1289,7 @@ def _weekly_team_export_df(
                 team=team,
                 week=wk,
                 nw_frame=nw,
+                irl_people=team_irl_people,
             )
         else:
             capacity_hours = float(wk_people["Expected Hours"].sum())
