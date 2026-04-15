@@ -30,6 +30,7 @@
     { "portfolio": "Medical Surgical", "team": "ACM", "ou": "ACM" },
     { "portfolio": "Medical Surgical", "team": "Endoscopy", "ou": "Endoscopy" },
     { "portfolio": "Medical Surgical", "team": "VSS", "ou": "VSS" },
-    { "portfolio": "Medical Surgical", "team": "MEIC MIR", "ou": "MEIC MIR" }
+    { "portfolio": "Medical Surgical", "team": "RR-CTS", "ou": "RR & MIR" },
+    { "portfolio": "Medical Surgical", "team": "MEIC MIR", "ou": "RR & MIR" }
   ]
 }
