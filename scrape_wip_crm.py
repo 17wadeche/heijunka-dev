@@ -317,7 +317,9 @@ def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
     if ws_metrics is not None:
         period = compute_period_date_ni(ws_metrics)
     if period is None:
-        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3")
+        period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3_and_filename")
     total_available = None
     completed_hours = None
     actual_hours_by_person: Dict[str, float] = {}
@@ -1249,9 +1251,12 @@ def main() -> int:
     default_paths = [
         r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis",
+        r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka",
+        r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archive\April 2026 - PAB",
+        
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")

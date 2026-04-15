@@ -13,6 +13,7 @@ DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Sche
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
+NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archive\April 2026 - PAB"
 TEAM_BY_SOURCE: Dict[str, str] = {
     os.path.normpath(MCS_DEFAULT_PATH): "MCS",
 }
@@ -142,8 +143,7 @@ def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
     base = os.path.basename(filename)
     stem, _ = os.path.splitext(base)
     patterns = [
-        r"(?<!\d)(\d{1,2})([A-Za-z]{3,9})(\d{4})(?!\d)",
-        r"(?<!\d)(\d{1,2})[\s\-_]+([A-Za-z]{3,9})[\s\-_]+(\d{4})(?!\d)",
+        r"(?<!\d)(\d{1,2})\s*[-_ ]*\s*([A-Za-z]{3,9})\s*[-_ ]*\s*(\d{4})(?!\d)",
         r"(?<!\d)(\d{4})[\s\-_]+(\d{1,2})[\s\-_]+(\d{1,2})(?!\d)",
         r"(?<!\d)(\d{1,2})[\s\-_\/]+(\d{1,2})[\s\-_\/]+(\d{4})(?!\d)",
     ]
@@ -152,19 +152,19 @@ def parse_period_date_from_filename(filename: str) -> Optional[_dt.date]:
         if not m:
             continue
         try:
-            if i in (0, 1):
+            if i == 0:
                 day = int(m.group(1))
                 mon_raw = m.group(2).lower()
                 year = int(m.group(3))
                 if mon_raw not in _MONTH_MAP:
                     continue
                 return _dt.date(year, _MONTH_MAP[mon_raw], day)
-            if i == 2:
+            if i == 1:
                 year = int(m.group(1))
                 month = int(m.group(2))
                 day = int(m.group(3))
                 return _dt.date(year, month, day)
-            if i == 3:
+            if i == 2:
                 month = int(m.group(1))
                 day = int(m.group(2))
                 year = int(m.group(3))
@@ -831,7 +831,14 @@ def main() -> int:
     ap.add_argument("--crm_wip", default="CRM_DATA\\CRM_WIP.csv", help="Path to CRM_WIP.csv (default: CRM_WIP.csv).")
     ap.add_argument("--out", default="CRM_DATA\\crm_non_wip_activities.csv", help="Output CSV path.")
     args = ap.parse_args()
-    inputs = args.files or [MCS_DEFAULT_PATH, DS_DEFAULT_DIR, CPT_DEFAULT_DIR, CDS_DEFAULT_DIR, NI_DEFAULT_DIR]
+    inputs = args.files or [
+        MCS_DEFAULT_PATH,
+        DS_DEFAULT_DIR,
+        CPT_DEFAULT_DIR,
+        CDS_DEFAULT_DIR,
+        NI_DEFAULT_DIR,
+        NI_ARCHIVE_APRIL_2026_DIR,
+    ]
     files = expand_input_paths(inputs)
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
     people_in_wip_lookup = load_people_in_wip_from_crm_wip(args.crm_wip)
