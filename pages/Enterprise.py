@@ -1610,7 +1610,7 @@ factor_out_ooo = st.toggle(
 )
 page = st.segmented_control(
     "Tab:",
-    options=["Overview", "Non-WIP", "Export"],
+    options=["Overview", "Drilldown", "Data Quality", "Non-WIP", "Export"],
     default="Overview",
     key="enterprise_section",
 )
@@ -1627,6 +1627,252 @@ def _get_export_lookup_bundle(
         org,
         factor_out_ooo=factor_out_ooo,
     )
+def _fmt_pct(v: Any) -> str:
+    try:
+        if pd.isna(v):
+            return "—"
+        return f"{float(v):.1%}"
+    except Exception:
+        return "—"
+def _fmt_hours(v: Any) -> str:
+    try:
+        if pd.isna(v):
+            return "—"
+        return f"{float(v):,.1f}"
+    except Exception:
+        return "—"
+def _status_from_unaccounted_pct(v: Any) -> tuple[str, str]:
+    try:
+        pct = float(v)
+    except Exception:
+        return "Unknown", "#64748b"
+    if pct <= 0.10:
+        return "Healthy", "#16a34a"
+    if pct <= 0.25:
+        return "Watch", "#ca8a04"
+    return "Action Needed", "#dc2626"
+def _render_drilldown_card(
+    title: str,
+    subtitle: str,
+    row: pd.Series,
+    accent: str = "#2563eb",
+) -> None:
+    status_label, status_color = _status_from_unaccounted_pct(row.get("unaccounted_pct"))
+    st.markdown(
+        f"""
+        <div style="
+            padding: 18px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(148,163,184,.35);
+            background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92));
+            box-shadow: 0 12px 30px rgba(15,23,42,.08);
+            margin-bottom: 14px;
+        ">
+            <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start;">
+                <div>
+                    <div style="font-size:.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.08em;">
+                        {subtitle}
+                    </div>
+                    <div style="font-size:1.25rem; font-weight:800; color:#0f172a;">
+                        {title}
+                    </div>
+                </div>
+                <div style="
+                    color:{status_color};
+                    font-weight:800;
+                    background:rgba(248,250,252,.9);
+                    border:1px solid rgba(148,163,184,.25);
+                    border-radius:999px;
+                    padding:6px 10px;
+                    white-space:nowrap;
+                ">
+                    {status_label}
+                </div>
+            </div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap:10px;
+                margin-top:16px;
+            ">
+                <div>
+                    <div style="color:#64748b; font-size:.78rem;">WIP</div>
+                    <div style="font-weight:800; color:{accent};">{_fmt_pct(row.get("wip_pct"))}</div>
+                </div>
+                <div>
+                    <div style="color:#64748b; font-size:.78rem;">Non-WIP</div>
+                    <div style="font-weight:800;">{_fmt_pct(row.get("non_wip_pct"))}</div>
+                </div>
+                <div>
+                    <div style="color:#64748b; font-size:.78rem;">OOO</div>
+                    <div style="font-weight:800;">{_fmt_pct(row.get("ooo_pct"))}</div>
+                </div>
+                <div>
+                    <div style="color:#64748b; font-size:.78rem;">Unaccounted</div>
+                    <div style="font-weight:800; color:{status_color};">{_fmt_pct(row.get("unaccounted_pct"))}</div>
+                </div>
+            </div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap:10px;
+                margin-top:12px;
+                color:#334155;
+                font-size:.9rem;
+            ">
+                <div><b>{_fmt_hours(row.get("capacity_hours"))}</b><br/><span style="color:#64748b;">Capacity hrs</span></div>
+                <div><b>{_fmt_hours(row.get("completed_hours"))}</b><br/><span style="color:#64748b;">Completed hrs</span></div>
+                <div><b>{_fmt_hours(row.get("non_wip_hours"))}</b><br/><span style="color:#64748b;">Non-WIP hrs</span></div>
+                <div><b>{_fmt_hours(row.get("unaccounted_hours"))}</b><br/><span style="color:#64748b;">Unaccounted hrs</span></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+def _latest_rows_for_week(df: pd.DataFrame, week) -> pd.DataFrame:
+    if df is None or df.empty or "week_start" not in df.columns:
+        return pd.DataFrame()
+    out = df.copy()
+    out["week_start"] = pd.to_datetime(out["week_start"], errors="coerce").dt.normalize()
+    week_ts = pd.to_datetime(week, errors="coerce").normalize()
+    return out[out["week_start"] == week_ts].copy()
+def _build_data_quality_summary(
+    team_df: pd.DataFrame,
+    ou_df: pd.DataFrame,
+    portfolio_df: pd.DataFrame,
+    shared_metrics_df: Optional[pd.DataFrame],
+    shared_nonwip_df: Optional[pd.DataFrame],
+    org: OrgConfig,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    checks: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    def add_check(area: str, check: str, issue_count: int, detail: str) -> None:
+        status = "Correct" if int(issue_count) == 0 else "Review Needed"
+        checks.append(
+            {
+                "Area": area,
+                "Check": check,
+                "Status": status,
+                "Issues": int(issue_count),
+                "Detail": detail,
+            }
+        )
+    expected_teams = {t.name for t in org.teams if t.enabled} or {t.name for t in org.teams}
+    present_teams = set(team_df["team"].dropna().astype(str)) if team_df is not None and not team_df.empty and "team" in team_df.columns else set()
+    missing_teams = sorted(expected_teams - present_teams)
+    add_check(
+        "Coverage",
+        "Enabled teams have weekly export rows",
+        len(missing_teams),
+        ", ".join(missing_teams[:20]) if missing_teams else "All enabled teams found in weekly export.",
+    )
+    if team_df is None or team_df.empty:
+        add_check("Team Export", "Team export exists", 1, "No team export rows were generated.")
+        return pd.DataFrame(checks), pd.DataFrame(issues)
+    t = team_df.copy()
+    t["week_start"] = pd.to_datetime(t.get("week_start"), errors="coerce")
+    required_cols = [
+        "team",
+        "week_start",
+        "capacity_hours",
+        "completed_hours",
+        "non_wip_hours",
+        "ooo_hours",
+        "unaccounted_hours",
+        "wip_pct",
+        "non_wip_pct",
+        "ooo_pct",
+        "unaccounted_pct",
+        "portfolio",
+        "ou",
+    ]
+    missing_cols = [c for c in required_cols if c not in t.columns]
+    add_check(
+        "Schema",
+        "Required team export columns exist",
+        len(missing_cols),
+        ", ".join(missing_cols) if missing_cols else "All required columns exist.",
+    )
+    null_team = int(t["team"].isna().sum()) if "team" in t.columns else len(t)
+    null_week = int(t["week_start"].isna().sum()) if "week_start" in t.columns else len(t)
+    null_portfolio = int(t["portfolio"].isna().sum()) if "portfolio" in t.columns else 0
+    null_ou = int(t["ou"].isna().sum()) if "ou" in t.columns else 0
+    add_check("Completeness", "Rows have team", null_team, f"{null_team} rows missing team.")
+    add_check("Completeness", "Rows have week_start", null_week, f"{null_week} rows missing week_start.")
+    add_check("Org Metadata", "Rows have portfolio", null_portfolio, f"{null_portfolio} rows missing portfolio.")
+    add_check("Org Metadata", "Rows have OU", null_ou, f"{null_ou} rows missing OU.")
+    numeric_cols = [
+        "capacity_hours",
+        "completed_hours",
+        "non_wip_hours",
+        "ooo_hours",
+        "unaccounted_hours",
+        "wip_pct",
+        "non_wip_pct",
+        "ooo_pct",
+        "unaccounted_pct",
+    ]
+    for col in numeric_cols:
+        if col not in t.columns:
+            continue
+        vals = pd.to_numeric(t[col], errors="coerce")
+        null_count = int(vals.isna().sum())
+        negative_count = int((vals < 0).sum())
+        add_check("Numeric Values", f"{col} is numeric", null_count, f"{null_count} rows have blank/non-numeric {col}.")
+        add_check("Numeric Values", f"{col} is not negative", negative_count, f"{negative_count} rows have negative {col}.")
+    if "capacity_hours" in t.columns:
+        zero_capacity = int((pd.to_numeric(t["capacity_hours"], errors="coerce").fillna(0) <= 0).sum())
+        add_check(
+            "Capacity",
+            "Capacity is greater than zero",
+            zero_capacity,
+            f"{zero_capacity} rows have zero or negative capacity.",
+        )
+    if {"wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct"}.issubset(t.columns):
+        pct_sum = (
+            pd.to_numeric(t["wip_pct"], errors="coerce").fillna(0)
+            + pd.to_numeric(t["non_wip_pct"], errors="coerce").fillna(0)
+            + pd.to_numeric(t["ooo_pct"], errors="coerce").fillna(0)
+            + pd.to_numeric(t["unaccounted_pct"], errors="coerce").fillna(0)
+        )
+        bad_pct_sum = int(((pct_sum < 0.98) | (pct_sum > 1.02)).sum())
+        add_check(
+            "Calculation",
+            "Percent mix totals approximately 100%",
+            bad_pct_sum,
+            f"{bad_pct_sum} rows have WIP + Non-WIP + OOO + Unaccounted outside 98%-102%.",
+        )
+    if "unaccounted_pct" in t.columns:
+        high_unaccounted = t[pd.to_numeric(t["unaccounted_pct"], errors="coerce").fillna(0) > 0.25].copy()
+        add_check(
+            "Business Rules",
+            "Unaccounted percentage is not above 25%",
+            len(high_unaccounted),
+            f"{len(high_unaccounted)} rows are above the 25% review threshold.",
+        )
+        for _, r in high_unaccounted.sort_values("unaccounted_pct", ascending=False).head(50).iterrows():
+            issues.append(
+                {
+                    "Issue": "High unaccounted %",
+                    "Team": r.get("team"),
+                    "Portfolio": r.get("portfolio"),
+                    "OU": r.get("ou"),
+                    "Week Start": pd.to_datetime(r.get("week_start"), errors="coerce").date()
+                    if pd.notna(pd.to_datetime(r.get("week_start"), errors="coerce"))
+                    else None,
+                    "Value": _fmt_pct(r.get("unaccounted_pct")),
+                    "Detail": f"{_fmt_hours(r.get('unaccounted_hours'))} unaccounted hours",
+                }
+            )
+    if shared_metrics_df is None or shared_metrics_df.empty:
+        add_check("Source Data", "Metrics source exists", 1, "No metrics rows loaded.")
+    else:
+        add_check("Source Data", "Metrics source exists", 0, f"{len(shared_metrics_df):,} metrics rows loaded.")
+    if shared_nonwip_df is None or shared_nonwip_df.empty:
+        add_check("Source Data", "Non-WIP source exists", 1, "No Non-WIP rows loaded.")
+    else:
+        add_check("Source Data", "Non-WIP source exists", 0, f"{len(shared_nonwip_df):,} Non-WIP rows loaded.")
+    return pd.DataFrame(checks), pd.DataFrame(issues)
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
@@ -1809,6 +2055,281 @@ if page == "Overview":
                             .interactive()
                         )
                         st.altair_chart(trend_chart, use_container_width=True)
+elif page == "Drilldown":
+    st.subheader("Portfolio → OU → Team Drilldown")
+    drill_team_export, drill_ou_export, drill_portfolio_export = _get_export_lookup_bundle(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        factor_out_ooo,
+    )
+    if drill_team_export.empty:
+        st.info("No drilldown data available.")
+    else:
+        week_options = sorted(
+            drill_team_export["week_start"].dropna().unique(),
+            reverse=True,
+        )
+        selected_week = st.selectbox(
+            "Week",
+            options=week_options,
+            index=0,
+            format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
+            key="drilldown_selected_week",
+        )
+        week_team = _latest_rows_for_week(drill_team_export, selected_week)
+        week_ou = _latest_rows_for_week(drill_ou_export, selected_week)
+        week_portfolio = _latest_rows_for_week(drill_portfolio_export, selected_week)
+        if week_team.empty:
+            st.info("No rows for the selected week.")
+        else:
+            portfolios = sorted(
+                [x for x in week_team["portfolio"].dropna().astype(str).unique()]
+            )
+            if not portfolios:
+                st.warning("No portfolio metadata found. Check `portfolio` values in enterprise_org.json.")
+            else:
+                selected_portfolio = st.selectbox(
+                    "Portfolio",
+                    options=portfolios,
+                    key="drilldown_portfolio",
+                )
+                portfolio_rows = week_portfolio[
+                    week_portfolio["portfolio"].astype(str) == selected_portfolio
+                ]
+                st.markdown("### Portfolio")
+                if not portfolio_rows.empty:
+                    _render_drilldown_card(
+                        title=selected_portfolio,
+                        subtitle=f"Week of {pd.Timestamp(selected_week).strftime('%Y-%m-%d')}",
+                        row=portfolio_rows.iloc[0],
+                        accent="#7c3aed",
+                    )
+                else:
+                    st.info("No portfolio rollup found for this selection.")
+                ou_options = sorted(
+                    [
+                        x
+                        for x in week_team.loc[
+                            week_team["portfolio"].astype(str) == selected_portfolio,
+                            "ou",
+                        ]
+                        .dropna()
+                        .astype(str)
+                        .unique()
+                    ]
+                )
+                selected_ou = None
+                if ou_options:
+                    selected_ou = st.selectbox(
+                        "OU",
+                        options=ou_options,
+                        key="drilldown_ou",
+                    )
+                    ou_rows = week_ou[
+                        (week_ou["portfolio"].astype(str) == selected_portfolio)
+                        & (week_ou["ou"].astype(str) == selected_ou)
+                    ]
+                    st.markdown("### OU")
+                    if not ou_rows.empty:
+                        _render_drilldown_card(
+                            title=selected_ou,
+                            subtitle=selected_portfolio,
+                            row=ou_rows.iloc[0],
+                            accent="#2563eb",
+                        )
+                    else:
+                        st.info("No OU rollup found for this selection.")
+                else:
+                    st.warning("No OU metadata found for this portfolio.")
+                team_scope = week_team[
+                    week_team["portfolio"].astype(str) == selected_portfolio
+                ].copy()
+                if selected_ou is not None:
+                    team_scope = team_scope[team_scope["ou"].astype(str) == selected_ou].copy()
+                team_options = sorted(team_scope["team"].dropna().astype(str).unique())
+                if team_options:
+                    selected_team = st.selectbox(
+                        "Team",
+                        options=team_options,
+                        key="drilldown_team",
+                    )
+                    team_rows = team_scope[team_scope["team"].astype(str) == selected_team]
+                    st.markdown("### Team")
+                    if not team_rows.empty:
+                        _render_drilldown_card(
+                            title=selected_team,
+                            subtitle=f"{selected_portfolio} / {selected_ou or 'All OUs'}",
+                            row=team_rows.iloc[0],
+                            accent="#0f766e",
+                        )
+                    st.markdown("### Teams in this scope")
+                    display_cols = [
+                        "team",
+                        "portfolio",
+                        "ou",
+                        "people_count",
+                        "capacity_hours",
+                        "completed_hours",
+                        "wip_pct",
+                        "non_wip_hours",
+                        "non_wip_pct",
+                        "ooo_hours",
+                        "ooo_pct",
+                        "unaccounted_hours",
+                        "unaccounted_pct",
+                    ]
+                    display_cols = [c for c in display_cols if c in team_scope.columns]
+                    display_df = team_scope[display_cols].copy()
+                    pct_cols = [c for c in display_df.columns if c.endswith("_pct")]
+                    for c in pct_cols:
+                        display_df[c] = pd.to_numeric(display_df[c], errors="coerce")
+                    st.dataframe(
+                        display_df.sort_values("unaccounted_pct", ascending=False),
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "team": "Team",
+                            "portfolio": "Portfolio",
+                            "ou": "OU",
+                            "people_count": st.column_config.NumberColumn("People", format="%.0f"),
+                            "capacity_hours": st.column_config.NumberColumn("Capacity Hours", format="%.1f"),
+                            "completed_hours": st.column_config.NumberColumn("Completed Hours", format="%.1f"),
+                            "non_wip_hours": st.column_config.NumberColumn("Non-WIP Hours", format="%.1f"),
+                            "ooo_hours": st.column_config.NumberColumn("OOO Hours", format="%.1f"),
+                            "unaccounted_hours": st.column_config.NumberColumn("Unaccounted Hours", format="%.1f"),
+                            "wip_pct": st.column_config.ProgressColumn("WIP %", format="%.1f%%", min_value=0, max_value=1),
+                            "non_wip_pct": st.column_config.ProgressColumn("Non-WIP %", format="%.1f%%", min_value=0, max_value=1),
+                            "ooo_pct": st.column_config.ProgressColumn("OOO %", format="%.1f%%", min_value=0, max_value=1),
+                            "unaccounted_pct": st.column_config.ProgressColumn("Unaccounted %", format="%.1f%%", min_value=0, max_value=1),
+                        },
+                    )
+                    trend_df = drill_team_export[
+                        drill_team_export["team"].astype(str) == selected_team
+                    ].copy()
+                    if not trend_df.empty:
+                        st.markdown("### Team trend")
+                        trend_long = trend_df.melt(
+                            id_vars=["week_start", "team"],
+                            value_vars=[
+                                c
+                                for c in ["wip_pct", "non_wip_pct", "ooo_pct", "unaccounted_pct"]
+                                if c in trend_df.columns
+                            ],
+                            var_name="Metric",
+                            value_name="Percent",
+                        )
+                        trend_chart = (
+                            alt.Chart(trend_long)
+                            .mark_line(point=True)
+                            .encode(
+                                x=alt.X("week_start:T", title="Week"),
+                                y=alt.Y("Percent:Q", title="Percent", axis=alt.Axis(format="%")),
+                                color=alt.Color("Metric:N", title="Metric"),
+                                tooltip=[
+                                    alt.Tooltip("week_start:T", title="Week"),
+                                    alt.Tooltip("Metric:N"),
+                                    alt.Tooltip("Percent:Q", format=".1%"),
+                                ],
+                            )
+                            .properties(height=320)
+                            .interactive()
+                        )
+                        st.altair_chart(trend_chart, use_container_width=True)
+                else:
+                    st.info("No teams found for this portfolio / OU selection.")
+elif page == "Data Quality":
+    st.subheader("Data Quality Dashboard")
+    dq_team_export, dq_ou_export, dq_portfolio_export = _get_export_lookup_bundle(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        factor_out_ooo,
+    )
+    checks_df, issues_df = _build_data_quality_summary(
+        dq_team_export,
+        dq_ou_export,
+        dq_portfolio_export,
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+    )
+    total_checks = len(checks_df)
+    issue_checks = int((checks_df["Issues"] > 0).sum()) if not checks_df.empty else 0
+    total_issues = int(checks_df["Issues"].sum()) if not checks_df.empty else 0
+    pass_rate = 0 if total_checks == 0 else (total_checks - issue_checks) / total_checks
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Checks", f"{total_checks:,}")
+    c2.metric("Checks needing review", f"{issue_checks:,}")
+    c3.metric("Total issues", f"{total_issues:,}")
+    c4.metric("Pass rate", f"{pass_rate:.0%}")
+    if issue_checks == 0:
+        st.success("No data-quality issues found in the current weekly export bundle.")
+    else:
+        st.warning("Some data-quality checks need review.")
+    st.markdown("### Quality checks")
+    st.dataframe(
+        checks_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Area": "Area",
+            "Check": "Check",
+            "Status": "Status",
+            "Issues": st.column_config.NumberColumn("Issues", format="%d"),
+            "Detail": "Detail",
+        },
+    )
+    if not issues_df.empty:
+        st.markdown("### Top row-level issues")
+        st.dataframe(
+            issues_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+    st.markdown("### Source coverage")
+    src_rows = []
+    for key, df in data.items():
+        if df is None or df.empty:
+            continue
+        date_col = _get_date_col(df)
+        team_col = _get_team_col(df)
+        tmp = df.copy()
+        min_date = None
+        max_date = None
+        if date_col and date_col in tmp.columns:
+            dates = pd.to_datetime(tmp[date_col], errors="coerce").dropna()
+            if not dates.empty:
+                min_date = dates.min().date()
+                max_date = dates.max().date()
+        teams = None
+        if team_col and team_col in tmp.columns:
+            teams = tmp[team_col].dropna().astype(str).nunique()
+        src_rows.append(
+            {
+                "Source": key,
+                "Rows": len(df),
+                "Columns": len(df.columns),
+                "Team Column": team_col or "—",
+                "Date Column": date_col or "—",
+                "Teams": teams if teams is not None else "—",
+                "Min Date": min_date,
+                "Max Date": max_date,
+            }
+        )
+    source_df = pd.DataFrame(src_rows)
+    if source_df.empty:
+        st.info("No source files were loaded.")
+    else:
+        st.dataframe(
+            source_df.sort_values("Source"),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Rows": st.column_config.NumberColumn("Rows", format="%d"),
+                "Columns": st.column_config.NumberColumn("Columns", format="%d"),
+            },
+        )
 elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
     activity_keys = [
