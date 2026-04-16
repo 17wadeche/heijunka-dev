@@ -277,16 +277,6 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
-def irl_people_for_team(team: str, config: dict) -> set[str]:
-    if not isinstance(config, dict):
-        return set()
-    team_cfg = config.get(str(team).strip(), {})
-    if not isinstance(team_cfg, dict):
-        return set()
-    raw = team_cfg.get("irl_people", [])
-    if not isinstance(raw, list):
-        return set()
-    return {str(x).strip() for x in raw if str(x).strip()}
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team", "period_date", "person", "Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
