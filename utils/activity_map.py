@@ -192,6 +192,7 @@ ACTIVITY_MAP = {
     "meeting with myles on check in/ shipping": "Meeting",
     "cornerstone:":"Cornerstone",
     "replace catheter meeting": "Meeting",
+    "check-in meeting": "Meeting",
     "co-op meeting": "Meeting",
     "gemba/wip review": "Gemba",
     "scrum, yellowbelt work":"Scrum & Action",
