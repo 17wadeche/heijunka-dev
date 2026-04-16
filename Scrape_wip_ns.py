@@ -127,9 +127,10 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
     et_combine_teams = {"O-Arm MEIC", "Nav", "Mazor", "AE MEIC", "CSF"}
     et_label = "Enabling Technologies"
     rollups = [
-        ({"DBS C13", "DBS C14", "DBS MEIC"}, "DBS"),
-        ({"MEIC PH", "PH", "PH Cell 17"}, "PH"),
-        ({"SCS Cell 1", "SCS Super Cell", "SCS MEIC"}, "SCS"),
+        ({"MEIC PH", "SCS MEIC", "DBS MEIC"}, "PH-NM MEIC"),
+        ({"DBS C13", "DBS C14"}, "DBS"),
+        ({"PH", "PH Cell 17"}, "PH"),
+        ({"SCS Cell 1", "SCS Super Cell"}, "SCS"),
         ({"PSS US", "PSS MEIC", "PSS MEIC Intern"}, "PSS"),
         (et_combine_teams, et_label),
     ]
