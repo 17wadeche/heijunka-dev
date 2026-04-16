@@ -1241,6 +1241,9 @@ def _weekly_team_export_df(
         nw["non_wip_hours"] = 0.0
     else:
         nw["non_wip_hours"] = pd.to_numeric(nw[total_non_wip_col], errors="coerce").fillna(0.0)
+    irl_lookup: dict[str, set[str]] = {
+        t: irl_people_for_team(t, teams_cfg) for t in enabled_team_names
+    }
     rows: list[dict[str, Any]] = []
     for _, nw_row in nw.iterrows():
         team = str(nw_row.get("team", "")).strip()
@@ -1248,7 +1251,7 @@ def _weekly_team_export_df(
         if not team or pd.isna(wk):
             continue
         wk = pd.Timestamp(wk).normalize()
-        team_irl_people = irl_people_for_team(team, teams_cfg)
+        team_irl_people = irl_lookup.get(team, set())
         wk_people = build_person_weekly_accounting(
             team=team,
             week=wk,
