@@ -1376,14 +1376,27 @@ def get_people_count_from_wip(
     component_teams: Optional[set] = None,
 ) -> int:
     team_name = str(team).strip()
-    if team_name == "DBS":
-        try:
-            return get_dbs_people_count_from_heijunka_files(
-                file_paths=(DBS_C13_SOURCE_FILE, DBS_C14_SOURCE_FILE),
-                name_row_zero_based=29,  
-            )
-        except Exception as e:
-            return int(fallback or 0)
+    team_key = team_name.casefold()
+    week_txt = "unknown"
+    try:
+        week_txt = pd.Timestamp(week).date().isoformat()
+    except Exception:
+        week_txt = str(week)
+    print(
+        f"[PEOPLE COUNT TRACE] "
+        f"team_raw={team!r} "
+        f"team_name={team_name!r} "
+        f"team_key={team_key!r} "
+        f"week={week_txt} "
+        f"fallback={fallback!r}",
+        flush=True,
+    )
+    if team_key == "dbs":
+        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=12", flush=True)
+        return 12
+    if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
+        print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=34", flush=True)
+        return 34
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
     base = wip_df[wip_df["period_date"] == week].copy()
@@ -1690,7 +1703,13 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
             if parent_team == "PH":
                 people_count_final = 18
-            elif parent_team in {"DBS", "SCS"}:
+            elif parent_team == "DBS":
+                people_count_final = 12
+                print(
+                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning=12",
+                    flush=True,
+                )
+            elif parent_team == "SCS":
                 people_count_final = fallback_people_count
             else:
                 people_count_final = get_people_count_from_wip(
@@ -2709,6 +2728,31 @@ def main():
         if not dupes.empty:
             print("\n[DEBUG] DUPLICATE team/week rows before write:")
     log_weekly_ph_summary(combined, "POST-ROLLUP")
+    if not combined.empty and "team" in combined.columns and "people_count" in combined.columns:
+        combined["_team_key"] = combined["team"].astype(str).str.strip().str.casefold()
+        combined.loc[combined["_team_key"] == "dbs", "people_count"] = 12
+        combined.loc[
+            combined["_team_key"].isin({
+                "enabling tech",
+                "enabling technology",
+                "enabling technologies",
+            }),
+            "people_count"
+        ] = 34
+        print(
+            "[FINAL PEOPLE COUNT OVERRIDE CHECK]\n"
+            + combined.loc[
+                combined["_team_key"].isin({
+                    "dbs",
+                    "enabling tech",
+                    "enabling technology",
+                    "enabling technologies",
+                }),
+                ["team", "period_date", "people_count"]
+            ].to_string(index=False),
+            flush=True,
+        )
+        combined = combined.drop(columns=["_team_key"])
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
     main()
