@@ -185,6 +185,7 @@ ACTIVITY_MAP = {
     "reading through coronary product guide": "Reading File/Document Information",
     "self training": "Training/Mentoring",
     "reading coronary accessories ppt": "Training/Mentoring",
+    "training natalie": "Training/Mentoring",
     "arranging shipment of products to plymouth":"Shipment",
     "job review":"Admin",
     "call with scott": "Meeting",
