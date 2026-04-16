@@ -1611,9 +1611,7 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     PEOPLE_START = 2
     PEOPLE_END = 18
     COL_B = 1
-    COL_AA = 26
-    COL_AF = 31
-    ooo_col = COL_AA if (week is not None and week.month == 2 and week.day == 16) else COL_AF
+    ooo_col = 26
     COL_C = 2
     COL_AE = 30
     HEADER_ROW = 1
