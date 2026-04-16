@@ -29,12 +29,8 @@ def _week_start_monday(dt_series: pd.Series) -> pd.Series:
     return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
 def _meic_team_for_person(name: str) -> Optional[str]:
     nm = norm_name(name)
-    if nm in DBS_MEIC_NAMES:
-        return "DBS MEIC"
-    if nm in PH_MEIC_NAMES:
-        return "PH MEIC"
-    if nm in SCS_MEIC_NAMES:
-        return "SCS MEIC"
+    if nm in DBS_MEIC_NAMES or nm in PH_MEIC_NAMES or nm in SCS_MEIC_NAMES:
+        return "PH-NM MEIC"
     return None
 def build_pss_intern_capacity_row(
     team: str,
@@ -1140,7 +1136,7 @@ def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
     tmp["total_non_wip_hours"] = pd.to_numeric(tmp.get("total_non_wip_hours"), errors="coerce").fillna(0.0)
     tmp["OOO Hours"] = pd.to_numeric(tmp.get("OOO Hours"), errors="coerce").fillna(0.0)
-    tmp = tmp[tmp["team"].isin(["PH", "PH MEIC"])].copy()
+    tmp = tmp[tmp["team"].isin(["PH", "PH-NM MEIC"])].copy()
     if tmp.empty:
         return
     tmp = tmp.sort_values(["period_date", "team"])
@@ -1352,40 +1348,23 @@ def build_meic_teamtracker_block(ws: pd.DataFrame) -> Dict:
 def split_meic_snapshot_into_teams(built: Dict) -> Dict[str, Dict]:
     people_rows = built["people_rows"]
     activities = built["nonwip_activities"]
-    def team_for_person(name: str) -> str:
-        if name in DBS_MEIC_NAMES:
-            return "DBS MEIC"
-        if name in PH_MEIC_NAMES:
-            return "PH MEIC"
-        return "SCS MEIC"
-    out: Dict[str, Dict] = {
-        "DBS MEIC": {"people_rows": [], "activities": []},
-        "PH MEIC": {"people_rows": [], "activities": []},
-        "SCS MEIC": {"people_rows": [], "activities": []},
-    }
+    team_name = "PH-NM MEIC"
+    nonwip_by_person = {}
     for r in people_rows:
-        out[team_for_person(r["name"])]["people_rows"].append(r)
-    for a in activities:
-        out[team_for_person(a["name"])]["activities"].append(a)
-    final = {}
-    for team_name, data in out.items():
-        prs = data["people_rows"]
-        acts = data["activities"]
-        nonwip_by_person = {}
-        for r in prs:
-            v = float(round(r["NONWIP"], 2))
-            if v != 0.0:
-                nonwip_by_person[r["name"]] = v
-        final[team_name] = {
-            "people_rows": prs,
-            "people_count": len(set(r["name"] for r in prs)),
-            "ooo_hours": float(round(sum(r["OOO"] for r in prs), 2)),
-            "total_nonwip_hours": float(round(sum(r["NONWIP"] for r in prs), 2)),
+        v = float(round(r["NONWIP"], 2))
+        if v != 0.0:
+            nonwip_by_person[r["name"]] = v
+    return {
+        team_name: {
+            "people_rows": people_rows,
+            "people_count": len(set(r["name"] for r in people_rows)),
+            "ooo_hours": float(round(sum(r["OOO"] for r in people_rows), 2)),
+            "total_nonwip_hours": float(round(sum(r["NONWIP"] for r in people_rows), 2)),
             "nonwip_by_person": nonwip_by_person,
-            "nonwip_activities": acts,
-            "ooo_map": {r["name"]: float(r["OOO"]) for r in prs},
+            "nonwip_activities": activities,
+            "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
         }
-    return final
+    }
 def get_people_count_from_wip(
     wip_df: pd.DataFrame,
     team: str,
