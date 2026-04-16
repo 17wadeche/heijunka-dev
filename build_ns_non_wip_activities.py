@@ -261,12 +261,15 @@ def build_meic_rows_from_non_d2d_log(
         wip_workers = extract_wip_workers_from_row(wip_match.iloc[0]) if not wip_match.empty else []
         wip_workers_count = len(wip_workers)
         wip_workers_ooo_hours = float(round(sum(safe_float0(ooo_by_person.get(n, 0.0)) for n in wip_workers), 2))
-        people_count_final = get_people_count_from_wip(
-            wip_df=wip_df,
-            team=team_name,
-            week=week,
-            fallback=grp["name"].nunique(),
-        )
+        if team_name == "PH-NM MEIC":
+            people_count_final = len(DBS_MEIC_NAMES | PH_MEIC_NAMES | SCS_MEIC_NAMES)
+        else:
+            people_count_final = get_people_count_from_wip(
+                wip_df=wip_df,
+                team=team_name,
+                week=week,
+                fallback=grp["name"].nunique(),
+            )
         out_rows.append({
             "team": team_name,
             "period_date": week.date().isoformat(),
@@ -719,7 +722,7 @@ def log_weekly_scs_breakdown(df: pd.DataFrame, label: str = "SCS SPLIT") -> None
     tmp["total_non_wip_hours"] = pd.to_numeric(
         tmp.get("total_non_wip_hours"), errors="coerce"
     ).fillna(0.0)
-    tmp = tmp[tmp["team"].isin(["SCS", "SCS MEIC"])].copy()
+    tmp = tmp[tmp["team"].isin(["SCS", "PH-NM MEIC"])].copy()
     if tmp.empty:
         return
     for week, g in tmp.groupby("period_date", dropna=False):
