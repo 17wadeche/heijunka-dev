@@ -193,6 +193,7 @@ ACTIVITY_MAP = {
     "venaseal document reading":"Reading File/Document Information",
     "pmpa meeting 3o getting a device from the pallet":"PMPA",
     "email, collaboration":"Email & IM",
+    "one on one, scott cundy ama, scrum, collaboration":"Meeting",
     "job review":"Admin",
     "call with scott": "Meeting",
     "meeting with fola on obstructed devcie": "Meeting",
