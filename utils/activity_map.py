@@ -194,6 +194,8 @@ ACTIVITY_MAP = {
     "replace catheter meeting": "Meeting",
     "co-op meeting": "Meeting",
     "gemba/wip review": "Gemba",
+    "scrum, yellowbelt work":"Scrum & Action",
+    "scrum, collaboration, self-performance review work":"Scrum & Action",
     "pmq/aortic meeting": "Meeting",
     "film team meeting": "Meeting",
     "q&a meeting": "Meeting",
