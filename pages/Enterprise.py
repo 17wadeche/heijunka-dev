@@ -1562,7 +1562,12 @@ factor_out_ooo = st.toggle(
     value=False,
     key="factor_out_ooo",
 )
-tabs = st.tabs(["Overview", "Non-WIP", "Export"])
+page = st.segmented_control(
+    "Section",
+    options=["Overview", "Non-WIP", "Export"],
+    default="Overview",
+    key="enterprise_section",
+)
 @st.cache_data(show_spinner=False)
 def _get_export_lookup_bundle(
     shared_metrics_df: Optional[pd.DataFrame],
@@ -1576,7 +1581,10 @@ def _get_export_lookup_bundle(
         org,
         factor_out_ooo=factor_out_ooo,
     )
-with tabs[0]:
+EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
+def _norm_activity_name(val: Any) -> str:
+    return str(val).strip().lower().replace("_", "-")
+if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
@@ -1755,10 +1763,7 @@ with tabs[0]:
                             .interactive()
                         )
                         st.altair_chart(trend_chart, use_container_width=True)
-EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
-def _norm_activity_name(val: Any) -> str:
-    return str(val).strip().lower().replace("_", "-")
-with tabs[1]:
+elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
     activity_keys = [
         "ns_non_wip_activities",
@@ -2015,7 +2020,7 @@ with tabs[1]:
     )
     ax.axis("equal")
     st.pyplot(fig)
-with tabs[2]:
+elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,  # ← new
