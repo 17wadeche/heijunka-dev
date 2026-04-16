@@ -7119,3 +7119,96 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-04-16 12:41:45,942 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-16 12:41:46,180 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 297 rows
 2026-04-16 12:41:46,182 | INFO | === NS Metrics Run END ===
+2026-04-16 13:55:44,999 | INFO | === NS Metrics Run START ===
+2026-04-16 13:55:44,999 | INFO | Selected team: all
+2026-04-16 13:55:44,999 | INFO | [Spine] START
+2026-04-16 13:55:51,782 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:06.783120
+2026-04-16 13:55:51,782 | INFO | [Spine] START
+2026-04-16 13:56:21,795 | INFO | [Spine] DONE | rows=6 | elapsed=0:00:30.013104
+2026-04-16 13:56:21,795 | INFO | [PH] START
+2026-04-16 13:57:07,023 | INFO | [PH] DONE | rows=546 | elapsed=0:00:45.227814
+2026-04-16 13:57:07,023 | INFO | [PH Cell 17] START
+2026-04-16 13:57:07,325 | INFO | [PH Cell 17] DONE | rows=3 | elapsed=0:00:00.302762
+2026-04-16 13:57:07,325 | INFO | [SCS Cell 1] START
+2026-04-16 13:57:50,583 | INFO | [SCS Cell 1] DONE | rows=286 | elapsed=0:00:43.257762
+2026-04-16 13:57:50,583 | INFO | [MEIC PH] START
+2026-04-16 13:57:58,213 | INFO | [MEIC PH] DONE | rows=89 | elapsed=0:00:07.629518
+2026-04-16 13:57:58,213 | INFO | [DBS C13] START
+2026-04-16 13:57:58,532 | INFO | [DBS C13] DONE | rows=4 | elapsed=0:00:00.319493
+2026-04-16 13:57:58,532 | INFO | [DBS C13] filter >= 2025-07-07: 4 -> 4
+2026-04-16 13:57:58,532 | INFO | [DBS C14] START
+2026-04-16 13:57:58,846 | INFO | [DBS C14] DONE | rows=4 | elapsed=0:00:00.313692
+2026-04-16 13:57:58,846 | INFO | [DBS C14] filter >= 2025-07-07: 4 -> 4
+2026-04-16 13:57:58,846 | INFO | [NV] START
+2026-04-16 13:59:32,729 | INFO | [NV] DONE | rows=46 | elapsed=0:01:33.882663
+2026-04-16 13:59:32,729 | INFO | [NV] filter >= 2025-07-07: 46 -> 41
+2026-04-16 13:59:32,729 | INFO | [Nav] START
+2026-04-16 14:02:32,744 | INFO | [Nav] still running...
+2026-04-16 14:03:30,751 | INFO | [Nav] DONE | rows=43 | elapsed=0:03:58.020157
+2026-04-16 14:03:30,751 | INFO | [AE MEIC] START
+2026-04-16 14:06:30,759 | INFO | [AE MEIC] still running...
+2026-04-16 14:07:29,082 | INFO | [AE MEIC] DONE | rows=43 | elapsed=0:03:58.331414
+2026-04-16 14:07:29,088 | INFO | [O-Arm MEIC] START
+2026-04-16 14:10:29,099 | INFO | [O-Arm MEIC] still running...
+2026-04-16 14:11:10,846 | INFO | [O-Arm MEIC] DONE | rows=41 | elapsed=0:03:41.757817
+2026-04-16 14:11:10,846 | INFO | [Mazor] START
+2026-04-16 14:13:22,648 | INFO | [Mazor] DONE | rows=45 | elapsed=0:02:11.801266
+2026-04-16 14:13:22,648 | INFO | [CSF] START
+2026-04-16 14:14:56,219 | INFO | [CSF] DONE | rows=43 | elapsed=0:01:33.571532
+2026-04-16 14:14:56,219 | INFO | [PSS US] START
+2026-04-16 14:15:40,316 | INFO | [PSS US] DONE | rows=46 | elapsed=0:00:44.096599
+2026-04-16 14:15:40,318 | INFO | [PSS MEIC] START
+2026-04-16 14:18:40,334 | INFO | [PSS MEIC] still running...
+2026-04-16 14:20:32,729 | INFO | [PSS MEIC] DONE | rows=45 | elapsed=0:04:52.410799
+2026-04-16 14:20:32,729 | INFO | [PSS MEIC Intern] START
+2026-04-16 14:21:31,584 | INFO | [PSS MEIC Intern] DONE | rows=46 | elapsed=0:00:58.855873
+2026-04-16 14:21:31,684 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-16 14:21:31,684 | INFO | [ENT] START
+2026-04-16 14:21:31,929 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.244760
+2026-04-16 14:21:31,929 | INFO | [DBS MEIC] START
+2026-04-16 14:21:31,947 | INFO | [DBS MEIC] DONE | rows=36 | elapsed=0:00:00.017801
+2026-04-16 14:21:31,948 | INFO | [SCS MEIC] START
+2026-04-16 14:21:31,952 | INFO | [SCS MEIC] DONE | rows=36 | elapsed=0:00:00.004286
+2026-04-16 14:21:31,952 | INFO | [TDD COS 1] START
+2026-04-16 14:21:59,864 | INFO | [TDD COS 1] DONE | rows=202 | elapsed=0:00:27.911650
+2026-04-16 14:21:59,865 | INFO | [TDD COS 1] filter >= 2025-06-02: 202 -> 45
+2026-04-16 14:21:59,866 | INFO | [SCS Super Cell] START
+2026-04-16 14:22:36,890 | INFO | === NS Metrics Run START ===
+2026-04-16 14:22:36,890 | INFO | Selected team: all
+2026-04-16 14:22:36,895 | INFO | [Spine] START
+2026-04-16 14:22:51,607 | INFO | [SCS Super Cell] DONE | rows=201 | elapsed=0:00:51.741209
+2026-04-16 14:22:51,607 | INFO | [SCS Super Cell] rows scraped (pre-filter): 201
+2026-04-16 14:22:51,607 | INFO | [SCS Super Cell] filter >= 2025-06-30: 201 -> 41
+2026-04-16 14:22:51,607 | INFO | [MEIC PH] filter >= 2025-09-01: 89 -> 34
+2026-04-16 14:22:51,607 | INFO | [PH Cell 17] rows before TAA filter = 3
+2026-04-16 14:22:51,607 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1516 -> 599
+2026-04-16 14:22:51,607 | INFO | [PH Cell 17] rows after TAA filter = 3
+2026-04-16 14:22:51,607 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1516 -> 599
+2026-04-16 14:22:51,607 | INFO | [ALL] drop period_date == 2023-11-06: 599 -> 598
+2026-04-16 14:22:51,620 | INFO | [ALL] drop period_date == 2026-09-07: 598 -> 597
+2026-04-16 14:22:51,689 | INFO | Wrote 597 rows to NS_DATA\NS_metrics.csv
+2026-04-16 14:22:51,839 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:14.944060
+2026-04-16 14:22:51,839 | INFO | [Spine] START
+2026-04-16 14:22:51,845 | INFO | Wrote 330 rows to NS_DATA\NS_WIP.csv
+2026-04-16 14:22:51,852 | ERROR | [Spine] FAIL | elapsed=0:00:00.012964 | error=(-2147024891, 'Access is denied.', None, None)
+2026-04-16 14:22:51,852 | ERROR | Traceback (most recent call last):
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 295, in run_team
+    rows = fn()
+           ^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 3176, in <lambda>
+    lambda: scrape_spine_previous_weeks_xlsm(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\heijunka-dev\Scrape_wip_ns.py", line 2299, in scrape_spine_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
+
+2026-04-16 14:22:51,852 | INFO | [PH] START
+2026-04-16 14:22:51,881 | INFO | [POST] WIP weekly keys=330
+2026-04-16 14:22:51,882 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-04-16 14:22:51,882 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-04-16 14:22:51,966 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 297 rows
+2026-04-16 14:22:51,967 | INFO | === NS Metrics Run END ===
