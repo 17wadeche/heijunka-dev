@@ -193,6 +193,8 @@ ACTIVITY_MAP = {
     "replace catheter meeting": "Meeting",
     "co-op meeting": "Meeting",
     "sh live case video":"Reviewing Documents & Case Video",
+    "re-doing analysi":"Redo Analysis",
+    "revisiting previous analysi":"Redo Analysis",
     "looking up on how to analyse video":"Reviewing Documents & Case Video",
     "mis it sap issues rch review and closure of rch": "IT Issue/Update",
     "meeting postmorkat": "Meeting",
