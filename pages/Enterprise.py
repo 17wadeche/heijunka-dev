@@ -1563,7 +1563,6 @@ factor_out_ooo = st.toggle(
     key="factor_out_ooo",
 )
 page = st.segmented_control(
-    "Section",
     options=["Overview", "Non-WIP", "Export"],
     default="Overview",
     key="enterprise_section",
