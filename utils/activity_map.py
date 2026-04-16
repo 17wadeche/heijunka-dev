@@ -194,6 +194,8 @@ ACTIVITY_MAP = {
     "co-op meeting": "Meeting",
     "sh live case video":"Reviewing Documents & Case Video",
     "looking up on how to analyse video":"Reviewing Documents & Case Video",
+    "mis it sap issues rch review and closure of rch": "IT Issue/Update",
+    "meeting postmorkat": "Meeting",
     "cleaning new desk and set up, admin":"Admin",
     "gemba slide prep and gemba":"Gemba",
     "emails & admin":"Email & IM",
