@@ -88,6 +88,7 @@ ACTIVITY_MAP = {
     "email a": "Email & IM",
     "emails/adminl": "Email & IM",
     "trainingl": "Training/Mentoring",
+    "cust comm training session": "Training/Mentoring",
     "pulled work": "Metrics & Schedule",
     "pulled work tool, yellow belt training": "Metrics & Schedule",
     "yellow belt training":"Yellow Belt",
