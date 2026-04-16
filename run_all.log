@@ -375,3 +375,69 @@
 [2026-04-16 14:37:11] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
 [2026-04-16 14:39:33] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ms_non_wip_activities.py
 [2026-04-16 14:39:33] Running: git add -A
+[2026-04-16 16:06:03] === Starting run_all.py ===
+[2026-04-16 16:06:03] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_iv.py --all
+[2026-04-16 16:07:09] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_iv.py --all
+[2026-04-16 16:07:09] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_iv_non_wip_activities.py --config teams.json --metrics IV_DATA\metrics.csv --all --out IV_DATA\non_wip.csv
+[2026-04-16 16:09:44] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_iv_non_wip_activities.py --config teams.json --metrics IV_DATA\metrics.csv --all --out IV_DATA\non_wip.csv
+[2026-04-16 16:09:44] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ect.py
+[2026-04-16 16:16:11] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ect.py
+[2026-04-16 16:16:11] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ect_non_wip_activities.py
+[2026-04-16 16:20:42] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ect_non_wip_activities.py
+[2026-04-16 16:20:42] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-10-27
+[2026-04-16 16:20:42] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-10-27
+[2026-04-16 16:20:42] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-03
+[2026-04-16 16:20:42] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-03
+[2026-04-16 16:20:42] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-10
+[2026-04-16 16:20:43] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-10
+[2026-04-16 16:20:43] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-17
+[2026-04-16 16:20:43] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-17
+[2026-04-16 16:20:43] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-24
+[2026-04-16 16:20:43] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-11-24
+[2026-04-16 16:20:43] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-01
+[2026-04-16 16:20:44] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-01
+[2026-04-16 16:20:44] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-08
+[2026-04-16 16:20:44] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-08
+[2026-04-16 16:20:44] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-15
+[2026-04-16 16:20:44] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-15
+[2026-04-16 16:20:44] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-22
+[2026-04-16 16:20:45] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-22
+[2026-04-16 16:20:45] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-29
+[2026-04-16 16:20:45] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2025-12-29
+[2026-04-16 16:20:45] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-05
+[2026-04-16 16:20:46] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-05
+[2026-04-16 16:20:46] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-12
+[2026-04-16 16:20:46] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-12
+[2026-04-16 16:20:46] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-19
+[2026-04-16 16:20:46] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-19
+[2026-04-16 16:20:46] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-26
+[2026-04-16 16:20:47] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-01-26
+[2026-04-16 16:20:47] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-02
+[2026-04-16 16:20:47] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-02
+[2026-04-16 16:20:47] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-09
+[2026-04-16 16:20:47] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-09
+[2026-04-16 16:20:47] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-16
+[2026-04-16 16:20:48] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-16
+[2026-04-16 16:20:48] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-23
+[2026-04-16 16:20:48] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-02-23
+[2026-04-16 16:20:48] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-02
+[2026-04-16 16:20:48] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-02
+[2026-04-16 16:20:48] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-09
+[2026-04-16 16:20:49] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-09
+[2026-04-16 16:20:49] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-16
+[2026-04-16 16:20:50] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-16
+[2026-04-16 16:20:50] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-23
+[2026-04-16 16:20:50] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-23
+[2026-04-16 16:20:50] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-30
+[2026-04-16 16:20:51] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-03-30
+[2026-04-16 16:20:51] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
+[2026-04-16 16:20:52] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-06
+[2026-04-16 16:20:52] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-13
+[2026-04-16 16:20:52] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-13
+[2026-04-16 16:20:52] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-16 16:37:28] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-16 16:37:28] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-16 16:37:45] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ns_non_wip_activities.py
+[2026-04-16 16:37:45] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-16 16:39:00] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_crm.py
+[2026-04-16 16:39:00] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_crm_non_wip_activities.py
