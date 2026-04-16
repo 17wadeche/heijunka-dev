@@ -190,6 +190,7 @@ ACTIVITY_MAP = {
     "call with scott": "Meeting",
     "meeting with fola on obstructed devcie": "Meeting",
     "meeting with myles on check in/ shipping": "Meeting",
+    "cornerstone:":"Cornerstone",
     "replace catheter meeting": "Meeting",
     "co-op meeting": "Meeting",
     "sh live case video":"Reviewing Documents & Case Video",
