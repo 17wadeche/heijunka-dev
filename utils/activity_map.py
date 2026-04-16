@@ -194,6 +194,11 @@ ACTIVITY_MAP = {
     "pmpa meeting 3o getting a device from the pallet":"PMPA",
     "email, collaboration":"Email & IM",
     "one on one, scott cundy ama, scrum, collaboration":"Meeting",
+    Ai/ml Gap review
+    Mdr Vig Meeting
+    Emalis/admin
+    Late Report Meeting
+    Pmpa Questions/updated
     "job review":"Admin",
     "call with scott": "Meeting",
     "meeting with fola on obstructed devcie": "Meeting",
