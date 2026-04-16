@@ -187,6 +187,7 @@ ACTIVITY_MAP = {
     "reading coronary accessories ppt": "Training/Mentoring",
     "training natalie": "Training/Mentoring",
     "arranging shipment of products to plymouth":"Shipment",
+    "myp connections event":"ERG Meeting",
     "job review":"Admin",
     "call with scott": "Meeting",
     "meeting with fola on obstructed devcie": "Meeting",
