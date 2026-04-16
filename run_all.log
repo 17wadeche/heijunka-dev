@@ -454,3 +454,11 @@
 [2026-04-16 16:43:17] Finished: git push
 [2026-04-16 16:43:17] Committed and pushed.
 [2026-04-16 16:43:17] All scripts completed successfully.
+[2026-04-16 17:13:51] === Starting run_all.py ===
+[2026-04-16 17:13:51] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_iv.py --all
+[2026-04-16 17:14:53] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_iv.py --all
+[2026-04-16 17:14:53] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_iv_non_wip_activities.py --config teams.json --metrics IV_DATA\metrics.csv --all --out IV_DATA\non_wip.csv
+[2026-04-16 17:17:36] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_iv_non_wip_activities.py --config teams.json --metrics IV_DATA\metrics.csv --all --out IV_DATA\non_wip.csv
+[2026-04-16 17:17:36] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ect.py
+[2026-04-16 17:24:03] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_ect.py
+[2026-04-16 17:24:03] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe build_ect_non_wip_activities.py
