@@ -6915,3 +6915,71 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-04-15 19:35:15,102 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-15 19:35:15,180 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 316 rows
 2026-04-15 19:35:15,182 | INFO | === NS Metrics Run END ===
+2026-04-16 10:07:09,163 | INFO | === NS Metrics Run START ===
+2026-04-16 10:07:09,166 | INFO | Selected team: all
+2026-04-16 10:07:09,172 | INFO | [Spine] START
+2026-04-16 10:07:29,448 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:20.276607
+2026-04-16 10:07:29,449 | INFO | [Spine] START
+2026-04-16 10:08:50,979 | INFO | [Spine] DONE | rows=6 | elapsed=0:01:21.530137
+2026-04-16 10:08:50,980 | INFO | [PH] START
+2026-04-16 10:10:11,395 | INFO | [PH] DONE | rows=546 | elapsed=0:01:20.414188
+2026-04-16 10:10:11,395 | INFO | [PH Cell 17] START
+2026-04-16 10:10:11,770 | INFO | [PH Cell 17] DONE | rows=3 | elapsed=0:00:00.375092
+2026-04-16 10:10:11,770 | INFO | [SCS Cell 1] START
+2026-04-16 10:11:26,517 | INFO | [SCS Cell 1] DONE | rows=286 | elapsed=0:01:14.747332
+2026-04-16 10:11:26,517 | INFO | [MEIC PH] START
+2026-04-16 10:11:57,976 | INFO | [MEIC PH] DONE | rows=89 | elapsed=0:00:31.458743
+2026-04-16 10:11:57,977 | INFO | [DBS C13] START
+2026-04-16 10:11:59,356 | INFO | [DBS C13] DONE | rows=4 | elapsed=0:00:01.379674
+2026-04-16 10:11:59,358 | INFO | [DBS C13] filter >= 2025-07-07: 4 -> 4
+2026-04-16 10:11:59,359 | INFO | [DBS C14] START
+2026-04-16 10:12:00,771 | INFO | [DBS C14] DONE | rows=4 | elapsed=0:00:01.410291
+2026-04-16 10:12:00,772 | INFO | [DBS C14] filter >= 2025-07-07: 4 -> 4
+2026-04-16 10:12:00,773 | INFO | [NV] START
+2026-04-16 10:14:33,571 | INFO | [NV] DONE | rows=46 | elapsed=0:02:32.798166
+2026-04-16 10:14:33,572 | INFO | [NV] filter >= 2025-07-07: 46 -> 41
+2026-04-16 10:14:33,572 | INFO | [Nav] START
+2026-04-16 10:17:33,581 | INFO | [Nav] still running...
+2026-04-16 10:17:57,802 | INFO | [Nav] DONE | rows=43 | elapsed=0:03:24.229871
+2026-04-16 10:17:57,802 | INFO | [AE MEIC] START
+2026-04-16 10:20:00,508 | INFO | [AE MEIC] DONE | rows=43 | elapsed=0:02:02.706309
+2026-04-16 10:20:00,508 | INFO | [O-Arm MEIC] START
+2026-04-16 10:22:28,948 | INFO | [O-Arm MEIC] DONE | rows=41 | elapsed=0:02:28.439878
+2026-04-16 10:22:28,949 | INFO | [Mazor] START
+2026-04-16 10:24:27,792 | INFO | [Mazor] DONE | rows=45 | elapsed=0:01:58.842775
+2026-04-16 10:24:27,793 | INFO | [CSF] START
+2026-04-16 10:25:27,071 | INFO | [CSF] DONE | rows=43 | elapsed=0:00:59.277745
+2026-04-16 10:25:27,072 | INFO | [PSS US] START
+2026-04-16 10:25:54,852 | INFO | [PSS US] DONE | rows=46 | elapsed=0:00:27.779842
+2026-04-16 10:25:54,853 | INFO | [PSS MEIC] START
+2026-04-16 10:28:36,494 | INFO | [PSS MEIC] DONE | rows=45 | elapsed=0:02:41.640888
+2026-04-16 10:28:36,495 | INFO | [PSS MEIC Intern] START
+2026-04-16 10:29:37,843 | INFO | [PSS MEIC Intern] DONE | rows=46 | elapsed=0:01:01.348010
+2026-04-16 10:29:38,080 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-16 10:29:38,080 | INFO | [ENT] START
+2026-04-16 10:29:38,332 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.251734
+2026-04-16 10:29:38,333 | INFO | [DBS MEIC] START
+2026-04-16 10:29:38,353 | INFO | [DBS MEIC] DONE | rows=36 | elapsed=0:00:00.020634
+2026-04-16 10:29:38,354 | INFO | [SCS MEIC] START
+2026-04-16 10:29:38,375 | INFO | [SCS MEIC] DONE | rows=36 | elapsed=0:00:00.020582
+2026-04-16 10:29:38,375 | INFO | [TDD COS 1] START
+2026-04-16 10:29:59,994 | INFO | [TDD COS 1] DONE | rows=202 | elapsed=0:00:21.619168
+2026-04-16 10:29:59,995 | INFO | [TDD COS 1] filter >= 2025-06-02: 202 -> 45
+2026-04-16 10:29:59,996 | INFO | [SCS Super Cell] START
+2026-04-16 10:30:59,187 | INFO | [SCS Super Cell] DONE | rows=201 | elapsed=0:00:59.190570
+2026-04-16 10:30:59,187 | INFO | [SCS Super Cell] rows scraped (pre-filter): 201
+2026-04-16 10:30:59,188 | INFO | [SCS Super Cell] filter >= 2025-06-30: 201 -> 41
+2026-04-16 10:30:59,189 | INFO | [MEIC PH] filter >= 2025-09-01: 89 -> 34
+2026-04-16 10:30:59,191 | INFO | [PH Cell 17] rows before TAA filter = 3
+2026-04-16 10:30:59,196 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1516 -> 599
+2026-04-16 10:30:59,197 | INFO | [PH Cell 17] rows after TAA filter = 3
+2026-04-16 10:30:59,197 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1516 -> 599
+2026-04-16 10:30:59,198 | INFO | [ALL] drop period_date == 2023-11-06: 599 -> 598
+2026-04-16 10:30:59,199 | INFO | [ALL] drop period_date == 2026-09-07: 598 -> 597
+2026-04-16 10:30:59,269 | INFO | Wrote 597 rows to NS_DATA\NS_metrics.csv
+2026-04-16 10:30:59,407 | INFO | Wrote 316 rows to NS_DATA\NS_WIP.csv
+2026-04-16 10:30:59,441 | INFO | [POST] WIP weekly keys=316
+2026-04-16 10:30:59,442 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-04-16 10:30:59,442 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-04-16 10:30:59,534 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 316 rows
+2026-04-16 10:30:59,535 | INFO | === NS Metrics Run END ===

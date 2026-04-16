@@ -14,7 +14,6 @@ from tempfile import mkdtemp
 import shutil
 import warnings
 from pathlib import Path
-print(f"RUNNING FILE: {Path(__file__).resolve()}", flush=True)
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 warnings.filterwarnings(
@@ -155,19 +154,6 @@ def build_pss_intern_capacity_row(
         for c, _label in activity_cols:
             total_row_nonwip += safe_float0(_cell(total_row, c))
         total_row_nonwip = float(round(total_row_nonwip, 2))
-
-    print(
-        f"[DEBUG][PSS Intern] week={pd.Timestamp(week).date().isoformat() if week is not None else 'unknown'} "
-        f"name_col={NAME_COL} expected_col={EXPECTED_WIP_COL} ooo_col={OOO_COL} "
-        f"people_start_row={people_start_row} total_row={total_row} "
-        f"activity_cols={[label for _, label in activity_cols]} "
-        f"people_count={people_count} "
-        f"builder_nonwip={total_nonwip_hours:.2f} "
-        f"sheet_row_total_nonwip={total_row_nonwip:.2f} "
-        f"ooo_hours={ooo_hours:.2f}",
-        flush=True,
-    )
-
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -184,7 +170,6 @@ def build_meic_rows_from_non_d2d_log(
     team_filter: Optional[str] = None,
 ) -> pd.DataFrame:
     if not xlsx_path.exists():
-        print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}", flush=True)
         return pd.DataFrame()
     ws = pd.read_excel(
         xlsx_path,
@@ -211,7 +196,6 @@ def build_meic_rows_from_non_d2d_log(
     if team_filter:
         raw = raw[raw["team"] == team_filter].copy()
     if raw.empty:
-        print(f"[DEBUG][MEIC LOG] no rows after filtering for team_filter={team_filter!r}", flush=True)
         return pd.DataFrame()
     raw["period_date"] = _week_start_monday(raw["date"])
     raw["hours"] = raw["hours"]
@@ -302,12 +286,6 @@ def build_meic_rows_from_non_d2d_log(
             "wip_workers_count": int(wip_workers_count),
             "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
         })
-        print(
-            f"[DEBUG][MEIC LOG] team={team_name} week={week.date().isoformat()} "
-            f"rows={len(grp)} people={grp['name'].nunique()} "
-            f"non_wip={total_nonwip_hours:.2f} ooo={ooo_hours:.2f}",
-            flush=True,
-        )
     df = pd.DataFrame(out_rows)
     if not df.empty:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
@@ -342,26 +320,24 @@ def _com_call(fn, tries: int = 30, sleep_s: float = 0.25):
         try:
             return fn()
         except pywintypes.com_error as e:
-            if e.args and e.args[0] == -2147418111:  # Call was rejected by callee
+            if e.args and e.args[0] == -2147418111:
                 time.sleep(sleep_s)
                 continue
             raise
     return fn()
 def get_dbs_people_count_from_heijunka_files(
     file_paths: tuple[Path, Path] = (DBS_C13_SOURCE_FILE, DBS_C14_SOURCE_FILE),
-    name_row_zero_based: int = 29,   # Excel row 30
+    name_row_zero_based: int = 29,  
 ) -> int:
     bad = {"", "open", "total", "uplh"}
     unique_names: set[str] = set()
     names_by_file: dict[str, list[str]] = {}
     for fp in file_paths:
         if not fp.exists():
-            print(f"[DEBUG][DBS] missing file: {fp}", flush=True)
             names_by_file[str(fp)] = []
             continue
         ws_df = pd.read_excel(fp, sheet_name=0, header=None)
         if ws_df.shape[0] <= name_row_zero_based:
-            print(f"[DEBUG][DBS] {fp.name}: row 30 not available", flush=True)
             names_by_file[str(fp)] = []
             continue
         row_vals = ws_df.iloc[name_row_zero_based].tolist()
@@ -377,13 +353,9 @@ def get_dbs_people_count_from_heijunka_files(
             file_names_found.append(name)
             unique_names.add(name)
         names_by_file[str(fp)] = file_names_found
-        print(f"[DEBUG][DBS] {fp.name} row 30 names: {file_names_found}", flush=True)
     if len(file_paths) >= 2:
         s1 = set(names_by_file.get(str(file_paths[0]), []))
         s2 = set(names_by_file.get(str(file_paths[1]), []))
-        print(f"[DEBUG][DBS] overlap names: {sorted(s1 & s2)}", flush=True)
-    print(f"[DEBUG][DBS] merged unique names counted: {sorted(unique_names)}", flush=True)
-    print(f"[DEBUG][DBS] merged unique people_count: {len(unique_names)}", flush=True)
     return len(unique_names)
 def norm_name(x) -> str:
     return " ".join(str(x or "").strip().split())
@@ -745,7 +717,6 @@ def _get_matching_worksheet(wb, preferred_name: str):
     )
 def log_weekly_scs_breakdown(df: pd.DataFrame, label: str = "SCS SPLIT") -> None:
     if df is None or df.empty:
-        print(f"[DEBUG][{label}] no rows", flush=True)
         return
     tmp = df.copy()
     tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
@@ -754,7 +725,6 @@ def log_weekly_scs_breakdown(df: pd.DataFrame, label: str = "SCS SPLIT") -> None
     ).fillna(0.0)
     tmp = tmp[tmp["team"].isin(["SCS", "SCS MEIC"])].copy()
     if tmp.empty:
-        print(f"[DEBUG][{label}] no SCS / SCS MEIC rows", flush=True)
         return
     for week, g in tmp.groupby("period_date", dropna=False):
         meic_hours = float(
@@ -764,14 +734,6 @@ def log_weekly_scs_breakdown(df: pd.DataFrame, label: str = "SCS SPLIT") -> None
             g.loc[g["team"] == "SCS", "total_non_wip_hours"].sum()
         )
         total_hours = meic_hours + other_scs_hours
-        print(
-            f"[DEBUG][{label}] "
-            f"week={pd.Timestamp(week).date().isoformat()} "
-            f"SCS_MEIC_non_wip={meic_hours:.2f} "
-            f"other_SCS_non_wip={other_scs_hours:.2f} "
-            f"total_SCS_non_wip={total_hours:.2f}",
-            flush=True,
-        )
 def _debug_print_et_people(team: str, week, people_rows) -> None:
     if str(team).strip() not in {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}:
         return
@@ -791,10 +753,6 @@ def _debug_print_et_people(team: str, week, people_rows) -> None:
         week_txt = pd.Timestamp(week).date().isoformat() if week is not None else "unknown"
     except Exception:
         week_txt = str(week)
-    print(
-        f"[DEBUG][ET][{team}] week={week_txt} count={len(names)} names={names}",
-        flush=True,
-    )
 ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
 def _unique_people_names_from_people_rows(people_rows) -> list[str]:
     names = []
@@ -820,10 +778,6 @@ def _start_excel_app():
         msg = str(e)
         if ("CLSIDToClassMap" not in msg) and ("CLSIDToPackageMap" not in msg):
             raise
-        print(
-            "[WARN] win32com gen_py cache appears corrupted; falling back to dynamic dispatch",
-            flush=True,
-        )
         try:
             gen_path = win32com.client.gencache.GetGeneratePath()
             if gen_path and os.path.isdir(gen_path):
@@ -847,16 +801,13 @@ def build_selector_rows_from_capacity_workbook(
     sheet_name: str = "Capacity mgmt",
 ) -> pd.DataFrame:
     xlsx_path = team_src.xlsx
-    print(f"[DEBUG] ENTER build_selector_rows_from_capacity_workbook for team={team_src.team!r}", flush=True)
-    print(f"[DEBUG] workbook path for {team_src.team!r}: {xlsx_path}", flush=True)
     if not xlsx_path.exists():
-        print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}", flush=True)
         return pd.DataFrame()
     out_rows: List[dict] = []
     pythoncom.CoInitialize()
     excel = None
     wb = None
-    temp_dir = None  # FIX: temp copy so we can open writable without locking original
+    temp_dir = None
     try:
         excel = _dyn(_start_excel_app())
         excel.Visible = False
@@ -876,15 +827,13 @@ def build_selector_rows_from_capacity_workbook(
             wb = _com_call(lambda: _dyn(workbooks.Open(
                 str(temp_path),
                 UpdateLinks=0,
-                ReadOnly=False,   # FIX: must be writable for formula recalc to fire
+                ReadOnly=False,
                 IgnoreReadOnlyRecommended=True,
                 Notify=False,
                 AddToMru=False,
                 CorruptLoad=0,
             )))
         except pywintypes.com_error as e:
-            print(f"[WARN] Could not open workbook for {team_src.team}: {xlsx_path}", flush=True)
-            print(f"[WARN] Excel open error for {team_src.team}: {e}", flush=True)
             return pd.DataFrame()
         ws_com = _dyn(_get_matching_worksheet(wb, sheet_name))
         try:
@@ -910,14 +859,11 @@ def build_selector_rows_from_capacity_workbook(
             except Exception:
                 pass
         if not all_dates:
-            print(f"[WARN] No selector dates found for {team_src.team} using cells {selector_candidates}", flush=True)
             return pd.DataFrame()
         today_cutoff = pd.Timestamp.today().normalize()
         all_dates = [d for d in all_dates if pd.Timestamp(d).normalize() <= today_cutoff]
         if not all_dates:
-            print(f"[WARN] No selector dates on or before today for {team_src.team}.", flush=True)
             return pd.DataFrame()
-        print(f"[DEBUG] {team_src.team} using selector cell {chosen_selector_cell} with dates {[d.date().isoformat() for d in all_dates]}", flush=True)
         for week in all_dates:
             try:
                 selector_range = _dyn(ws_com.Range(chosen_selector_cell))
@@ -944,7 +890,6 @@ def build_selector_rows_from_capacity_workbook(
                     except Exception:
                         pass
                     time.sleep(0.5)
-                print(f"[DEBUG] {team_src.team} -> refreshing/recalculating for {week.date()}", flush=True)
                 used = None
                 for _snap_attempt in range(6):
                     _raw = ws_com.UsedRange.Value
@@ -965,26 +910,18 @@ def build_selector_rows_from_capacity_workbook(
                     if _nonzero:
                         used = _raw
                         break
-                    print(
-                        f"[DEBUG] {team_src.team} week={week.date()} snap attempt {_snap_attempt+1}: "
-                        f"activity cols all-zero, retrying...",
-                        flush=True,
-                    )
                     time.sleep(1.0)
                     try:
                         _com_call(lambda: excel.CalculateFullRebuild(), tries=3, sleep_s=0.3)
                     except Exception:
                         pass
                 if used is None:
-                    print(f"[WARN] {team_src.team} week={week.date()}: activity cols still zero after retries", flush=True)
                     continue
                 if not isinstance(used, tuple):
                     used = ((used,),)
                 ws_df = pd.DataFrame(list(used))
-                print(f"[DEBUG][RAW SNAPSHOT] shape={ws_df.shape}", flush=True)
                 for _dbg_row in range(5, min(9, ws_df.shape[0])):
                     _dbg_vals = [ws_df.iat[_dbg_row, c] for c in range(min(ws_df.shape[1], 30))]
-                    print(f"[DEBUG][RAW SNAPSHOT] row {_dbg_row}: {_dbg_vals}", flush=True)
                 if team_src.custom_builder is None:
                     raise ValueError(f"No custom_builder configured for {team_src.team}")
                 built = team_src.custom_builder(team_src.team, ws_df, week)
@@ -1076,22 +1013,19 @@ def build_pss_intern_from_user_data(
     metrics_df: pd.DataFrame,
 ) -> pd.DataFrame:
     if not xlsx_path.exists():
-        print(f"[WARN][PSS Intern] Missing file: {xlsx_path}", flush=True)
         return pd.DataFrame()
     try:
         ws = pd.read_excel(
             xlsx_path,
             sheet_name=PSS_INTERN_USER_DATA_SHEET,
-            header=0,          # row 1 is the header
+            header=0,         
             engine="openpyxl",
         )
     except Exception as e:
         print(f"[WARN][PSS Intern] Could not read User Data sheet: {e}", flush=True)
         return pd.DataFrame()
-    print(f"[DEBUG][PSS Intern User Data] shape={ws.shape}", flush=True)
-    print(f"[DEBUG][PSS Intern User Data] columns={list(ws.columns)}", flush=True)
-    WEEK_COL = ws.columns[0]   # "FY Week"
-    NAME_COL = ws.columns[5]   # "User"
+    WEEK_COL = ws.columns[0] 
+    NAME_COL = ws.columns[5] 
     ACTIVITY_START_IDX = 18
     skip_col_fragments = {
         "wp1", "wp2", "wip", "output", "hours", "hour", "daily",
@@ -1106,13 +1040,11 @@ def build_pss_intern_from_user_data(
         if any(frag in lc for frag in skip_col_fragments):
             continue
         activity_col_names.append(col)
-    print(f"[DEBUG][PSS Intern User Data] activity cols: {activity_col_names}", flush=True)
     ws[WEEK_COL] = pd.to_datetime(ws[WEEK_COL], errors="coerce").dt.normalize()
     ws[NAME_COL] = ws[NAME_COL].map(norm_name)
     ws = ws[ws[WEEK_COL].notna()].copy()
     ws = ws[ws[NAME_COL].map(is_real_person)].copy()
     if ws.empty:
-        print(f"[WARN][PSS Intern User Data] No valid rows after filtering", flush=True)
         return pd.DataFrame()
     for col in activity_col_names:
         ws[col] = pd.to_numeric(ws[col], errors="coerce").fillna(0.0)
@@ -1154,11 +1086,6 @@ def build_pss_intern_from_user_data(
                 activities.append({"name": name, "activity": "OOO", "hours": ooo})
         total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
         ooo_hours = float(round(sum(ooo_map.values()), 2))
-        print(
-            f"[DEBUG][PSS Intern User Data] week={week.date()} "
-            f"people={people_count} nonwip={total_nonwip_hours:.2f} ooo={ooo_hours:.2f}",
-            flush=True,
-        )
         completed_match = metrics_df[
             (metrics_df.get("team") == "PSS Intern") &
             (metrics_df["period_date"] == week)
@@ -1208,7 +1135,6 @@ def build_pss_intern_from_user_data(
     return df
 def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     if df is None or df.empty:
-        print(f"[DEBUG][{label}] no rows", flush=True)
         return
     tmp = df.copy()
     tmp["period_date"] = pd.to_datetime(tmp["period_date"], errors="coerce").dt.normalize()
@@ -1216,7 +1142,6 @@ def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     tmp["OOO Hours"] = pd.to_numeric(tmp.get("OOO Hours"), errors="coerce").fillna(0.0)
     tmp = tmp[tmp["team"].isin(["PH", "PH MEIC"])].copy()
     if tmp.empty:
-        print(f"[DEBUG][{label}] no PH / PH MEIC rows", flush=True)
         return
     tmp = tmp.sort_values(["period_date", "team"])
     for _, r in tmp.iterrows():
@@ -1260,8 +1185,8 @@ def build_pss_meic_dated_row(team: str, ws: pd.DataFrame, week: Optional[pd.Time
     ACT_START = _col_letter_to_idx("C")
     ACT_END = _col_letter_to_idx("W")
     COL_OOO = _col_letter_to_idx("X")
-    HEADER_ROW = 0          # Excel row 1
-    PEOPLE_START_ROW = 1    # Excel row 2
+    HEADER_ROW = 0 
+    PEOPLE_START_ROW = 1
     def header_label_for_col(c: int) -> str:
         txt = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
         return txt
@@ -1331,10 +1256,10 @@ def week_from_mnav_capacity_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[p
     if "capacity mgmt" not in s_lower:
         return None
     candidate_cells = [
-        (1, 0),  # A2
-        (0, 1),  # B1
-        (1, 1),  # B2
-        (0, 0),  # A1
+        (1, 0),  
+        (0, 1), 
+        (1, 1),  
+        (0, 0),
     ]
     for r, c in candidate_cells:
         try:
@@ -1473,10 +1398,9 @@ def get_people_count_from_wip(
         try:
             return get_dbs_people_count_from_heijunka_files(
                 file_paths=(DBS_C13_SOURCE_FILE, DBS_C14_SOURCE_FILE),
-                name_row_zero_based=29,   # Excel row 30
+                name_row_zero_based=29,  
             )
         except Exception as e:
-            print(f"[WARN][DBS] failed special people count: {e}", flush=True)
             return int(fallback or 0)
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
@@ -1505,7 +1429,6 @@ def build_meic_rows_from_team_tracker(
     team_filter: Optional[str] = None,
 ) -> pd.DataFrame:
     if not xlsx_path.exists():
-        print(f"[WARN] Missing XLSX for MEIC tracker: {xlsx_path}")
         return pd.DataFrame()
     out_rows: List[dict] = []
     excel = win32.gencache.EnsureDispatch("Excel.Application")
@@ -1532,14 +1455,10 @@ def build_meic_rows_from_team_tracker(
                 all_dates = [current_dt]
         for week in all_dates:
             try:
-                print(f"[DEBUG][MEIC] about to set Team Tracker B1 for week {week.date()}", flush=True)
-                print(f"[DEBUG][MEIC] workbook={xlsx_path}", flush=True)
-                print(f"[DEBUG][MEIC] sheet={TEAM_TRACKER_SHEET}", flush=True)
                 try:
                     is_protected = bool(ws_com.ProtectContents)
                 except Exception:
                     is_protected = "unknown"
-                print(f"[DEBUG][MEIC] ProtectContents={is_protected}", flush=True)
                 ws_com.Range("A2").Value = week.to_pydatetime()
                 wb.RefreshAll()
                 excel.CalculateUntilAsyncQueriesDone()
@@ -1559,7 +1478,6 @@ def build_meic_rows_from_team_tracker(
                         if team_name == team_filter
                     }
                 for team_name, team_built in split.items():
-                    print(f"[DEBUG][MEIC] processing {team_name} for week {week.date()}", flush=True)
                     completed_match = metrics_df[
                         (metrics_df.get("team") == team_name) &
                         (metrics_df["period_date"] == week)
@@ -1892,7 +1810,6 @@ def combine_enabling_technologies(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.
         if "source_file" in rest.columns:
             rest = rest.drop(columns=["source_file"])
         return rest
-    print("\n[DEBUG][ET] People count breakdown by week and team:", flush=True)
     all_dates = sorted(subset["period_date"].dropna().unique())
     for d in all_dates:
         week_rows = subset[subset["period_date"] == d]
@@ -1903,8 +1820,6 @@ def combine_enabling_technologies(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.
             count = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum()) if not team_row.empty else 0
             parts.append(f"{team}={count}")
             total += count
-        print(f"  {pd.Timestamp(d).date()}  total={total}  [{', '.join(parts)}]", flush=True)
-    print("", flush=True)
     out_rows = []
     for period_date, g in subset.groupby("period_date", dropna=False):
         nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
@@ -1968,7 +1883,7 @@ def build_capacity_fixed_row(
     activity_start_col_letter: str,
     activity_end_col_letter: str,
     week: Optional[pd.Timestamp] = None,
-    total_nonwip_cell: Optional[str] = None,   # NEW
+    total_nonwip_cell: Optional[str] = None,  
 ) -> Dict:
     col_b = _col_letter_to_idx(expected_col_letter)
     col_ooo = _col_letter_to_idx(ooo_col_letter)
@@ -2074,15 +1989,15 @@ def classify_activity(label: str) -> str:
         return "OTHER_TEAM_WIP"
     return "OTHER_NON_WIP"
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2    # Excel row 3
-    PEOPLE_END   = 25   # Excel row 26
-    TOTAL_ROW    = 26   # Excel row 27
+    PEOPLE_START = 2  
+    PEOPLE_END   = 25   
+    TOTAL_ROW    = 26   
     COL_B  = _col_letter_to_idx("B")
     COL_Z  = _col_letter_to_idx("Z")
     COL_AA = _col_letter_to_idx("AA")
     ACT_START  = _col_letter_to_idx("C")
     ACT_END    = _col_letter_to_idx("AG")
-    HEADER_ROW = 1      # Excel row 2
+    HEADER_ROW = 1    
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -2171,12 +2086,12 @@ def build_ae_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] 
     )
 def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     NAME_COL   = _col_letter_to_idx("A")
-    COL_B      = _col_letter_to_idx("B")   # Expected WIP hrs
+    COL_B      = _col_letter_to_idx("B") 
     ACT_START  = _col_letter_to_idx("C")
-    ACT_END    = _col_letter_to_idx("R")   # last activity before OOO
-    COL_OOO    = _col_letter_to_idx("S")   # Out of Office
-    HEADER_ROW = 0                         # Excel row 1
-    PEOPLE_START_ROW = 1                   # Excel row 2
+    ACT_END    = _col_letter_to_idx("R")   
+    COL_OOO    = _col_letter_to_idx("S")   
+    HEADER_ROW = 0                         
+    PEOPLE_START_ROW = 1                  
     people_rows: List[dict] = []
     seen_people = False
     blank_run = 0
@@ -2254,7 +2169,7 @@ def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp
         activity_start_col_letter="C",
         activity_end_col_letter="P",
         week=week,
-        total_nonwip_cell="AI20",   # NEW
+        total_nonwip_cell="AI20",   
     )
 def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
@@ -2269,7 +2184,7 @@ def build_mazor_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         activity_start_col_letter="C",
         activity_end_col_letter="Y",
         week=week,
-        total_nonwip_cell="AI20",   # NEW
+        total_nonwip_cell="AI20",   
     )
 def week_from_pss_us_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
@@ -2369,8 +2284,6 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
             "B": float(expected),
             "OOO": float(ooo),
         })
-    print(f"[DEBUG][Spine] people_rows names: {[r['name'] for r in people_rows]}", flush=True)
-    print(f"[DEBUG][Spine] unique count: {len(set(r['name'] for r in people_rows))}", flush=True)
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
     team_hours_available = safe_float0(
@@ -2431,7 +2344,7 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         activity_start_col_letter="C",
         activity_end_col_letter="AB",
         week=week,
-        total_nonwip_cell="AI20",   # NEW
+        total_nonwip_cell="AI20",  
     )
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
@@ -2545,7 +2458,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     "O-Arm MEIC": TeamSource(
         team="O-Arm MEIC",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\OARM_MEIC_Heijunka.xlsm"),
-        week_from_sheet=week_from_oarm_meic_tab,   # <-- changed
+        week_from_sheet=week_from_oarm_meic_tab, 
         custom_builder=build_oarm_meic_row,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
@@ -2624,10 +2537,8 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         )
     xlsx_path = team_src.xlsx
     if not xlsx_path.exists():
-        print(f"[WARN] Missing XLSX for {team_src.team}: {xlsx_path}")
         return pd.DataFrame()
     sheets = pd.read_excel(xlsx_path, sheet_name=None, header=None, engine="openpyxl")
-    print(f"[DEBUG][{team_src.team}] sheet names: {list(sheets.keys())}", flush=True)  # ADD THIS
     out_rows: List[dict] = []
     for sheet_name, ws in sheets.items():
         if team_src.week_from_sheet is None:
@@ -2762,8 +2673,6 @@ def main():
     if not et_weekly.empty:
         et_weekly["period_date"] = pd.to_datetime(et_weekly["period_date"], errors="coerce").dt.normalize()
         et_weekly = et_weekly.sort_values(["period_date", "team"]).reset_index(drop=True)
-        print("\n=== ET hours by team by week ===")
-        print(et_weekly.to_string(index=False))
         for d in sorted(et_weekly["period_date"].dropna().unique()):
             week_rows = et_weekly[et_weekly["period_date"] == d]
             parts = []
@@ -2776,7 +2685,6 @@ def main():
                 parts.append(
                     f"{team}: people={people}, non_wip={non_wip:.2f}, ooo={ooo:.2f}, wip_workers_ooo={wip_ooo:.2f}"
                 )
-            print(f"{pd.Timestamp(d).date()} | " + " | ".join(parts), flush=True)
         et_pivot = (
             et_weekly.pivot_table(
                 index="period_date",
@@ -2787,8 +2695,6 @@ def main():
             .fillna(0)
             .sort_index()
         )
-        print("\n=== ET total_non_wip_hours pivot ===")
-        print(et_pivot.to_string())
     if OUT_PATH.exists():
         old_df = load_csv(OUT_PATH)
     else:
@@ -2819,7 +2725,6 @@ def main():
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     split_combined = combined.copy()
     split_combined.to_csv(OUT_SPLIT_PATH, index=False, encoding="utf-8-sig")
-    print(f"Wrote {len(split_combined)} rows -> {OUT_SPLIT_PATH}")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     if not combined.empty:
@@ -2835,9 +2740,7 @@ def main():
         dupes = combined[combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
         if not dupes.empty:
             print("\n[DEBUG] DUPLICATE team/week rows before write:")
-            print(dupes.sort_values(["team", "period_date"]).to_string(index=False))
     log_weekly_ph_summary(combined, "POST-ROLLUP")
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
-    print(f"Wrote {len(combined)} rows -> {OUT_PATH}")
 if __name__ == "__main__":
     main()
