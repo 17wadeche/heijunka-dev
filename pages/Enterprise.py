@@ -1537,6 +1537,52 @@ def _excel_bytes_from_export_dfs(
     raise RuntimeError(
         f"Excel export requires openpyxl or xlsxwriter to be installed. Last error: {last_err}"
     )
+def _safe_sheet_name(name: str) -> str:
+    return re.sub(r"[\[\]\*\/\\\?\:]", "_", str(name))[:31]
+@st.cache_data(show_spinner=False)
+def _cached_custom_excel_bytes(
+    sheet_items: tuple[tuple[str, pd.DataFrame], ...],
+) -> bytes:
+    buf = io.BytesIO()
+    last_err = None
+    for engine in ("openpyxl", "xlsxwriter"):
+        buf = io.BytesIO()
+        try:
+            with pd.ExcelWriter(buf, engine=engine) as writer:
+                wrote_any = False
+                for sheet_name, df in sheet_items:
+                    if df is None:
+                        continue
+                    safe_name = _safe_sheet_name(sheet_name)
+                    df.to_excel(writer, index=False, sheet_name=safe_name)
+                    wrote_any = True
+                if not wrote_any:
+                    pd.DataFrame({"Message": ["No rows selected for export."]}).to_excel(
+                        writer,
+                        index=False,
+                        sheet_name="Export",
+                    )
+            buf.seek(0)
+            return buf.getvalue()
+        except Exception as e:
+            last_err = e
+    raise RuntimeError(f"Could not create Excel workbook: {last_err}")
+def _apply_display_column_selection(
+    df: pd.DataFrame,
+    selected_columns: list[str],
+) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+    cols = [c for c in selected_columns if c in df.columns]
+    if not cols:
+        return df.iloc[:, 0:0].copy()
+    return df[cols].copy()
+def _append_alert_before_display(df: pd.DataFrame, include_alert: bool) -> pd.DataFrame:
+    if df is None or df.empty or not include_alert:
+        return df
+    if "unaccounted_pct" in df.columns:
+        return _append_export_alert_column(df, pct_col="unaccounted_pct")
+    return df
 def _concat_frames(frames: list[pd.DataFrame]) -> Optional[pd.DataFrame]:
     if not frames:
         return None
@@ -2023,278 +2069,264 @@ elif page == "Non-WIP":
 elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
-        shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,  # ← new
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        factor_out_ooo,
     )
-    export_scope_df = team_export.copy()
-    export_filter_col = "team"
-    export_filter_label = "Team"
-    if not team_export.empty:
-        export_filter_card = st.container(border=True)
-        with export_filter_card:
-            st.markdown("#### Export filters")
-            export_cols = st.columns([1.15, 1.0, 1.4])
-            export_week_options = sorted(
-                team_export["week_start"].dropna().unique(),
-                reverse=True,
-            )
-            export_selected_weeks = export_cols[0].multiselect(
-                "Weeks",
-                options=export_week_options,
-                default=export_week_options[:8] if len(export_week_options) > 8 else export_week_options,
-                format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
-                key="export_selected_weeks",
-                placeholder="Select one or more weeks",
-            )
-            export_filter_level = export_cols[1].radio(
-                "Filter by",
-                options=["Portfolio", "OU", "Team"],
-                index=0,
-                horizontal=True,
-                key="export_filter_level",
-            )
-            if export_filter_level == "Portfolio":
-                export_scope_df = portfolio_export.copy()
-                export_filter_col = "portfolio"
-                export_filter_label = "Portfolio"
-            elif export_filter_level == "OU":
-                export_scope_df = ou_export.copy()
-                export_filter_col = "ou"
-                export_filter_label = "OU"
-            else:
-                export_scope_df = team_export.copy()
-                export_filter_col = "team"
-                export_filter_label = "Team"
-            export_scope_df["week_start"] = pd.to_datetime(
-                export_scope_df["week_start"], errors="coerce"
-            ).dt.normalize()
-            selected_week_set = {
-                pd.Timestamp(x).normalize()
-                for x in export_selected_weeks
-            }
-            export_scoped_weeks = export_scope_df[
-                export_scope_df["week_start"].isin(selected_week_set)
-            ].copy()
-            export_options = sorted(
-                x for x in export_scoped_weeks[export_filter_col].dropna().astype(str).unique()
-                if str(x).strip()
-            )
-            export_selected_values = export_cols[2].multiselect(
-                export_filter_label,
-                options=export_options,
-                default=export_options,
-                key=f"export_selected_{export_filter_col}",
-                placeholder=f"Select one or more {export_filter_label.lower()} values",
-            )
-        if export_selected_weeks and export_selected_values:
-            export_scope_df = export_scope_df[
-                export_scope_df["week_start"].isin(selected_week_set)
-                & export_scope_df[export_filter_col].astype(str).isin(export_selected_values)
-            ].copy()
-        else:
-            export_scope_df = export_scope_df.iloc[0:0].copy()
-    def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
-        rename_map = {
-            "portfolio": "Portfolio",
-            "ou": "OU",
-            "team": "Team",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "wip_avg_hours_day": "WIP Avg. Hours/Day",
-            "non_wip_pct": "Non-WIP %",
-            "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
-            "ooo_pct": "OOO %",
-            "ooo_avg_hours_day": "OOO Avg. Hours/Day",
-            "unaccounted_pct": "Unaccounted %",
-            "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        }
-        preferred_order = [
-            "portfolio", "ou", "team", "week_start",
-            "capacity_hours", "people_count",
-            "completed_hours", "wip_pct", "wip_avg_hours_day",
-            "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
-            "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
-            "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
-        ]
-        cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
-        out = df[cols].copy().rename(columns=rename_map)
-        out = _append_export_alert_column(out, pct_col="Unaccounted %", alert_col_name="")
-        if "Week Start" in out.columns:
-            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-        leading_cols = [c for c in ["", "team", "ou", "portfolio", "Week Start"] if c in out.columns]
-        remaining_cols = [c for c in out.columns if c not in leading_cols]
-        out = out[leading_cols + remaining_cols]
-        fmt = {}
-        for c in [
-            "Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours",
-            "Capacity Hours", "Unaccounted Hours",
-            "WIP Avg. Hours/Day", "Non-WIP Avg. Hours/Day",
-            "OOO Avg. Hours/Day", "Unaccounted Avg. Hours/Day",
-        ]:
-            if c in out.columns:
-                fmt[c] = "{:,.2f}"
-        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
-            if c in out.columns:
-                fmt[c] = "{:.1%}"
-        styler = out.style.format(fmt)
-        if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
-        if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
-        return styler
-    def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
-        rename_map = {
-            "portfolio": "Portfolio",
-            "ou": "OU",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "wip_avg_hours_day": "WIP Avg. Hours/Day",
-            "non_wip_pct": "Non-WIP %",
-            "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
-            "ooo_pct": "OOO %",
-            "ooo_avg_hours_day": "OOO Avg. Hours/Day",
-            "unaccounted_pct": "Unaccounted %",
-            "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        }
-        preferred_order = [
-            "portfolio", "ou", "week_start",
-            "capacity_hours", "people_count",
-            "completed_hours", "wip_pct", "wip_avg_hours_day",
-            "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
-            "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
-            "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
-        ]
-        cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
-        out = df[cols].copy().rename(columns=rename_map)
-        if "Week Start" in out.columns:
-            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-        fmt = {}
-        for c in [
-            "Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours",
-            "Capacity Hours", "Unaccounted Hours",
-            "WIP Avg. Hours/Day", "Non-WIP Avg. Hours/Day",
-            "OOO Avg. Hours/Day", "Unaccounted Avg. Hours/Day",
-        ]:
-            if c in out.columns:
-                fmt[c] = "{:,.2f}"
-        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
-            if c in out.columns:
-                fmt[c] = "{:.1%}"
-        styler = out.style.format(fmt)
-        if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
-        if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
-        return styler
-    def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
-        rename_map = {
-            "portfolio": "Portfolio",
-            "week_start": "Week Start",
-            "completed_hours": "Completed Hours",
-            "people_count": "People Count",
-            "non_wip_hours": "Non-WIP Hours",
-            "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
-            "unaccounted_hours": "Unaccounted Hours",
-            "wip_pct": "WIP %",
-            "wip_avg_hours_day": "WIP Avg. Hours/Day",
-            "non_wip_pct": "Non-WIP %",
-            "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
-            "ooo_pct": "OOO %",
-            "ooo_avg_hours_day": "OOO Avg. Hours/Day",
-            "unaccounted_pct": "Unaccounted %",
-            "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        }
-        preferred_order = [
-            "portfolio", "week_start",
-            "capacity_hours", "people_count",
-            "completed_hours", "wip_pct", "wip_avg_hours_day",
-            "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
-            "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
-            "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
-        ]
-        cols = [c for c in preferred_order if c in df.columns] + [
-            c for c in df.columns if c not in preferred_order and c != "ou"
-        ]
-        out = df[cols].copy().rename(columns=rename_map)
-        if "Week Start" in out.columns:
-            out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-        fmt = {}
-        for c in [
-            "Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours",
-            "Capacity Hours", "Unaccounted Hours",
-            "WIP Avg. Hours/Day", "Non-WIP Avg. Hours/Day",
-            "OOO Avg. Hours/Day", "Unaccounted Avg. Hours/Day",
-        ]:
-            if c in out.columns:
-                fmt[c] = "{:,.2f}"
-        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
-            if c in out.columns:
-                fmt[c] = "{:.1%}"
-        styler = out.style.format(fmt)
-        if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
-        if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
-        return styler
     if team_export.empty:
         st.info("No exportable team/week data found.")
-    else:
-        if export_scope_df.empty:
-            st.info("No export rows match the selected filters.")
+        st.stop()
+    team_export = team_export.copy()
+    team_export["week_start"] = pd.to_datetime(
+        team_export["week_start"],
+        errors="coerce",
+    ).dt.normalize()
+    with st.container(border=True):
+        st.markdown("#### Export filters")
+        export_cols = st.columns([1.15, 1.0, 1.4])
+        export_week_options = sorted(
+            team_export["week_start"].dropna().unique(),
+            reverse=True,
+        )
+        export_selected_weeks = export_cols[0].multiselect(
+            "Weeks",
+            options=export_week_options,
+            default=export_week_options[:8]
+            if len(export_week_options) > 8
+            else export_week_options,
+            format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
+            key="export_selected_weeks",
+            placeholder="Select one or more weeks",
+        )
+        export_filter_level = export_cols[1].radio(
+            "Filter by",
+            options=["Portfolio", "OU", "Team"],
+            index=0,
+            horizontal=True,
+            key="export_filter_level",
+        )
+        filter_col_map = {
+            "Portfolio": "portfolio",
+            "OU": "ou",
+            "Team": "team",
+        }
+        export_filter_col = filter_col_map[export_filter_level]
+        selected_week_set = {
+            pd.Timestamp(x).normalize()
+            for x in export_selected_weeks
+        }
+        scoped_for_options = team_export.copy()
+        if selected_week_set:
+            scoped_for_options = scoped_for_options[
+                scoped_for_options["week_start"].isin(selected_week_set)
+            ].copy()
         else:
-            if export_filter_level == "Team":
-                st.markdown("#### Team weekly")
-                st.dataframe(
-                    _format_export_display_team(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
-                team_export_display = _display_export_team_df(export_scope_df)
-                ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
-                portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
-            elif export_filter_level == "OU":
-                st.markdown("#### OU weekly")
-                st.dataframe(
-                    _format_export_display_ou(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
-                team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
-                ou_export_display = _display_export_ou_df(export_scope_df)
-                portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
-            else:
-                st.markdown("#### Portfolio weekly")
-                st.dataframe(
-                    _format_export_display_portfolio(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
-                team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
-                ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
-                portfolio_export_display = _display_export_portfolio_df(export_scope_df)
+            scoped_for_options = scoped_for_options.iloc[0:0].copy()
+        export_options = sorted(
+            x
+            for x in scoped_for_options[export_filter_col]
+            .dropna()
+            .astype(str)
+            .unique()
+            if str(x).strip()
+        )
+        export_selected_values = export_cols[2].multiselect(
+            export_filter_level,
+            options=export_options,
+            default=export_options,
+            key=f"export_selected_{export_filter_col}",
+            placeholder=f"Select one or more {export_filter_level.lower()} values",
+        )
+    filtered_team_export = team_export.copy()
+    if selected_week_set:
+        filtered_team_export = filtered_team_export[
+            filtered_team_export["week_start"].isin(selected_week_set)
+        ].copy()
+    else:
+        filtered_team_export = filtered_team_export.iloc[0:0].copy()
+    if export_selected_values:
+        filtered_team_export = filtered_team_export[
+            filtered_team_export[export_filter_col]
+            .astype(str)
+            .isin(export_selected_values)
+        ].copy()
+    else:
+        filtered_team_export = filtered_team_export.iloc[0:0].copy()
+    if filtered_team_export.empty:
+        st.info("No export rows match the selected filters.")
+        st.stop()
+    filtered_ou_export = _rollup_export_level(
+        filtered_team_export,
+        "ou",
+        factor_out_ooo=factor_out_ooo,
+    )
+    filtered_portfolio_export = _rollup_export_level(
+        filtered_team_export,
+        "portfolio",
+        factor_out_ooo=factor_out_ooo,
+    )
+    with st.container(border=True):
+        st.markdown("#### Export customization")
+        custom_cols = st.columns([1.1, 1.1, 1.4])
+        selected_sheets = custom_cols[0].multiselect(
+            "Sheets to include",
+            options=["Team Weekly", "OU Weekly", "Portfolio Weekly"],
+            default=["Team Weekly", "OU Weekly", "Portfolio Weekly"],
+            key="export_selected_sheets",
+        )
+        include_alert_column = custom_cols[1].checkbox(
+            "Include alert column",
+            value=True,
+            key="export_include_alert_column",
+            help="Adds an alert flag for rows where Unaccounted % is above 25%.",
+        )
+        export_file_name = custom_cols[2].text_input(
+            "File name",
+            value="enterprise_weekly_export.xlsx",
+            key="export_file_name",
+        ).strip()
+        if not export_file_name:
+            export_file_name = "enterprise_weekly_export.xlsx"
+        if not export_file_name.lower().endswith(".xlsx"):
+            export_file_name += ".xlsx"
+    if include_alert_column:
+        filtered_team_export = _append_export_alert_column(
+            filtered_team_export,
+            pct_col="unaccounted_pct",
+            alert_col_name="Alert",
+        )
+        filtered_ou_export = _append_export_alert_column(
+            filtered_ou_export,
+            pct_col="unaccounted_pct",
+            alert_col_name="Alert",
+        )
+        filtered_portfolio_export = _append_export_alert_column(
+            filtered_portfolio_export,
+            pct_col="unaccounted_pct",
+            alert_col_name="Alert",
+        )
+    team_export_display_all = _display_export_team_df(filtered_team_export)
+    ou_export_display_all = _display_export_ou_df(filtered_ou_export)
+    portfolio_export_display_all = _display_export_portfolio_df(filtered_portfolio_export)
+    with st.expander("Column selection", expanded=True):
+        team_tab, ou_tab, portfolio_tab = st.tabs(
+            ["Team Weekly", "OU Weekly", "Portfolio Weekly"]
+        )
+        with team_tab:
+            selected_team_columns = st.multiselect(
+                "Team Weekly columns",
+                options=list(team_export_display_all.columns),
+                default=list(team_export_display_all.columns),
+                key="export_team_columns",
+            )
+        with ou_tab:
+            selected_ou_columns = st.multiselect(
+                "OU Weekly columns",
+                options=list(ou_export_display_all.columns),
+                default=list(ou_export_display_all.columns),
+                key="export_ou_columns",
+            )
+        with portfolio_tab:
+            selected_portfolio_columns = st.multiselect(
+                "Portfolio Weekly columns",
+                options=list(portfolio_export_display_all.columns),
+                default=list(portfolio_export_display_all.columns),
+                key="export_portfolio_columns",
+            )
+    def _select_export_columns(df: pd.DataFrame, selected_columns: list[str]) -> pd.DataFrame:
+        if df is None or df.empty:
+            return df
+        cols = [c for c in selected_columns if c in df.columns]
+        if not cols:
+            return df.iloc[:, 0:0].copy()
+        return df[cols].copy()
+    team_export_display = _select_export_columns(
+        team_export_display_all,
+        selected_team_columns,
+    )
+    ou_export_display = _select_export_columns(
+        ou_export_display_all,
+        selected_ou_columns,
+    )
+    portfolio_export_display = _select_export_columns(
+        portfolio_export_display_all,
+        selected_portfolio_columns,
+    )
+    export_sheet_map = {
+        "Team Weekly": team_export_display,
+        "OU Weekly": ou_export_display,
+        "Portfolio Weekly": portfolio_export_display,
+    }
+    selected_sheet_items = [
+        (sheet_name, export_sheet_map[sheet_name])
+        for sheet_name in selected_sheets
+        if sheet_name in export_sheet_map
+    ]
+    if not selected_sheet_items:
+        st.warning("Select at least one sheet to export.")
+        st.stop()
+    st.markdown("#### Preview")
+    preview_sheet = st.radio(
+        "Preview sheet",
+        options=selected_sheets,
+        horizontal=True,
+        key="export_preview_sheet",
+    )
+    preview_df = export_sheet_map.get(preview_sheet, pd.DataFrame())
+    if preview_df.empty:
+        st.info(f"No rows available for {preview_sheet}.")
+    else:
+        st.dataframe(
+            preview_df,
+            width="stretch",
+            hide_index=True,
+        )
+    def _safe_sheet_name(name: str) -> str:
+        return re.sub(r"[\[\]\*\/\\\?\:]", "_", str(name))[:31]
+    def _excel_bytes_from_selected_sheets(
+        sheet_items: list[tuple[str, pd.DataFrame]],
+    ) -> bytes:
+        last_err = None
+        for engine in ("openpyxl", "xlsxwriter"):
+            buf = io.BytesIO()
             try:
-                xlsx_bytes = _cached_excel_bytes(
-                    team_export_display,
-                    ou_export_display,
-                    portfolio_export_display,
-                )
-                st.download_button(
-                    label="Download Excel export",
-                    data=xlsx_bytes,
-                    file_name="enterprise_weekly_export.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+                with pd.ExcelWriter(buf, engine=engine) as writer:
+                    wrote_any = False
+                    for sheet_name, sheet_df in sheet_items:
+                        safe_name = _safe_sheet_name(sheet_name)
+                        if sheet_df is None:
+                            sheet_df = pd.DataFrame()
+                        sheet_df.to_excel(
+                            writer,
+                            index=False,
+                            sheet_name=safe_name,
+                        )
+                        wrote_any = True
+                    if not wrote_any:
+                        pd.DataFrame(
+                            {"Message": ["No rows selected for export."]}
+                        ).to_excel(
+                            writer,
+                            index=False,
+                            sheet_name="Export",
+                        )
+                buf.seek(0)
+                return buf.getvalue()
             except Exception as e:
-                st.error(f"Excel export failed: {e}")
+                last_err = e
+        raise RuntimeError(f"Could not create Excel workbook: {last_err}")
+    try:
+        xlsx_bytes = _excel_bytes_from_selected_sheets(selected_sheet_items)
+        st.download_button(
+            label="Download custom Excel export",
+            data=xlsx_bytes,
+            file_name=export_file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        st.caption(
+            f"Export includes {len(selected_sheet_items)} sheet(s) and "
+            f"{sum(len(df) for _, df in selected_sheet_items)} total row(s)."
+        )
+    except Exception as e:
+        st.error(f"Excel export failed: {e}")
