@@ -2464,20 +2464,8 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
-    "DBS MEIC": TeamSource(
-        team="DBS MEIC",
-        xlsx=MEIC_TRACKER_PATH,
-        wip_workers_from="NS_metrics",
-        completed_hours_from="NS_metrics",
-    ),
-    "SCS MEIC": TeamSource(
-        team="SCS MEIC",
-        xlsx=MEIC_TRACKER_PATH,
-        wip_workers_from="NS_metrics",
-        completed_hours_from="NS_metrics",
-    ),
-    "PH MEIC": TeamSource(
-        team="PH MEIC",
+    "PH-NM MEIC": TeamSource(
+        team="PH-NM MEIC",
         xlsx=MEIC_TRACKER_PATH,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
@@ -2492,12 +2480,12 @@ def build_nonwip_by_person_b_minus_c(people_rows: List[dict]) -> Dict[str, float
         out[r["name"]] = v
     return out
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
-    if team_src.team in {"DBS MEIC", "SCS MEIC", "PH MEIC"}:
+    if team_src.team == "PH-NM MEIC":
         return build_meic_rows_from_non_d2d_log(
             team_src.xlsx,
             wip_df=wip_df,
             metrics_df=metrics_df,
-            team_filter=team_src.team,
+            team_filter=None,
         )
     if team_src.team in {"PSS Intern"}:
         return build_pss_intern_from_user_data(
