@@ -197,6 +197,7 @@ ACTIVITY_MAP = {
     "ai/ml gap review":"Gap Report",
     "helping with spyral analysi":"Redo Analysis",
     "pdp and work summary form":"Admin",
+    "wording for cf file":"Admin",
     "archieving":"Admin",
     "mdr vig meeting": "Meeting",
     "emalis/admin": "Admin",
