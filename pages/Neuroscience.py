@@ -3397,44 +3397,10 @@ with right2:
                         for c in drill_categories
                     ]
                     drill_df = drill_df.sort_values(["period_date", "CategoryOrder"]).copy()
-                    week_overflow = (
-                        drill_df.groupby(["team", "period_date"], as_index=False)["Pct"]
-                        .sum()
-                        .rename(columns={"Pct": "RawTotalPct"})
-                    )
-                    week_overflow["OverPct"] = (week_overflow["RawTotalPct"] - 1.0).clip(lower=0.0)
-                    week_overflow["HasOverflow"] = week_overflow["OverPct"] > 1e-6
-                    week_overflow["OverflowLabel"] = np.where(week_overflow["HasOverflow"], "!", "")
-                    week_overflow["PctShown"] = np.minimum(week_overflow["RawTotalPct"], 1.0)
-                    week_overflow["YOverflow"] = 1.0
-                    week_overflow["OverflowText"] = (
-                        (week_overflow["RawTotalPct"] * 100.0).round(1).astype(str) + "%"
-                    )
                     drill_label_src = drill_df.copy()
-                    drill_label_src["PctDisplay"] = pd.to_numeric(drill_label_src["Pct"], errors="coerce").fillna(0.0)
-                    display_totals = (
-                        drill_label_src.groupby(["team", "period_date"], as_index=False)["PctDisplay"]
-                        .sum()
-                        .rename(columns={"PctDisplay": "DisplayTotal"})
-                    )
-                    drill_label_src = drill_label_src.merge(
-                        display_totals,
-                        on=["team", "period_date"],
-                        how="left",
-                    )
-                    drill_label_src["PctDisplay"] = np.where(
-                        drill_label_src["DisplayTotal"] > 1.0,
-                        np.where(
-                            drill_label_src["DisplayTotal"] > 0,
-                            drill_label_src["PctDisplay"] / drill_label_src["DisplayTotal"],
-                            0.0,
-                        ),
-                        drill_label_src["PctDisplay"],
-                    )
-                    drill_label_src["cum_pct"] = drill_label_src.groupby(["team", "period_date"])["PctDisplay"].cumsum()
-                    drill_label_src["y_mid"] = drill_label_src["cum_pct"] - (drill_label_src["PctDisplay"] / 2.0)
-                    drill_label_src = drill_label_src[drill_label_src["PctDisplay"] >= 0.05].copy()
-                    drill_label_src["PctLabel"] = (drill_label_src["PctDisplay"] * 100.0).round().astype(int).astype(str) + "%"
+                    drill_label_src["cum_pct"] = drill_label_src.groupby("period_date")["Pct"].cumsum()
+                    drill_label_src["y_mid"] = drill_label_src["cum_pct"] - (drill_label_src["Pct"] / 2.0)
+                    drill_label_src = drill_label_src[drill_label_src["Pct"] >= 0.05].copy()
                     week_count = max(len(latest_weeks), 1)
                     drill_width = max(380, min(900, week_count * 52))
                     drill_bars = (
@@ -3473,58 +3439,28 @@ with right2:
                                 alt.Tooltip("team:N", title="Team"),
                                 alt.Tooltip("period_date:T", title="Week"),
                                 alt.Tooltip("Category:N", title="Category"),
-                                alt.Tooltip("Hours:Q", title="Hours", format=",2f"),
+                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
                                 alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
                             ],
                         )
                     )
-                    drill_labels = (
-                        alt.Chart(drill_label_src)
-                        .mark_text(
-                            color="white",
-                            fontSize=10,
-                            fontWeight="bold",
-                            align="center",
-                            baseline="middle",
-                        )
-                        .encode(
-                            x=alt.X("period_date:T"),
-                            y=alt.Y(
-                                "y_mid:Q",
-                                scale=alt.Scale(domain=[0, 1]),
-                                axis=None,
-                            ),
-                            detail="Category:N",
-                            text="PctLabel:N",
-                        )
+                    drill_labels = alt.Chart(drill_label_src).mark_text(
+                        color="white",
+                        fontSize=10,
+                        fontWeight="bold",
+                        align="center",
+                        baseline="middle",
+                    ).encode(
+                        x=alt.X("period_date:T"),
+                        y=alt.Y(
+                            "y_mid:Q",
+                            scale=alt.Scale(domain=[0, 1]),
+                            axis=None,
+                        ),
+                        detail="Category:N",
+                        text=alt.Text("Pct:Q", format=".0%"),
                     )
-                    overflow_marks = (
-                        alt.Chart(week_overflow[week_overflow["HasOverflow"]])
-                        .mark_text(
-                            color="#b91c1c",
-                            fontSize=16,
-                            fontWeight="bold",
-                            align="center",
-                            baseline="bottom",
-                            dy=-4,
-                        )
-                        .encode(
-                            x=alt.X("period_date:T"),
-                            y=alt.Y(
-                                "YOverflow:Q",
-                                scale=alt.Scale(domain=[0, 1]),
-                                axis=None,
-                            ),
-                            text="OverflowLabel:N",
-                            tooltip=[
-                                alt.Tooltip("team:N", title="Team"),
-                                alt.Tooltip("period_date:T", title="Week"),
-                                alt.Tooltip("RawTotalPct:Q", title="Actual total %", format=".1%"),
-                                alt.Tooltip("OverPct:Q", title="Over by", format=".1%"),
-                            ],
-                        )
-                    )
-                    drill = (drill_bars + drill_labels + overflow_marks).properties(
+                    drill = (drill_bars + drill_labels).properties(
                         height=280,
                         width=drill_width,
                     )
