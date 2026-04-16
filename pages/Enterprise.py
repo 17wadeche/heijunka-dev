@@ -942,7 +942,7 @@ if org is None:
         st.write("\n".join(attempted_paths[:300]))
     st.stop()
 repo_root = _repo_root_from_cfg_path_str(cfg_path_str)
-data = load_common_data(str(repo_root))
+data, exploded = load_precomputed(str(repo_root))
 enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
