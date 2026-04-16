@@ -1517,19 +1517,59 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
     if "Week Start" in out.columns:
         out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
     return out
+def _excel_col_name(idx: int) -> str:
+    name = ""
+    idx += 1
+    while idx:
+        idx, rem = divmod(idx - 1, 26)
+        name = chr(65 + rem) + name
+    return name
+def _apply_over_100_outline_xlsxwriter(writer, sheet_name: str, df: pd.DataFrame) -> None:
+    if df is None or df.empty:
+        return
+    required_cols = ["WIP %", "Non-WIP %", "OOO %"]
+    if not all(c in df.columns for c in required_cols):
+        return
+    workbook = writer.book
+    worksheet = writer.sheets[sheet_name]
+    yellow_outline = workbook.add_format({
+        "border": 2,
+        "border_color": "#facc15",
+    })
+    wip_col = _excel_col_name(df.columns.get_loc("WIP %"))
+    non_wip_col = _excel_col_name(df.columns.get_loc("Non-WIP %"))
+    ooo_col = _excel_col_name(df.columns.get_loc("OOO %"))
+    first_data_row = 2  # Excel row 1 is header; row 2 is first data row
+    last_data_row = len(df) + 1
+    last_col = _excel_col_name(len(df.columns) - 1)
+    worksheet.conditional_format(
+        f"A{first_data_row}:{last_col}{last_data_row}",
+        {
+            "type": "formula",
+            "criteria": f"=(${wip_col}{first_data_row}+${non_wip_col}{first_data_row}+${ooo_col}{first_data_row})>1",
+            "format": yellow_outline,
+        },
+    )
 def _excel_bytes_from_export_dfs(
     team_df: pd.DataFrame,
     ou_df: pd.DataFrame,
     portfolio_df: pd.DataFrame,
 ) -> bytes:
     last_err = None
-    for engine in ("openpyxl", "xlsxwriter"):
+    for engine in ("xlsxwriter", "openpyxl"):
         buf = io.BytesIO()
         try:
             with pd.ExcelWriter(buf, engine=engine) as writer:
-                team_df.to_excel(writer, index=False, sheet_name="Team Weekly")
-                ou_df.to_excel(writer, index=False, sheet_name="OU Weekly")
-                portfolio_df.to_excel(writer, index=False, sheet_name="Portfolio Weekly")
+                sheets = [
+                    ("Team Weekly", team_df),
+                    ("OU Weekly", ou_df),
+                    ("Portfolio Weekly", portfolio_df),
+                ]
+                for sheet_name, df in sheets:
+                    df.to_excel(writer, index=False, sheet_name=sheet_name)
+                if engine == "xlsxwriter":
+                    for sheet_name, df in sheets:
+                        _apply_over_100_outline_xlsxwriter(writer, sheet_name, df)
             buf.seek(0)
             return buf.getvalue()
         except Exception as e:
