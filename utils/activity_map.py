@@ -67,6 +67,7 @@ ACTIVITY_MAP = {
     "a3 meeting":"Problem Solving",
     "monthly precedent events":"Precedent Event",
     "metrics/scrum/schedule for tomorrow": "Metrics & Schedule",
+    "metrics & schedule for thursday": "Metrics & Schedule",
     "run wr/ heijunka": "Metrics & Schedule",
     "metrics, tuesday schedule": "Metrics & Schedule",
     "christmas lunch":"Break",
