@@ -1517,6 +1517,20 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
     if "Week Start" in out.columns:
         out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
     return out
+def _over_100_row_outline_style(row: pd.Series) -> list[str]:
+    required = ["WIP %", "Non-WIP %", "OOO %"]
+    if not all(c in row.index for c in required):
+        return [""] * len(row)
+    total = pd.to_numeric(
+        pd.Series([row["WIP %"], row["Non-WIP %"], row["OOO %"]]),
+        errors="coerce",
+    ).fillna(0.0).sum()
+    if float(total) > 1.0:
+        return [
+            "border-top: 3px solid #facc15; "
+            "border-bottom: 3px solid #facc15;"
+        ] * len(row)
+    return [""] * len(row)
 def _excel_col_name(idx: int) -> str:
     name = ""
     idx += 1
@@ -2229,9 +2243,16 @@ elif page == "Export":
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True),
+                subset=["WIP %"],
+            )
         if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.20),
+                subset=["Non-WIP %"],
+            )
+        styler = styler.apply(_over_100_row_outline_style, axis=1)
         return styler
     def _format_export_display_ou(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
@@ -2279,9 +2300,16 @@ elif page == "Export":
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True),
+                subset=["WIP %"],
+            )
         if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.20),
+                subset=["Non-WIP %"],
+            )
+        styler = styler.apply(_over_100_row_outline_style, axis=1)
         return styler
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
@@ -2330,9 +2358,16 @@ elif page == "Export":
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
         if "WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True), subset=["WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True),
+                subset=["WIP %"],
+            )
         if "Non-WIP %" in out.columns:
-            styler = styler.map(lambda v: _threshold_cell_style(v, 0.20), subset=["Non-WIP %"])
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.20),
+                subset=["Non-WIP %"],
+            )
+        styler = styler.apply(_over_100_row_outline_style, axis=1)
         return styler
     if team_export.empty:
         st.info("No exportable team/week data found.")
