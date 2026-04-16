@@ -912,53 +912,6 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         return cat
     out["Activity"] = out["Activity"].map(_canon_activity)
     return out.groupby("Activity", as_index=False)["Hours"].sum()
-st.markdown("""
-<div class="hero">
-  <div>
-    <div class="eyebrow">Enterprise Intelligence</div>
-    <h1>Enterprise Dashboard</h1>
-    <p>Track WIP, Non-WIP, OOO, capacity, and unaccounted time across teams, OUs, and portfolios.</p>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-st.markdown("""
-<style>
-.hero {
-  padding: 28px 32px;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #111827 0%, #1e3a8a 45%, #7c3aed 100%);
-  color: white;
-  margin-bottom: 24px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, .25);
-}
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: .16em;
-  font-size: .75rem;
-  opacity: .8;
-}
-.hero h1 {
-  margin: 0;
-  font-size: 2.6rem;
-}
-.hero p {
-  max-width: 760px;
-  opacity: .88;
-}
-.metric-card {
-  padding: 20px;
-  border-radius: 22px;
-  background: rgba(255,255,255,.78);
-  border: 1px solid rgba(148,163,184,.25);
-  box-shadow: 0 12px 35px rgba(15,23,42,.08);
-  transition: transform .18s ease, box-shadow .18s ease;
-}
-.metric-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 45px rgba(15,23,42,.14);
-}
-</style>
-""", unsafe_allow_html=True)
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 with st.sidebar:
     st.caption(get_page_last_updated_label())
