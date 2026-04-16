@@ -194,6 +194,7 @@ ACTIVITY_MAP = {
     "co-op meeting": "Meeting",
     "sh live case video":"Reviewing Documents & Case Video",
     "cas ri":"RI",
+    "eoy self-eval; cornerstone training; email":"Career Development",
     "re-doing analysi":"Redo Analysis",
     "revisiting previous analysi":"Redo Analysis",
     "looking up on how to analyse video":"Reviewing Documents & Case Video",
