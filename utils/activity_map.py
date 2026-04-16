@@ -192,6 +192,7 @@ ACTIVITY_MAP = {
     "deco documentation reading":"Reading File/Document Information",
     "venaseal document reading":"Reading File/Document Information",
     "pmpa meeting 3o getting a device from the pallet":"PMPA",
+    
     "job review":"Admin",
     "call with scott": "Meeting",
     "meeting with fola on obstructed devcie": "Meeting",
