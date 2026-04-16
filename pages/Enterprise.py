@@ -436,6 +436,7 @@ def merged_people_count_for_week(
     nw_frame: pd.DataFrame,
     person_hours: pd.DataFrame,
     people_in_wip: pd.DataFrame,
+    long_nw: pd.DataFrame | None = None,
 ) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
     if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "SCS", "TDD", "ACM","CPT","DS","CDS","NI", "VSS","Endoscopy","Surgical AST-GST"}:
@@ -451,7 +452,8 @@ def merged_people_count_for_week(
             if not team_match.empty:
                 return int(team_match.iloc[0])
     names = set()
-    long_nw = explode_non_wip_by_person(nw_frame)
+    if long_nw is None:
+        long_nw = explode_non_wip_by_person(nw_frame)
     for df_, person_col in [
         (long_nw, "person"),
         (person_hours, "person"),
@@ -1267,6 +1269,7 @@ def _weekly_team_export_df(
             nw_frame=nw,
             person_hours=person_hours,
             people_in_wip=people_in_wip,
+            long_nw=long_nw,           
         )
         if people_count is None or float(people_count) <= 0:
             people_count = float(
