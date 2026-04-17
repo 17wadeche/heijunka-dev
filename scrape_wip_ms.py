@@ -104,6 +104,35 @@ CSV_COLUMNS = [
     "Closures",
     "Opened",
 ]
+METRICS_CSV_COLUMNS = [
+    "team",
+    "rollup_team",
+    "period_date",
+    "source_file",
+    "Total Available Hours",
+    "Completed Hours",
+    "Target Output",
+    "Actual Output",
+    "Target UPLH",
+    "Actual UPLH",
+    "UPLH WP1",
+    "UPLH WP2",
+    "HC in WIP",
+    "Actual HC Used",
+    "People in WIP",
+    "Person Hours",
+    "Outputs by Person",
+    "Outputs by Cell/Station",
+    "Cell/Station Hours",
+    "Hours by Cell/Station - by person",
+    "Output by Cell/Station - by person",
+    "UPLH by Cell/Station - by person",
+    "Open Complaint Timeliness",
+    "error",
+    "Closures",
+    "Opened",
+]
+
 EXCLUDED_STATIONS = {"ooo", "non wip", ""}
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
@@ -668,6 +697,28 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             "Opened": "",
         })
     return rows
+def detail_rows_for_metrics(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    detail_rows: List[Dict[str, Any]] = []
+    for row in rows:
+        out = dict(row)
+        out["rollup_team"] = rollup_team_name((row.get("team", "") or "").strip())
+        detail_rows.append(out)
+    detail_rows.sort(key=lambda r: (
+        (r.get("rollup_team", "") or "").lower(),
+        (r.get("team", "") or "").lower(),
+        r.get("period_date", "") or "9999-12-31",
+        (r.get("source_file", "") or "").lower(),
+    ))
+    return detail_rows
+def write_csv_rows(path: str, rows: List[Dict[str, Any]], columns: List[str]) -> None:
+    out_dir = os.path.dirname(path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as fp:
+        writer = csv.DictWriter(fp, fieldnames=columns)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: row.get(k, "") for k in columns})
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Optional workbook(s) to scrape. If omitted, uses DEFAULT_FILES in the script.")
@@ -687,13 +738,11 @@ def main() -> int:
     closures_lut = load_closures_lookup(closures_csv)
     enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     final_rows = rollup_rows_by_team_period(all_rows)
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, "w", newline="", encoding="utf-8") as fp:
-        writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
-        writer.writeheader()
-        for row in final_rows:
-            writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
+    metrics_rows = detail_rows_for_metrics(all_rows)
+    write_csv_rows(args.out, final_rows, CSV_COLUMNS)
+    write_csv_rows(args.metrics_out, metrics_rows, METRICS_CSV_COLUMNS)
     print(f"Wrote {len(final_rows)} row(s) to {args.out}")
+    print(f"Wrote {len(metrics_rows)} row(s) to {args.metrics_out}")
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
