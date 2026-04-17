@@ -238,6 +238,62 @@ def normalize_person_name(name: str) -> str:
     s = " ".join(s.split())
     key = s.lower()
     return NAME_ALIASES.get(key, s)
+PSS_GROUPS = {
+    "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
+    "MEIC": set(),  # computed as everyone else in PSS
+}
+def filter_people_df_by_group(df_in: pd.DataFrame, team: str, group_name: str | None) -> pd.DataFrame:
+    if df_in is None or df_in.empty or team != "PSS" or not group_name:
+        return df_in
+    out = df_in.copy()
+    if "person" not in out.columns:
+        return out
+    us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
+    out["person"] = out["person"].astype(str).map(normalize_person_name)
+    if group_name == "US":
+        return out[out["person"].isin(us_people)].copy()
+    if group_name == "MEIC":
+        return out[~out["person"].isin(us_people)].copy()
+    return out
+def metric_row_filtered_to_group(row, team: str, group_name: str | None):
+    if team != "PSS" or not group_name:
+        return row
+    us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
+    def keep_person(name: str) -> bool:
+        n = normalize_person_name(name)
+        if group_name == "US":
+            return n in us_people
+        if group_name == "MEIC":
+            return n not in us_people
+        return True
+    row = row.copy()
+    json_person_cols = [
+        "Person Hours",
+        "Outputs by Person",
+        "People in WIP",
+        "non_wip_by_person",
+    ]
+    for col in json_person_cols:
+        if col not in row.index or pd.isna(row[col]):
+            continue
+        try:
+            payload = json.loads(row[col]) if isinstance(row[col], str) else row[col]
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            payload = {k: v for k, v in payload.items() if keep_person(str(k))}
+        elif isinstance(payload, list):
+            payload = [x for x in payload if keep_person(str(x))]
+        row[col] = json.dumps(payload)
+    if "non_wip_activities" in row.index and pd.notna(row["non_wip_activities"]):
+        try:
+            acts = json.loads(row["non_wip_activities"]) if isinstance(row["non_wip_activities"], str) else row["non_wip_activities"]
+            if isinstance(acts, list):
+                acts = [a for a in acts if keep_person(str(a.get("name", "")))]
+                row["non_wip_activities"] = json.dumps(acts)
+        except Exception:
+            pass
+    return row
 PERSON_WEEKLY_HOURS = {
     "Chelsey": 16.0,
     "MG": 36.0,
@@ -1222,6 +1278,14 @@ if nonwip_mode:
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+        pss_group = None
+        if team_nw == "PSS":
+            pss_group = st.selectbox(
+                "Group",
+                options=["US", "MEIC"],
+                index=0,
+                key="pss_group",
+            )
     today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
         [
@@ -1249,6 +1313,7 @@ if nonwip_mode:
         st.info("No Non-WIP row for that team/week.")
         st.stop()
     row = sel.iloc[0]
+    row = metric_row_filtered_to_group(row, team_nw, pss_group if team_nw == "PSS" else None)
     if "% Non-WIP" in row.index and pd.notna(row["% Non-WIP"]):
         pct_non_wip = float(row["% Non-WIP"])
     else:
@@ -1293,6 +1358,8 @@ if nonwip_mode:
         week_hours=40.0,
         irl_people=team_irl_people,
     )
+    if team_nw == "PSS":
+        wk_people_kpi = filter_people_df_by_group(wk_people_kpi, team_nw, pss_group)
     wk_people_kpi = wk_people_kpi.copy()
     if "Expected Hours" in wk_people_kpi.columns:
         wk_people_kpi["Expected Hours"] = pd.to_numeric(
@@ -2048,6 +2115,8 @@ with left:
                         st.info(f"No per-person data available for {team_name}.")
                     else:
                         team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+                        if team_name == "PSS":
+                            team_people = filter_people_df_by_group(team_people, team_name, st.session_state.get("pss_group"))
                         wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
                         if wk_people.empty:
                             st.info("No per-person data for the selected week.")
