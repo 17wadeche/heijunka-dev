@@ -1747,32 +1747,51 @@ if nonwip_mode:
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
     team_hist = team_hist.copy()
-    team_hist["people_count"] = team_hist["period_date"].apply(
-        lambda wk: merged_people_count_for_week(team_nw, wk, df, nw)
-    )
-    show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
-    tbl = (
-        team_hist[show_cols]
-        .rename(columns={
-            "team": "Team",
-            "period_date": "Date",
-            "people_count": "People Count",
-            "total_non_wip_hours": "Non-WIP Hours",
-            "% Non-WIP": "% Non-WIP",
-        })
-        .sort_values("Date", ascending=False)
-    )
-    if "Date" in tbl.columns:
-        tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
-    st.dataframe(
-        tbl.style.format({
-            "People Count": "{:,.0f}",
-            "Non-WIP Hours": "{:,.1f}",
-            "% Non-WIP": "{:.2f}%",
-        }),
-        use_container_width=True,
-        hide_index=True,
-    )
+    if not team_hist.empty:
+        team_hist["% Non-WIP"] = np.where(
+            pd.to_numeric(team_hist["Capacity Hours"], errors="coerce") > 0,
+            (
+                pd.to_numeric(team_hist["Non-WIP Hours"], errors="coerce")
+                / pd.to_numeric(team_hist["Capacity Hours"], errors="coerce")
+            ) * 100.0,
+            np.nan,
+        )
+        show_cols = [
+            "team",
+            "period_date",
+            "People Count",
+            "WIP Hours",
+            "Non-WIP Hours",
+            "OOO Hours",
+            "Unaccounted Hours",
+            "Capacity Hours",
+            "% Non-WIP",
+        ]
+        tbl = (
+            team_hist[show_cols]
+            .rename(columns={
+                "team": "Team",
+                "period_date": "Date",
+            })
+            .sort_values("Date", ascending=False)
+        )
+        if "Date" in tbl.columns:
+            tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
+        st.dataframe(
+            tbl.style.format({
+                "People Count": "{:,.0f}",
+                "WIP Hours": "{:,.1f}",
+                "Non-WIP Hours": "{:,.1f}",
+                "OOO Hours": "{:,.1f}",
+                "Unaccounted Hours": "{:,.1f}",
+                "Capacity Hours": "{:,.1f}",
+                "% Non-WIP": "{:.2f}%",
+            }),
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No trend rows available for this selection.")
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
