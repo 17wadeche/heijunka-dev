@@ -141,6 +141,7 @@ ACTIVITY_MAP = {
     "01":"Admin",
     "admin (30)":"Admin",
     "cornerstone (30)":"Cornerstone",
+    "document/previous investigation reading":"Reading File/Document Information",
     "cqxm/pmq meeting": "Meeting",
     "set u":"Set Up",
     "cqzm/pmq meeting": "Meeting",
