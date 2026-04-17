@@ -2153,8 +2153,6 @@ with left:
                         st.info(f"No per-person data available for {team_name}.")
                     else:
                         team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
-                        if team_name == "PSS":
-                            team_people = filter_people_df_by_group(team_people, team_name, st.session_state.get("pss_group"))
                         wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
                         if wk_people.empty:
                             st.info("No per-person data for the selected week.")
