@@ -53,35 +53,39 @@ def _rows_from_xlsb(path: str, sheet_name: str) -> Iterable[Tuple[Any, ...]]:
         yield tuple(row)
 def _sheetnames_xlsx_like(path: str) -> List[str]:
     from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True, read_only=True)
-    return list(wb.sheetnames)
+    wb = load_workbook(path, data_only=True, read_only=True, keep_links=False)
+    try:
+        return list(wb.sheetnames)
+    finally:
+        wb.close()
 def _rows_from_xlsx_like_visible(path: str, sheet_name: str) -> Iterable[Tuple[Any, ...]]:
     from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True, read_only=False)
-    ws = wb[sheet_name]
-    max_row = ws.max_row or 0
-    max_col = ws.max_column or 0
-    for r in range(1, max_row + 1):
-        row_vals = []
-        for c in range(1, max_col + 1):
-            row_vals.append(ws.cell(r, c).value)
-        yield tuple(row_vals)
+    wb = load_workbook(path, data_only=True, read_only=True, keep_links=False)
+    try:
+        ws = wb[sheet_name]
+        for row in ws.iter_rows(values_only=True):
+            yield tuple(row)
+    finally:
+        wb.close()
 from typing import Set 
 def _hidden_rows_xlsx_like(path: str, sheet_name: str) -> Set[int]:
     from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True, read_only=False)
-    ws = wb[sheet_name]
-    max_row = ws.max_row or 0
-    hidden: Set[int] = set()
-    for r in range(1, max_row + 1):
-        rd = ws.row_dimensions.get(r)
-        if rd is None:
-            continue
-        is_hidden = bool(getattr(rd, "hidden", False))
-        zero_h = (getattr(rd, "height", None) == 0)
-        if is_hidden or zero_h:
-            hidden.add(r)
-    return hidden
+    wb = load_workbook(path, data_only=True, read_only=False, keep_links=False)
+    try:
+        ws = wb[sheet_name]
+        hidden: Set[int] = set()
+        for key, rd in ws.row_dimensions.items():
+            try:
+                r = int(key)
+            except Exception:
+                continue
+            is_hidden = bool(getattr(rd, "hidden", False))
+            zero_h = (getattr(rd, "height", None) == 0)
+            if is_hidden or zero_h:
+                hidden.add(r)
+        return hidden
+    finally:
+        wb.close()
 def _hidden_rows(path: str, sheet_name: str) -> Set[int]:
     ext = os.path.splitext(path)[1].lower()
     if ext in (".xlsx", ".xlsm"):
@@ -248,17 +252,6 @@ def parse_prod_analysis(
         b["ooo_by_person"] = {k: round(v, 2) for k, v in b["ooo_by_person"].items()}
         b["non_wip_by_person"] = {k: round(v, 2) for k, v in b["non_wip_by_person"].items()}
     return buckets
-def load_completed_hours(metrics_csv: str) -> Dict[Tuple[str, str], float]:
-    out: Dict[Tuple[str, str], float] = {}
-    with open(metrics_csv, "r", encoding="utf-8") as f:
-        r = csv.DictReader(f)
-        for row in r:
-            team = _clean(row.get("Team") or row.get("team") or "")
-            wk = _clean(row.get("Week") or row.get("period_date") or "")
-            ch = _to_float(row.get("Completed Hours") or row.get("completed_hours") or "0") or 0.0
-            if team and wk:
-                out[(team, wk)] = out.get((team, wk), 0.0) + ch
-    return out
 def weeks_for_team(metrics_csv: str, team: str) -> List[str]:
     weeks = set()
     with open(metrics_csv, "r", encoding="utf-8") as f:
@@ -280,8 +273,9 @@ def _loads_json_maybe(s: str) -> Optional[dict]:
             return json.loads(s.replace("''", '"').replace('""', '"'))
         except Exception:
             return None
-def load_person_metrics(metrics_csv: str) -> Dict[Tuple[str, str, str], Dict[str, float]]:
-    out: Dict[Tuple[str, str, str], Dict[str, float]] = {}
+def load_metrics_indexes(metrics_csv: str):
+    completed: Dict[Tuple[str, str], float] = {}
+    person_metrics: Dict[Tuple[str, str, str], Dict[str, float]] = {}
     with open(metrics_csv, "r", encoding="utf-8") as f:
         r = csv.DictReader(f)
         for row in r:
@@ -289,19 +283,20 @@ def load_person_metrics(metrics_csv: str) -> Dict[Tuple[str, str, str], Dict[str
             week = _clean(row.get("Week") or row.get("period_date") or "")
             if not (team and week):
                 continue
+            ch = _to_float(row.get("Completed Hours") or row.get("completed_hours") or "0") or 0.0
+            completed[(team, week)] = completed.get((team, week), 0.0) + ch
             ph_json_raw = row.get("Person Hours") or row.get("person_hours") or ""
             ph = _loads_json_maybe(ph_json_raw) or {}
-            if not isinstance(ph, dict):
-                continue
-            for person, payload in ph.items():
-                if not person or _is_non_person_label(person):   # <-- skip labels
-                    continue
-                actual_val = None
-                if isinstance(payload, dict):
-                    actual_val = _to_float(payload.get("actual"))
-                actual = float(actual_val) if actual_val is not None else 0.0
-                out[(team, week, _clean(person))] = {"actual": actual}
-    return out
+            if isinstance(ph, dict):
+                for person, payload in ph.items():
+                    if not person or _is_non_person_label(person):
+                        continue
+                    actual_val = None
+                    if isinstance(payload, dict):
+                        actual_val = _to_float(payload.get("actual"))
+                    actual = float(actual_val) if actual_val is not None else 0.0
+                    person_metrics[(team, week, _clean(person))] = {"actual": actual}
+    return completed, person_metrics
 def build_non_wip_rows(config_path: str,
                        chosen_teams: Optional[List[str]],
                        all_teams: bool,
@@ -311,9 +306,8 @@ def build_non_wip_rows(config_path: str,
     teams_to_run = list(cfg.keys()) if all_teams else (chosen_teams or [])
     if not teams_to_run:
         raise SystemExit("No teams specified. Use --all or --team <NAME> (repeatable).")
-    completed_index = load_completed_hours(metrics_csv)
-    person_metrics = load_person_metrics(metrics_csv)
-    wip_workers_all: Dict[str, set] = defaultdict(set)          # team -> set(person)
+    completed_index, person_metrics = load_metrics_indexes(metrics_csv)
+    wip_workers_all: Dict[str, set] = defaultdict(set)
     wip_workers_by_week: Dict[Tuple[str, str], set] = defaultdict(set)
     out_rows: List[Dict[str, Any]] = []
     for team in teams_to_run:
@@ -321,7 +315,6 @@ def build_non_wip_rows(config_path: str,
         path = entry.get("workbook")
         if not path or not os.path.exists(path):
             raise SystemExit(f"[{team}] Workbook not found: {path}")
-        irl_people = {p.strip() for p in (entry.get("irl_people") or [])}
         prod_cfg = entry.get("prod_sheets") or entry.get("prod_sheet") or []
         prod_hints = prod_cfg if isinstance(prod_cfg, list) else [prod_cfg]
         avail_hint = entry.get("avail_sheet")
@@ -340,10 +333,9 @@ def build_non_wip_rows(config_path: str,
             if not hint:
                 continue
             nm = _find_sheet_by_hint(sheet_names, hint)
-            rows_s = list(get_rows(path, nm))
             anchors_s = (entry.get("week_anchors", {}) or {}).get(nm, [])
             hidden_prod_rows = set() if team in IGNORE_PROD_HIDDEN_ROWS else _hidden_rows(path, nm)
-            pb = parse_prod_analysis(rows_s, anchors_s, hidden_prod_rows)
+            pb = parse_prod_analysis(get_rows(path, nm), anchors_s, hidden_prod_rows)
             for wk, b in pb.items():
                 prod_buckets_merged[wk]["ooo_hours"] += b.get("ooo_hours", 0.0)
                 for person, hrs in (b.get("ooo_by_person", {}) or {}).items():
@@ -356,11 +348,10 @@ def build_non_wip_rows(config_path: str,
             b["ooo_by_person"] = {k: round(float(v), 2) for k, v in b["ooo_by_person"].items()}
             b["non_wip_by_person"] = {k: round(float(v), 2) for k, v in b["non_wip_by_person"].items()}
         avail_name = _find_sheet_by_hint(sheet_names, avail_hint)
-        avail_rows = list(get_rows(path, avail_name))
         avail_anchors = (entry.get("week_anchors", {}) or {}).get(avail_name, [])
         hidden_avail_rows = _hidden_rows(path, avail_name)
         people_by_week = people_by_week_from_available(
-            avail_rows,
+            get_rows(path, avail_name),
             avail_anchors,
             hidden_avail_rows,
         )
@@ -418,7 +409,6 @@ def build_non_wip_rows(config_path: str,
                 "WIP Workers Count": len(wk_wip_workers),
                 "WIP Workers OOO Hours": wip_workers_ooo_hours,
             })
-        names = sorted(wip_workers_all[team])
     return out_rows
 def main():
     ap = argparse.ArgumentParser(description="Collect Non-WIP/OOO metrics into a new CSV.")

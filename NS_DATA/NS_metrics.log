@@ -8948,3 +8948,28 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-04-17 17:45:54,930 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
 2026-04-17 17:45:54,983 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 297 rows
 2026-04-17 17:45:54,984 | INFO | === NS Metrics Run END ===
+2026-04-17 18:28:41,184 | INFO | === NS Metrics Run START ===
+2026-04-17 18:28:41,184 | INFO | Selected team: all
+2026-04-17 18:28:41,184 | INFO | [Spine] START
+2026-04-17 18:28:55,109 | INFO | [Spine] DONE | rows=34 | elapsed=0:00:13.924987
+2026-04-17 18:28:55,109 | INFO | [Spine] START
+2026-04-17 18:29:48,090 | INFO | [Spine] DONE | rows=6 | elapsed=0:00:52.980746
+2026-04-17 18:29:48,090 | INFO | [PH] START
+2026-04-17 18:30:28,764 | INFO | [PH] DONE | rows=546 | elapsed=0:00:40.674238
+2026-04-17 18:30:28,764 | INFO | [PH Cell 17] START
+2026-04-17 18:30:28,963 | INFO | [PH Cell 17] DONE | rows=3 | elapsed=0:00:00.198694
+2026-04-17 18:30:28,963 | INFO | [SCS Cell 1] START
+2026-04-17 18:31:21,685 | INFO | [SCS Cell 1] DONE | rows=286 | elapsed=0:00:52.722376
+2026-04-17 18:31:21,685 | INFO | [MEIC PH] START
+2026-04-17 18:31:32,895 | INFO | [MEIC PH] DONE | rows=90 | elapsed=0:00:11.209344
+2026-04-17 18:31:32,895 | INFO | [DBS C13] START
+2026-04-17 18:31:33,862 | INFO | [DBS C13] DONE | rows=4 | elapsed=0:00:00.967014
+2026-04-17 18:31:33,862 | INFO | [DBS C13] filter >= 2025-07-07: 4 -> 4
+2026-04-17 18:31:33,862 | INFO | [DBS C14] START
+2026-04-17 18:31:34,747 | INFO | [DBS C14] DONE | rows=4 | elapsed=0:00:00.884912
+2026-04-17 18:31:34,747 | INFO | [DBS C14] filter >= 2025-07-07: 4 -> 4
+2026-04-17 18:31:34,747 | INFO | [NV] START
+2026-04-17 18:34:34,759 | INFO | [NV] still running...
+2026-04-17 18:34:42,524 | INFO | [NV] DONE | rows=46 | elapsed=0:03:07.777213
+2026-04-17 18:34:42,524 | INFO | [NV] filter >= 2025-07-07: 46 -> 41
+2026-04-17 18:34:42,530 | INFO | [Nav] START
