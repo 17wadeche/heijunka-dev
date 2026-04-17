@@ -1391,6 +1391,17 @@ if nonwip_mode:
         metrics_frame_for_accounting["team"] = team_nw
     else:
         metrics_frame_for_accounting = df
+    if subgroup_nw != "All":
+        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw).copy()
+        metrics_frame_for_accounting = wip_group_filtered
+        metrics_frame_for_accounting["team"] = team_nw
+    else:
+        metrics_frame_for_accounting = df
+    if subgroup_nw != "All":
+        nw_view_for_accounting = nw_view.copy()
+        nw_view_for_accounting["team"] = team_nw
+    else:
+        nw_view_for_accounting = nw
     people_count_val = merged_people_count_for_week(team_nw, week_nw, df, nw)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
@@ -1399,7 +1410,7 @@ if nonwip_mode:
         week=week_nw,
         nw_row=row,
         metrics_frame=metrics_frame_for_accounting,
-        nw_frame=nw,
+        nw_frame=nw_view_for_accounting, 
         week_hours=40.0,
         irl_people=team_irl_people,
     )
