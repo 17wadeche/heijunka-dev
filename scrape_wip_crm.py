@@ -15,6 +15,12 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB": "DS",
     r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB": "CPT",
     r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka": "NI",
+    r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker": "NI & PM MEIC",
+}
+EXCLUDED_FILES = {
+    os.path.normpath(
+        r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026\Not USED Week 20 Apr 2026 Heijunka & PAB.xlsm"
+    ),
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
@@ -24,6 +30,7 @@ CDS_ROOT_HINT = _norm_cds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Dia
 DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB")
 CPT_ROOT_HINT = _norm_cpt = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB")
 NI_ROOT_HINT = _norm_ni = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka")
+MEIC_ROOT_HINT = _norm_meic = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker")
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
 _PROD_PAT = re.compile(r"\b(production|product)\s+analysis\b", re.IGNORECASE)
 _MONTH_MAP = {
@@ -183,6 +190,8 @@ def team_for_source(path: str) -> str:
         return "CPT"
     if np.startswith(CDS_ROOT_HINT):
         return "CDS"
+    if np.startswith(MEIC_ROOT_HINT):
+        return "NI & PM MEIC"
     if np.startswith(NI_ROOT_HINT):
         return "NI"
     if np.startswith(MCS_ROOT_HINT):
@@ -297,6 +306,199 @@ def compute_output_by_station_by_person_ni(ws_pab: Worksheet) -> Dict[str, Dict[
         out.setdefault(cell_station, {})
         out[cell_station][person] = out[cell_station].get(person, 0.0) + hours_i
     return out
+def _meic_cell_station(category_d: Any, subarea_e: Any) -> str:
+    category = str(category_d).strip() if category_d is not None else ""
+    subarea = str(subarea_e).strip() if subarea_e is not None else ""
+    if subarea and subarea.lower() != "no subareas":
+        return subarea
+    return category
+def _is_excluded_station_meic(category_d: Any) -> bool:
+    s = str(category_d).strip().lower() if category_d is not None else ""
+    return s in {"non-wip", "essential non-wip"}
+def _iter_rows_meic_pab(
+    ws_pab: Worksheet, start_row: int = 2
+) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float], Optional[float]]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        person = ws_pab[f"C{r}"].value
+        category_d = ws_pab[f"D{r}"].value
+        subarea_e = ws_pab[f"E{r}"].value
+        target_g = _cell_number(ws_pab[f"G{r}"].value)
+        hours_i = _cell_number(ws_pab[f"I{r}"].value)
+        actual_j = _cell_number(ws_pab[f"J{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        category = str(category_d).strip() if category_d is not None else ""
+        subarea = str(subarea_e).strip() if subarea_e is not None else ""
+        if p == "" and category == "" and subarea == "" and target_g is None and hours_i is None and actual_j is None:
+            continue
+        yield (r, p, category, subarea, target_g, hours_i, actual_j)
+def compute_total_available_hours_meic(ws_wip_plan: Worksheet) -> Optional[float]:
+    return _cell_number(ws_wip_plan["DU3"].value)
+def compute_completed_hours_meic(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    total = _cell_number(ws_perf["R24"].value)
+    actual_by_person: Dict[str, float] = {}
+    people_in_wip: List[str] = []
+    seen = set()
+    for r in range(5, 24):
+        person = ws_perf[f"A{r}"].value
+        actual = _cell_number(ws_perf[f"R{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or actual is None or actual == 0:
+            continue
+        actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        if p not in seen:
+            seen.add(p)
+            people_in_wip.append(p)
+    return total, actual_by_person, people_in_wip
+def compute_person_available_hours_meic(ws_perf: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in range(5, 24):
+        person = ws_perf[f"A{r}"].value
+        available = _cell_number(ws_perf[f"Q{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or available is None:
+            continue
+        out[p] = out.get(p, 0.0) + available
+    return out
+def compute_target_actual_output_meic(ws_pab: Worksheet) -> Tuple[float, float]:
+    targ = 0.0
+    act = 0.0
+    for _, _, _, _, target_g, _, actual_j in _iter_rows_meic_pab(ws_pab):
+        if target_g is not None:
+            targ += target_g
+        if actual_j is not None:
+            act += actual_j
+    return targ, act
+def compute_outputs_by_person_meic(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, _, _, target_g, _, actual_j in _iter_rows_meic_pab(ws_pab):
+        if not person or is_excluded_person(person):
+            continue
+        out.setdefault(person, {"output": 0.0, "target": 0.0})
+        if target_g is not None:
+            out[person]["target"] += target_g
+        if actual_j is not None:
+            out[person]["output"] += actual_j
+    return out
+def compute_outputs_by_station_meic(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, _, category_d, subarea_e, target_g, _, actual_j in _iter_rows_meic_pab(ws_pab):
+        if _is_excluded_station_meic(category_d):
+            continue
+        cell_station = _meic_cell_station(category_d, subarea_e)
+        if not cell_station:
+            continue
+        out.setdefault(cell_station, {"output": 0.0, "target": 0.0})
+        if target_g is not None:
+            out[cell_station]["target"] += target_g
+        if actual_j is not None:
+            out[cell_station]["output"] += actual_j
+    return out
+def compute_station_hours_meic(ws_pab: Worksheet) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    for _, person, category_d, subarea_e, _, hours_i, actual_j in _iter_rows_meic_pab(ws_pab):
+        if _is_excluded_station_meic(category_d):
+            continue
+        cell_station = _meic_cell_station(category_d, subarea_e)
+        if not cell_station:
+            continue
+        if hours_i is not None:
+            station_hours[cell_station] = station_hours.get(cell_station, 0.0) + hours_i
+        if not person or is_excluded_person(person):
+            continue
+        if actual_j is None:
+            continue
+        station_hours_by_person.setdefault(cell_station, {})
+        station_hours_by_person[cell_station][person] = (
+            station_hours_by_person[cell_station].get(person, 0.0) + actual_j
+        )
+    return station_hours, station_hours_by_person
+def compute_output_by_station_by_person_meic(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, category_d, subarea_e, _, hours_i, _ in _iter_rows_meic_pab(ws_pab):
+        if not person or is_excluded_person(person) or _is_excluded_station_meic(category_d):
+            continue
+        cell_station = _meic_cell_station(category_d, subarea_e)
+        if not cell_station or hours_i is None:
+            continue
+        out.setdefault(cell_station, {})
+        out[cell_station][person] = out[cell_station].get(person, 0.0) + hours_i
+    return out
+def scrape_one_workbook_meic(path: str) -> List[Dict[str, Any]]:
+    team = team_for_source(path)
+    wb = load_workbook(path, data_only=True)
+    err_msgs: List[str] = []
+    ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
+    ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
+    ws_perf = wb[_sheet_ci(wb, "#5 Performance WIP Time")] if _sheet_ci(wb, "#5 Performance WIP Time") else None
+    if ws_wip_plan is None:
+        err_msgs.append("missing_#1_wip_plan_sheet")
+    if ws_pab is None:
+        err_msgs.append("missing_#2_pab_sheet")
+    if ws_perf is None:
+        err_msgs.append("missing_#5_performance_wip_time_sheet")
+    period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        err_msgs.append("missing_period_date_from_filename")
+    total_available = None
+    completed_hours = None
+    actual_hours_by_person: Dict[str, float] = {}
+    people: List[str] = []
+    person_avail: Dict[str, float] = {}
+    target_output = None
+    actual_output = None
+    outputs_by_person: Dict[str, Dict[str, float]] = {}
+    outputs_by_station: Dict[str, Dict[str, float]] = {}
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    output_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    try:
+        if ws_wip_plan is not None:
+            total_available = compute_total_available_hours_meic(ws_wip_plan)
+        if ws_perf is not None:
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_meic(ws_perf)
+            person_avail = compute_person_available_hours_meic(ws_perf)
+        if ws_pab is not None:
+            target_output, actual_output = compute_target_actual_output_meic(ws_pab)
+            outputs_by_person = compute_outputs_by_person_meic(ws_pab)
+            outputs_by_station = compute_outputs_by_station_meic(ws_pab)
+            station_hours, station_hours_by_person = compute_station_hours_meic(ws_pab)
+            output_by_station_by_person = compute_output_by_station_by_person_meic(ws_pab)
+            uplh_by_station_by_person = compute_uplh_by_station_by_person(output_by_station_by_person, station_hours_by_person)
+    except Exception as e:
+        err_msgs.append(f"meic_parse_error: {e!r}")
+    target_uplh = safe_div(float(target_output or 0.0), float(completed_hours or 0.0))
+    actual_uplh = safe_div(float(actual_output or 0.0), float(completed_hours or 0.0))
+    hc_in_wip = len(people) if people else 0
+    actual_hc_used = safe_div(float(completed_hours or 0.0), 32.5)
+    return [{
+        "team": team,
+        "period_date": iso_date(period),
+        "source_file": path,
+        "Total Available Hours": float(total_available) if total_available is not None else "",
+        "Completed Hours": float(completed_hours) if completed_hours is not None else "",
+        "Target Output": float(target_output) if target_output is not None else "",
+        "Actual Output": float(actual_output) if actual_output is not None else "",
+        "Target UPLH": float(target_uplh) if target_uplh is not None else "",
+        "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
+        "UPLH WP1": "",
+        "UPLH WP2": "",
+        "HC in WIP": hc_in_wip,
+        "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
+        "People in WIP": dumps_json(people) if ws_perf is not None else "",
+        "Person Hours": build_person_hours_json(person_avail, actual_hours_by_person) if ws_perf is not None else "",
+        "Outputs by Person": dumps_json(outputs_by_person) if ws_pab is not None else "",
+        "Outputs by Cell/Station": dumps_json(outputs_by_station) if ws_pab is not None else "",
+        "Cell/Station Hours": dumps_json(station_hours) if ws_pab is not None else "",
+        "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
+        "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
+        "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
+        "Open Complaint Timeliness": "",
+        "error": "; ".join(err_msgs) if err_msgs else "",
+        "Closures": "",
+        "Opened": "",
+    }]
 def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
     wb = load_workbook(path, data_only=True)
@@ -387,6 +589,35 @@ def parse_period_date_from_text(text: str, *, default_year: Optional[int] = None
     s = (text or "").strip()
     if not s:
         return None
+    for fmt in (
+        "%m-%d-%Y", "%m-%d-%y",
+        "%m/%d/%Y", "%m/%d/%y",
+        "%Y-%m-%d",
+    ):
+        try:
+            return _dt.datetime.strptime(s, fmt).date()
+        except ValueError:
+            pass
+    m = re.search(r"\b(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})\b", s)
+    if m:
+        month = int(m.group(1))
+        day = int(m.group(2))
+        year = int(m.group(3))
+        if year < 100:
+            year += 2000
+        try:
+            return _dt.date(year, month, day)
+        except ValueError:
+            return None
+    m = re.search(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        try:
+            return _dt.date(year, month, day)
+        except ValueError:
+            return None
     patterns = [
         r"(\d{1,2})\s*[-/ ]\s*([A-Za-z]{3,9})(?:\s*[-/ ]\s*(\d{2,4}))?",
         r"\b(\d{1,2})([A-Za-z]{3,9})(\d{2,4})\b",
@@ -410,6 +641,7 @@ def parse_period_date_from_text(text: str, *, default_year: Optional[int] = None
             return _dt.date(year, month, day)
         except ValueError:
             return None
+
     return None
 def parse_period_date_from_sheetname(sheet_name: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
     return parse_period_date_from_text(sheet_name, default_year=default_year)
@@ -1186,6 +1418,8 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             return scrape_one_workbook_cpt(path)
         if team == "NI":
             return scrape_one_workbook_ni(path)
+        if team == "NI & PM MEIC":
+            return scrape_one_workbook_meic(path)
         return [dict(blank_row_for_missing_file(path), error=f"unknown_team_for_source: {path}")]
     except FileNotFoundError:
         return [blank_row_for_missing_file(path)]
@@ -1213,14 +1447,21 @@ def iter_input_files(paths: List[str]) -> Iterable[str]:
                     continue
                 if not lower.endswith((".xlsx", ".xlsm", ".xls")):
                     continue
-                full_path = os.path.join(p, name)
+                full_path = _norm_path(os.path.join(p, name))
+                if full_path in EXCLUDED_FILES:
+                    continue
                 if np.startswith(CDS_ROOT_HINT) and "pab" not in lower:
                     continue
                 if np.startswith(NI_ROOT_HINT) and "pab" not in lower:
                     continue
+                if np.startswith(MEIC_ROOT_HINT) and "heijunka tracker" not in lower:
+                    continue
                 yield full_path
         else:
-            yield p
+            full_path = _norm_path(p)
+            if full_path in EXCLUDED_FILES:
+                continue
+            yield full_path
 def blank_row_for_missing_file(f: str) -> Dict[str, Any]:
     return {
         "team": team_for_source(f),
@@ -1256,9 +1497,11 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB",
+        r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archive\April 2026 - PAB",
-        
+        r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker",
+        r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker\Archive",
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")

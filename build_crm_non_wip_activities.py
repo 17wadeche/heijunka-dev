@@ -15,6 +15,7 @@ CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and
 CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
 NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archive\April 2026 - PAB"
+MEIC_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker"
 TEAM_BY_SOURCE: Dict[str, str] = {
     os.path.normpath(MCS_DEFAULT_PATH): "MCS",
 }
@@ -72,6 +73,12 @@ NI_PERF_METRICS_SHEET = "#4 Performance Metrics"
 NI_PERF_WIP_SHEET = "#5 Performance WIP Time"
 NI_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 NI_PEOPLE_COUNT = 8
+MEIC_PAB_SHEET = "#2 PAB"
+MEIC_WIP_PLAN_SHEET = "# 1 WIP plan"
+MEIC_PERF_WIP_SHEET = "#5 Performance WIP Time"
+MEIC_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
+MEIC_PEOPLE_COUNT = 19
+MEIC_TEAM_NAME = "NI & PM MEIC"
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
@@ -90,6 +97,9 @@ def team_for_source(path: str) -> str:
     ni_root = _norm_path(NI_DEFAULT_DIR)
     if np.startswith(ni_root + os.sep) or np == ni_root:
         return "NI"
+    meic_root = _norm_path(MEIC_DEFAULT_DIR)
+    if np.startswith(meic_root + os.sep) or np == meic_root:
+        return MEIC_TEAM_NAME
     base = os.path.basename(np)
     if base in TEAM_BY_BASENAME:
         return TEAM_BY_BASENAME[base]
@@ -102,6 +112,8 @@ def team_for_source(path: str) -> str:
         return "CDS"
     if "non implantables" in np_lower:
         return "NI"
+    if "crm cqxm reports - 1.9 heijunka tracker" in np_lower:
+        return MEIC_TEAM_NAME
     return ""
 def _norm_text(x: str) -> str:
     return re.sub(r"\s+", " ", (x or "").strip()).lower()
@@ -799,6 +811,23 @@ def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str]
         non_wip_types=NI_NON_WIP_TYPES,
         period_date_offset_days=-4,
     )
+def scrape_one_meic_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
+    return scrape_one_mapped_workbook(
+        path,
+        people_in_wip_lookup,
+        team=MEIC_TEAM_NAME,
+        pab_sheet=MEIC_PAB_SHEET,
+        wip_plan_sheet=MEIC_WIP_PLAN_SHEET,
+        perf_metrics_sheet=None,
+        perf_metrics_date_cell=None,
+        perf_wip_sheet=MEIC_PERF_WIP_SHEET,
+        pct_in_wip_cell="J2",
+        ooo_total_cell="DT2",
+        ooo_name_col="DB",
+        ooo_hours_col="DT",
+        people_count=MEIC_PEOPLE_COUNT,
+        non_wip_types=MEIC_NON_WIP_TYPES,
+    )
 def expand_input_paths(paths: List[str]) -> List[str]:
     out: List[str] = []
     seen = set()
@@ -843,6 +872,7 @@ def main() -> int:
         CDS_ARCHIVE_PAB_DIR,
         NI_DEFAULT_DIR,
         NI_ARCHIVE_APRIL_2026_DIR,
+        MEIC_DEFAULT_DIR,
     ]
     files = expand_input_paths(inputs)
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
@@ -859,6 +889,8 @@ def main() -> int:
                 all_rows.extend(scrape_one_cds_workbook(f, people_in_wip_lookup))
             elif team == "NI":
                 all_rows.extend(scrape_one_ni_workbook(f, people_in_wip_lookup))
+            elif team == MEIC_TEAM_NAME:
+                all_rows.extend(scrape_one_meic_workbook(f, people_in_wip_lookup))
             else:
                 all_rows.extend(scrape_one_workbook(f, completed_hours_lookup))
         except Exception as exc:
