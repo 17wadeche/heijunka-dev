@@ -170,6 +170,8 @@ def split_team_group(team_name: str) -> tuple[str, str]:
                 f"{base}_{subgroup}",
                 f"{base} {subgroup}",
                 f"{base} ({subgroup})",
+                f"CTS-{base}-RI",   # e.g. CTS-ACM-RI
+                f"CTS-{base}-PM",
             }
             if raw in candidates:
                 return base, subgroup
@@ -1383,8 +1385,9 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    if subgroup_nw != "All" and not wip_match.empty:
-        metrics_frame_for_accounting = wip_match.copy()
+    if subgroup_nw != "All":
+        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw).copy()
+        metrics_frame_for_accounting = wip_group_filtered
         metrics_frame_for_accounting["team"] = team_nw
     else:
         metrics_frame_for_accounting = df
