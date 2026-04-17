@@ -166,6 +166,7 @@ def split_team_group(team_name: str) -> tuple[str, str]:
         "cts-gis": ("Endoscopy", "CTS"),
         "cts-sibo": ("Surgical AST-GST", "CTS"),
         "cts-sinh": ("Surgical AST-GST", "CTS"),
+        "cts-vents": ("VSS", "CTS"),
         "acm": ("ACM", "All"),
         "vss": ("VSS", "All"),
         "surgical ast-gst": ("Surgical AST-GST", "All"),
