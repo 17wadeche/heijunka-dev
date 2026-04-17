@@ -1113,6 +1113,7 @@ ACTIVITY_MAP = {
     "reading through agile doc":"Reading File/Document Information",
     "(fai code meeting)":"Coding/Code Gov",
     "evolut tmv support":"Collaboration",
+    "tm sypport":"Collaboration",
     "sh r&d call":"Meeting",
     "grad clinic":"Admin",
     "bi launchpad access/global reporting access": "IT Issue/Update",
