@@ -1340,19 +1340,12 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3, c4 = st.columns(4)
-    wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
-    wip_hours_val = (
-        float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
-        if not wip_match.empty and "Completed Hours" in wip_match.columns
-        else np.nan
-    )
-    people_count_val = merged_people_count_for_week(team_nw, week_nw, df, nw)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people_kpi = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
-        nw_row=row,
+        nw_row=row,            # already filtered for PSS group
         metrics_frame=df,
         nw_frame=nw,
         week_hours=40.0,
@@ -1361,45 +1354,56 @@ if nonwip_mode:
     if team_nw == "PSS":
         wk_people_kpi = filter_people_df_by_group(wk_people_kpi, team_nw, pss_group)
     wk_people_kpi = wk_people_kpi.copy()
-    if "Expected Hours" in wk_people_kpi.columns:
-        wk_people_kpi["Expected Hours"] = pd.to_numeric(
-            wk_people_kpi["Expected Hours"], errors="coerce"
-        ).fillna(0.0)
-    if "OOO Hours" in wk_people_kpi.columns:
-        wk_people_kpi["OOO Hours"] = pd.to_numeric(
-            wk_people_kpi["OOO Hours"], errors="coerce"
-        ).fillna(0.0)
-    if people_count_val is None or float(people_count_val) <= 0:
-        people_count_val = float(
-            wk_people_kpi["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
-        ) if not wk_people_kpi.empty and "person" in wk_people_kpi.columns else np.nan
-    if team_nw in {"NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD", "ACM"}:
-        capacity_val = float(people_count_val) * 40.0 if pd.notna(people_count_val) else np.nan
-    elif team_nw == "ENT":
-        capacity_val = ent_capacity_hours_for_week(
-            team=team_nw,
-            week=week_nw,
-            nw_frame=nw,
-            irl_people=team_irl_people,
+    num_cols = [
+        "Completed Hours",
+        "Non-WIP Hours",
+        "OOO Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+        "Unaccounted",
+        "Expected Hours",
+    ]
+    for col in num_cols:
+        if col in wk_people_kpi.columns:
+            wk_people_kpi[col] = pd.to_numeric(wk_people_kpi[col], errors="coerce").fillna(0.0)
+    people_count_val = (
+        float(
+            wk_people_kpi["person"]
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .nunique()
         )
-    else:
-        capacity_val = (
-            float(wk_people_kpi["Expected Hours"].sum())
-            if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns
-            else np.nan
+        if not wk_people_kpi.empty and "person" in wk_people_kpi.columns
+        else np.nan
+    )
+    wip_hours_val = (
+        float(wk_people_kpi["Completed Hours"].sum())
+        if not wk_people_kpi.empty and "Completed Hours" in wk_people_kpi.columns
+        else np.nan
+    )
+    nonwip_hours_val = (
+        float(
+            wk_people_kpi["Other Team WIP"].sum()
+            + wk_people_kpi["Accounted Non-WIP"].sum()
         )
-    nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
-        if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
-    ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
-        if pd.notna(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) else 0.0
-    used_hours = (
-        (0.0 if pd.isna(wip_hours_val) else float(wip_hours_val))
-        + (0.0 if pd.isna(nonwip_hours_val) else float(nonwip_hours_val))
-        + (0.0 if pd.isna(ooo_hours_val) else float(ooo_hours_val))
+        if not wk_people_kpi.empty
+        else np.nan
+    )
+    ooo_hours_val = (
+        float(wk_people_kpi["OOO Hours"].sum())
+        if not wk_people_kpi.empty and "OOO Hours" in wk_people_kpi.columns
+        else 0.0
     )
     unaccounted_hours_val = (
-        max(float(capacity_val) - used_hours, 0.0)
-        if pd.notna(capacity_val)
+        float(wk_people_kpi["Unaccounted"].sum())
+        if not wk_people_kpi.empty and "Unaccounted" in wk_people_kpi.columns
+        else np.nan
+    )
+    capacity_val = (
+        float(wk_people_kpi["Expected Hours"].sum())
+        if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns
         else np.nan
     )
     capacity_pct_basis = capacity_val
@@ -1460,10 +1464,10 @@ if nonwip_mode:
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
-    if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
+    if "non_wip_activities" not in row.index or row.get("non_wip_activities", "") in ("", "[]", None):
         st.info("No Non-WIP activities recorded for this selection.")
     else:
-        act_tbl = build_ooo_table_from_row(sel.iloc[0])
+        act_tbl = build_ooo_table_from_row(row)
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
@@ -1480,6 +1484,8 @@ if nonwip_mode:
         week_hours=40.0,
         irl_people=team_irl_people,
     )
+    if team_nw == "PSS":
+        wk_people = filter_people_df_by_group(wk_people, team_nw, pss_group)
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
     else:
