@@ -3198,7 +3198,7 @@ with right2:
                 top_mix = top_mix.dropna(subset=["Pct"]).copy()
             exclude_people = {
                 "TM10", "TM11", "TM12", "TM13", "TM14", "TM15",
-                "TM16", "TM5", "TM6", "TM7", "TM8", "TM9"
+                "TM16", "TM5", "TM6", "TM7", "TM8", "TM9","TM3", "TM4"
             }
             top_mix["person"] = top_mix["person"].astype(str).str.strip()
             top_mix = top_mix[~top_mix["person"].isin(exclude_people)].copy()
