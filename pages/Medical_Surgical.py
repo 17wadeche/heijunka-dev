@@ -198,7 +198,11 @@ def filter_team_view(frame: pd.DataFrame, team_group: str, subgroup: str = "All"
         frame = add_team_group_columns(frame)
     sub = frame[frame["team_group"] == team_group].copy()
     if subgroup != "All":
-        sub = sub[sub["team_subgroup"] == subgroup].copy()
+        exact = sub[sub["team_subgroup"] == subgroup]
+        if exact.empty:
+            sub = sub[sub["team_subgroup"] == "All"].copy()
+        else:
+            sub = exact
     return sub
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
