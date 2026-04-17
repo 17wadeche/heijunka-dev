@@ -647,7 +647,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize() if pd.notna(pd.to_datetime(r["period_date"], errors="coerce")) else pd.NaT,
                 "person": str(person).strip(),
                 "Actual Hours": a,
                 "Available Hours": t,
