@@ -1383,6 +1383,11 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
+    if subgroup_nw != "All" and not wip_match.empty:
+        metrics_frame_for_accounting = wip_match.copy()
+        metrics_frame_for_accounting["team"] = team_nw
+    else:
+        metrics_frame_for_accounting = df
     people_count_val = merged_people_count_for_week(team_nw, week_nw, df, nw)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
@@ -1390,7 +1395,7 @@ if nonwip_mode:
         team=team_nw,
         week=week_nw,
         nw_row=row,
-        metrics_frame=df,
+        metrics_frame=metrics_frame_for_accounting,
         nw_frame=nw,
         week_hours=40.0,
         irl_people=team_irl_people,
@@ -1492,7 +1497,7 @@ if nonwip_mode:
         team=team_nw,
         week=week_nw,
         nw_row=row,
-        metrics_frame=df,
+        metrics_frame=metrics_frame_for_accounting,
         nw_frame=nw,
         week_hours=40.0,
         irl_people=team_irl_people,
