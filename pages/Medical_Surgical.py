@@ -1230,16 +1230,20 @@ if nonwip_mode:
         st.stop()
     st.markdown("### Non-WIP Overview")
     teams_nw = grouped_team_options(nw)
-    c_team, c_subgroup, c_week = st.columns(3)
+    c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
-    with c_subgroup:
-        subgroup_nw = st.selectbox(
-            "Breakdown",
-            options=subgroup_options_for_team(team_nw),
-            index=0,   # default = All
-            key="nw_team_subgroup",
-        )
+        subgroup_opts = subgroup_options_for_team(team_nw)
+        has_extra_groups = len(subgroup_opts) > 1
+        if has_extra_groups:
+            subgroup_nw = st.selectbox(
+                "Group:",
+                options=subgroup_opts,
+                index=0,   # default = All
+                key="nw_team_subgroup",
+            )
+        else:
+            subgroup_nw = "All"
     nw_view = filter_team_view(nw, team_nw, subgroup_nw)
     today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
