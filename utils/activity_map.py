@@ -1082,6 +1082,8 @@ ACTIVITY_MAP = {
     "quality finding":"QA",
     "reading through dmaic slide":"Problem Solving",
     "self traing":"Training/Mentoring",
+    "affera mapping training events with ruth":"Training/Mentoring",
+    "schedule & email":"Email & IM",
     "setting equipment up on sap and creating pm'": "IT Issue/Update",
     "customs issue":"Admin",
     "emails+shipping": "Email & IM",
