@@ -161,6 +161,8 @@ def split_team_group(team_name: str) -> tuple[str, str]:
     for base, allowed in TEAM_BREAKDOWN_RULES.items():
         if raw == base:
             return base, "All"
+        if raw in {f"CTS-{base}-RI", f"CTS-{base}-PM"}:
+            return base, "CTS"
         for subgroup in allowed:
             if subgroup == "All":
                 continue
