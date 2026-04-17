@@ -227,7 +227,7 @@ def compute_completed_hours_ni(ws_perf: Worksheet) -> Tuple[Optional[float], Dic
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(5, 13):  # rows 5 through 12 inclusive
+    for r in range(5, 13): 
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"R{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -240,7 +240,7 @@ def compute_completed_hours_ni(ws_perf: Worksheet) -> Tuple[Optional[float], Dic
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_ni(ws_perf: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for r in range(5, 13):  # rows 5 through 12 inclusive
+    for r in range(5, 13):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"Q{r}"].value)
         p = str(person).strip() if person is not None else ""
