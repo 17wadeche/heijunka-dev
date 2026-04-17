@@ -1471,7 +1471,11 @@ if nonwip_mode:
                                 "Activity:N",
                                 title="Activity",
                                 sort=order_acts,
-                                axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                                axis=alt.Axis(
+                                    labelAngle=-45,
+                                    labelLimit=200,
+                                    labelOverlap=False,
+                                ),
                             ),
                             y=alt.Y("Hours:Q", title="Total Non-WIP Hours"),
                             tooltip=[
@@ -1480,7 +1484,8 @@ if nonwip_mode:
                             ],
                         )
                         .properties(
-                            height=280
+                            height=320,
+                            padding={"left": 8, "right": 12, "top": 16, "bottom": 80},
                         )
                     )
                     st.altair_chart(act_chart, use_container_width=True)
