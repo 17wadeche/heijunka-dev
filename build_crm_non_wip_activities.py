@@ -11,6 +11,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
+CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
 CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
@@ -868,6 +869,7 @@ def main() -> int:
         MCS_DEFAULT_PATH,
         DS_DEFAULT_DIR,
         CPT_DEFAULT_DIR,
+        CPT_ARCHIVE_PAB_DIR,
         CDS_DEFAULT_DIR,
         CDS_ARCHIVE_PAB_DIR,
         NI_DEFAULT_DIR,
