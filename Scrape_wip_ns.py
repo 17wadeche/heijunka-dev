@@ -462,7 +462,7 @@ def scrape_dbs_dated_tabs_xlsx(
     min_period_date: str = "2025-06-02",
     max_period_date: Optional[str] = None,
 ) -> list[dict]:
-    wb = load_workbook(source_file, data_only=True)
+    wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
     rows_out: list[dict] = []
     cols = _excel_col_range("B", "R")
     excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
@@ -620,7 +620,7 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
     closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
     closures_lu, closures_err = read_lookup_csv(closures_path)
-    wb = load_workbook(source_file, data_only=True)
+    wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
     rows_out: list[dict] = []
     cols = col_range(cfg["person_cols"][0], cfg["person_cols"][1])
     for ws in wb.worksheets:

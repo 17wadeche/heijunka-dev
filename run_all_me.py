@@ -36,12 +36,12 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-03-23"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-03-30"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-04-06"],
-    [PYTHON_BIN, "Scrape_wip_ns.py"],
-    [PYTHON_BIN, "build_ns_non_wip_activities.py"],
     [PYTHON_BIN, "scrape_wip_crm.py"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py"],
     [PYTHON_BIN, "scrape_wip_ms.py"],
     [PYTHON_BIN, "build_ms_non_wip_activities.py"],
+    [PYTHON_BIN, "Scrape_wip_ns.py"],
+    [PYTHON_BIN, "build_ns_non_wip_activities.py"],
 ]
 def run(cmd, *, cwd=None):
     subprocess.run(cmd, cwd=cwd, check=True)
