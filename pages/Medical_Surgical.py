@@ -1392,12 +1392,6 @@ if nonwip_mode:
     else:
         metrics_frame_for_accounting = df
     if subgroup_nw != "All":
-        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw).copy()
-        metrics_frame_for_accounting = wip_group_filtered
-        metrics_frame_for_accounting["team"] = team_nw
-    else:
-        metrics_frame_for_accounting = df
-    if subgroup_nw != "All":
         nw_view_for_accounting = nw_view.copy()
         nw_view_for_accounting["team"] = team_nw
     else:
