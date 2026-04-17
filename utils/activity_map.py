@@ -1084,6 +1084,7 @@ ACTIVITY_MAP = {
     "self traing":"Training/Mentoring",
     "affera mapping training events with ruth":"Training/Mentoring",
     "schedule & email":"Email & IM",
+    "workday reviews for tms":"Career Development",
     "setting equipment up on sap and creating pm'": "IT Issue/Update",
     "customs issue":"Admin",
     "emails+shipping": "Email & IM",
