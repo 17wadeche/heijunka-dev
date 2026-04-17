@@ -1374,7 +1374,11 @@ if nonwip_mode:
                     "person:N",
                     title="Person",
                     sort=order_people,
-                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                    axis=alt.Axis(
+                        labelAngle=-45,
+                        labelOverlap=False,   # show all labels
+                        labelLimit=0,         # don't truncate names
+                    ),
                 ),
                 y=alt.Y(
                     "Hours:Q",
