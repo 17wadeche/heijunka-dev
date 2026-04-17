@@ -139,6 +139,7 @@ ACTIVITY_MAP = {
     "email; meeting; collaboration":"Email & IM",
     "emeil":"Email & IM",
     "01":"Admin",
+    "tour":"Admin",
     "admin (30)":"Admin",
     "cornerstone (30)":"Cornerstone",
     "document/previous investigation reading":"Reading File/Document Information",
