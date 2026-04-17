@@ -2323,6 +2323,7 @@ ACTIVITY_MAP = {
     "email/teams rpa request": "RPA Meeting/Action",
     "rpa requests/collaboration": "RPA Meeting/Action",
     "team collabration":"Collaboration",
+    "collabration":"Collaboration",
     "pulled metrics for scrum":"Scrum & Action",
     "training, collaboration, emails/admin":"Admin",
     "ng, collaboration, ps requests, meeting":"Next Gen",
