@@ -1484,7 +1484,7 @@ if nonwip_mode:
                             ],
                         )
                         .properties(
-                            height=320,
+                            height=420,
                             padding={"left": 8, "right": 12, "top": 16, "bottom": 80},
                         )
                     )
