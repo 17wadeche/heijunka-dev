@@ -156,8 +156,21 @@ def _norm_team_text(x: str) -> str:
     return " ".join(str(x or "").strip().split())
 def split_team_group(team_name: str) -> tuple[str, str]:
     raw = _norm_team_text(team_name)
+    raw_lower = raw.lower()
     if not raw:
         return "", "All"
+    explicit_map = {
+        "endoscopy": ("Endoscopy", "US"),
+        "endo us": ("Endoscopy", "US"),
+        "endo meic": ("Endoscopy", "MEIC"),
+        "cts-gis": ("Endoscopy", "CTS"),
+        "acm": ("ACM", "All"),
+        "vss": ("VSS", "All"),
+        "surgical ast-gst": ("Surgical AST-GST", "All"),
+        "surgical robotics": ("Surgical Robotics", "All"),
+    }
+    if raw_lower in explicit_map:
+        return explicit_map[raw_lower]
     for base, allowed in TEAM_BREAKDOWN_RULES.items():
         if raw == base:
             return base, "All"
