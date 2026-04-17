@@ -336,36 +336,78 @@ def _normalize_period_date_series(s: pd.Series) -> pd.Series:
 def update_timeliness_csv(path: str, updates_df: pd.DataFrame) -> tuple[int, int]:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
-    existing = pd.read_csv(path, dtype={"team": str, "period_date": str})
-    if "team" not in existing.columns or "period_date" not in existing.columns:
-        raise RuntimeError(f"{path} must have columns: team, period_date, {METRIC_NAME}")
+    existing = pd.read_csv(
+        path,
+        dtype={
+            "operating_unit": str,
+            "integrated_operating_unit": str,
+            "team": str,
+            "period_date": str
+        }
+    )
+    required = {"operating_unit", "integrated_operating_unit", "team", "period_date"}
+    if not required.issubset(existing.columns):
+        raise RuntimeError(
+            f"{path} must have columns: operating_unit, integrated_operating_unit, "
+            f"team, period_date, {METRIC_NAME}"
+        )
     if METRIC_NAME not in existing.columns:
         existing[METRIC_NAME] = pd.NA
+    existing["operating_unit"] = existing["operating_unit"].astype(str).str.strip()
+    existing["integrated_operating_unit"] = existing["integrated_operating_unit"].astype(str).str.strip()
     existing["team"] = existing["team"].astype(str).str.strip()
     existing["period_date"] = _normalize_period_date_series(existing["period_date"])
     upd = updates_df.copy()
+    upd["operating_unit"] = upd["operating_unit"].astype(str).str.strip()
+    upd["integrated_operating_unit"] = upd["integrated_operating_unit"].astype(str).str.strip()
     upd["team"] = upd["team"].astype(str).str.strip()
     upd["period_date"] = _normalize_period_date_series(upd["period_date"])
     existing_dt = pd.to_datetime(existing["period_date"], errors="coerce")
     upd_dt = pd.to_datetime(upd["period_date"], errors="coerce")
     max_existing = existing_dt.max()
-    new_weeks = sorted([d for d in upd_dt.dropna().unique()
-                        if pd.isna(max_existing) or d > max_existing])
-    all_teams = sorted(set(existing["team"].dropna().tolist()) | set(upd["team"].dropna().tolist()))
-    existing_keys = set(zip(existing["team"], existing["period_date"]))
+    new_weeks = sorted(
+        [d for d in upd_dt.dropna().unique() if pd.isna(max_existing) or d > max_existing]
+    )
+    all_keys = sorted(
+        set(
+            zip(
+                upd["operating_unit"],
+                upd["integrated_operating_unit"],
+                upd["team"]
+            )
+        )
+    )
+    existing_keys = set(
+        zip(
+            existing["operating_unit"],
+            existing["integrated_operating_unit"],
+            existing["team"],
+            existing["period_date"]
+        )
+    )
     rows_to_add = []
     for week_dt in new_weeks:
         week_str = pd.Timestamp(week_dt).strftime("%Y-%m-%d")
-        for team in all_teams:
-            key = (team, week_str)
+        for ou, iou, team in all_keys:
+            key = (ou, iou, team, week_str)
             if key not in existing_keys:
-                rows_to_add.append({"team": team, "period_date": week_str, METRIC_NAME: pd.NA})
+                rows_to_add.append({
+                    "operating_unit": ou,
+                    "integrated_operating_unit": iou,
+                    "team": team,
+                    "period_date": week_str,
+                    METRIC_NAME: pd.NA
+                })
                 existing_keys.add(key)
     added_count = len(rows_to_add)
     if rows_to_add:
         existing = pd.concat([existing, pd.DataFrame(rows_to_add)], ignore_index=True)
-    upd_map = upd.set_index(["team", "period_date"])[METRIC_NAME]
-    ex_idx = existing.set_index(["team", "period_date"])
+    upd_map = upd.set_index(
+        ["operating_unit", "integrated_operating_unit", "team", "period_date"]
+    )[METRIC_NAME]
+    ex_idx = existing.set_index(
+        ["operating_unit", "integrated_operating_unit", "team", "period_date"]
+    )
     common = ex_idx.index.intersection(upd_map.index)
     ex_idx.loc[common, METRIC_NAME] = upd_map.loc[common].values
     updated_count = len(common)
