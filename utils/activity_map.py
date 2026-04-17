@@ -140,6 +140,7 @@ ACTIVITY_MAP = {
     "emeil":"Email & IM",
     "pharma lab fume hood":"Set Up",
     "vena seal meeting rescheduled to later in the day":"Meeting",
+    "emails/meetings/collaboration/reg inquirie":"Collaboration",
     "establish precedent event guidance/research/collaboration":"Precedent Event",
     "01":"Admin",
     "tour":"Admin",
