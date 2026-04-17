@@ -3263,7 +3263,42 @@ with right2:
                 detail="Category:N",
                 text=alt.Text("Pct:Q", format=".0%"),
             )
-            top_chart = (bars + labels).properties(height=320)
+            person_totals = (
+                week_mix.groupby("person", as_index=False)["Hours"]
+                .sum()
+                .rename(columns={"Hours": "TotalHours"})
+            )
+            if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
+                expected_hrs = wk_people_kpi[["person", "Expected Hours"]].copy()
+                expected_hrs["person"] = expected_hrs["person"].astype(str).str.strip()
+            else:
+                expected_hrs = pd.DataFrame({"person": person_totals["person"], "Expected Hours": 40.0})
+            person_totals["person"] = person_totals["person"].astype(str).str.strip()
+            person_totals = person_totals.merge(expected_hrs, on="person", how="left")
+            person_totals["Expected Hours"] = person_totals["Expected Hours"].fillna(40.0)
+            overflow_df = person_totals[person_totals["TotalHours"] > person_totals["Expected Hours"]].copy()
+            overflow_df["y_pos"] = 1.02  # just above the top of the 100% bar
+            overflow_df["label"] = "⚠"
+            overflow_layer = (
+                alt.Chart(overflow_df)
+                .mark_text(
+                    fontSize=14,
+                    fontWeight="bold",
+                    color="#ef4444",
+                    baseline="bottom",
+                )
+                .encode(
+                    x=alt.X("person:N", sort=person_order),
+                    y=alt.Y("y_pos:Q", scale=alt.Scale(domain=[0, 1.12]), axis=None),
+                    text=alt.Text("label:N"),
+                    tooltip=[
+                        alt.Tooltip("person:N", title="Person"),
+                        alt.Tooltip("TotalHours:Q", title="Total Hours", format=",.1f"),
+                        alt.Tooltip("Expected Hours:Q", title="Expected Hours", format=",.1f"),
+                    ],
+                )
+            )
+            top_chart = (bars + labels + overflow_layer).properties(height=320)
             st.altair_chart(top_chart, use_container_width=True)
             st.markdown("##### Drill-down over time")
             people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
@@ -3414,7 +3449,45 @@ with right2:
                         detail="Category:N",
                         text=alt.Text("Pct:Q", format=".0%"),
                     )
-                    drill = (drill_bars + drill_labels).properties(
+                    drill_totals = (
+                        drill_df.groupby("period_date", as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "TotalHours"})
+                    )
+                    person_key = str(picked_person_mix).strip().lower()
+                    PERSON_WEEKLY_HOURS_DRILL = {"chelsey": 16.0, "mg": 36.0, "lindsey": 32.0}
+                    if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
+                        person_expected_match = wk_people_kpi.loc[
+                            wk_people_kpi["person"].astype(str).str.strip().str.lower() == person_key,
+                            "Expected Hours"
+                        ]
+                        drill_expected_hrs = float(person_expected_match.iloc[0]) if not person_expected_match.empty else PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                    else:
+                        drill_expected_hrs = PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                    drill_totals["ExpectedHours"] = drill_expected_hrs
+                    drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
+                    drill_overflow_df["y_pos"] = 1.02
+                    drill_overflow_df["label"] = "⚠"
+                    drill_overflow_layer = (
+                        alt.Chart(drill_overflow_df)
+                        .mark_text(
+                            fontSize=14,
+                            fontWeight="bold",
+                            color="#ef4444",
+                            baseline="bottom",
+                        )
+                        .encode(
+                            x=alt.X("period_date:T"),
+                            y=alt.Y("y_pos:Q", scale=alt.Scale(domain=[0, 1.12]), axis=None),
+                            text=alt.Text("label:N"),
+                            tooltip=[
+                                alt.Tooltip("period_date:T", title="Week"),
+                                alt.Tooltip("TotalHours:Q", title="Total Hours", format=",.1f"),
+                                alt.Tooltip("ExpectedHours:Q", title="Expected Hours", format=",.1f"),
+                            ],
+                        )
+                    )
+                    drill = (drill_bars + drill_labels + drill_overflow_layer).properties(
                         height=280,
                         width=drill_width,
                     )
