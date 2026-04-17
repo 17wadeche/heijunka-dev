@@ -97,6 +97,54 @@ def load_non_wip(
                 pct_wip_0_100 = s
             df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_wip_group_metrics(path: str | None = None, url: str | None = None) -> pd.DataFrame:
+    if url is None:
+        url = MS_WIP_GROUP_METRICS_URL
+    if url:
+        df = pd.read_csv(
+            url,
+            engine="python",
+            sep=None,
+            encoding="utf-8-sig",
+            on_bad_lines="skip",
+            dtype=str,
+        )
+        return _postprocess(df)
+    p = Path(path or WIP_GROUPS_DEFAULT_PATH)
+    if not p.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(
+        p,
+        engine="python",
+        sep=None,
+        encoding="utf-8-sig",
+        on_bad_lines="skip",
+        dtype=str,
+    )
+    return _postprocess(df)
+@st.cache_data(show_spinner=False, ttl=15 * 60)
+def load_nonwip_group_metrics(path: str | None = None, url: str | None = None) -> pd.DataFrame:
+    if url is None:
+        url = MS_NONWIP_GROUP_METRICS_URL
+    if url:
+        df = pd.read_csv(url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+    else:
+        p = Path(path or NONWIP_GROUPS_DEFAULT_PATH)
+        if not p.exists():
+            return pd.DataFrame()
+        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+
+    if "period_date" in df.columns:
+        df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    if "% in WIP" in df.columns and "% Non-WIP" not in df.columns:
+        s = pd.to_numeric(df["% in WIP"], errors="coerce")
+        if pd.notna(s.max()):
+            df["% Non-WIP"] = 100.0 - (s * 100.0 if float(s.max()) <= 1.5 else s)
+    return df
 TEAM_BREAKDOWN_RULES = {
     "ACM": ["All", "US", "MEIC", "CTS"],
     "Endoscopy": ["All", "US", "MEIC", "CTS"],
@@ -1146,6 +1194,9 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
+wip_group_df = add_team_group_columns(load_wip_group_metrics())
+nonwip_group_df = add_team_group_columns(load_nonwip_group_metrics())
+df = add_team_group_columns(df)
 def kpi_card(
     container,
     label: str,
@@ -1228,12 +1279,12 @@ nonwip_mode = st.toggle(
     help="Switch between WIP and Non-WIP metrics"
 )
 if nonwip_mode:
-    nw = load_non_wip()
-    if nw.empty:
+    nw_base = add_team_group_columns(load_non_wip())
+    if nw_base.empty:
         st.info("No Non-WIP data found yet. Make sure non_wip_activities.csv exists.")
         st.stop()
     st.markdown("### Non-WIP Overview")
-    teams_nw = grouped_team_options(nw)
+    teams_nw = grouped_team_options(nw_base)
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
@@ -1248,7 +1299,9 @@ if nonwip_mode:
             )
         else:
             subgroup_nw = "All"
-    nw_view = filter_team_view(nw, team_nw, subgroup_nw)
+    nw_source = nw_base if subgroup_nw == "All" else nonwip_group_df
+    nw_view = filter_team_view(nw_source, team_nw, subgroup_nw)
+    nw = nw_source
     today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
         [
