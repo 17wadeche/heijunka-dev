@@ -3375,7 +3375,7 @@ with right2:
                     title="Person",
                     sort=person_order,
                     axis=alt.Axis(
-                        labelAngle=-45,
+                        labelAngle=-90,
                         labelLimit=200,
                         labelOverlap=False,   # force all names to render
                     ),
