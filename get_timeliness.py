@@ -8,6 +8,8 @@ WORKBOOK_PATH = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DSA-MDT-RPT-W-Go Gree
 SHEET_NAME = "Open Complaint Timeliness"
 METRIC_NAME = "Open Complaint Timeliness"
 TEAM_COLUMN_NAME = "Product Group"
+OU_COLUMN_NAME = "Operating Unit"
+IOU_COLUMN_NAME = "Integrated Operating Unit"
 TEAM_MAP = {
     "Coronary":"CRDN",
     "Infusion":"TDD",
@@ -34,6 +36,14 @@ MERGE_LOOKUP = {member: target
                 for target, members in AVERAGE_MERGE_GROUPS.items()
                 for member in members}
 EXCLUDE_TEAMS = {
+    "AE",
+    "CSF",
+    "Caesarea",
+    "ILS-AST",
+    "PTNM",
+    "Patient Management",
+    "Patient Monitoring",
+    "Renal Care Solutions",
     "AAS",
     "Affera",
     "Airways",
@@ -411,18 +421,32 @@ def main():
                 "No weekly date columns found. "
                 "This usually means the Calendar hierarchy didn't drill to week level."
             )
-        if TEAM_COLUMN_NAME not in data.columns:
+        required_cols = [TEAM_COLUMN_NAME, OU_COLUMN_NAME, IOU_COLUMN_NAME]
+        missing = [c for c in required_cols if c not in data.columns]
+        if missing:
             raise RuntimeError(
-                f"'{TEAM_COLUMN_NAME}' column not found in pivot output. "
+                f"Missing required column(s): {missing}. "
                 f"First columns seen: {list(data.columns)[:30]}"
             )
         records = []
         for _, row in data.iterrows():
             team_raw = row.get(TEAM_COLUMN_NAME, None)
+            ou_raw = row.get(OU_COLUMN_NAME, None)
+            iou_raw = row.get(IOU_COLUMN_NAME, None)
             if team_raw is None or not str(team_raw).strip():
                 continue
+            if ou_raw is None or not str(ou_raw).strip():
+                continue
+            if iou_raw is None or not str(iou_raw).strip():
+                continue
             team_raw = str(team_raw).strip()
-            if not INCLUDE_TOTALS and is_total_like(team_raw):
+            ou_raw = str(ou_raw).strip()
+            iou_raw = str(iou_raw).strip()
+            if not INCLUDE_TOTALS and (
+                is_total_like(team_raw) or
+                is_total_like(ou_raw) or
+                is_total_like(iou_raw)
+            ):
                 continue
             if team_is_excluded(team_raw):
                 continue
@@ -439,6 +463,8 @@ def main():
                     val *= 100.0
                 iso = date_map[c].strftime("%Y-%m-%d")
                 records.append({
+                    "operating_unit": ou_raw,
+                    "integrated_operating_unit": iou_raw,
                     "team": team,
                     "period_date": iso,
                     METRIC_NAME: round(val, 1),
@@ -449,11 +475,16 @@ def main():
         out_df["team"] = out_df["team"].map(lambda t: MERGE_LOOKUP.get(t, t))
         out_df = (
             out_df
-            .groupby(["team", "period_date"], as_index=False)[METRIC_NAME]
+            .groupby(
+                ["operating_unit", "integrated_operating_unit", "team", "period_date"],
+                as_index=False
+            )[METRIC_NAME]
             .mean()
         )
         out_df[METRIC_NAME] = out_df[METRIC_NAME].round(1)
-        out_df = out_df.sort_values(["team", "period_date"])
+        out_df = out_df.sort_values(
+            ["operating_unit", "integrated_operating_unit", "team", "period_date"]
+        )
         updated, added = update_timeliness_csv(TIMELINESS_CSV_PATH, out_df)
         print(f"Updated {updated} row(s), added {added} row(s) in {TIMELINESS_CSV_PATH}")
         out_df.to_csv(out_path, index=False)
