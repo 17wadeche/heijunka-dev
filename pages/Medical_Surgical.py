@@ -1667,7 +1667,7 @@ if nonwip_mode:
                     st.altair_chart(act_chart, use_container_width=True)
     st.markdown("#### Team Trends")
     team_hist = nw_view.copy()
-    team_hist = team_hist.dropna(subset=["period_date"]).sort_values("period_date")
+    team_hist = team_hist.dropna(subset=["period_date"]).copy()
     if not team_hist.empty and len(team_hist) > 1:
         agg_map = {}
         if "people_count" in team_hist.columns:
@@ -1680,6 +1680,7 @@ if nonwip_mode:
             agg_map["% in WIP"] = "mean"
         if "% Non-WIP" in team_hist.columns:
             agg_map["% Non-WIP"] = "mean"
+
         if agg_map:
             team_hist = (
                 team_hist.groupby("period_date", as_index=False)
@@ -1689,38 +1690,57 @@ if nonwip_mode:
             team_hist["team"] = team_nw if subgroup_nw == "All" else f"{team_nw} - {subgroup_nw}"
             team_hist["team_group"] = team_nw
             team_hist["team_subgroup"] = subgroup_nw
+
+    # force chart columns to proper types
     if not team_hist.empty:
+        team_hist["period_date"] = pd.to_datetime(team_hist["period_date"], errors="coerce")
+        if "total_non_wip_hours" in team_hist.columns:
+            team_hist["total_non_wip_hours"] = pd.to_numeric(team_hist["total_non_wip_hours"], errors="coerce")
+        if "% Non-WIP" in team_hist.columns:
+            team_hist["% Non-WIP"] = pd.to_numeric(team_hist["% Non-WIP"], errors="coerce")
+
+        trend_hours = team_hist.dropna(subset=["period_date", "total_non_wip_hours"]).copy()
+        trend_pct = team_hist.dropna(subset=["period_date", "% Non-WIP"]).copy()
+
         t1, t2 = st.columns(2)
+
         with t1:
-            ch1 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",1f"),
-                    ],
+            if trend_hours.empty:
+                st.info("No trendable Non-WIP Hours data available.")
+            else:
+                ch1 = (
+                    alt.Chart(trend_hours)
+                    .mark_line(point=True)
+                    .encode(
+                        x=alt.X("period_date:T", title="Week"),
+                        y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
+                        tooltip=[
+                            alt.Tooltip("period_date:T", title="Date"),
+                            alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
+                        ],
+                    )
+                    .properties(height=240, title="Total Non-WIP Hours")
                 )
-                .properties(height=240, title="Total Non-WIP Hours")
-            )
-            st.altair_chart(ch1, use_container_width=True)
+                st.altair_chart(ch1, use_container_width=True)
+
         with t2:
-            ch2 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",2f"),
-                    ],
+            if trend_pct.empty:
+                st.info("No trendable % Non-WIP data available.")
+            else:
+                ch2 = (
+                    alt.Chart(trend_pct)
+                    .mark_line(point=True)
+                    .encode(
+                        x=alt.X("period_date:T", title="Week"),
+                        y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
+                        tooltip=[
+                            alt.Tooltip("period_date:T", title="Date"),
+                            alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
+                        ],
+                    )
+                    .properties(height=240, title="% Non-WIP")
                 )
-                .properties(height=240, title="% Non-WIP")
-            )
-            st.altair_chart(ch2, use_container_width=True)
+                st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
     team_hist_tbl = team_hist.copy()
     team_hist_tbl["people_count"] = team_hist_tbl["period_date"].apply(
