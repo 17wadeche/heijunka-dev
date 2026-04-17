@@ -1673,42 +1673,17 @@ has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
 if has_dates and min_date and max_date:
-    min_date = pd.to_datetime(min_date).date()
-    max_date = pd.to_datetime(max_date).date()
-    cur_start = st.session_state.get("start_date", min_date)
-    cur_end = st.session_state.get("end_date", max_date)
-    cur_start = pd.to_datetime(cur_start).date()
-    cur_end = pd.to_datetime(cur_end).date()
-    if cur_start < min_date:
-        cur_start = min_date
-    if cur_start > max_date:
-        cur_start = max_date
-    if cur_end < min_date:
-        cur_end = min_date
-    if cur_end > max_date:
-        cur_end = max_date
-    if cur_start > cur_end:
-        cur_start, cur_end = min_date, max_date
-    st.session_state["start_date"] = cur_start
-    st.session_state["end_date"] = cur_end
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            value=st.session_state["start_date"],
-            min_value=min_date,
-            max_value=max_date,
-            key="start_date",
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            value=st.session_state["end_date"],
-            min_value=min_date,
-            max_value=max_date,
-            key="end_date",
-        )
+    if "start_date" not in st.session_state:
+        st.session_state["start_date"] = min_date
+    if "end_date" not in st.session_state:
+        st.session_state["end_date"] = max_date
+    start = st.session_state["start_date"]
+    end = st.session_state["end_date"]
+    if start > end:
+        st.error("Start date cannot be after end date!")
+        start, end = min_date, max_date
+        st.session_state["start_date"] = start
+        st.session_state["end_date"] = end
 else:
     start, end = None, None
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
