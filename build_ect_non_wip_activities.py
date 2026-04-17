@@ -162,8 +162,14 @@ def round_hours(value: float) -> float:
 def get_people_count(ws_avail) -> int:
     unique_names: set[str] = set()
     excluded = {"0", "total available hours"}
-    for row_num in range(PEOPLE_NAME_START_ROW, PEOPLE_NAME_END_ROW + 1):
-        raw_value = normalize_name(ws_avail[f"A{row_num}"].value)
+    for (raw_a,) in ws_avail.iter_rows(
+        min_row=PEOPLE_NAME_START_ROW,
+        max_row=PEOPLE_NAME_END_ROW,
+        min_col=1,
+        max_col=1,
+        values_only=True,
+    ):
+        raw_value = normalize_name(raw_a)
         if not raw_value:
             continue
         if raw_value.casefold() in excluded:
@@ -181,7 +187,7 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
     for folder in folders:
         if not folder.exists():
             continue
-        for path in sorted(folder.rglob("*.xls*")):
+        for path in folder.rglob("*.xls*"):
             if f"{TEAM} Future Heijunka" not in path.stem:
                 continue
             resolved = path.resolve()
@@ -217,7 +223,7 @@ def process_workbook(path: Path) -> dict[str, Any]:
     parsed_file_date = parse_date_from_filename(path)
     if parsed_file_date:
         row["Week"] = parsed_file_date.isoformat()
-    wb = load_workbook(path, data_only=True, read_only=True)
+    wb = load_workbook(path, data_only=True, read_only=True, keep_links=False)
     if AVAILABLE_SHEET not in wb.sheetnames:
         raise ValueError(f"Missing sheet: {AVAILABLE_SHEET}")
     if PRODUCTION_SHEET not in wb.sheetnames:
@@ -234,23 +240,31 @@ def process_workbook(path: Path) -> dict[str, Any]:
     non_wip_activities: list[dict[str, Any]] = []
     person_activity_types: dict[str, set[str]] = defaultdict(set)
     ooo_minutes_by_person: dict[str, float] = defaultdict(float)
-    for excel_row in range(PROD_START_ROW, PROD_END_ROW + 1):
-        person = first_name_only(ws_prod[f"C{excel_row}"].value)
-        activity_type = normalize_name(ws_prod[f"D{excel_row}"].value)
-        minutes = safe_float(ws_prod[f"G{excel_row}"].value)
-        activity_detail = normalize_name(ws_prod[f"K{excel_row}"].value)
+    for row_vals in ws_prod.iter_rows(
+        min_row=PROD_START_ROW,
+        max_row=PROD_END_ROW,
+        min_col=3,   # C
+        max_col=11,  # K
+        values_only=True,
+    ):
+        person_raw, activity_type_raw, _, _, completed_raw, _, _, _, activity_detail_raw = row_vals
+        person = first_name_only(person_raw)
+        activity_type = normalize_name(activity_type_raw)
+        minutes = safe_float(completed_raw)
+        activity_detail = normalize_name(activity_detail_raw)
         if not person or minutes == 0:
             continue
         normalized_activity = activity_type.casefold()
         person_activity_types[person].add(normalized_activity)
+        hours = minutes / 60.0
         if normalized_activity == "non-wip":
             total_non_wip_minutes += minutes
-            non_wip_by_person[person] += minutes / 60.0
+            non_wip_by_person[person] += hours
             non_wip_activities.append(
                 {
                     "name": person,
                     "activity": activity_detail if activity_detail else "Non-WIP",
-                    "hours": round_hours(minutes / 60.0),
+                    "hours": round_hours(hours),
                 }
             )
         elif normalized_activity == "other team wip":
@@ -258,7 +272,7 @@ def process_workbook(path: Path) -> dict[str, Any]:
                 {
                     "name": person,
                     "activity": activity_detail if activity_detail else "Other Team WIP",
-                    "hours": round_hours(minutes / 60.0),
+                    "hours": round_hours(hours),
                 }
             )
         if normalized_activity == "ooo":
@@ -268,7 +282,7 @@ def process_workbook(path: Path) -> dict[str, Any]:
                 {
                     "name": person,
                     "activity": activity_detail if activity_detail else "OOO",
-                    "hours": round_hours(minutes / 60.0),
+                    "hours": round_hours(hours),
                 }
             )
     wip_workers: list[str] = []

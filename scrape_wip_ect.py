@@ -151,13 +151,39 @@ def get_available_name_for_row(ws, row_num: int) -> str:
     return ""
 def get_available_person_hours(ws) -> dict[str, dict[str, float]]:
     person_hours: dict[str, dict[str, float]] = {}
+    needed_rows = set()
+    for r in AVAILABLE_ROWS:
+        needed_rows.update({r - 2, r - 1, r})
+    needed_rows = {r for r in needed_rows if r >= 1}
+    row_cache = {}
+    for idx, row in enumerate(
+        ws.iter_rows(
+            min_row=min(needed_rows),
+            max_row=max(needed_rows),
+            min_col=1,
+            max_col=7,   # enough to cover A:G
+            values_only=True,
+        ),
+        start=min(needed_rows),
+    ):
+        row_cache[idx] = row
     for row_num in AVAILABLE_ROWS:
-        name = get_available_name_for_row(ws, row_num)
+        candidates = [
+            row_cache.get(row_num - 1, [None])[0] if row_num > 1 else None,
+            row_cache.get(row_num, [None])[0],
+            row_cache.get(row_num - 2, [None])[0] if row_num > 2 else None,
+        ]
+        name = ""
+        for candidate in candidates:
+            maybe = first_name_only(candidate)
+            if maybe:
+                name = maybe
+                break
         if not name:
             continue
-        available = sum(safe_float(ws[f"{col}{row_num}"].value) for col in AVAILABLE_COLS)
-        if name not in person_hours:
-            person_hours[name] = {"actual": 0.0, "available": 0.0}
+        row_vals = row_cache.get(row_num, ())
+        available = sum(safe_float(row_vals[i]) for i in range(2, 7))  # C:G
+        person_hours.setdefault(name, {"actual": 0.0, "available": 0.0})
         person_hours[name]["available"] += available
     return person_hours
 def load_timeliness_lookup(path: Path) -> dict[tuple[str, str], float]:
@@ -220,28 +246,37 @@ def process_workbook(
         lambda: defaultdict(lambda: {"output": 0.0, "target": 0.0})
     )
     actual_hours_by_person: dict[str, float] = defaultdict(float)
-    for excel_row in range(PROD_START_ROW, PROD_END_ROW + 1):
-        person = first_name_only(ws_prod[f"C{excel_row}"].value)
-        station = normalize_name(ws_prod[f"D{excel_row}"].value)
-        target_minutes = safe_float(ws_prod[f"F{excel_row}"].value)
-        completed_row_minutes = safe_float(ws_prod[f"G{excel_row}"].value)
-        actual_output_value = safe_float(ws_prod[f"I{excel_row}"].value)
+    for row_vals in ws_prod.iter_rows(
+        min_row=PROD_START_ROW,
+        max_row=PROD_END_ROW,
+        min_col=3,   # C
+        max_col=9,   # I
+        values_only=True,
+    ):
+        person_raw, station_raw, _, target_raw, completed_raw, _, actual_raw = row_vals
+        person = first_name_only(person_raw)
+        station = normalize_name(station_raw)
+        target_minutes = safe_float(target_raw)
+        completed_row_minutes = safe_float(completed_raw)
+        actual_output_value = safe_float(actual_raw)
         completed_minutes += completed_row_minutes
         target_output += target_minutes
         actual_output += actual_output_value
         if person:
             unique_people.add(person)
-            actual_hours_by_person[person] += completed_row_minutes / 60.0
+            hours = completed_row_minutes / 60.0
+            actual_hours_by_person[person] += hours
             outputs_by_person[person]["target"] += target_minutes
             outputs_by_person[person]["output"] += actual_output_value
-            if person not in person_hours:
-                person_hours[person] = {"actual": 0.0, "available": 0.0}
+            person_hours.setdefault(person, {"actual": 0.0, "available": 0.0})
         if station:
+            hours = completed_row_minutes / 60.0
             outputs_by_station[station]["target"] += target_minutes
             outputs_by_station[station]["output"] += actual_output_value
-            station_hours[station] += completed_row_minutes / 60.0
+            station_hours[station] += hours
         if station and person:
-            hours_by_station_person[station][person] += completed_row_minutes / 60.0
+            hours = completed_row_minutes / 60.0
+            hours_by_station_person[station][person] += hours
             output_by_station_person[station][person]["target"] += target_minutes
             output_by_station_person[station][person]["output"] += actual_output_value
     for person, actual in actual_hours_by_person.items():
@@ -352,6 +387,8 @@ def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]
             writer.writerow(normalized_row)
 def main() -> None:
     files = find_candidate_files(FOLDERS)
+    for f in files[:10]:
+        print("  ", f)
     if not files:
         searched = ", ".join(str(f) for f in FOLDERS)
         raise FileNotFoundError(f"No matching files found in: {searched}")
@@ -380,11 +417,5 @@ def main() -> None:
             )
     rows = sort_rows_by_date(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
-    existing_fieldnames, existing_rows = read_csv_rows(METRICS_AGGREGATE_CSV)
-    final_fieldnames = ensure_fieldnames(existing_fieldnames, OUTPUT_COLUMNS)
-    merged_rows = merge_rows_by_team_period(existing_rows, rows)
-    write_csv_rows(METRICS_AGGREGATE_CSV, final_fieldnames, merged_rows)
-    print(f"Wrote {len(rows)} rows to {OUTPUT_CSV}")
-    print(f"Merged into {METRICS_AGGREGATE_CSV} with {len(merged_rows)} total rows")
 if __name__ == "__main__":
     main()
