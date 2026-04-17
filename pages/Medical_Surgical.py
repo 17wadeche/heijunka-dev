@@ -1506,7 +1506,7 @@ if nonwip_mode:
         week=week_nw,
         nw_row=row,
         metrics_frame=metrics_frame_for_accounting,
-        nw_frame=nw,
+        nw_frame=nw_view_for_accounting,
         week_hours=40.0,
         irl_people=team_irl_people,
     )
