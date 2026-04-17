@@ -3,6 +3,7 @@ import re
 import time
 from datetime import datetime, date, timedelta
 import pandas as pd
+import csv
 import win32com.client as win32
 WORKBOOK_PATH = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DSA-MDT-RPT-W-Go Green Initiative Monitor.xlsx"
 SHEET_NAME = "Open Complaint Timeliness"
@@ -86,6 +87,9 @@ EXCLUDE_TEAMS = {
     "â€‹Undetermined",
     "Undetermined"
 }
+def build_team_key(ou: str, iou: str, team: str) -> str:
+    parts = [str(x).strip() for x in (ou, iou, team) if str(x).strip()]
+    return " | ".join(parts)
 def excel_serial_to_date(n: float) -> date:
     return (datetime(1899, 12, 30) + timedelta(days=float(n))).date()
 def week_monday(d: date) -> date:
@@ -331,87 +335,88 @@ def force_expand_to_week_view_and_leaf(pt, max_passes=8):
         pass
 def _normalize_period_date_series(s: pd.Series) -> pd.Series:
     s = s.astype(str).str.strip().str.lstrip("'")
-    dt = pd.to_datetime(s, errors="coerce", infer_datetime_format=True)
+    dt = pd.to_datetime(s, errors="coerce")
     return dt.dt.strftime("%Y-%m-%d").fillna(s)
 def update_timeliness_csv(path: str, updates_df: pd.DataFrame) -> tuple[int, int]:
-    if not os.path.exists(path):
-        raise FileNotFoundError(path)
-    existing = pd.read_csv(
-        path,
-        dtype={
-            "operating_unit": str,
-            "integrated_operating_unit": str,
-            "team": str,
-            "period_date": str
-        }
-    )
-    required = {"operating_unit", "integrated_operating_unit", "team", "period_date"}
-    if not required.issubset(existing.columns):
-        raise RuntimeError(
-            f"{path} must have columns: operating_unit, integrated_operating_unit, "
-            f"team, period_date, {METRIC_NAME}"
-        )
-    if METRIC_NAME not in existing.columns:
-        existing[METRIC_NAME] = pd.NA
-    existing["operating_unit"] = existing["operating_unit"].astype(str).str.strip()
-    existing["integrated_operating_unit"] = existing["integrated_operating_unit"].astype(str).str.strip()
-    existing["team"] = existing["team"].astype(str).str.strip()
-    existing["period_date"] = _normalize_period_date_series(existing["period_date"])
     upd = updates_df.copy()
-    upd["operating_unit"] = upd["operating_unit"].astype(str).str.strip()
-    upd["integrated_operating_unit"] = upd["integrated_operating_unit"].astype(str).str.strip()
     upd["team"] = upd["team"].astype(str).str.strip()
     upd["period_date"] = _normalize_period_date_series(upd["period_date"])
+    metric_col = METRIC_NAME
+    def _load_existing_mixed_csv(csv_path: str) -> pd.DataFrame:
+        if not os.path.exists(csv_path):
+            return pd.DataFrame(columns=["team", "period_date", metric_col])
+        rows = []
+        with open(csv_path, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            first_row = True
+            for raw in reader:
+                if not raw or all(not str(x).strip() for x in raw):
+                    continue
+                if first_row:
+                    first_row = False
+                    lowered = [str(x).strip().lower() for x in raw]
+                    if metric_col.lower() in lowered:
+                        continue
+                if len(raw) == 3:
+                    team, period_date, metric_val = raw
+                    rows.append({
+                        "team": str(team).strip(),
+                        "period_date": str(period_date).strip(),
+                        metric_col: metric_val
+                    })
+                    continue
+                if len(raw) == 5:
+                    ou, iou, team, period_date, metric_val = raw
+                    team_key = build_team_key(ou, iou, team)
+                    rows.append({
+                        "team": team_key,
+                        "period_date": str(period_date).strip(),
+                        metric_col: metric_val
+                    })
+                    continue
+                continue
+        if not rows:
+            return pd.DataFrame(columns=["team", "period_date", metric_col])
+        existing_df = pd.DataFrame(rows)
+        existing_df["team"] = existing_df["team"].astype(str).str.strip()
+        existing_df["period_date"] = _normalize_period_date_series(existing_df["period_date"])
+        existing_df[metric_col] = pd.to_numeric(existing_df[metric_col], errors="coerce")
+        return existing_df
+    existing = _load_existing_mixed_csv(path)
+    if existing.empty:
+        upd.to_csv(path, index=False)
+        return len(upd), len(upd)
     existing_dt = pd.to_datetime(existing["period_date"], errors="coerce")
     upd_dt = pd.to_datetime(upd["period_date"], errors="coerce")
     max_existing = existing_dt.max()
     new_weeks = sorted(
         [d for d in upd_dt.dropna().unique() if pd.isna(max_existing) or d > max_existing]
     )
-    all_keys = sorted(
-        set(
-            zip(
-                upd["operating_unit"],
-                upd["integrated_operating_unit"],
-                upd["team"]
-            )
-        )
-    )
-    existing_keys = set(
-        zip(
-            existing["operating_unit"],
-            existing["integrated_operating_unit"],
-            existing["team"],
-            existing["period_date"]
-        )
-    )
+    all_teams = sorted(set(existing["team"].dropna().tolist()) | set(upd["team"].dropna().tolist()))
+    existing_keys = set(zip(existing["team"], existing["period_date"]))
     rows_to_add = []
     for week_dt in new_weeks:
         week_str = pd.Timestamp(week_dt).strftime("%Y-%m-%d")
-        for ou, iou, team in all_keys:
-            key = (ou, iou, team, week_str)
+        for team in all_teams:
+            key = (team, week_str)
             if key not in existing_keys:
                 rows_to_add.append({
-                    "operating_unit": ou,
-                    "integrated_operating_unit": iou,
                     "team": team,
                     "period_date": week_str,
-                    METRIC_NAME: pd.NA
+                    metric_col: pd.NA
                 })
                 existing_keys.add(key)
     added_count = len(rows_to_add)
     if rows_to_add:
         existing = pd.concat([existing, pd.DataFrame(rows_to_add)], ignore_index=True)
-    upd_map = upd.set_index(
-        ["operating_unit", "integrated_operating_unit", "team", "period_date"]
-    )[METRIC_NAME]
-    ex_idx = existing.set_index(
-        ["operating_unit", "integrated_operating_unit", "team", "period_date"]
-    )
+    upd_map = upd.set_index(["team", "period_date"])[metric_col]
+    ex_idx = existing.set_index(["team", "period_date"])
     common = ex_idx.index.intersection(upd_map.index)
-    ex_idx.loc[common, METRIC_NAME] = upd_map.loc[common].values
+    ex_idx.loc[common, metric_col] = upd_map.loc[common].values
     updated_count = len(common)
-    ex_idx.reset_index().to_csv(path, index=False)
+    final_df = ex_idx.reset_index()
+    final_df = final_df.sort_values(["team", "period_date"])
+    final_df.to_csv(path, index=False)
     return updated_count, added_count
 def main():
     if not os.path.exists(WORKBOOK_PATH):
@@ -493,6 +498,7 @@ def main():
             if team_is_excluded(team_raw):
                 continue
             team = TEAM_MAP.get(team_raw, team_raw)
+            team_key = build_team_key(ou_raw, iou_raw, team)
             for c in date_cols:
                 v = row.get(c, None)
                 if v is None or (isinstance(v, str) and not v.strip()):
@@ -505,28 +511,20 @@ def main():
                     val *= 100.0
                 iso = date_map[c].strftime("%Y-%m-%d")
                 records.append({
-                    "operating_unit": ou_raw,
-                    "integrated_operating_unit": iou_raw,
-                    "team": team,
+                    "team": team_key,
                     "period_date": iso,
                     METRIC_NAME: round(val, 1),
                 })
         out_df = pd.DataFrame(records)
         if out_df.empty:
             raise RuntimeError("Export produced 0 rows (pivot likely still collapsed or filtered unexpectedly).")
-        out_df["team"] = out_df["team"].map(lambda t: MERGE_LOOKUP.get(t, t))
         out_df = (
             out_df
-            .groupby(
-                ["operating_unit", "integrated_operating_unit", "team", "period_date"],
-                as_index=False
-            )[METRIC_NAME]
+            .groupby(["team", "period_date"], as_index=False)[METRIC_NAME]
             .mean()
         )
         out_df[METRIC_NAME] = out_df[METRIC_NAME].round(1)
-        out_df = out_df.sort_values(
-            ["operating_unit", "integrated_operating_unit", "team", "period_date"]
-        )
+        out_df = out_df.sort_values(["team", "period_date"])
         updated, added = update_timeliness_csv(TIMELINESS_CSV_PATH, out_df)
         print(f"Updated {updated} row(s), added {added} row(s) in {TIMELINESS_CSV_PATH}")
         out_df.to_csv(out_path, index=False)
