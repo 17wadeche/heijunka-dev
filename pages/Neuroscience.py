@@ -864,28 +864,33 @@ def build_person_weekly_accounting(
     out["Expected Hours"] = out["person_key"].apply(
         lambda p: get_expected_hours(p, week_hours, irl_people_norm)
     )
-    out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
-    out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
-    out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
-    out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
-    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+    calc_cols = [
+        "Expected Hours",
+        "OOO Hours",
+        "Non-WIP Hours",
+        "Completed Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+    ]
+    for col in calc_cols:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0).astype("float64")
     non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
-    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total).astype("float64")
     remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
-    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
+    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip).astype("float64")
     out["Unaccounted"] = (
         out["Expected Hours"]
         - out["Completed Hours"]
         - out["OOO Hours"]
         - out["Other Team WIP"]
         - out["Accounted Non-WIP"]
-    ).clip(lower=0.0)
+    ).clip(lower=0.0).astype("float64")
     out["Total Used"] = (
         out["Completed Hours"]
         + out["OOO Hours"]
         + out["Other Team WIP"]
         + out["Accounted Non-WIP"]
-    )
+    ).astype("float64")
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
