@@ -143,7 +143,7 @@ ACTIVITY_MAP = {
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
     "affera training 30": "Training/Mentoring",
-    "workday tm review":"Career Developement",
+    "workday tm review":"Career Development",
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
     "coding, rrtt, meetings, collaboration/event review":"Coding/Code Gov",
