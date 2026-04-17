@@ -1640,7 +1640,22 @@ if nonwip_mode:
                     )
                     st.altair_chart(act_chart, use_container_width=True)
     st.markdown("#### Team Trends")
-    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
+    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date").copy()
+    if team_nw == "PSS" and pss_group:
+        team_hist = team_hist.apply(
+            lambda r: metric_row_filtered_to_group(r, team_nw, pss_group),
+            axis=1,
+        )
+        if "non_wip_by_person" in team_hist.columns:
+            team_hist["total_non_wip_hours"] = team_hist["non_wip_by_person"].apply(
+                lambda x: sum((json.loads(x) if isinstance(x, str) else x).values())
+                if x not in ("", None) and isinstance((json.loads(x) if isinstance(x, str) else x), dict)
+                else 0.0
+            )
+        if "people_count" in team_hist.columns and "non_wip_by_person" in team_hist.columns:
+            team_hist["people_count"] = team_hist["non_wip_by_person"].apply(
+                lambda x: len(json.loads(x)) if isinstance(x, str) and x not in ("", None) else (len(x) if isinstance(x, dict) else 0)
+            )
     if not team_hist.empty:
         t1, t2 = st.columns(2)
         with t1:
@@ -1675,9 +1690,10 @@ if nonwip_mode:
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
     team_hist = team_hist.copy()
-    team_hist["people_count"] = team_hist["period_date"].apply(
-        lambda wk: merged_people_count_for_week(team_nw, wk, df, nw)
-    )
+    if not (team_nw == "PSS" and pss_group):
+        team_hist["people_count"] = team_hist["period_date"].apply(
+            lambda wk: merged_people_count_for_week(team_nw, wk, df, nw)
+        )
     show_cols = ["team","period_date","people_count","total_non_wip_hours","% Non-WIP"]
     tbl = (
         team_hist[show_cols]
