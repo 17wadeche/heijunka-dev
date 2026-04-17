@@ -12,12 +12,16 @@ from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\MS_DATA\ms_non_wip_activities.csv")
+WIP_GROUPS_DEFAULT_PATH = Path(r"C:\heijunka-dev\MS_DATA\MS_WIP_metrics.csv")
+NONWIP_GROUPS_DEFAULT_PATH = Path(r"C:\heijunka-dev\MS_DATA\MS_NONWIP_METRICS.csv")
 def _safe_secret(name: str, default=None):
     import os
     try:
         return st.secrets.get(name, os.environ.get(name, default))
     except Exception:
         return os.environ.get(name, default)
+MS_WIP_GROUP_METRICS_URL = _safe_secret("MS_WIP_GROUP_METRICS_URL")
+MS_NONWIP_GROUP_METRICS_URL = _safe_secret("MS_NONWIP_GROUP_METRICS_URL")
 NON_WIP_DATA_URL = _safe_secret("MS_NON_WIP_DATA_URL")
 DATA_URL = _safe_secret("MS_HEIJUNKA_DATA_URL")
 def _fmt_hours_minutes(x) -> str:
