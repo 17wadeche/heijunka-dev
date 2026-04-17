@@ -3220,9 +3220,9 @@ with right2:
                     title="Person",
                     sort=person_order,
                     axis=alt.Axis(
-                        labelAngle=-30,
+                        labelAngle=-90,
                         labelLimit=180,
-                        labelOverlap=False,   # show all names
+                        labelOverlap=False, 
                     ),
                 ),
                 y=alt.Y(
