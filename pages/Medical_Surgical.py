@@ -3213,7 +3213,11 @@ with right2:
                     "person:N",
                     title="Person",
                     sort=person_order,
-                    axis=alt.Axis(labelAngle=-30, labelLimit=140),
+                    axis=alt.Axis(
+                        labelAngle=-30,
+                        labelLimit=180,
+                        labelOverlap=False,   # show all names
+                    ),
                 ),
                 y=alt.Y(
                     "Pct:Q",
