@@ -1108,6 +1108,7 @@ ACTIVITY_MAP = {
     "emails+closurefast querie":"Question",
     "fwt, lab, admin":"Admin",
     "r&d support - stedi hyperacre":"Hypercare",
+    "scrum, wi meeting, training":"Scrum & Action",
     "requesting bi launchpad access and sap reactivation access": "IT Issue/Update",
     "reading through agile doc":"Reading File/Document Information",
     "(fai code meeting)":"Coding/Code Gov",

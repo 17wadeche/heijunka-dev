@@ -1206,3 +1206,5 @@
 [2026-04-17 13:43:48] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-13
 [2026-04-17 13:43:49] Finished: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe push_selected_dates.py --date 2026-04-13
 [2026-04-17 13:43:49] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe Scrape_wip_ns.py
+[2026-04-17 14:00:03] === Starting run_all.py ===
+[2026-04-17 14:00:03] Running: C:\Users\wadec8\AppData\Local\Programs\Python\Python3\python.exe scrape_wip_iv.py --all
