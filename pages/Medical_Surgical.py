@@ -1373,7 +1373,11 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3, c4 = st.columns(4)
-    wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
+    if subgroup_nw == "All":
+        wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
+    else:
+        wip_match = filter_team_view(wip_group_df, team_nw, subgroup_nw)
+        wip_match = wip_match[wip_match["period_date"] == week_nw]
     wip_hours_val = (
         float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
         if not wip_match.empty and "Completed Hours" in wip_match.columns
