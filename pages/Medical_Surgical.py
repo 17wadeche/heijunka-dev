@@ -1385,6 +1385,14 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
+    import streamlit as st
+    st.write("DEBUG subgroup_nw:", subgroup_nw)
+    st.write("DEBUG wip_match team_subgroup values:", 
+             wip_match["team_subgroup"].unique().tolist() if "team_subgroup" in wip_match.columns else "NO COL")
+    st.write("DEBUG wip_match teams:", 
+             wip_match["team"].unique().tolist() if not wip_match.empty else "EMPTY")
+    st.write("DEBUG wip_match Completed Hours:", 
+             float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum()) if not wip_match.empty else "EMPTY")
     if subgroup_nw == "All":
         metrics_frame_for_accounting = df
     else:
