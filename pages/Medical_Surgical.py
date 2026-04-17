@@ -3308,7 +3308,7 @@ with right2:
                     ],
                 )
             )
-            top_chart = (bars + labels + overflow_layer).properties(height=320)
+            top_chart = (bars + labels + overflow_layer).properties(height=380)
             st.altair_chart(top_chart, use_container_width=True)
             st.markdown("##### Drill-down over time")
             people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
