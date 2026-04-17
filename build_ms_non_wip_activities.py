@@ -269,6 +269,11 @@ def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         r.get("period_date", "") or "9999-12-31",
     ))
     return out_rows
+def sort_granular_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(rows, key=lambda r: (
+        (r.get("team", "") or "").lower(),
+        r.get("period_date", "") or "9999-12-31",
+    ))
 def parse_week_people_from_left_table(ws: Worksheet, start_row: int, end_row: int) -> List[str]:
     people: List[str] = []
     seen = set()
@@ -511,7 +516,8 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Optional workbook(s) to scrape. If omitted, uses DEFAULT_FILES in the script.")
-    ap.add_argument("--out", default="MS_DATA\\ms_non_wip_activities.csv", help="Output CSV path.")
+    ap.add_argument("--out", default="MS_DATA\\ms_non_wip_activities.csv", help="Output CSV path (rolled-up).")
+    ap.add_argument("--metrics-out", default="MS_DATA\\MS_NONWIP_METRICS.csv", help="Output CSV path (granular, pre-rollup).")
     args = ap.parse_args()
     wip_csv = find_wip_csv()
     wip_lut: Dict[Tuple[str, str], Dict[str, Any]] = {}
@@ -531,6 +537,14 @@ def main() -> int:
         for row in final_rows:
             writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
     print(f"Wrote {len(final_rows)} row(s) to {args.out}")
+    granular_rows = sort_granular_rows(all_rows)
+    with open(args.metrics_out, "w", newline="", encoding="utf-8") as fp:
+        writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        for row in granular_rows:
+            writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
+    print(f"Wrote {len(granular_rows)} row(s) to {args.metrics_out}")
+
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
