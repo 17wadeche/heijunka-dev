@@ -1358,6 +1358,9 @@ if nonwip_mode:
             "Other Team WIP": "Accounted_Other",
             "Accounted Non-WIP": "Accounted_NonOther",
         })
+        wk_people = wk_people[
+            ~wk_people["person"].str.contains("TM", case=False, na=False)
+        ].copy()
         stack = (
             wk_people.melt(
                 id_vars=["person", "period_date", "Non-WIP Hours", "Completed Hours"],
