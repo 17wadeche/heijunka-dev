@@ -1605,8 +1605,8 @@ if nonwip_mode:
             .configure_view(stroke=None)
         st.altair_chart(chart, use_container_width=True)
         st.markdown("#### Non-WIP Activities")
-        if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
-            act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
+        if "non_wip_activities" in row.index and row.get("non_wip_activities", "") not in ("", "[]", None):
+            act_tbl2 = build_ooo_table_from_row(row)
             if not act_tbl2.empty and "HoursRaw" in act_tbl2.columns:
                 cat = (
                     act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
