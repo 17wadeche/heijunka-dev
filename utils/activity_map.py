@@ -138,6 +138,7 @@ ACTIVITY_MAP = {
     "crdn t":"Meeting",
     "email; meeting; collaboration":"Email & IM",
     "emeil":"Email & IM",
+    "pharma lab fume hood":"Set Up",
     "vena seal meeting rescheduled to later in the day":"Meeting",
     "01":"Admin",
     "tour":"Admin",
