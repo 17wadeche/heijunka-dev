@@ -93,6 +93,61 @@ def load_non_wip(
                 pct_wip_0_100 = s
             df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
+TEAM_BREAKDOWN_RULES = {
+    "ACM": ["All", "US", "MEIC", "CTS"],
+    "Endoscopy": ["All", "US", "MEIC", "CTS"],
+    "VSS": ["All", "US", "MEIC", "CTS"],
+    "Surgical AST-GST": ["All", "US", "MEIC", "CTS"],
+    "Surgical Robotics": ["All", "US", "MEIC"],
+}
+def _norm_team_text(x: str) -> str:
+    return " ".join(str(x or "").strip().split())
+def split_team_group(team_name: str) -> tuple[str, str]:
+    raw = _norm_team_text(team_name)
+    if not raw:
+        return "", "All"
+    for base, allowed in TEAM_BREAKDOWN_RULES.items():
+        if raw == base:
+            return base, "All"
+        for subgroup in allowed:
+            if subgroup == "All":
+                continue
+            candidates = {
+                f"{base} - {subgroup}",
+                f"{base}-{subgroup}",
+                f"{base}_{subgroup}",
+                f"{base} {subgroup}",
+                f"{base} ({subgroup})",
+            }
+            if raw in candidates:
+                return base, subgroup
+    return raw, "All"
+def add_team_group_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame is None or frame.empty or "team" not in frame.columns:
+        return frame.copy()
+    out = frame.copy()
+    parsed = out["team"].map(split_team_group)
+    out["team_group"] = parsed.map(lambda x: x[0])
+    out["team_subgroup"] = parsed.map(lambda x: x[1])
+    return out
+def grouped_team_options(frame: pd.DataFrame) -> list[str]:
+    if frame is None or frame.empty:
+        return []
+    if "team_group" not in frame.columns:
+        frame = add_team_group_columns(frame)
+    groups = sorted([t for t in frame["team_group"].dropna().unique() if str(t).strip()])
+    return groups
+def subgroup_options_for_team(team_group: str) -> list[str]:
+    return TEAM_BREAKDOWN_RULES.get(team_group, ["All"])
+def filter_team_view(frame: pd.DataFrame, team_group: str, subgroup: str = "All") -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return frame.copy()
+    if "team_group" not in frame.columns:
+        frame = add_team_group_columns(frame)
+    sub = frame[frame["team_group"] == team_group].copy()
+    if subgroup != "All":
+        sub = sub[sub["team_subgroup"] == subgroup].copy()
+    return sub
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
@@ -1174,16 +1229,22 @@ if nonwip_mode:
         st.info("No Non-WIP data found yet. Make sure non_wip_activities.csv exists.")
         st.stop()
     st.markdown("### Non-WIP Overview")
-    teams_nw = sorted([t for t in nw["team"].dropna().unique()])
-    c_team, c_week = st.columns(2)
+    teams_nw = grouped_team_options(nw)
+    c_team, c_subgroup, c_week = st.columns(3)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+    with c_subgroup:
+        subgroup_nw = st.selectbox(
+            "Breakdown",
+            options=subgroup_options_for_team(team_nw),
+            index=0,   # default = All
+            key="nw_team_subgroup",
+        )
+    nw_view = filter_team_view(nw, team_nw, subgroup_nw)
     today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
         [
-            d for d in pd.to_datetime(
-                nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()
-            )
+            d for d in pd.to_datetime(nw_view["period_date"].dropna().unique())
             if pd.notna(d) and pd.to_datetime(d).normalize() <= today_nw
         ],
         reverse=True
@@ -1200,10 +1261,26 @@ if nonwip_mode:
             key="nw_week",
         )
     week_nw = pd.to_datetime(week_nw).normalize()
-    sel = nw[(nw["team"] == team_nw) & (nw["period_date"] == week_nw)]
+    sel = nw_view[nw_view["period_date"] == week_nw].copy()
     if sel.empty:
         st.info("No Non-WIP row for that team/week.")
         st.stop()
+    if len(sel) > 1:
+        agg_row = sel.iloc[0].copy()
+        numeric_sum_cols = ["people_count", "total_non_wip_hours", "OOO Hours"]
+        for col in numeric_sum_cols:
+            if col in sel.columns:
+                agg_row[col] = pd.to_numeric(sel[col], errors="coerce").sum()
+        if "% in WIP" in sel.columns:
+            pct_series = pd.to_numeric(sel["% in WIP"], errors="coerce")
+            agg_row["% in WIP"] = pct_series.mean()
+        if "% Non-WIP" in sel.columns:
+            pct_nw_series = pd.to_numeric(sel["% Non-WIP"], errors="coerce")
+            agg_row["% Non-WIP"] = pct_nw_series.mean()
+        agg_row["team"] = team_nw if subgroup_nw == "All" else f"{team_nw} - {subgroup_nw}"
+        agg_row["team_group"] = team_nw
+        agg_row["team_subgroup"] = subgroup_nw
+        sel = pd.DataFrame([agg_row])
     row = sel.iloc[0]
     if "% Non-WIP" in row.index and pd.notna(row["% Non-WIP"]):
         pct_non_wip = float(row["% Non-WIP"])
@@ -1604,7 +1681,7 @@ def _set_qp_teams(values: list[str]) -> None:
         st.experimental_set_query_params(teams=values)
 def _sets_equal(a, b) -> bool:
     return set(a) == set(b)
-teams = sorted([t for t in df["team"].dropna().unique()])
+teams = grouped_team_options(df)
 default_teams = [teams[0]] if teams else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
