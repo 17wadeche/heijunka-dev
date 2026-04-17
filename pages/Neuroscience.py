@@ -240,30 +240,35 @@ def normalize_person_name(name: str) -> str:
     return NAME_ALIASES.get(key, s)
 PSS_GROUPS = {
     "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
-    "MEIC": set(),  # computed as everyone else in PSS
 }
 def filter_people_df_by_group(df_in: pd.DataFrame, team: str, group_name: str | None) -> pd.DataFrame:
-    if df_in is None or df_in.empty or team != "PSS" or not group_name:
+    if df_in is None or df_in.empty or team != "PSS":
         return df_in
+    group_name = (group_name or "both").strip().lower()
+    if group_name == "both":
+        return df_in.copy()
     out = df_in.copy()
     if "person" not in out.columns:
         return out
     us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
     out["person"] = out["person"].astype(str).map(normalize_person_name)
-    if group_name == "US":
+    if group_name == "us":
         return out[out["person"].isin(us_people)].copy()
-    if group_name == "MEIC":
+    if group_name == "meic":
         return out[~out["person"].isin(us_people)].copy()
     return out
 def metric_row_filtered_to_group(row, team: str, group_name: str | None):
-    if team != "PSS" or not group_name:
+    if team != "PSS":
         return row
+    group_name = (group_name or "both").strip().lower()
+    if group_name == "both":
+        return row.copy()
     us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
     def keep_person(name: str) -> bool:
         n = normalize_person_name(name)
-        if group_name == "US":
+        if group_name == "us":
             return n in us_people
-        if group_name == "MEIC":
+        if group_name == "meic":
             return n not in us_people
         return True
     row = row.copy()
@@ -1221,6 +1226,63 @@ def percent_color(v: float | None, threshold: float, invert: bool = False) -> st
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
 st.markdown("<h1 style='text-align: center;'>NS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+def build_group_team_trend(
+    team: str,
+    nw_frame: pd.DataFrame,
+    metrics_frame: pd.DataFrame,
+    irl_people: set[str] | None = None,
+    group_name: str | None = None,
+) -> pd.DataFrame:
+    if nw_frame is None or nw_frame.empty:
+        return pd.DataFrame(columns=[
+            "team", "period_date", "WIP Hours", "Non-WIP Hours",
+            "OOO Hours", "Unaccounted Hours", "Capacity Hours", "People Count"
+        ])
+    sub = nw_frame[nw_frame["team"] == team].dropna(subset=["period_date"]).copy()
+    if sub.empty:
+        return pd.DataFrame(columns=[
+            "team", "period_date", "WIP Hours", "Non-WIP Hours",
+            "OOO Hours", "Unaccounted Hours", "Capacity Hours", "People Count"
+        ])
+    rows = []
+    for _, raw_row in sub.sort_values("period_date").iterrows():
+        wk = pd.to_datetime(raw_row["period_date"], errors="coerce")
+        if pd.isna(wk):
+            continue
+        wk = wk.normalize()
+        row = metric_row_filtered_to_group(raw_row, team, group_name if team == "PSS" else None)
+        wk_people = build_person_weekly_accounting(
+            team=team,
+            week=wk,
+            nw_row=row,
+            metrics_frame=metrics_frame,
+            nw_frame=nw_frame,
+            week_hours=40.0,
+            irl_people=irl_people,
+        )
+        if team == "PSS":
+            wk_people = filter_people_df_by_group(wk_people, team, group_name)
+        if wk_people.empty:
+            continue
+        for col in [
+            "Completed Hours", "Other Team WIP", "Accounted Non-WIP",
+            "OOO Hours", "Unaccounted", "Expected Hours"
+        ]:
+            if col in wk_people.columns:
+                wk_people[col] = pd.to_numeric(wk_people[col], errors="coerce").fillna(0.0)
+        rows.append({
+            "team": team,
+            "period_date": wk,
+            "WIP Hours": float(wk_people["Completed Hours"].sum()),
+            "Non-WIP Hours": float(wk_people["Other Team WIP"].sum() + wk_people["Accounted Non-WIP"].sum()),
+            "OOO Hours": float(wk_people["OOO Hours"].sum()),
+            "Unaccounted Hours": float(wk_people["Unaccounted"].sum()),
+            "Capacity Hours": float(wk_people["Expected Hours"].sum()),
+            "People Count": int(
+                wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
+            ),
+        })
+    return pd.DataFrame(rows)
 def ent_capacity_hours_for_week(
     team: str,
     week,
@@ -1278,11 +1340,11 @@ if nonwip_mode:
     c_team, c_week = st.columns(2)
     with c_team:
         team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
-        pss_group = None
+        pss_group = "both"
         if team_nw == "PSS":
             pss_group = st.selectbox(
                 "Group",
-                options=["US", "MEIC"],
+                options=["both", "US", "MEIC"],
                 index=0,
                 key="pss_group",
             )
@@ -1605,8 +1667,8 @@ if nonwip_mode:
             .configure_view(stroke=None)
         st.altair_chart(chart, use_container_width=True)
         st.markdown("#### Non-WIP Activities")
-        if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
-            act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
+        if row.get("non_wip_activities", "") not in ("", "[]", None):
+            act_tbl2 = build_ooo_table_from_row(row)
             if not act_tbl2.empty and "HoursRaw" in act_tbl2.columns:
                 cat = (
                     act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
@@ -1631,16 +1693,22 @@ if nonwip_mode:
                             y=alt.Y("Hours:Q", title="Total Non-WIP Hours"),
                             tooltip=[
                                 alt.Tooltip("Activity:N", title="Activity"),
-                                alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
+                                alt.Tooltip("Hours:Q", title="Hours", format=",2f"),
                             ],
                         )
-                        .properties(
-                            height=280
-                        )
+                        .properties(height=280)
                     )
                     st.altair_chart(act_chart, use_container_width=True)
+        else:
+            st.info("No Non-WIP activities recorded for this selection.")
     st.markdown("#### Team Trends")
-    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
+    team_hist = build_group_team_trend(
+        team=team_nw,
+        nw_frame=nw,
+        metrics_frame=df,
+        irl_people=team_irl_people,
+        group_name=pss_group if team_nw == "PSS" else None,
+    ).sort_values("period_date")
     if not team_hist.empty:
         t1, t2 = st.columns(2)
         with t1:
@@ -1649,13 +1717,16 @@ if nonwip_mode:
                 .mark_line(point=True)
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
+                    y=alt.Y("Non-WIP Hours:Q", title="Non-WIP Hours"),
                     tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                        alt.Tooltip("Non-WIP Hours:Q", title="Non-WIP Hours", format=",1f"),
+                        alt.Tooltip("OOO Hours:Q", title="OOO Hours", format=",1f"),
+                        alt.Tooltip("WIP Hours:Q", title="WIP Hours", format=",1f"),
+                        alt.Tooltip("Unaccounted Hours:Q", title="Unaccounted Hours", format=",1f"),
                     ],
                 )
-                .properties(height=240, title="Total Non-WIP Hours")
+                .properties(height=280)
             )
             st.altair_chart(ch1, use_container_width=True)
         with t2:
@@ -1664,13 +1735,14 @@ if nonwip_mode:
                 .mark_line(point=True)
                 .encode(
                     x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
+                    y=alt.Y("People Count:Q", title="People Count"),
                     tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
+                        alt.Tooltip("period_date:T", title="Week"),
+                        alt.Tooltip("People Count:Q", title="People Count"),
+                        alt.Tooltip("Capacity Hours:Q", title="Capacity Hours", format=",1f"),
                     ],
                 )
-                .properties(height=240, title="% Non-WIP")
+                .properties(height=280)
             )
             st.altair_chart(ch2, use_container_width=True)
     st.markdown("#### Weekly Non-WIP Rows")
