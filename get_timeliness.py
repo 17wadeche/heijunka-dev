@@ -19,6 +19,7 @@ TEAM_MAP = {
     "Enabling Technologies Total": "Enabling Technologies",
     "Ventilation":"VSS",
     "HF-MCS":"MCS",
+    "Surgical | Robotic Surgical Technologies | Surgical Robotics":"Surgical Robotics",
     
 }
 MONTHREL_ALLOWED = {0, -1}
@@ -36,57 +37,6 @@ AVERAGE_MERGE_GROUPS = {
 MERGE_LOOKUP = {member: target
                 for target, members in AVERAGE_MERGE_GROUPS.items()
                 for member in members}
-EXCLUDE_TEAMS = {
-    "AE",
-    "CSF",
-    "Caesarea",
-    "ILS-AST",
-    "PTNM",
-    "Patient Management",
-    "Patient Monitoring",
-    "Renal Care Solutions",
-    "AAS",
-    "Affera",
-    "Airways",
-    "Boxborough",
-    "Brady",
-    "DISPOSABLES",
-    "Diabetes",
-    "Diagnostics",
-    "DigitalTec",
-    "EPG",
-    "Enterra",
-    "GIS",
-    "Heart Failure HP",
-    "Heart Failure LP",
-    "INPEN",
-    "Implantable Tibial",
-    "InterStim",
-    "Intersect",
-    "Kanghui",
-    "Kyphon",
-    "LSV",
-    "MITG - Default",
-    "MITG - Unmapped",
-    "MOBILEAPP",
-    "Medicrea",
-    "NGP",
-    "PARADIGM",
-    "PCS-GWY",
-    "PCS-MEIC",
-    "PM-Apps",
-    "PM-CTS",
-    "RESERVOIR",
-    "RF Ablation",
-    "SENSOR",
-    "SOFTWARE",
-    "TRANSMITTER",
-    "TYRX",
-    "Tachy",
-    "Vitatron",
-    "â€‹Undetermined",
-    "Undetermined"
-}
 def build_team_key(ou: str, iou: str, team: str) -> str:
     parts = [str(x).strip() for x in (ou, iou, team) if str(x).strip()]
     return " | ".join(parts)
@@ -94,11 +44,6 @@ def excel_serial_to_date(n: float) -> date:
     return (datetime(1899, 12, 30) + timedelta(days=float(n))).date()
 def week_monday(d: date) -> date:
     return d - timedelta(days=d.weekday())
-def team_is_excluded(team_raw: str) -> bool:
-    t = team_raw.strip()
-    if t in EXCLUDE_TEAMS:
-        return True
-    return False
 def parse_period_header(x):
     if x is None:
         return None
@@ -468,37 +413,32 @@ def main():
                 "No weekly date columns found. "
                 "This usually means the Calendar hierarchy didn't drill to week level."
             )
-        required_cols = [TEAM_COLUMN_NAME, OU_COLUMN_NAME, IOU_COLUMN_NAME]
-        missing = [c for c in required_cols if c not in data.columns]
-        if missing:
+        required_cols = [OU_COLUMN_NAME, IOU_COLUMN_NAME, TEAM_COLUMN_NAME]
+        present_cols = [c for c in required_cols if c in data.columns]
+        if not present_cols:
             raise RuntimeError(
-                f"Missing required column(s): {missing}. "
+                f"None of the expected hierarchy columns were found. "
+                f"Expected one or more of: {required_cols}. "
                 f"First columns seen: {list(data.columns)[:30]}"
             )
         records = []
         for _, row in data.iterrows():
-            team_raw = row.get(TEAM_COLUMN_NAME, None)
-            ou_raw = row.get(OU_COLUMN_NAME, None)
-            iou_raw = row.get(IOU_COLUMN_NAME, None)
-            if team_raw is None or not str(team_raw).strip():
+            team_raw = row.get(TEAM_COLUMN_NAME, "") if TEAM_COLUMN_NAME in data.columns else ""
+            ou_raw = row.get(OU_COLUMN_NAME, "") if OU_COLUMN_NAME in data.columns else ""
+            iou_raw = row.get(IOU_COLUMN_NAME, "") if IOU_COLUMN_NAME in data.columns else ""
+            team_raw = "" if team_raw is None else str(team_raw).strip()
+            ou_raw = "" if ou_raw is None else str(ou_raw).strip()
+            iou_raw = "" if iou_raw is None else str(iou_raw).strip()
+            if not (ou_raw or iou_raw or team_raw):
                 continue
-            if ou_raw is None or not str(ou_raw).strip():
-                continue
-            if iou_raw is None or not str(iou_raw).strip():
-                continue
-            team_raw = str(team_raw).strip()
-            ou_raw = str(ou_raw).strip()
-            iou_raw = str(iou_raw).strip()
-            if not INCLUDE_TOTALS and (
-                is_total_like(team_raw) or
-                is_total_like(ou_raw) or
-                is_total_like(iou_raw)
+            if not INCLUDE_TOTALS and any(
+                is_total_like(x) for x in (ou_raw, iou_raw, team_raw) if x
             ):
                 continue
-            if team_is_excluded(team_raw):
-                continue
-            team = TEAM_MAP.get(team_raw, team_raw)
+            team = TEAM_MAP.get(team_raw, team_raw) if team_raw else ""
             team_key = build_team_key(ou_raw, iou_raw, team)
+            if not team_key:
+                continue
             for c in date_cols:
                 v = row.get(c, None)
                 if v is None or (isinstance(v, str) and not v.strip()):
