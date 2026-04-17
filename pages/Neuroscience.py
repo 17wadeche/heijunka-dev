@@ -1282,7 +1282,7 @@ if nonwip_mode:
         if team_nw == "PSS":
             pss_group = st.selectbox(
                 "Group",
-                options=["US", "MEIC"],
+                options=["All", "US", "MEIC"],
                 index=0,
                 key="pss_group",
             )
