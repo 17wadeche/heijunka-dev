@@ -170,8 +170,6 @@ def split_team_group(team_name: str) -> tuple[str, str]:
                 f"{base}_{subgroup}",
                 f"{base} {subgroup}",
                 f"{base} ({subgroup})",
-                f"CTS-{base}-RI",   # e.g. CTS-ACM-RI
-                f"CTS-{base}-PM",
             }
             if raw in candidates:
                 return base, subgroup
