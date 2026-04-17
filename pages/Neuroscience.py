@@ -835,8 +835,19 @@ def build_person_weekly_accounting(
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
-        .fillna(0.0)
     )
+    numeric_cols = [
+        "Non-WIP Hours",
+        "Completed Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+        "OOO Hours",
+    ]
+    for col in numeric_cols:
+        if col not in out.columns:
+            out[col] = 0.0
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0)
+    out["person"] = out["person"].astype("string")
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
     PERSON_WEEKLY_HOURS = {
