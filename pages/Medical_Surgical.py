@@ -1462,7 +1462,7 @@ if nonwip_mode:
         )
         chart = (outline + ref + bars) \
             .properties(
-                height=300,
+                height=340,
                 padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             ) \
             .configure_axis(labelOverlap=True) \
