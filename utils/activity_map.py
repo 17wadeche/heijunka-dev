@@ -2322,6 +2322,8 @@ ACTIVITY_MAP = {
     "us sr/rd shadowing":"Training/Mentoring",
     "metrics, meetings, schedule, email":"Admin",
     "meeting with jerlie on burndown":"Meeting",
+    "scrum, training": "Training/Mentoring",
+    "collaboration 60": "Collaboration",
     "email/teams rpa request": "RPA Meeting/Action",
     "rpa requests/collaboration": "RPA Meeting/Action",
     "team collabration":"Collaboration",
