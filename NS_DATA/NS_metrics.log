@@ -9013,3 +9013,34 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-04-17 18:57:34,495 | INFO | [PSS US] DONE | rows=46 | elapsed=0:00:54.157903
 2026-04-17 18:57:34,497 | INFO | [PSS MEIC] START
 2026-04-17 19:00:34,504 | INFO | [PSS MEIC] still running...
+2026-04-17 19:02:14,607 | INFO | [PSS MEIC] DONE | rows=45 | elapsed=0:04:40.109251
+2026-04-17 19:02:14,608 | INFO | [PSS MEIC Intern] START
+2026-04-17 19:03:05,185 | INFO | [PSS MEIC Intern] DONE | rows=46 | elapsed=0:00:50.578390
+2026-04-17 19:03:05,348 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-17 19:03:05,348 | INFO | [ENT] START
+2026-04-17 19:03:05,481 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.132472
+2026-04-17 19:03:05,481 | INFO | [DBS MEIC] START
+2026-04-17 19:03:05,481 | INFO | [DBS MEIC] DONE | rows=36 | elapsed=0:00:00
+2026-04-17 19:03:05,481 | INFO | [SCS MEIC] START
+2026-04-17 19:03:05,506 | INFO | [SCS MEIC] DONE | rows=36 | elapsed=0:00:00.024959
+2026-04-17 19:03:05,507 | INFO | [TDD COS 1] START
+2026-04-17 19:03:21,349 | INFO | [TDD COS 1] DONE | rows=202 | elapsed=0:00:15.842351
+2026-04-17 19:03:21,350 | INFO | [TDD COS 1] filter >= 2025-06-02: 202 -> 45
+2026-04-17 19:03:21,350 | INFO | [SCS Super Cell] START
+2026-04-17 19:03:58,821 | INFO | [SCS Super Cell] DONE | rows=201 | elapsed=0:00:37.471570
+2026-04-17 19:03:58,822 | INFO | [SCS Super Cell] rows scraped (pre-filter): 201
+2026-04-17 19:03:58,822 | INFO | [SCS Super Cell] filter >= 2025-06-30: 201 -> 41
+2026-04-17 19:03:58,823 | INFO | [MEIC PH] filter >= 2025-09-01: 90 -> 35
+2026-04-17 19:03:58,823 | INFO | [PH Cell 17] rows before TAA filter = 3
+2026-04-17 19:03:58,823 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 1517 -> 599
+2026-04-17 19:03:58,823 | INFO | [PH Cell 17] rows after TAA filter = 3
+2026-04-17 19:03:58,823 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 1517 -> 599
+2026-04-17 19:03:58,823 | INFO | [ALL] drop period_date == 2023-11-06: 599 -> 598
+2026-04-17 19:03:58,823 | INFO | [ALL] drop period_date == 2026-09-07: 598 -> 597
+2026-04-17 19:03:58,875 | INFO | Wrote 597 rows to NS_DATA\NS_metrics.csv
+2026-04-17 19:03:58,979 | INFO | Wrote 330 rows to NS_DATA\NS_WIP.csv
+2026-04-17 19:03:59,003 | INFO | [POST] WIP weekly keys=330
+2026-04-17 19:03:59,004 | INFO | [POST] closures placeholders appended=0 -> closures.csv
+2026-04-17 19:03:59,004 | INFO | [POST] timeliness placeholders appended=0 -> timeliness.csv
+2026-04-17 19:03:59,075 | INFO | [POST] NS_WIP.csv updated with closures/timeliness for 297 rows
+2026-04-17 19:03:59,077 | INFO | === NS Metrics Run END ===
