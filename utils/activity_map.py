@@ -2330,6 +2330,7 @@ ACTIVITY_MAP = {
     "collabration":"Collaboration",
     "pulled metrics for scrum":"Scrum & Action",
     "scrum collaboration":"Scrum & Action",
+    "scrum/training/emails/reg inquirie":"Scrum & Action",
     "training, collaboration, emails/admin":"Admin",
     "ng, collaboration, ps requests, meeting":"Next Gen",
     "collaboration, meetings, lates update":"Collaboration",
