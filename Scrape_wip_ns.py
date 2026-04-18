@@ -2531,6 +2531,26 @@ def append_missing_placeholders_from_wip(
         logger.info(f"[POST] WIP weekly keys={len(wip_keys)}")
         logger.info(f"[POST] closures placeholders appended={len(missing_closures)} -> {os.path.basename(closures_csv_path)}")
         logger.info(f"[POST] timeliness placeholders appended={len(missing_timeliness)} -> {os.path.basename(timeliness_csv_path)}")
+def _worker_spine_new(source_file, cfg, mondays):
+    return scrape_spine_previous_weeks_xlsm(source_file, cfg, team="Spine", dropdown_override=mondays)
+def _worker_nv(source_file, mondays):
+    return scrape_dbs_previous_weeks_xlsm(source_file, "NV", dropdown_override=mondays)
+def _worker_nav(source_file, mondays):
+    return scrape_nav_previous_weeks_xlsm(source_file, "Nav", dropdown_override=mondays)
+def _worker_ae_meic(source_file, mondays):
+    return scrape_meic_ae_oarm_previous_weeks_xlsm(source_file, "AE MEIC", dropdown_override=mondays)
+def _worker_oarm_meic(source_file, mondays):
+    return scrape_meic_ae_oarm_previous_weeks_xlsm(source_file, "O-Arm MEIC", dropdown_override=mondays)
+def _worker_mazor(source_file, cfg, mondays):
+    return scrape_previous_weeks_xlsm_with_filters(source_file, "Mazor", cfg, dropdown_override=mondays)
+def _worker_csf(source_file, cfg, mondays):
+    return scrape_previous_weeks_xlsm_with_filters(source_file, "CSF", cfg, dropdown_override=mondays)
+def _worker_pss_us(source_file, cfg, mondays):
+    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS US", cfg, dropdown_override=mondays)
+def _worker_pss_meic(source_file, cfg, mondays):
+    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS MEIC", cfg, dropdown_override=mondays)
+def _worker_pss_intern(source_file, cfg, mondays):
+    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS MEIC Intern", cfg, dropdown_override=mondays)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
@@ -3090,16 +3110,6 @@ def main():
             d += timedelta(days=7)
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
-    if should_run("Spine"):
-        extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
-        extend_team(
-            "Spine",
-            lambda: scrape_spine_previous_weeks_xlsm(
-                spine_new_source_file,
-                SPINE_NEW_CFG,
-                team="Spine",
-            )
-        )
     if should_run("PH"):
         extend_team(
             "PH",
@@ -3138,28 +3148,39 @@ def main():
     )
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
     rows.extend(dbs_c14_rows)
-    nv_rows = run_team(
-        "NV",
-        lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV", ALL_MONDAYS_SINCE_2025_06_02),
-    )
-    nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
-    rows.extend(nv_rows)
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    com_tasks = []
+    if should_run("Spine"):
+        com_tasks.append((_worker_spine_new, spine_new_source_file, SPINE_NEW_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+    if should_run("NV"):
+        com_tasks.append((_worker_nv, nv_source_file, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("Nav"):
-        extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_nav, nav_source_file, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("AE MEIC"):
-        extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_ae_meic, ae_meic_source_file, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("O-Arm MEIC"):
-        extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_oarm_meic, oarm_meic_source_file, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("Mazor"):
-        extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_mazor, mazor_source_file, MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("CSF"):
-        extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_csf, csf_source_file, CSF_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS US"):
-        extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_pss_us, pss_us_source_file, PSS_US_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS MEIC"):
-        extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_pss_meic, pss_meic_source_file, PSS__MEIC_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS MEIC Intern"):
-        extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        com_tasks.append((_worker_pss_intern, pss_intern_source_file, PSS_MEIC_Intern_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+    with ProcessPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(fn, *args): fn.__name__ for fn, *args in com_tasks}
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                rows.extend(result)
+            except Exception as e:
+                print(f"Worker {futures[future]} failed: {e}")
+    nv_rows_filtered = [r for r in rows if r.get("team") == "NV"]
+    rows = [r for r in rows if r.get("team") != "NV"]
+    rows.extend(filter_rows_on_or_after(nv_rows_filtered, cutoff_dbs))
     if should_run("ENT"):
         extend_team("ENT", lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     if should_run("DBS MEIC"):
