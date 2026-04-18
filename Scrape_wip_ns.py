@@ -2,6 +2,9 @@ import csv
 import json
 import os
 import re
+import shutil
+import tempfile
+import uuid
 from datetime import datetime, date, timedelta
 from typing import Any, Dict, Optional, Tuple
 from openpyxl import load_workbook
@@ -12,6 +15,11 @@ import pythoncom
 import pywintypes
 import argparse
 import logging
+import sys
+import traceback
+from contextlib import contextmanager
+from threading import Thread, Event
+import math
 WIP_HEADERS = [
     "team",
     "period_date",
@@ -252,10 +260,46 @@ def write_csv_wip(rows: list[dict], out_path: str) -> None:
                 os.remove(tmp_path)
             except OSError:
                 pass
-def run_team(team_name: str, fn):
+def setup_logging(log_path: str = "NS_DATA\\NS_metrics.log") -> logging.Logger:
+    logger = logging.getLogger("NS_DATA\ns_metrics")
+    logger.setLevel(logging.INFO)
+    fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setFormatter(fmt)
+    fh.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(fmt)
+    ch.setLevel(logging.INFO)
+    if not logger.handlers:
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+    return logger
+@contextmanager
+def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
+    stop = Event()
+    def _run():
+        while not stop.wait(every_seconds):
+            logger.info(f"[{label}] still running...")
+    t = Thread(target=_run, daemon=True)
+    t.start()
     try:
-        return fn()
-    except Exception:
+        yield
+    finally:
+        stop.set()
+        t.join(timeout=1)
+def run_team(logger: logging.Logger, team_name: str, fn):
+    start = datetime.now()
+    logger.info(f"[{team_name}] START")
+    try:
+        with heartbeat(logger, team_name, every_seconds=180): 
+            rows = fn()
+        elapsed = datetime.now() - start
+        logger.info(f"[{team_name}] DONE | rows={len(rows)} | elapsed={elapsed}")
+        return rows
+    except Exception as e:
+        elapsed = datetime.now() - start
+        logger.error(f"[{team_name}] FAIL | elapsed={elapsed} | error={e}")
+        logger.error(traceback.format_exc())
         return []
 HEADERS = [
     "team",
@@ -421,6 +465,7 @@ def scrape_dbs_dated_tabs_xlsx(
     wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
     rows_out: list[dict] = []
     cols = _excel_col_range("B", "R")
+    excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
     timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
     closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -570,6 +615,7 @@ def scrape_dbs_dated_tabs_xlsx(
         })
     return rows_out
 def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[dict]:
+    excel_dir = os.path.dirname(os.path.abspath(source_file))
     timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
     closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -581,6 +627,8 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
         if not period_date:
+            if cfg.get("team") == "PH Cell 17":
+                print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
             continue
         min_pd = safe_str(cfg.get("min_period_date"))
         if min_pd and period_date < min_pd:
@@ -588,6 +636,16 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         max_pd = safe_str(cfg.get("max_period_date"))
         if max_pd and period_date > max_pd:
             continue
+        if cfg.get("team") == "Spine" and safe_str(cfg.get("min_period_date")) == "2026-02-24":
+            print(
+                f"[SPINE NEW DEBUG] tab={ws.title!r} period_date={period_date} "
+                f"W53={ws['W53'].value!r} W54={ws['W54'].value!r} W55={ws['W55'].value!r} "
+                f"W63={ws['W63'].value!r} W64={ws['W64'].value!r} W65={ws['W65'].value!r}"
+            )
+            print(
+                f"[SPINE NEW DEBUG] completed_hours cell={cfg['cells']['completed_hours']!r} "
+                f"value={ws[cfg['cells']['completed_hours']].value!r}"
+            )
         taa_spec = cfg["cells"]["total_available_hours"]
         if isinstance(taa_spec, str):
             total_available_hours = safe_float(ws[taa_spec].value)
@@ -874,6 +932,7 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "M")
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
         closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -1069,6 +1128,7 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "V")
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
         closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -1273,6 +1333,7 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "P") 
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
         closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -1709,6 +1770,7 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
         closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -2118,6 +2180,7 @@ def scrape_ent_from_csv(
     weekly: Dict[str, Dict[str, Any]] = {}
     with open(ent_csv_path, "r", newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
+        headers = next(reader, None)  # skip header row
         for row in reader:
             if not row or len(row) < 6:
                 continue
@@ -2279,6 +2342,7 @@ def scrape_spine_previous_weeks_xlsm(
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "T")
+        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
         timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
         closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
         timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
@@ -2294,6 +2358,16 @@ def scrape_spine_previous_weeks_xlsm(
                 continue
             if period_date > today_iso:
                 continue
+            print(
+                f"[SPINE NEW DEBUG] choice={choice!r} period_date={period_date} "
+                f"W53={_com_call(lambda: ws.Range('W53').Value)!r} "
+                f"W54={_com_call(lambda: ws.Range('W54').Value)!r} "
+                f"W55={_com_call(lambda: ws.Range('W55').Value)!r} "
+                f"W63={_com_call(lambda: ws.Range('W63').Value)!r} "
+                f"W64={_com_call(lambda: ws.Range('W64').Value)!r} "
+                f"W65={_com_call(lambda: ws.Range('W65').Value)!r} "
+                f"X55={_com_call(lambda: ws.Range('X55').Value)!r}"
+            )
             total_available_hours = safe_float(
                 _com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value)
             )
@@ -2531,30 +2605,14 @@ def append_missing_placeholders_from_wip(
         logger.info(f"[POST] WIP weekly keys={len(wip_keys)}")
         logger.info(f"[POST] closures placeholders appended={len(missing_closures)} -> {os.path.basename(closures_csv_path)}")
         logger.info(f"[POST] timeliness placeholders appended={len(missing_timeliness)} -> {os.path.basename(timeliness_csv_path)}")
-def _worker_spine_new(source_file, cfg, mondays):
-    return scrape_spine_previous_weeks_xlsm(source_file, cfg, team="Spine", dropdown_override=mondays)
-def _worker_nv(source_file, mondays):
-    return scrape_dbs_previous_weeks_xlsm(source_file, "NV", dropdown_override=mondays)
-def _worker_nav(source_file, mondays):
-    return scrape_nav_previous_weeks_xlsm(source_file, "Nav", dropdown_override=mondays)
-def _worker_ae_meic(source_file, mondays):
-    return scrape_meic_ae_oarm_previous_weeks_xlsm(source_file, "AE MEIC", dropdown_override=mondays)
-def _worker_oarm_meic(source_file, mondays):
-    return scrape_meic_ae_oarm_previous_weeks_xlsm(source_file, "O-Arm MEIC", dropdown_override=mondays)
-def _worker_mazor(source_file, cfg, mondays):
-    return scrape_previous_weeks_xlsm_with_filters(source_file, "Mazor", cfg, dropdown_override=mondays)
-def _worker_csf(source_file, cfg, mondays):
-    return scrape_previous_weeks_xlsm_with_filters(source_file, "CSF", cfg, dropdown_override=mondays)
-def _worker_pss_us(source_file, cfg, mondays):
-    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS US", cfg, dropdown_override=mondays)
-def _worker_pss_meic(source_file, cfg, mondays):
-    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS MEIC", cfg, dropdown_override=mondays)
-def _worker_pss_intern(source_file, cfg, mondays):
-    return scrape_previous_weeks_xlsm_with_filters(source_file, "PSS MEIC Intern", cfg, dropdown_override=mondays)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
+    parser.add_argument("--log", default="NS_DATA\\NS_metrics.log", help="Log file path")
     args = parser.parse_args()
+    logger = setup_logging(args.log)
+    logger.info("=== NS Metrics Run START ===")
+    logger.info(f"Selected team: {args.team}")
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
     scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
@@ -3098,8 +3156,9 @@ def main():
     def should_run(team_name: str) -> bool:
         return selected_team in ("all", "", team_name.lower())
     def extend_team(team_name: str, fn):
-        out = run_team(team_name, fn)
+        out = run_team(logger, team_name, fn)   # logs START/DONE/FAIL + rows + elapsed
         rows.extend(out)
+        return out
     def mondays_since(start_iso: str, end_d: date) -> list[str]:
         start = date.fromisoformat(start_iso)
         start = start - timedelta(days=start.weekday()) 
@@ -3110,6 +3169,16 @@ def main():
             d += timedelta(days=7)
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
+    if should_run("Spine"):
+        extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
+        extend_team(
+            "Spine",
+            lambda: scrape_spine_previous_weeks_xlsm(
+                spine_new_source_file,
+                SPINE_NEW_CFG,
+                team="Spine",
+            )
+        )
     if should_run("PH"):
         extend_team(
             "PH",
@@ -3126,9 +3195,10 @@ def main():
                 scrape_workbook_with_config(scs_source_file, SCS_CELL1_OLD_CFG)
                 + scrape_workbook_with_config(scs_source_file, SCS_CELL1_NEW_CFG)
         )
-    meic_rows = run_team("MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
+    meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
     cutoff_dbs = "2025-07-07"
     dbs_c13_rows = run_team(
+        logger,
         "DBS C13",
         lambda: scrape_dbs_dated_tabs_xlsx(
             dbs_c13_source_file,
@@ -3136,9 +3206,12 @@ def main():
             min_period_date="2025-06-02",
         ),
     )
+    before = len(dbs_c13_rows)
     dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
+    logger.info(f"[DBS C13] filter >= {cutoff_dbs}: {before} -> {len(dbs_c13_rows)}")
     rows.extend(dbs_c13_rows)
     dbs_c14_rows = run_team(
+        logger,
         "DBS C14",
         lambda: scrape_dbs_dated_tabs_xlsx(
             dbs_c14_source_file,
@@ -3146,73 +3219,96 @@ def main():
             min_period_date="2025-06-02",
         ),
     )
+    before = len(dbs_c14_rows)
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
+    logger.info(f"[DBS C14] filter >= {cutoff_dbs}: {before} -> {len(dbs_c14_rows)}")
     rows.extend(dbs_c14_rows)
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    com_tasks = []
-    if should_run("Spine"):
-        com_tasks.append((_worker_spine_new, spine_new_source_file, SPINE_NEW_CFG, ALL_MONDAYS_SINCE_2025_06_02))
-    if should_run("NV"):
-        com_tasks.append((_worker_nv, nv_source_file, ALL_MONDAYS_SINCE_2025_06_02))
+    nv_rows = run_team(
+        logger,
+        "NV",
+        lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV", ALL_MONDAYS_SINCE_2025_06_02),
+    )
+    before = len(nv_rows)
+    nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
+    logger.info(f"[NV] filter >= {cutoff_dbs}: {before} -> {len(nv_rows)}")
+    rows.extend(nv_rows)
     if should_run("Nav"):
-        com_tasks.append((_worker_nav, nav_source_file, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("AE MEIC"):
-        com_tasks.append((_worker_ae_meic, ae_meic_source_file, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("O-Arm MEIC"):
-        com_tasks.append((_worker_oarm_meic, oarm_meic_source_file, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("Mazor"):
-        com_tasks.append((_worker_mazor, mazor_source_file, MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("CSF"):
-        com_tasks.append((_worker_csf, csf_source_file, CSF_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS US"):
-        com_tasks.append((_worker_pss_us, pss_us_source_file, PSS_US_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS MEIC"):
-        com_tasks.append((_worker_pss_meic, pss_meic_source_file, PSS__MEIC_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS MEIC Intern"):
-        com_tasks.append((_worker_pss_intern, pss_intern_source_file, PSS_MEIC_Intern_CFG, ALL_MONDAYS_SINCE_2025_06_02))
-    with ProcessPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fn, *args): fn.__name__ for fn, *args in com_tasks}
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                rows.extend(result)
-            except Exception as e:
-                print(f"Worker {futures[future]} failed: {e}")
-    nv_rows_filtered = [r for r in rows if r.get("team") == "NV"]
-    rows = [r for r in rows if r.get("team") != "NV"]
-    rows.extend(filter_rows_on_or_after(nv_rows_filtered, cutoff_dbs))
+        extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("ENT"):
+        try:
+            ent_name_note = apply_ent_name_replacements_to_sheet(
+                ent_mapping_xlsx,
+                sheet_name="Next Week Forecast",
+                start_row=2,
+                end_row=30,
+                name_col_letter="A",
+            )
+            logger.info(f"[ENT] {ent_name_note}")
+        except Exception as e:
+            logger.error(f"[ENT] Failed applying name replacements to mapping sheet: {e}")
         extend_team("ENT", lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     if should_run("DBS MEIC"):
         extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
     if should_run("SCS MEIC"):
         extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
     cos_rows = run_team(
+        logger,
         "TDD COS 1",
         lambda: (scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)),
     )
     cutoff_cos = date.fromisoformat("2025-06-02")
+    before = len(cos_rows)
     cos_rows = [r for r in cos_rows if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()]
+    logger.info(f"[TDD COS 1] filter >= {cutoff_cos.isoformat()}: {before} -> {len(cos_rows)}")
     rows.extend(cos_rows)
     scs_super_rows = run_team(
+        logger,
         "SCS Super Cell",
         lambda: (
             scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_OLD_CFG)
             + scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_NEW_CFG)
         ),
     )
+    logger.info(f"[SCS Super Cell] rows scraped (pre-filter): {len(scs_super_rows)}")
     cutoff_super = date.fromisoformat("2025-06-30")
+    before = len(scs_super_rows)
     scs_super_rows = [r for r in scs_super_rows if safe_str(r.get("period_date")) >= cutoff_super.isoformat()]
+    logger.info(f"[SCS Super Cell] filter >= {cutoff_super.isoformat()}: {before} -> {len(scs_super_rows)}")
     rows.extend(scs_super_rows)
+    before = len(meic_rows)
     meic_rows = [r for r in meic_rows if safe_str(r.get("period_date")) >= "2025-09-01"]
+    logger.info(f"[MEIC PH] filter >= 2025-09-01: {before} -> {len(meic_rows)}")
     rows.extend(meic_rows)
+    ph17_before = sum(1 for r in rows if r.get("team") == "PH Cell 17")
+    logger.info(f"[PH Cell 17] rows before TAA filter = {ph17_before}")
+    before = len(rows)
     rows = [
         r for r in rows
         if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine"))
         or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
+    logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")
+    ph17_after = sum(1 for r in rows if r.get("team") == "PH Cell 17")
+    logger.info(f"[PH Cell 17] rows after TAA filter = {ph17_after}")
+    logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell): {before} -> {len(rows)}")
     for bad in ("2023-11-06", "2026-09-07"):
+        before = len(rows)
         rows = [r for r in rows if safe_str(r.get("period_date")) != bad]
+        logger.info(f"[ALL] drop period_date == {bad}: {before} -> {len(rows)}")
     def sort_key(r: dict) -> tuple:
         team = safe_str(r.get("team")).lower()
         d = safe_str(r.get("period_date"))
@@ -3220,20 +3316,25 @@ def main():
         return (team, date_key)
     rows.sort(key=sort_key)
     write_csv(rows, out_file)
+    logger.info(f"Wrote {len(rows)} rows to {out_file}")
     wip_rows = build_ns_wip_rows(rows)
     wip_out_file = "NS_DATA\\NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
+    logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
+    excel_dir = os.path.dirname(os.path.abspath(wip_out_file))
     timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
     closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
     append_missing_placeholders_from_wip(
         wip_csv_path=wip_out_file,
         closures_csv_path=closures_path,
         timeliness_csv_path=timeliness_path,
+        logger=logger,
     )
     def apply_closures_timeliness_to_wip(
         wip_csv_path: str,
         closures_csv_path: str,
         timeliness_csv_path: str,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
         closures_rows = read_csv_rows(closures_csv_path)
         timeliness_rows = read_csv_rows(timeliness_csv_path)
@@ -3270,10 +3371,14 @@ def main():
             w.writeheader()
             for r in wip_rows:
                 w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
+        if logger:
+            logger.info(f"[POST] NS_WIP.csv updated with closures/timeliness for {updated} rows")
     apply_closures_timeliness_to_wip(
         wip_csv_path=wip_out_file,
         closures_csv_path=closures_path,
         timeliness_csv_path=timeliness_path,
+        logger=logger,
     )
+    logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
