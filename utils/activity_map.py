@@ -2316,6 +2316,8 @@ ACTIVITY_MAP = {
     "metrics, burndown meeting, schedule":"Admin",
     "computer issue": "IT Issue/Update",
     "email/teams requests rpa, audit":"Email & IM",
+    "scrum, training (letters And Wi update)":"Scrum & Action",
+    "stacy's email-temp sensor comm/inv":"Email & IM",
     "emails/teams questions/collaboration":"Email & IM",
     "us sr/rd shadowing":"Training/Mentoring",
     "metrics, meetings, schedule, email":"Admin",
