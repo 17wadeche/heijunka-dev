@@ -2,10 +2,9 @@
 import os
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(SCRIPT_DIR)
-LOG_FILE = os.path.join(SCRIPT_DIR, "run_all.log")
 PYTHON_BIN = sys.executable
 commands = [
     [PYTHON_BIN, "scrape_wip_iv.py", "--all"],
@@ -44,15 +43,8 @@ commands = [
     [PYTHON_BIN, "Scrape_wip_ns.py"],
     [PYTHON_BIN, "build_ns_non_wip_activities.py"],
 ]
-def log(msg: str) -> None:
-    line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
-    print(line)
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
 def run(cmd, *, cwd=None):
-    log(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd, cwd=cwd, check=True)
-    log(f"Finished: {' '.join(cmd)}")
 def has_git_changes(*, cwd=None) -> bool:
     r = subprocess.run(["git", "diff", "--quiet"], cwd=cwd)
     if r.returncode == 1:
@@ -62,20 +54,14 @@ def has_git_changes(*, cwd=None) -> bool:
 def main():
     repo_root = SCRIPT_DIR
     try:
-        log("=== Starting run_all.py ===")
         for cmd in commands:
             run(cmd, cwd=repo_root)
         run(["git", "add", "-A"], cwd=repo_root)
         if has_git_changes(cwd=repo_root):
             msg = f"Automated update ({date.today().isoformat()})"
             run(["git", "commit", "-m", msg], cwd=repo_root)
-            run(["git", "push"], cwd=repo_root)
-            log("Committed and pushed.")
-        else:
-            log("No git changes to commit. Skipping commit/push.")
-        log("All scripts completed successfully.")
+            run(["git", "push"], cwd=repo_root)        
     except subprocess.CalledProcessError as e:
-        log(f"Command failed (exit {e.returncode}): {e.cmd}")
         sys.exit(e.returncode)
 if __name__ == "__main__":
     main()
