@@ -287,6 +287,47 @@ def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
     finally:
         stop.set()
         t.join(timeout=1)
+def read_existing_metrics_rows(path: str) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", newline="", encoding="utf-8-sig") as f:
+            return list(csv.DictReader(f))
+    except Exception:
+        return []
+def load_ph_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    ph_source_file: str,
+    ph_new_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    ph_weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_ph_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "PH"
+    ]
+    frozen_ph_rows = [
+        r for r in existing_ph_rows
+        if safe_str(r.get("period_date")) not in ph_weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-09-01"
+    ]
+    cfg = dict(ph_new_cfg)
+    cfg["min_period_date"] = min(ph_weeks_to_refresh)
+    cfg["max_period_date"] = max(ph_weeks_to_refresh)
+    refreshed_ph_rows = scrape_workbook_with_config(ph_source_file, cfg)
+    refreshed_ph_rows = [
+        r for r in refreshed_ph_rows
+        if safe_str(r.get("period_date")) in ph_weeks_to_refresh
+    ]
+    merged_ph_rows = merge_rows_by_team_period(frozen_ph_rows + refreshed_ph_rows)
+    if logger:
+        logger.info(
+            f"[PH] loaded cached PH rows from NS_metrics: {len(existing_ph_rows)} | "
+            f"kept={len(frozen_ph_rows)} | refreshed={len(refreshed_ph_rows)} | "
+            f"final={len(merged_ph_rows)}"
+        )
+    return merged_ph_rows
 def run_team(logger: logging.Logger, team_name: str, fn):
     start = datetime.now()
     logger.info(f"[{team_name}] START")
@@ -856,6 +897,48 @@ def merge_rows_by_team_period(rows: list[dict]) -> list[dict]:
     out = list(merged.values())
     out.sort(key=lambda r: (safe_str(r.get("team")).lower(), safe_str(r.get("period_date"))))
     return out
+def monday_of_week(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+def iso_monday_weeks_back(today: Optional[date] = None, weeks_back: int = 2) -> list[str]:
+    if today is None:
+        today = date.today()
+    start = monday_of_week(today)
+    return [(start - timedelta(days=7 * i)).isoformat() for i in range(weeks_back + 1)]
+def refresh_ph_recent_3_weeks(
+    ph_source_file: str,
+    out_file: str,
+    ph_new_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    ph_recent_csv = os.path.join(
+        os.path.dirname(os.path.abspath(out_file)) or ".",
+        "ph_recent_rows.csv",
+    )
+    existing_recent = read_rows_csv(ph_recent_csv)
+    keep_weeks = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    frozen_recent = [
+        r for r in existing_recent
+        if safe_str(r.get("period_date")) not in keep_weeks
+    ]
+    cfg = dict(ph_new_cfg)
+    cfg["min_period_date"] = min(keep_weeks)
+    cfg["max_period_date"] = max(keep_weeks)
+    rescanned_recent = scrape_workbook_with_config(ph_source_file, cfg)
+    rescanned_recent = [
+        r for r in rescanned_recent
+        if safe_str(r.get("period_date")) in keep_weeks
+    ]
+    merged_recent = merge_rows_by_team_period(frozen_recent + rescanned_recent)
+    write_rows_csv(merged_recent, ph_recent_csv, HEADERS)
+    if logger:
+        logger.info(
+            f"[PH] refreshed only these weeks: {sorted(keep_weeks)} | "
+            f"kept_cached={len(frozen_recent)} | rescanned={len(rescanned_recent)} | "
+            f"recent_cache_total={len(merged_recent)}"
+        )
+    return merged_recent
+PH_HISTORY_MIN_DATE = "2025-09-01"
+PH_HISTORY_OLD_END = "2026-03-16"
 def freeze_ph_history_once(
     ph_source_file: str,
     out_file: str,
@@ -867,12 +950,18 @@ def freeze_ph_history_once(
         if logger:
             logger.info(f"[PH] history csv already exists: {ph_hist_csv}")
         return
-    old_rows = scrape_workbook_with_config(ph_source_file, ph_old_cfg)
-    old_rows = [r for r in old_rows if safe_str(r.get("period_date")) <= "2026-03-16"]
+    cfg = dict(ph_old_cfg)
+    cfg["min_period_date"] = PH_HISTORY_MIN_DATE
+    cfg["max_period_date"] = PH_HISTORY_OLD_END
+    old_rows = scrape_workbook_with_config(ph_source_file, cfg)
     old_rows = merge_rows_by_team_period(old_rows)
     write_rows_csv(old_rows, ph_hist_csv, HEADERS)
     if logger:
-        logger.info(f"[PH] froze {len(old_rows)} historical rows to {ph_hist_csv}")
+        logger.info(
+            f"[PH] froze {len(old_rows)} historical rows "
+            f"from {PH_HISTORY_MIN_DATE} to {PH_HISTORY_OLD_END} "
+            f"to {ph_hist_csv}"
+        )
 def _excel_col_range(start_col: str, end_col: str) -> list[int]:
     s = column_index_from_string(start_col)
     e = column_index_from_string(end_col)
@@ -3233,15 +3322,17 @@ def main():
             )
         )
     if should_run("PH"):
-        ph_hist_csv = _ph_history_csv_path(out_file)
-        freeze_ph_history_once(ph_source_file, out_file, PH_OLD_CFG, logger)
-        ph_hist_rows = read_rows_csv(ph_hist_csv)
-        ph_new_rows = run_team(
+        ph_rows = run_team(
             logger,
             "PH",
-            lambda: scrape_workbook_with_config(ph_source_file, PH_NEW_CFG)
+            lambda: load_ph_from_existing_metrics_and_refresh_3_weeks(
+                out_file,         # this is NS_metrics.csv
+                ph_source_file,
+                PH_NEW_CFG,
+                logger=logger,
+            )
         )
-        ph_rows = merge_rows_by_team_period(ph_hist_rows + ph_new_rows)
+
         rows.extend(ph_rows)
     if should_run("PH Cell 17"):
         extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
