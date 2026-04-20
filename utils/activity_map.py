@@ -2392,6 +2392,7 @@ ACTIVITY_MAP = {
     "nh training": "Training/Mentoring",
     "training nhs": "Training/Mentoring",
     "email/im":"Email & IM",
+    "scrum & after scrum call for literature review":"Scrum & Action",
     "ri temp handoff mtg":"RI",
     "career dev review":"Career Development",
     "next gen call recording": "Next Gen",
