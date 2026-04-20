@@ -130,7 +130,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Non-WIP Hours": v
             })
     out = pd.DataFrame(rows, columns=cols)
@@ -649,7 +649,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize() if pd.notna(pd.to_datetime(r["period_date"], errors="coerce")) else pd.NaT,
-                "person": str(person).strip(),
+                "person": normalize_person_name(str(person).strip()),
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
@@ -875,7 +875,7 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual": a,
                         "Target": t,
                     })
@@ -921,7 +921,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         "team": r["team"],
                         "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                         "cell_station": str(station).strip(),
-                        "person": str(person).strip(),
+                        "person": normalize_person_name(str(person).strip()),
                         "Actual Hours": a,
                         "Available Hours": np.nan,
                     })
@@ -937,7 +937,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                     "team": r["team"],
                     "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                     "cell_station": str(station).strip(),
-                    "person": str(person).strip(),
+                    "person": normalize_person_name(str(person).strip()),
                     "Actual Hours": a,
                     "Available Hours": t,
                 })
