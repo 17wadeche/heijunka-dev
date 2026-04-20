@@ -210,11 +210,13 @@ def _cached_excel_bytes(
     team_export_display: pd.DataFrame,
     ou_export_display: pd.DataFrame,
     portfolio_export_display: pd.DataFrame,
+    missing_teams_display: pd.DataFrame,
 ) -> bytes:
     return _excel_bytes_from_export_dfs(
         team_export_display,
         ou_export_display,
         portfolio_export_display,
+        missing_teams_display,
     )
 @dataclass(frozen=True)
 class TeamConfig:
@@ -226,6 +228,56 @@ class OrgConfig:
     org_name: str
     teams: List[TeamConfig]
     raw: Dict[str, Any]
+@st.cache_data(show_spinner=False)
+def _build_missing_team_weeks_df(
+    team_export: pd.DataFrame,
+    org: OrgConfig,
+    selected_weeks: list[pd.Timestamp] | None = None,
+) -> pd.DataFrame:
+    if org is None or not org.teams:
+        return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
+    enabled_teams = [t for t in org.teams if t.enabled] or org.teams
+    team_meta = _team_meta_lookup(org).copy()
+    weeks = []
+    if selected_weeks:
+        weeks = [pd.Timestamp(w).normalize() for w in selected_weeks if pd.notna(w)]
+    elif team_export is not None and not team_export.empty and "week_start" in team_export.columns:
+        weeks = sorted(
+            pd.to_datetime(team_export["week_start"], errors="coerce").dropna().dt.normalize().unique()
+        )
+    if not weeks:
+        return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
+    expected = pd.MultiIndex.from_product(
+        [weeks, [t.name for t in enabled_teams]],
+        names=["week_start", "team"],
+    ).to_frame(index=False)
+    actual = pd.DataFrame(columns=["week_start", "team"])
+    if team_export is not None and not team_export.empty:
+        actual = team_export.loc[:, ["week_start", "team"]].copy()
+        actual["week_start"] = pd.to_datetime(actual["week_start"], errors="coerce").dt.normalize()
+        actual["team"] = actual["team"].astype(str).str.strip()
+        actual = actual.dropna(subset=["week_start", "team"]).drop_duplicates()
+    missing = (
+        expected
+        .merge(actual.assign(_present=1), on=["week_start", "team"], how="left")
+        .loc[lambda d: d["_present"].isna(), ["week_start", "team"]]
+        .merge(team_meta, on="team", how="left")
+        .sort_values(["week_start", "portfolio", "ou", "team"])
+        .reset_index(drop=True)
+    )
+    if missing.empty:
+        return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
+    missing["Status"] = "Missing weekly data"
+    missing = missing.rename(
+        columns={
+            "week_start": "Week Start",
+            "team": "Team",
+            "portfolio": "Portfolio",
+            "ou": "OU",
+        }
+    )
+    missing["Week Start"] = pd.to_datetime(missing["Week Start"], errors="coerce").dt.date
+    return missing
 def _coerce_bool(v: Any, default: bool = True) -> bool:
     if v is None:
         return default
@@ -1566,6 +1618,7 @@ def _excel_bytes_from_export_dfs(
     team_df: pd.DataFrame,
     ou_df: pd.DataFrame,
     portfolio_df: pd.DataFrame,
+    missing_teams_df: pd.DataFrame,
 ) -> bytes:
     last_err = None
     for engine in ("xlsxwriter", "openpyxl"):
@@ -1576,12 +1629,17 @@ def _excel_bytes_from_export_dfs(
                     ("Team Weekly", team_df),
                     ("OU Weekly", ou_df),
                     ("Portfolio Weekly", portfolio_df),
+                    ("Missing Teams", missing_teams_df),
                 ]
                 for sheet_name, df in sheets:
-                    df.to_excel(writer, index=False, sheet_name=sheet_name)
+                    if df is None:
+                        continue
+                    safe_name = _safe_sheet_name(sheet_name)
+                    df.to_excel(writer, index=False, sheet_name=safe_name)
                 if engine == "xlsxwriter":
-                    for sheet_name, df in sheets:
-                        _apply_over_100_outline_xlsxwriter(writer, sheet_name, df)
+                    for sheet_name, df in sheets[:3]:
+                        if df is not None and not df.empty:
+                            _apply_over_100_outline_xlsxwriter(writer, _safe_sheet_name(sheet_name), df)
             buf.seek(0)
             return buf.getvalue()
         except Exception as e:
@@ -2121,11 +2179,13 @@ elif page == "Non-WIP":
 elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
-        shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,  # ← new
+        shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
     )
     export_scope_df = team_export.copy()
     export_filter_col = "team"
     export_filter_label = "Team"
+    export_filter_level = "Team"
+    export_selected_weeks = []
     if not team_export.empty:
         export_filter_card = st.container(border=True)
         with export_filter_card:
@@ -2190,6 +2250,11 @@ elif page == "Export":
             ].copy()
         else:
             export_scope_df = export_scope_df.iloc[0:0].copy()
+    missing_teams_display = _build_missing_team_weeks_df(
+        team_export=team_export,
+        org=org,
+        selected_weeks=export_selected_weeks,
+    )
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
             "portfolio": "Portfolio",
@@ -2224,7 +2289,7 @@ elif page == "Export":
         out = _append_export_alert_column(out, pct_col="Unaccounted %", alert_col_name="")
         if "Week Start" in out.columns:
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-        leading_cols = [c for c in ["", "team", "ou", "portfolio", "Week Start"] if c in out.columns]
+        leading_cols = [c for c in ["", "Team", "OU", "Portfolio", "Week Start"] if c in out.columns]
         remaining_cols = [c for c in out.columns if c not in leading_cols]
         out = out[leading_cols + remaining_cols]
         fmt = {}
@@ -2403,11 +2468,21 @@ elif page == "Export":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(export_scope_df)
+            st.markdown("#### Teams missing weekly data")
+            if missing_teams_display.empty:
+                st.success("No missing teams for the selected week(s).")
+            else:
+                st.dataframe(
+                    missing_teams_display,
+                    use_container_width=True,
+                    hide_index=True,
+                )
             try:
                 xlsx_bytes = _cached_excel_bytes(
                     team_export_display,
                     ou_export_display,
                     portfolio_export_display,
+                    missing_teams_display,
                 )
                 st.download_button(
                     label="Download Excel export",
