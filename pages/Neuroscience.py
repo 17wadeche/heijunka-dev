@@ -3227,10 +3227,6 @@ with right2:
                 week_hours=40.0,
                 irl_people=irl_lookup.get(team, set()),
             )
-            if team == "PSS":
-                pass
-            elif team_nw == "PSS" and "pss_group" in st.session_state:
-                pass
             if wk_people.empty:
                 continue
             wk_people = wk_people.copy()
