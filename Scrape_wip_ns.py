@@ -820,6 +820,55 @@ def write_csv(rows: list, out_path: str) -> None:
         w.writeheader()
         for r in rows:
             w.writerow({h: r.get(h, "") for h in HEADERS})
+def _ph_history_csv_path(out_file: str) -> str:
+    out_dir = os.path.dirname(os.path.abspath(out_file)) or "."
+    return os.path.join(out_dir, "ph_historical_rows.csv")
+def read_rows_csv(path: str) -> list[dict]:
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", newline="", encoding="utf-8-sig") as f:
+            return list(csv.DictReader(f))
+    except Exception:
+        return []
+def write_rows_csv(rows: list[dict], out_path: str, fieldnames: list[str]) -> None:
+    out_dir = os.path.dirname(os.path.abspath(out_path)) or "."
+    tmp_path = os.path.join(out_dir, f".{os.path.basename(out_path)}.tmp")
+    try:
+        with open(tmp_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            w.writeheader()
+            for r in rows:
+                w.writerow({h: r.get(h, "") for h in fieldnames})
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, out_path)
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+def merge_rows_by_team_period(rows: list[dict]) -> list[dict]:
+    merged: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        key = (safe_str(r.get("team")), safe_str(r.get("period_date")))
+        merged[key] = r
+    out = list(merged.values())
+    out.sort(key=lambda r: (safe_str(r.get("team")).lower(), safe_str(r.get("period_date"))))
+    return out
+def freeze_ph_history_once(ph_source_file: str, out_file: str, logger: Optional[logging.Logger] = None) -> None:
+    ph_hist_csv = _ph_history_csv_path(out_file)
+    if os.path.exists(ph_hist_csv):
+        if logger:
+            logger.info(f"[PH] history csv already exists: {ph_hist_csv}")
+        return
+    old_rows = scrape_workbook_with_config(ph_source_file, PH_OLD_CFG)
+    old_rows = [r for r in old_rows if safe_str(r.get("period_date")) <= "2026-03-16"]
+    old_rows = merge_rows_by_team_period(old_rows)
+    write_rows_csv(old_rows, ph_hist_csv, HEADERS)
+    if logger:
+        logger.info(f"[PH] froze {len(old_rows)} historical rows to {ph_hist_csv}")
 def _excel_col_range(start_col: str, end_col: str) -> list[int]:
     s = column_index_from_string(start_col)
     e = column_index_from_string(end_col)
@@ -3180,12 +3229,16 @@ def main():
             )
         )
     if should_run("PH"):
-        extend_team(
+        ph_hist_csv = _ph_history_csv_path(out_file)
+        freeze_ph_history_once(ph_source_file, out_file, logger)
+        ph_hist_rows = read_rows_csv(ph_hist_csv)
+        ph_new_rows = run_team(
+            logger,
             "PH",
-            lambda:
-                scrape_workbook_with_config(ph_source_file, PH_OLD_CFG)
-                + scrape_workbook_with_config(ph_source_file, PH_NEW_CFG)
+            lambda: scrape_workbook_with_config(ph_source_file, PH_NEW_CFG)
         )
+        ph_rows = merge_rows_by_team_period(ph_hist_rows + ph_new_rows)
+        rows.extend(ph_rows)
     if should_run("PH Cell 17"):
         extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
     if should_run("SCS Cell 1"):
