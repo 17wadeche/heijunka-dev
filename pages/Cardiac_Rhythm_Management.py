@@ -47,6 +47,7 @@ def load_team_config(config_path: str | None = None) -> dict:
 NAME_ALIASES = {
     "-": "-",
     "peter mchugh": "Peter McHugh",
+    "peter mc hugh": "Peter McHugh",
 }
 def normalize_person_name(name: str) -> str:
     s = str(name or "")
