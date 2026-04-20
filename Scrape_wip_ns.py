@@ -768,7 +768,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
         team = cfg["team"]
         key = (team, period_date)
-        period_date = date_parser(ws.title)
         open_complaint_timeliness = ""
         closures = ""
         opened = ""
