@@ -56,7 +56,20 @@ def normalize_person_name(name: str) -> str:
     s = s.replace("\u00a0", " ")
     s = re.sub(r"\s+", " ", s).strip()
     key = s.casefold()
-    return NAME_ALIASES.get(key, s)
+    if key in NAME_ALIASES:
+        return NAME_ALIASES[key]
+    def _title_token(t: str) -> str:
+        if not t:
+            return t
+        for prefix in ("mc", "mac"):
+            if t.lower().startswith(prefix) and len(t) > len(prefix):
+                return prefix.capitalize() + t[len(prefix):].capitalize()
+        return t.capitalize()
+    tokens = s.split(" ")
+    normalized = " ".join(_title_token(t) for t in tokens)
+    if normalized.casefold() in NAME_ALIASES:
+        return NAME_ALIASES[normalized.casefold()]
+    return normalized
 def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(config, dict):
         return set()
