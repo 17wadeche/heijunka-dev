@@ -856,13 +856,18 @@ def merge_rows_by_team_period(rows: list[dict]) -> list[dict]:
     out = list(merged.values())
     out.sort(key=lambda r: (safe_str(r.get("team")).lower(), safe_str(r.get("period_date"))))
     return out
-def freeze_ph_history_once(ph_source_file: str, out_file: str, logger: Optional[logging.Logger] = None) -> None:
+def freeze_ph_history_once(
+    ph_source_file: str,
+    out_file: str,
+    ph_old_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> None:
     ph_hist_csv = _ph_history_csv_path(out_file)
     if os.path.exists(ph_hist_csv):
         if logger:
             logger.info(f"[PH] history csv already exists: {ph_hist_csv}")
         return
-    old_rows = scrape_workbook_with_config(ph_source_file, PH_OLD_CFG)
+    old_rows = scrape_workbook_with_config(ph_source_file, ph_old_cfg)
     old_rows = [r for r in old_rows if safe_str(r.get("period_date")) <= "2026-03-16"]
     old_rows = merge_rows_by_team_period(old_rows)
     write_rows_csv(old_rows, ph_hist_csv, HEADERS)
@@ -3229,7 +3234,7 @@ def main():
         )
     if should_run("PH"):
         ph_hist_csv = _ph_history_csv_path(out_file)
-        freeze_ph_history_once(ph_source_file, out_file, logger)
+        freeze_ph_history_once(ph_source_file, out_file, PH_OLD_CFG, logger)
         ph_hist_rows = read_rows_csv(ph_hist_csv)
         ph_new_rows = run_team(
             logger,
