@@ -1256,3 +1256,18 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-20 14:50:37,018 | INFO | [SCS Cell 1] still running...
 2026-04-20 14:51:08,596 | INFO | [SCS Cell 1] DONE | rows=286 | elapsed=0:27:31.739277
 2026-04-20 14:51:08,596 | INFO | [MEIC PH] START
+2026-04-20 14:54:08,624 | INFO | [MEIC PH] still running...
+2026-04-20 14:56:06,582 | INFO | [MEIC PH] DONE | rows=90 | elapsed=0:04:57.985399
+2026-04-20 14:56:06,582 | INFO | [DBS C13] START
+2026-04-20 14:56:31,993 | INFO | [DBS C13] DONE | rows=5 | elapsed=0:00:25.411651
+2026-04-20 14:56:31,996 | INFO | [DBS C13] filter >= 2025-07-07: 5 -> 5
+2026-04-20 14:56:32,000 | INFO | [DBS C14] START
+2026-04-20 14:57:01,394 | INFO | [DBS C14] DONE | rows=5 | elapsed=0:00:29.394586
+2026-04-20 14:57:01,394 | INFO | [DBS C14] filter >= 2025-07-07: 5 -> 5
+2026-04-20 14:57:01,394 | INFO | [NV] START
+2026-04-20 15:00:01,410 | INFO | [NV] still running...
+2026-04-20 15:00:15,506 | INFO | [NV] DONE | rows=47 | elapsed=0:03:14.111999
+2026-04-20 15:00:15,507 | INFO | [NV] filter >= 2025-07-07: 47 -> 42
+2026-04-20 15:00:15,507 | INFO | [Nav] START
+2026-04-20 15:03:15,520 | INFO | [Nav] still running...
+2026-04-20 15:06:15,524 | INFO | [Nav] still running...
