@@ -2997,6 +2997,11 @@ with right2:
     _nw = load_non_wip()
     teams_cfg = load_team_config()
     irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
+    def canonical_person_label(name: str) -> str:
+        s = normalize_person_name(name)
+        s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
     mix_rows = []
     nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
     if not nw_sub.empty:
@@ -3018,11 +3023,23 @@ with right2:
             if wk_people.empty:
                 continue
             wk_people = wk_people.copy()
+            wk_people["person"] = wk_people["person"].map(canonical_person_label)
             wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
             wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
             wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
             wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people = (
+                wk_people.groupby(["team", "period_date", "person"], as_index=False)
+                .agg({
+                    "WIP": "sum",
+                    "Other Team WIP": "sum",
+                    "Non-WIP": "sum",
+                    "OOO": "sum",
+                    "Unaccounted": "sum",
+                    "Expected Hours": "max",
+                })
+            )
             wk_people["Denom"] = (
                 wk_people["WIP"]
                 + wk_people["Other Team WIP"]
@@ -3070,6 +3087,7 @@ with right2:
         week_mix = person_mix[
             person_mix["period_date"] == pd.to_datetime(picked_mix_week).normalize()
         ].copy()
+        
         chosen_mix_teams = []
         if multi_team:
             teams_present = sorted(week_mix["team"].dropna().unique().tolist())
