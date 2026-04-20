@@ -7,6 +7,8 @@ import numpy as np
 import streamlit as st
 import altair as alt
 import json
+import re
+import unicodedata
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
@@ -235,10 +237,19 @@ NAME_ALIASES = {
     "goutham kumar, p":"P Goutham Kumar",
 }
 def normalize_person_name(name: str) -> str:
-    s = str(name or "").strip()
-    s = " ".join(s.split())
+    s = str(name or "")
+    s = unicodedata.normalize("NFKC", s)
+    s = s.replace("\u00A0", " ")  # non-breaking space
+    s = " ".join(s.split()).strip()
     key = s.lower()
-    return NAME_ALIASES.get(key, s)
+    key = re.sub(r"[^\w\s]", "", key)   # remove punctuation
+    key = " ".join(key.split())
+    aliases = {
+        "jacob": "Jacob Woolley",
+        "jacob g": "Jacob Geraghty",
+        "jacob geraghty": "Jacob Geraghty",
+    }
+    return aliases.get(key, s)
 PSS_GROUPS = {
     "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
     "MEIC": set(),  # computed as everyone else in PSS
