@@ -1660,55 +1660,6 @@ if nonwip_mode:
                         )
                     )
                     st.altair_chart(act_chart, use_container_width=True)
-    st.markdown("#### Team Trends")
-    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date").copy()
-    if team_nw == "PSS" and pss_group:
-        team_hist = team_hist.apply(
-            lambda r: metric_row_filtered_to_group(r, team_nw, pss_group),
-            axis=1,
-        )
-        if "non_wip_by_person" in team_hist.columns:
-            team_hist["total_non_wip_hours"] = team_hist["non_wip_by_person"].apply(
-                lambda x: sum((json.loads(x) if isinstance(x, str) else x).values())
-                if x not in ("", None) and isinstance((json.loads(x) if isinstance(x, str) else x), dict)
-                else 0.0
-            )
-        if "people_count" in team_hist.columns and "non_wip_by_person" in team_hist.columns:
-            team_hist["people_count"] = team_hist["non_wip_by_person"].apply(
-                lambda x: len(json.loads(x)) if isinstance(x, str) and x not in ("", None) else (len(x) if isinstance(x, dict) else 0)
-            )
-    if not team_hist.empty:
-        t1, t2 = st.columns(2)
-        with t1:
-            ch1 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
-                    ],
-                )
-                .properties(height=240, title="Total Non-WIP Hours")
-            )
-            st.altair_chart(ch1, use_container_width=True)
-        with t2:
-            ch2 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
-                    ],
-                )
-                .properties(height=240, title="% Non-WIP")
-            )
-            st.altair_chart(ch2, use_container_width=True)
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
