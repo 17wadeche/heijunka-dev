@@ -197,6 +197,7 @@ NAME_ALIASES = {
     "mirlay morin": "Mirlay",
     "nikita schazenbach": "Nikita",
     "jacob": "Jacob Woolley",
+    "jacob g": "Jacob Geraghty",
     "madison moeller": "Madison",
     "pavani uppari":"Uppari Pavani",
     "s, prabhu":"Prabhu S",
