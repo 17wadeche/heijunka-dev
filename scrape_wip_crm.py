@@ -93,15 +93,23 @@ def compute_period_date_cds(ws_metrics: Worksheet) -> Optional[_dt.date]:
         return None
     return d - _dt.timedelta(days=4)
 def compute_total_available_hours_cds(ws_wip_plan: Worksheet) -> Optional[float]:
-    return _cell_number(ws_wip_plan["CQ3"].value)
+    return _cell_number(ws_wip_plan["CW3"].value)
+def _cds_use_r_layout(ws_perf: Worksheet) -> bool:
+    for r in range(5, 11):
+        if _cell_number(ws_perf[f"AA{r}"].value) is not None:
+            return False
+    return True
 def compute_completed_hours_cds(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    total = _cell_number(ws_perf["R11"].value)
+    use_r_layout = _cds_use_r_layout(ws_perf)
+    total_col = "AB" if not use_r_layout else "R"
+    actual_col = "AB" if not use_r_layout else "R"
+    total = _cell_number(ws_perf[f"{total_col}11"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
     for r in range(5, 11):
         person = ws_perf[f"A{r}"].value
-        actual = _cell_number(ws_perf[f"R{r}"].value)
+        actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
@@ -111,10 +119,12 @@ def compute_completed_hours_cds(ws_perf: Worksheet) -> Tuple[Optional[float], Di
             people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_cds(ws_perf: Worksheet) -> Dict[str, float]:
+    use_r_layout = _cds_use_r_layout(ws_perf)
+    available_col = "AA" if not use_r_layout else "R"
     out: Dict[str, float] = {}
     for r in range(5, 11):
         person = ws_perf[f"A{r}"].value
-        available = _cell_number(ws_perf[f"Q{r}"].value)
+        available = _cell_number(ws_perf[f"{available_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
