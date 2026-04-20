@@ -1191,3 +1191,11 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-20 10:53:05,662 | INFO | === NS Metrics Run START ===
 2026-04-20 10:53:05,663 | INFO | Selected team: all
 2026-04-20 10:53:05,670 | INFO | [Spine] START
+2026-04-20 11:05:15,292 | INFO | === NS Metrics Run START ===
+2026-04-20 11:05:15,292 | INFO | Selected team: all
+2026-04-20 11:05:15,294 | INFO | [Spine] START
+2026-04-20 11:07:19,817 | INFO | [Spine] DONE | rows=34 | elapsed=0:02:04.520676
+2026-04-20 11:07:19,824 | INFO | [Spine] START
+2026-04-20 11:08:16,880 | INFO | [Spine] DONE | rows=6 | elapsed=0:00:57.055762
+2026-04-20 11:08:16,880 | INFO | [PH] START
+2026-04-20 11:11:16,888 | INFO | [PH] still running...
