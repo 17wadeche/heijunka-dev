@@ -2384,6 +2384,7 @@ ACTIVITY_MAP = {
     "admin 30":"Admin",
     "liberant discussion with fola":"Collaboration",
     "fwt: dhr sort for aged missing return":"Metrics & Schedule",
+    "and quality meeting":"Meeting",
     "/request for affera monitoring":"WIP/Event Review",
     "on training prep": "Training/Mentoring",
     "affera question":"Question",
