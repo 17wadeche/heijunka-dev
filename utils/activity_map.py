@@ -2398,6 +2398,7 @@ ACTIVITY_MAP = {
     "_ performed merge on pe": "WIP/Event Review",
     "and pe": "WIP/Event Review",
     "training nhs": "Training/Mentoring",
+    "training call with ruth": "Training/Mentoring",
     "email/im":"Email & IM",
     "scrum & after scrum call for literature review":"Scrum & Action",
     "ri temp handoff mtg":"RI",
