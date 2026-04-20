@@ -249,6 +249,7 @@ def normalize_person_name(name: str) -> str:
         "nikita schazenbach": "Nikita",
         "jacob": "Jacob Woolley",
         "jacob g": "Jacob Geraghty",
+        "jake": "Jacob Geraghty",
         "madison moeller": "Madison",
         "pavani uppari":"Uppari Pavani",
         "s, prabhu":"Prabhu S",
