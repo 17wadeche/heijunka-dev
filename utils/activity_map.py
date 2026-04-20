@@ -2392,6 +2392,8 @@ ACTIVITY_MAP = {
     "ai bootcamp": "Training/Mentoring",
     "nh training": "Training/Mentoring",
     "investigation for parker event": "WIP/Event Review",
+    "parklife event": "WIP/Event Review",
+    "open wip review": "WIP/Event Review",
     "and cancelled reports for pe": "WIP/Event Review",
     "_ performed merge on pe": "WIP/Event Review",
     "and pe": "WIP/Event Review",
