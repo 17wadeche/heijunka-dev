@@ -238,13 +238,18 @@ def _build_missing_team_weeks_df(
         return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
     enabled_teams = [t for t in org.teams if t.enabled] or org.teams
     team_meta = _team_meta_lookup(org).copy()
+    min_missing_week = pd.Timestamp("2026-04-13").normalize()
     weeks = []
     if selected_weeks:
         weeks = [pd.Timestamp(w).normalize() for w in selected_weeks if pd.notna(w)]
     elif team_export is not None and not team_export.empty and "week_start" in team_export.columns:
         weeks = sorted(
-            pd.to_datetime(team_export["week_start"], errors="coerce").dropna().dt.normalize().unique()
+            pd.to_datetime(team_export["week_start"], errors="coerce")
+            .dropna()
+            .dt.normalize()
+            .unique()
         )
+    weeks = [w for w in weeks if w >= min_missing_week]
     if not weeks:
         return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
     expected = pd.MultiIndex.from_product(
@@ -256,7 +261,9 @@ def _build_missing_team_weeks_df(
         actual = team_export.loc[:, ["week_start", "team"]].copy()
         actual["week_start"] = pd.to_datetime(actual["week_start"], errors="coerce").dt.normalize()
         actual["team"] = actual["team"].astype(str).str.strip()
-        actual = actual.dropna(subset=["week_start", "team"]).drop_duplicates()
+        actual = actual[
+            actual["week_start"].notna() & (actual["week_start"] >= min_missing_week)
+        ].dropna(subset=["week_start", "team"]).drop_duplicates()
     missing = (
         expected
         .merge(actual.assign(_present=1), on=["week_start", "team"], how="left")
