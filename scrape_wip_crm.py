@@ -900,16 +900,22 @@ def _iter_rows_ds_pab(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[i
         yield (r, p, cat, cs, target, hours_i, actual_j)
 def compute_total_available_hours_ds(ws_wip_plan: Worksheet) -> Optional[float]:
     return _cell_number(ws_wip_plan["EG3"].value)
+def _ds_use_r_layout(ws_perf: Worksheet) -> bool:
+    for r in range(5, 46):
+        if _cell_number(ws_perf[f"AA{r}"].value) is not None:
+            return False
+    return True
 def compute_completed_hours_ds(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    total = _cell_number(ws_perf["R46"].value)
-    if total is None or total == 0:
-        total = _cell_number(ws_perf["AB46"].value)
+    use_r_layout = _ds_use_r_layout(ws_perf)
+    total_col = "R" if use_r_layout else "AB"
+    actual_col = "R" if use_r_layout else "AB"
+    total = _cell_number(ws_perf[f"{total_col}46"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
     for r in range(5, 46):
         person = ws_perf[f"A{r}"].value
-        actual = _cell_number(ws_perf[f"AB{r}"].value)
+        actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
@@ -919,10 +925,12 @@ def compute_completed_hours_ds(ws_perf: Worksheet) -> Tuple[Optional[float], Dic
             people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_ds(ws_perf: Worksheet) -> Dict[str, float]:
+    use_r_layout = _ds_use_r_layout(ws_perf)
+    available_col = "R" if use_r_layout else "AA"
     out: Dict[str, float] = {}
     for r in range(5, 46):
         person = ws_perf[f"A{r}"].value
-        available = _cell_number(ws_perf[f"AA{r}"].value)
+        available = _cell_number(ws_perf[f"{available_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
