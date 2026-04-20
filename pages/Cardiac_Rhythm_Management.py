@@ -3085,13 +3085,8 @@ with right2:
             key="time_mix_week_right2",
         )
         week_mix = person_mix[
-            pd.to_datetime(person_mix["period_date"], errors="coerce").dt.normalize() == sel_week
+            person_mix["period_date"] == pd.to_datetime(picked_mix_week).normalize()
         ].copy()
-        week_mix["person"] = week_mix["person"].map(canonical_person_label)
-        week_mix = (
-            week_mix.groupby(["period_date", "person", "Category"], as_index=False)
-            .agg({"Hours": "sum"})
-        )
         chosen_mix_teams = []
         if multi_team:
             teams_present = sorted(week_mix["team"].dropna().unique().tolist())
