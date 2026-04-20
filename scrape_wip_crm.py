@@ -1000,7 +1000,7 @@ def compute_completed_hours_cpt(ws_perf: Worksheet) -> Tuple[Optional[float], Di
     seen = set()
     for r in range(5, 52):
         person = ws_perf[f"A{r}"].value
-        actual = _cell_number(ws_perf[f"R{r}"].value)
+        actual = _cell_number(ws_perf[f"AB{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
@@ -1013,7 +1013,7 @@ def compute_person_available_hours_cpt(ws_perf: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for r in range(5, 52):
         person = ws_perf[f"A{r}"].value
-        available = _cell_number(ws_perf[f"Q{r}"].value)
+        available = _cell_number(ws_perf[f"AA{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
