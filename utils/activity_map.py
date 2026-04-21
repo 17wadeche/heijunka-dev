@@ -169,7 +169,7 @@ ACTIVITY_MAP = {
     "chem ordering calls (with sean)":"Shipment",
     "rdn - thermocouple testing for capa":"CAPA",
     "recording it issue":"IT Issue/Update",
-    "deco document reading
+    "deco document reading":"Reading File/Document Information",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
     "training on intake": "Training/Mentoring",
     "practiciting loading harmony valve": "Training/Mentoring",
