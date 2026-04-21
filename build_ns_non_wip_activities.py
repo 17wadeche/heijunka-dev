@@ -32,6 +32,68 @@ def _meic_team_for_person(name: str) -> Optional[str]:
     if nm in DBS_MEIC_NAMES or nm in PH_MEIC_NAMES or nm in SCS_MEIC_NAMES:
         return "PH-NM MEIC"
     return None
+def _freeze_missing_past_weeks(
+    fresh_df: pd.DataFrame,
+    cache_path: Path,
+    *,
+    key_cols: list[str] = ["team", "period_date"],
+) -> pd.DataFrame:
+    fresh = fresh_df.copy()
+    if fresh.empty:
+        if cache_path.exists():
+            try:
+                cached = load_csv(cache_path)
+                if "period_date" in cached.columns:
+                    cached["period_date"] = pd.to_datetime(
+                        cached["period_date"], errors="coerce"
+                    ).dt.normalize()
+                return cached
+            except Exception:
+                return fresh
+        return fresh
+    if "period_date" in fresh.columns:
+        fresh["period_date"] = pd.to_datetime(
+            fresh["period_date"], errors="coerce"
+        ).dt.normalize()
+    if not cache_path.exists():
+        return fresh
+    try:
+        cached = load_csv(cache_path)
+    except Exception as e:
+        print(f"[WARN] Could not read cache file {cache_path}: {e}", flush=True)
+        return fresh
+    if cached.empty:
+        return fresh
+    if "period_date" in cached.columns:
+        cached["period_date"] = pd.to_datetime(
+            cached["period_date"], errors="coerce"
+        ).dt.normalize()
+    for col in fresh.columns:
+        if col not in cached.columns:
+            cached[col] = ""
+    for col in cached.columns:
+        if col not in fresh.columns:
+            fresh[col] = ""
+    cached = cached[fresh.columns].copy()
+    today = pd.Timestamp.today().normalize()
+    cached_past = cached[cached["period_date"].notna() & (cached["period_date"] <= today)].copy()
+    merged = pd.concat([cached_past, fresh], ignore_index=True, sort=False)
+    if "team" in merged.columns:
+        merged["team"] = merged["team"].astype(str).str.strip()
+        merged = merged[merged["team"] != ""].copy()
+    if "period_date" in merged.columns:
+        merged["period_date"] = pd.to_datetime(
+            merged["period_date"], errors="coerce"
+        ).dt.normalize()
+        merged = merged[merged["period_date"].notna()].copy()
+    merged = merged.drop_duplicates(subset=key_cols, keep="last")
+    merged = merged.sort_values(key_cols).reset_index(drop=True)
+    print(
+        f"[CACHE FREEZE] {cache_path.name}: "
+        f"fresh_rows={len(fresh_df)} merged_rows={len(merged)}",
+        flush=True,
+    )
+    return merged
 def build_pss_intern_capacity_row(
     team: str,
     ws: pd.DataFrame,
@@ -2709,6 +2771,7 @@ def main():
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     split_combined = combined.copy()
+    split_combined = _freeze_missing_past_weeks(split_combined, OUT_SPLIT_PATH)
     split_combined.to_csv(OUT_SPLIT_PATH, index=False, encoding="utf-8-sig")
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
@@ -2751,6 +2814,7 @@ def main():
             flush=True,
         )
         combined = combined.drop(columns=["_team_key"])
+    combined = _freeze_missing_past_weeks(combined, OUT_PATH)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
     main()
