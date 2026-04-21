@@ -966,11 +966,14 @@ def scrape_csf_previous_weeks_with_config(
             actual_uplh = safe_div(actual_output, completed_hours)
             uplh_wp1 = safe_float(_range_val(ws, cfg["cells"]["uplh_wp1"]))
             uplh_wp2 = safe_float(_range_val(ws, cfg["cells"]["uplh_wp2"]))
-            hc_row = cfg["rows"]["hc_row"]
+            rows_cfg = cfg.get("rows", {})
+            team_name = cfg.get("team", "CSF")
+            hc_row = rows_cfg.get("hc_row", rows_cfg.get("person_actual_row_for_person_hours"))
             hc_in_wip = 0
-            for c in cols:
-                if safe_float(_cell_val(ws, hc_row, c)) != 0.0:
-                    hc_in_wip += 1
+            if hc_row:
+                for c in cols:
+                    if safe_float(_cell_val(ws, hc_row, c)) != 0.0:
+                        hc_in_wip += 1
             actual_hc_used = safe_div(completed_hours, 32.5)
             person_hours: Dict[str, Dict[str, float]] = {}
             name_row_ph = cfg["rows"]["person_name_row_for_person_hours"]
@@ -984,22 +987,26 @@ def scrape_csf_previous_weeks_with_config(
                 available = safe_float(_cell_val(ws, avail_row_ph, c))
                 person_hours[name] = {"actual": actual, "available": available}
             outputs_by_person: Dict[str, Dict[str, float]] = {}
-            name_row_op = cfg["rows"]["person_name_row_for_outputs_by_person"]
-            target_row_op = cfg["rows"]["person_target_row_for_outputs_by_person"]
-            output_spec = cfg["outputs_by_person_output"]
-            for c in cols:
-                name = safe_str(_cell_val(ws, name_row_op, c))
-                if not name:
-                    continue
-                if output_spec["type"] == "row":
-                    output_val = safe_float(_cell_val(ws, output_spec["row"], c))
-                elif output_spec["type"] == "sum_rows":
-                    output_val = sum(safe_float(_cell_val(ws, r, c)) for r in output_spec["rows"])
-                else:
-                    output_val = 0.0
-                target_val = safe_float(_cell_val(ws, target_row_op, c))
-                if output_val != 0.0 or target_val != 0.0:
-                    outputs_by_person[name] = {"output": output_val, "target": target_val}
+            name_row_op = rows_cfg.get("person_name_row_for_outputs_by_person")
+            target_row_op = rows_cfg.get("person_target_row_for_outputs_by_person")
+            output_spec = cfg.get("outputs_by_person_output")
+            if name_row_op and target_row_op and output_spec:
+                for c in cols:
+                    name = safe_str(_cell_val(ws, name_row_op, c))
+                    if not name:
+                        continue
+                    if output_spec.get("type") == "row":
+                        output_val = safe_float(_cell_val(ws, output_spec["row"], c))
+                    elif output_spec.get("type") == "sum_rows":
+                        output_val = sum(
+                            safe_float(_cell_val(ws, r, c))
+                            for r in output_spec.get("rows", [])
+                        )
+                    else:
+                        output_val = 0.0
+                    target_val = safe_float(_cell_val(ws, target_row_op, c))
+                    if output_val != 0.0 or target_val != 0.0:
+                        outputs_by_person[name] = {"output": output_val, "target": target_val}
             outputs_by_cell = {
                 "WP1": {"output": wp1_out, "target": wp1_tgt},
                 "WP2": {"output": wp2_out, "target": wp2_tgt},
@@ -1057,7 +1064,7 @@ def scrape_csf_previous_weeks_with_config(
                 f"completed_hours={completed_hours!r}"
             )
             rows_out.append({
-                "team": cfg["team"],
+                "team": team_name,
                 "period_date": period_date,
                 "source_file": os.path.abspath(os.path.expandvars(source_file)),
                 "Total Available Hours": total_available_hours,
