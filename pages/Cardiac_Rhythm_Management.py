@@ -1191,8 +1191,8 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    teams_cfg = load_team_config()
-    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
+    team_week_hours = 39.0 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
     _ppl_hours_kpi = explode_person_hours(df)
     _ppl_in_wip_kpi = explode_people_in_wip(df)
     people_count_merged = merged_people_count_for_week(
@@ -1208,17 +1208,15 @@ if nonwip_mode:
         nw_row=row,
         metrics_frame=df,
         nw_frame=nw,
-        week_hours=40.0,
-        irl_people=team_irl_people,
+        week_hours=team_week_hours,
+        irl_people=set(),
     )
-    if people_count_merged > 0:
-        irl_count = min(len(team_irl_people), people_count_merged)
-        non_irl_count = max(people_count_merged - irl_count, 0)
-        capacity_val = float((irl_count * 39.0) + (non_irl_count * 40.0))
-    elif not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
+    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
         capacity_val = float(
             pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum()
         )
+    elif people_count_merged > 0:
+        capacity_val = float(people_count_merged * team_week_hours)
     else:
         capacity_val = np.nan
     nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
@@ -1302,8 +1300,7 @@ if nonwip_mode:
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
-    teams_cfg = load_team_config()
-    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
+    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
@@ -1311,7 +1308,7 @@ if nonwip_mode:
         metrics_frame=df,
         nw_frame=nw,
         week_hours=40.0,
-        irl_people=team_irl_people,
+        irl_people=set(),
     )
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
@@ -3009,8 +3006,7 @@ with mid2:
 with right2:
     st.subheader("Hours Trend")
     _nw = load_non_wip()
-    teams_cfg = load_team_config()
-    irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
+    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
     def canonical_person_label(name: str) -> str:
         s = normalize_person_name(name)
         s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
@@ -3025,14 +3021,15 @@ with right2:
             if not team or pd.isna(wk):
                 continue
             wk = wk.normalize()
+            team_week_hours = 39.0 if team.upper() in SPECIAL_39_TEAMS else 40.0
             wk_people = build_person_weekly_accounting(
                 team=team,
                 week=wk,
                 nw_row=nw_row,
                 metrics_frame=f,
                 nw_frame=_nw,
-                week_hours=40.0,
-                irl_people=irl_lookup.get(team, set()),
+                week_hours=team_week_hours,
+                irl_people=set(),   # do not use teams.json
             )
             if wk_people.empty:
                 continue
@@ -3065,7 +3062,7 @@ with right2:
                     "Expected Hours": "max",
                 })
             )
-            wk_people["Denom"] = pd.to_numeric(wk_people["Expected Hours"], errors="coerce")
+            wk_people["Denom"] = wk_people["Expected Hours"]
             long_df = wk_people.melt(
                 id_vars=["team", "period_date", "person", "Denom"],
                 value_vars=[
