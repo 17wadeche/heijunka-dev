@@ -2771,7 +2771,7 @@ def main():
                 old_split_df[col] = old_split_df[col].fillna("").astype(str)
         old_split_df = old_split_df[old_split_df["team"] != ""].copy()
         old_split_df = old_split_df[old_split_df["period_date"].notna()].copy()
-        old_split_df = _remove_split_rollup_rows(old_split_df)
+        old_split_df = _remove_split_rollup_rows(old_split_df)  # okay for split history only
         combined = pd.concat([old_split_df, new_df], ignore_index=True)
     if not combined.empty:
         combined["team"] = combined["team"].astype(str).str.strip()
@@ -2781,7 +2781,6 @@ def main():
                 combined[col] = combined[col].fillna("").astype(str)
         combined = combined[combined["team"] != ""].copy()
         combined = combined[combined["period_date"].notna()].copy()
-        combined = _remove_split_rollup_rows(combined)
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
@@ -2792,29 +2791,29 @@ def main():
     split_combined = split_combined.drop_duplicates(subset=["team", "period_date"], keep="last")
     split_combined = split_combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     split_combined.to_csv(OUT_SPLIT_PATH, index=False, encoding="utf-8-sig")
-    combined = split_combined.copy()
-    combined = combine_enabling_technologies(combined, wip_df=wip_df)
-    combined = combine_meic_parent_teams(combined, wip_df=wip_df)
-    if not combined.empty:
-        combined["team"] = combined["team"].astype(str).str.strip()
-        combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
+    final_combined = combined.copy()
+    final_combined = combine_enabling_technologies(final_combined, wip_df=wip_df)
+    final_combined = combine_meic_parent_teams(final_combined, wip_df=wip_df)
+    if not final_combined.empty:
+        final_combined["team"] = final_combined["team"].astype(str).str.strip()
+        final_combined["period_date"] = pd.to_datetime(final_combined["period_date"], errors="coerce").dt.normalize()
         for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
-            if col in combined.columns:
-                combined[col] = combined[col].fillna("").astype(str)
-        combined = combined[combined["team"] != ""].copy()
-        combined = combined[combined["period_date"].notna()].copy()
-        combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
-        combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
-        dupes = combined[combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
+            if col in final_combined.columns:
+                final_combined[col] = final_combined[col].fillna("").astype(str)
+        final_combined = final_combined[final_combined["team"] != ""].copy()
+        final_combined = final_combined[final_combined["period_date"].notna()].copy()
+        final_combined = final_combined.drop_duplicates(subset=["team", "period_date"], keep="last")
+        final_combined = final_combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+        dupes = final_combined[final_combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
         if not dupes.empty:
             print("\n[DEBUG] DUPLICATE team/week rows before write:")
             print(dupes[["team", "period_date"]].to_string(index=False), flush=True)
-    log_weekly_ph_summary(combined, "POST-ROLLUP")
-    if not combined.empty and "team" in combined.columns and "people_count" in combined.columns:
-        combined["_team_key"] = combined["team"].astype(str).str.strip().str.casefold()
-        combined.loc[combined["_team_key"] == "dbs", "people_count"] = 12
-        combined.loc[
-            combined["_team_key"].isin({
+    log_weekly_ph_summary(final_combined, "POST-ROLLUP")
+    if not final_combined.empty and "team" in final_combined.columns and "people_count" in final_combined.columns:
+        final_combined["_team_key"] = final_combined["team"].astype(str).str.strip().str.casefold()
+        final_combined.loc[final_combined["_team_key"] == "dbs", "people_count"] = 12
+        final_combined.loc[
+            final_combined["_team_key"].isin({
                 "enabling tech",
                 "enabling technology",
                 "enabling technologies",
@@ -2823,8 +2822,8 @@ def main():
         ] = 34
         print(
             "[FINAL PEOPLE COUNT OVERRIDE CHECK]\n"
-            + combined.loc[
-                combined["_team_key"].isin({
+            + final_combined.loc[
+                final_combined["_team_key"].isin({
                     "dbs",
                     "enabling tech",
                     "enabling technology",
@@ -2834,7 +2833,7 @@ def main():
             ].to_string(index=False),
             flush=True,
         )
-        combined = combined.drop(columns=["_team_key"])
-    combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
+        final_combined = final_combined.drop(columns=["_team_key"])
+    final_combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
     main()
