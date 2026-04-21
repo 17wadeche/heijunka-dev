@@ -1,5 +1,4 @@
 # pages/Neuroscience.py
-import hmac
 import os, sys
 from pathlib import Path
 import pandas as pd
@@ -289,7 +288,7 @@ def normalize_person_name(name: str) -> str:
     return aliases.get(key, s)
 PSS_GROUPS = {
     "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
-    "MEIC": set(),  # computed as everyone else in PSS
+    "MEIC": set(), 
 }
 def filter_people_df_by_group(df_in: pd.DataFrame, team: str, group_name: str | None) -> pd.DataFrame:
     if df_in is None or df_in.empty or team != "PSS" or not group_name:
@@ -462,7 +461,6 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     return out
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
-    import numpy as np
     if cat.empty:
         return cat
     def _canon_activity(label: str) -> str:
@@ -626,7 +624,6 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
         if isinstance(x, dict):
             return [str(k).strip() for k in x.keys() if _is_good_name(str(k))]
         return []
-    import re
     for _, r in sub.iterrows():
         people = _as_names(r["People in WIP"])
         for person in people:
