@@ -428,12 +428,16 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         obj = json.loads(payload) if isinstance(payload, str) else payload
     except Exception:
         obj = []
+
     if not isinstance(obj, list) or not obj:
         return pd.DataFrame(columns=["Activity", "Name", "Time"])
+
     df = pd.DataFrame(obj)
+
     for c in ["activity", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
+
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
     df["activity"] = (
         df["activity"]
@@ -444,23 +448,25 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
             "Holiday": "OOO",
         })
     )
-    grp = (
-        df.groupby(["activity", "name"], as_index=False)
-    )
+
     out = (
-        grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
-           [["Activity", "Name", "HoursRaw"]]
-           .assign(
-               Activity=lambda d: d["Activity"].astype(str).str.strip(),
-               Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
-           )
+        df.groupby(["activity", "name"], as_index=False)["hours"]
+          .sum()
+          .rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
+          .assign(
+              Activity=lambda d: d["Activity"].astype(str).str.strip(),
+              Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
+          )
     )
+
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
+
     out = (
         out[["Activity", "Name", "Time", "HoursRaw"]]
-           .sort_values(["Activity", "Name"])
-           .reset_index(drop=True)
+        .sort_values(["Activity", "Name"])
+        .reset_index(drop=True)
     )
+
     return out
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
