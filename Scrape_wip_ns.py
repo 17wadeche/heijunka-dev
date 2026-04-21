@@ -398,11 +398,6 @@ def load_csf_from_existing_metrics_and_refresh_3_weeks(
         r for r in existing_rows
         if safe_str(r.get("team")) == "CSF"
     ]
-    frozen_csf_rows = [
-        r for r in existing_csf_rows
-        if safe_str(r.get("period_date")) not in weeks_to_refresh
-        and safe_str(r.get("period_date")) >= "2025-06-02"
-    ]
     cfg = dict(CSF_CFG)
     cfg["min_period_date"] = min(weeks_to_refresh)
     cfg["max_period_date"] = max(weeks_to_refresh)
@@ -415,12 +410,32 @@ def load_csf_from_existing_metrics_and_refresh_3_weeks(
         r for r in refreshed_csf_rows
         if safe_str(r.get("period_date")) in weeks_to_refresh
     ]
-    merged_csf_rows = merge_rows_by_team_period(frozen_csf_rows + refreshed_csf_rows)
+    if not refreshed_csf_rows:
+        if logger:
+            logger.warning(
+                f"[CSF] refresh returned 0 rows; keeping existing cached CSF rows only | "
+                f"existing={len(existing_csf_rows)} | weeks_to_refresh={sorted(weeks_to_refresh)}"
+            )
+        return existing_csf_rows
+    refreshed_by_period = {
+        safe_str(r.get("period_date")): r
+        for r in refreshed_csf_rows
+    }
+    merged_csf_rows = []
+    for old_row in existing_csf_rows:
+        pd = safe_str(old_row.get("period_date"))
+        if pd in refreshed_by_period:
+            merged_csf_rows.append(refreshed_by_period.pop(pd))
+        else:
+            merged_csf_rows.append(old_row)
+    merged_csf_rows.extend(refreshed_by_period.values())
+    merged_csf_rows = merge_rows_by_team_period(merged_csf_rows)
     if logger:
         logger.info(
             f"[CSF] loaded cached rows from NS_metrics: {len(existing_csf_rows)} | "
-            f"kept={len(frozen_csf_rows)} | refreshed={len(refreshed_csf_rows)} | "
-            f"final={len(merged_csf_rows)}"
+            f"refreshed={len(refreshed_csf_rows)} | "
+            f"final={len(merged_csf_rows)} | "
+            f"weeks_to_refresh={sorted(weeks_to_refresh)}"
         )
     return merged_csf_rows
 def load_oarm_meic_from_existing_metrics_and_refresh_3_weeks(
@@ -900,6 +915,7 @@ def scrape_csf_previous_weeks_with_config(
                 _com_call(lambda: excel.Calculate())
             time.sleep(1)
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
+            print(f"[CSF DEBUG] requested={choice!r} actual={_com_call(lambda: dd.Value)!r} period_date={period_date}")
             if not period_date:
                 continue
             min_pd = safe_str(cfg.get("min_period_date"))
@@ -1035,6 +1051,11 @@ def scrape_csf_previous_weeks_with_config(
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
+            print(
+                f"[CSF DEBUG] APPEND period_date={period_date} "
+                f"target_output={target_output!r} actual_output={actual_output!r} "
+                f"completed_hours={completed_hours!r}"
+            )
             rows_out.append({
                 "team": cfg["team"],
                 "period_date": period_date,
@@ -1059,6 +1080,7 @@ def scrape_csf_previous_weeks_with_config(
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
                 "error": "",
             })
+        print(f"[CSF DEBUG] rows_out total={len(rows_out)}")
         return rows_out
     finally:
         try:
