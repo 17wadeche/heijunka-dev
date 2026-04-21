@@ -388,8 +388,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(s, errors="coerce")  
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    if {"Actual Output", "Target Output"}.issubset(df.columns):
-        df["Efficiency vs Target"] = (df["Actual Output"] / df["Target Output"]).replace([np.inf, -np.inf], np.nan)
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
         df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
