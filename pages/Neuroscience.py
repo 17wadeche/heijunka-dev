@@ -434,16 +434,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     for c in ["activity", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
-    if "days" not in df.columns:
-        df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
-    df["days"]  = pd.to_numeric(df["days"], errors="coerce")
-    df["day_norm"] = (
-        df["day"]
-        .astype(str)
-        .str.strip()
-        .replace({"": np.nan, "None": np.nan, "nan": np.nan})
-    )
     df["activity"] = (
         df["activity"]
         .astype(str)
