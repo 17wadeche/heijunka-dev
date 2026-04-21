@@ -1451,7 +1451,7 @@ ACTIVITY_MAP = {
     "manufacturing review meeting":"Meeting",
     "reading concerto versa tm":"Reading File/Document Information",
     "meetings, email/admin":"Meeting",
-    "meeting, collaboration w/lab regarding discrepancy, trianing prep":"Meeting",
+    "meeting, collaboration w/lab regarding discrepancy, training prep":"Meeting",
     "meeting, collaboration":"Meeting",
     "alison meet & greet, scrum, collaboration":"Meeting",
     "scrum, collaboration, meeting, adverse event list":"Meeting",
