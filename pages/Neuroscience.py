@@ -465,27 +465,9 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
             day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
         )
     )
-    def _label_row(r):
-        n = r["days_known"]
-        dv = r["day_values"] or []
-        try:
-            n_int = int(n) if pd.notna(n) else None
-        except Exception:
-            n_int = None
-        if n_int is not None:
-            if n_int > 1:
-                return f"{n_int} days"
-            if n_int == 1:
-                return dv[0] if len(dv) == 1 else "Week"
-        if len(dv) > 1:
-            return f"{len(dv)} days"
-        if len(dv) == 1:
-            return dv[0]
-        return "Week"
-    grp["Day"] = grp.apply(_label_row, axis=1)
     out = (
         grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
-           [["Activity", "Day", "Name", "HoursRaw"]]
+           [["Activity", "Name", "HoursRaw"]]
            .assign(
                Activity=lambda d: d["Activity"].astype(str).str.strip(),
                Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
@@ -493,7 +475,7 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     )
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
     out = (
-        out[["Activity", "Day", "Name", "Time", "HoursRaw"]]
+        out[["Activity", "Name", "Time", "HoursRaw"]]
            .sort_values(["Activity", "Name"])
            .reset_index(drop=True)
     )
