@@ -194,98 +194,62 @@ def load_data(data_path: str | None, data_url: str | None):
     else:
         return pd.DataFrame()
     return _postprocess(df)
-NAME_ALIASES = {
-    "mirlay morin": "Mirlay",
-    "nikita schazenbach": "Nikita",
-    "jacob": "Jacob Woolley",
-    "jacob g": "Jacob Geraghty",
-    "madison moeller": "Madison",
-    "pavani uppari":"Uppari Pavani",
-    "s, prabhu":"Prabhu S",
-    "damahe, jagruti":"Jagruti Damahe",
-    "kallagunta, malleshwari":"Malleshwari Kallagunta",
-    "gopikalyani ijigiri":"Gopikalyani Iligiri",
-    "dey, pranjal":"Pranjal Dey",
-    "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
-    "shanmugasundaram, naveenkumar":"Naveen Shanmugasundaram",
-    "naveenkumar shanmugasundaram":"Naveen Shanmugasundaram",
-    "s, giridhar":"Giridhar S",
-    "vemulapalli, reshmita":"Reshmita",
-    "rick kennedy":"Rick",
-    "surekha raju anantarapu":"Surekha Raju",
-    "anwar, mohd faiz":"Mohd Faiz Anwar",
-    "mohd anwar":"Mohd Faiz Anwar",
-    "dominick olaes":"Dominick",
-    "tabitha robertson":"Tabitha",
-    "mariyadas, abhish":"Abhish Mariyadas",
-    "abhish m":"Abhish Mariyadas",
-    "m, kasi":"Kasi M",
-    "kasi":"Kasi M",
-    "divya, netti":"Netti",
-    "patil, shankar":"Shankar",
-    "m g":"MG",
-    "nath, koushik":"Koushik Nath",
-    "iligiri, gopikalyani":"Gopikalyani Iligiri",
-    "gowda, manjunath":"Manjunath Gowda",
-    "andrew o":"Andrew",
-    "kumar, shailesh":"Shailesh Kumar",
-    "michael": "Michael F",
-    "anu nandyala":"Anu",
-    "mani s.":"Mani",
-    "kuche":"Ku Che",
-    "goutham kumar, p":"P Goutham Kumar",
-}
 def normalize_person_name(name: str) -> str:
-    s = str(name or "")
-    s = unicodedata.normalize("NFKC", s)
-    s = s.replace("\u00A0", " ")  # non-breaking space
-    s = " ".join(s.split()).strip()
-    key = s.lower()
-    key = re.sub(r"[^\w\s]", "", key)   # remove punctuation
-    key = " ".join(key.split())
+    def _norm(x: str) -> str:
+        x = str(x or "")
+        x = unicodedata.normalize("NFKC", x)
+        x = x.replace("\u00A0", " ")
+        x = " ".join(x.split()).strip()
+        x = x.lower()
+        x = re.sub(r"[^\w\s]", "", x)   # remove punctuation
+        x = " ".join(x.split())
+        return x
+    raw = str(name or "")
+    clean = " ".join(unicodedata.normalize("NFKC", raw).replace("\u00A0", " ").split()).strip()
+    key = _norm(clean)
     aliases = {
-        "mirlay morin": "Mirlay",
-        "nikita schazenbach": "Nikita",
-        "jacob": "Jacob Woolley",
-        "jacob g": "Jacob Geraghty",
-        "jake": "Jacob Geraghty",
-        "madison moeller": "Madison",
-        "pavani uppari":"Uppari Pavani",
-        "s, prabhu":"Prabhu S",
-        "damahe, jagruti":"Jagruti Damahe",
-        "kallagunta, malleshwari":"Malleshwari Kallagunta",
-        "gopikalyani ijigiri":"Gopikalyani Iligiri",
-        "dey, pranjal":"Pranjal Dey",
-        "shanmugasundaram, naveen":"Naveen Shanmugasundaram",
-        "shanmugasundaram, naveenkumar":"Naveen Shanmugasundaram",
-        "naveenkumar shanmugasundaram":"Naveen Shanmugasundaram",
-        "s, giridhar":"Giridhar S",
-        "vemulapalli, reshmita":"Reshmita",
-        "rick kennedy":"Rick",
-        "surekha raju anantarapu":"Surekha Raju",
-        "anwar, mohd faiz":"Mohd Faiz Anwar",
-        "mohd anwar":"Mohd Faiz Anwar",
-        "dominick olaes":"Dominick",
-        "tabitha robertson":"Tabitha",
-        "mariyadas, abhish":"Abhish Mariyadas",
-        "abhish m":"Abhish Mariyadas",
-        "m, kasi":"Kasi M",
-        "kasi":"Kasi M",
-        "divya, netti":"Netti",
-        "patil, shankar":"Shankar",
-        "m g":"MG",
-        "nath, koushik":"Koushik Nath",
-        "iligiri, gopikalyani":"Gopikalyani Iligiri",
-        "gowda, manjunath":"Manjunath Gowda",
-        "andrew o":"Andrew",
-        "kumar, shailesh":"Shailesh Kumar",
-        "michael": "Michael F",
-        "anu nandyala":"Anu",
-        "mani s.":"Mani",
-        "kuche":"Ku Che",
-        "goutham kumar, p":"P Goutham Kumar",
+        _norm("mirlay morin"): "Mirlay",
+        _norm("nikita schazenbach"): "Nikita",
+        _norm("jacob"): "Jacob Woolley",
+        _norm("jacob g"): "Jacob Geraghty",
+        _norm("jake"): "Jacob Geraghty",
+        _norm("madison moeller"): "Madison",
+        _norm("pavani uppari"): "Uppari Pavani",
+        _norm("s, prabhu"): "Prabhu S",
+        _norm("damahe, jagruti"): "Jagruti Damahe",
+        _norm("kallagunta, malleshwari"): "Malleshwari Kallagunta",
+        _norm("gopikalyani ijigiri"): "Gopikalyani Iligiri",
+        _norm("dey, pranjal"): "Pranjal Dey",
+        _norm("shanmugasundaram, naveen"): "Naveen Shanmugasundaram",
+        _norm("shanmugasundaram, naveenkumar"): "Naveen Shanmugasundaram",
+        _norm("naveenkumar shanmugasundaram"): "Naveen Shanmugasundaram",
+        _norm("s, giridhar"): "Giridhar S",
+        _norm("vemulapalli, reshmita"): "Reshmita",
+        _norm("rick kennedy"): "Rick",
+        _norm("surekha raju anantarapu"): "Surekha Raju",
+        _norm("anwar, mohd faiz"): "Mohd Faiz Anwar",
+        _norm("mohd anwar"): "Mohd Faiz Anwar",
+        _norm("dominick olaes"): "Dominick",
+        _norm("tabitha robertson"): "Tabitha",
+        _norm("mariyadas, abhish"): "Abhish Mariyadas",
+        _norm("abhish m"): "Abhish Mariyadas",
+        _norm("m, kasi"): "Kasi M",
+        _norm("kasi"): "Kasi M",
+        _norm("divya, netti"): "Netti",
+        _norm("patil, shankar"): "Shankar",
+        _norm("m g"): "MG",
+        _norm("nath, koushik"): "Koushik Nath",
+        _norm("iligiri, gopikalyani"): "Gopikalyani Iligiri",
+        _norm("gowda, manjunath"): "Manjunath Gowda",
+        _norm("andrew o"): "Andrew",
+        _norm("kumar, shailesh"): "Shailesh Kumar",
+        _norm("michael"): "Michael F",
+        _norm("anu nandyala"): "Anu",
+        _norm("mani s."): "Mani",
+        _norm("kuche"): "Ku Che",
+        _norm("goutham kumar, p"): "P Goutham Kumar",
     }
-    return aliases.get(key, s)
+    return aliases.get(key, clean)
 PSS_GROUPS = {
     "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
     "MEIC": set(), 
