@@ -3445,14 +3445,15 @@ with right2:
                     )
                     person_key = str(picked_person_mix).strip().lower()
                     PERSON_WEEKLY_HOURS_DRILL = {"chelsey": 16.0, "mg": 36.0, "lindsey": 32.0}
-                    if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
-                        person_expected_match = wk_people_kpi.loc[
-                            wk_people_kpi["person"].astype(str).str.strip().str.lower() == person_key,
-                            "Expected Hours"
-                        ]
-                        drill_expected_hrs = float(person_expected_match.iloc[0]) if not person_expected_match.empty else PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
+                    if multi_team and chosen_mix_teams:
+                        teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
+                    elif "team_name" in locals():
+                        teams_for_drill = {str(team_name).strip().upper()}
                     else:
-                        drill_expected_hrs = PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                        teams_for_drill = set()
+                    default_drill_expected = 39.0 if teams_for_drill & SPECIAL_39_TEAMS else 40.0
+                    drill_expected_hrs = PERSON_WEEKLY_HOURS_DRILL.get(person_key, default_drill_expected)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
                     drill_overflow_df["y_pos"] = 1.02
