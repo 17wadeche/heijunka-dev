@@ -609,7 +609,7 @@ def load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
     logger: Optional[logging.Logger] = None,
 ) -> list[dict]:
     existing_rows = read_existing_metrics_rows(ns_metrics_path)
-    scs_weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    scs_weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
     existing_scs_rows = [
         r for r in existing_rows
         if safe_str(r.get("team")) == "SCS Cell 1"
@@ -619,18 +619,20 @@ def load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
         if safe_str(r.get("period_date")) not in scs_weeks_to_refresh
         and safe_str(r.get("period_date")) >= "2025-06-30"
     ]
+    switch_date = safe_str(scs_new_cfg.get("min_period_date"))
+    old_weeks = [w for w in scs_weeks_to_refresh if w < switch_date]
+    new_weeks = [w for w in scs_weeks_to_refresh if w >= switch_date]
     refreshed_rows: list[dict] = []
-    old_cfg = dict(scs_old_cfg)
-    old_cfg["min_period_date"] = "2025-06-30"
-    old_cfg["max_period_date"] = min(scs_weeks_to_refresh)
-    new_cfg = dict(scs_new_cfg)
-    new_cfg["min_period_date"] = max(
-        safe_str(scs_new_cfg.get("min_period_date")),
-        min(scs_weeks_to_refresh),
-    )
-    new_cfg["max_period_date"] = max(scs_weeks_to_refresh)
-    refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, old_cfg))
-    refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, new_cfg))
+    if old_weeks:
+        old_cfg = dict(scs_old_cfg)
+        old_cfg["min_period_date"] = min(old_weeks)
+        old_cfg["max_period_date"] = max(old_weeks)
+        refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, old_cfg))
+    if new_weeks:
+        new_cfg = dict(scs_new_cfg)
+        new_cfg["min_period_date"] = min(new_weeks)
+        new_cfg["max_period_date"] = max(new_weeks)
+        refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, new_cfg))
     refreshed_rows = [
         r for r in refreshed_rows
         if safe_str(r.get("period_date")) in scs_weeks_to_refresh
@@ -640,7 +642,8 @@ def load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
         logger.info(
             f"[SCS Cell 1] loaded cached rows from NS_metrics: {len(existing_scs_rows)} | "
             f"kept={len(frozen_scs_rows)} | refreshed={len(refreshed_rows)} | "
-            f"final={len(merged_scs_rows)}"
+            f"final={len(merged_scs_rows)} | "
+            f"old_weeks={old_weeks} | new_weeks={new_weeks}"
         )
     return merged_scs_rows
 def load_ph_from_existing_metrics_and_refresh_3_weeks(
