@@ -94,6 +94,20 @@ def _freeze_missing_past_weeks(
         flush=True,
     )
     return merged
+SPLIT_EXCLUDED_TEAMS = {
+    "Enabling Tech",
+    "Enabling Technology",
+    "Enabling Technologies",
+    "PH-NM MEIC",
+}
+def _remove_split_rollup_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df.copy()
+    out = df.copy()
+    if "team" in out.columns:
+        out["team"] = out["team"].astype(str).str.strip()
+        out = out[~out["team"].isin(SPLIT_EXCLUDED_TEAMS)].copy()
+    return out
 def build_pss_intern_capacity_row(
     team: str,
     ws: pd.DataFrame,
@@ -2710,8 +2724,7 @@ def main():
         new_df.loc[
             new_df["team"].isin(ENABLE_TEAMS),
             ["period_date", "team", "people_count", "total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"]
-        ]
-        .copy()
+        ].copy()
         if not new_df.empty
         else pd.DataFrame(columns=[
             "period_date", "team", "people_count", "total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"
@@ -2742,23 +2755,24 @@ def main():
             .fillna(0)
             .sort_index()
         )
-    if OUT_PATH.exists():
-        old_df = load_csv(OUT_PATH)
+    if OUT_SPLIT_PATH.exists():
+        old_split_df = load_csv(OUT_SPLIT_PATH)
     else:
-        old_df = pd.DataFrame(columns=new_df.columns if not new_df.empty else None)
-    if old_df is None or old_df.empty:
+        old_split_df = pd.DataFrame(columns=new_df.columns if not new_df.empty else None)
+    if old_split_df is None or old_split_df.empty:
         combined = new_df.copy()
     elif new_df is None or new_df.empty:
-        combined = old_df.copy()
+        combined = old_split_df.copy()
     else:
-        old_df["team"] = old_df["team"].astype(str).str.strip()
-        old_df["period_date"] = pd.to_datetime(old_df["period_date"], errors="coerce").dt.normalize()
+        old_split_df["team"] = old_split_df["team"].astype(str).str.strip()
+        old_split_df["period_date"] = pd.to_datetime(old_split_df["period_date"], errors="coerce").dt.normalize()
         for col in ["source_file", "non_wip_by_person", "non_wip_activities", "wip_workers", "team_member_names"]:
-            if col in old_df.columns:
-                old_df[col] = old_df[col].fillna("").astype(str)
-        old_df = old_df[old_df["team"] != ""].copy()
-        old_df = old_df[old_df["period_date"].notna()].copy()
-        combined = pd.concat([old_df, new_df], ignore_index=True)
+            if col in old_split_df.columns:
+                old_split_df[col] = old_split_df[col].fillna("").astype(str)
+        old_split_df = old_split_df[old_split_df["team"] != ""].copy()
+        old_split_df = old_split_df[old_split_df["period_date"].notna()].copy()
+        old_split_df = _remove_split_rollup_rows(old_split_df)
+        combined = pd.concat([old_split_df, new_df], ignore_index=True)
     if not combined.empty:
         combined["team"] = combined["team"].astype(str).str.strip()
         combined["period_date"] = pd.to_datetime(combined["period_date"], errors="coerce").dt.normalize()
@@ -2767,12 +2781,18 @@ def main():
                 combined[col] = combined[col].fillna("").astype(str)
         combined = combined[combined["team"] != ""].copy()
         combined = combined[combined["period_date"].notna()].copy()
+        combined = _remove_split_rollup_rows(combined)
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     split_combined = combined.copy()
+    split_combined = _remove_split_rollup_rows(split_combined)
     split_combined = _freeze_missing_past_weeks(split_combined, OUT_SPLIT_PATH)
+    split_combined = _remove_split_rollup_rows(split_combined)
+    split_combined = split_combined.drop_duplicates(subset=["team", "period_date"], keep="last")
+    split_combined = split_combined.sort_values(["team", "period_date"]).reset_index(drop=True)
     split_combined.to_csv(OUT_SPLIT_PATH, index=False, encoding="utf-8-sig")
+    combined = split_combined.copy()
     combined = combine_enabling_technologies(combined, wip_df=wip_df)
     combined = combine_meic_parent_teams(combined, wip_df=wip_df)
     if not combined.empty:
@@ -2788,6 +2808,7 @@ def main():
         dupes = combined[combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
         if not dupes.empty:
             print("\n[DEBUG] DUPLICATE team/week rows before write:")
+            print(dupes[["team", "period_date"]].to_string(index=False), flush=True)
     log_weekly_ph_summary(combined, "POST-ROLLUP")
     if not combined.empty and "team" in combined.columns and "people_count" in combined.columns:
         combined["_team_key"] = combined["team"].astype(str).str.strip().str.casefold()
@@ -2814,7 +2835,6 @@ def main():
             flush=True,
         )
         combined = combined.drop(columns=["_team_key"])
-    combined = _freeze_missing_past_weeks(combined, OUT_PATH)
     combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
     main()
