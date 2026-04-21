@@ -166,6 +166,7 @@ ACTIVITY_MAP = {
     "collaboration affera ftq/integer oem":"Project Work",
     "scrum, collaboration, question":"Scrum & Action",
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
+    "Training on intake": "Training/Mentoring",
     "practiciting loading harmony valve": "Training/Mentoring",
     "scrum email":"Scrum & Action",
     "racticiting loading harmory valve": "Training/Mentoring",
