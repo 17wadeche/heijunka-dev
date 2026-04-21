@@ -389,6 +389,7 @@ def load_mazor_from_existing_metrics_and_refresh_3_weeks(
 def load_csf_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     csf_source_file: str,
+    CSF_CFG: Dict[str, Any],
     logger: Optional[logging.Logger] = None,
 ) -> list[dict]:
     existing_rows = read_existing_metrics_rows(ns_metrics_path)
@@ -402,9 +403,12 @@ def load_csf_from_existing_metrics_and_refresh_3_weeks(
         if safe_str(r.get("period_date")) not in weeks_to_refresh
         and safe_str(r.get("period_date")) >= "2025-06-02"
     ]
-    refreshed_csf_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+    cfg = dict(CSF_CFG)
+    cfg["min_period_date"] = min(weeks_to_refresh)
+    cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_csf_rows = scrape_csf_previous_weeks_with_config(
         csf_source_file,
-        "CSF",
+        cfg,
         dropdown_override=sorted(weeks_to_refresh),
     )
     refreshed_csf_rows = [
@@ -836,6 +840,245 @@ def read_lookup_csv(path: str) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], s
         return lookup, ""
     except Exception as e:
         return lookup, f"Failed reading {os.path.basename(path)}: {e}"
+def scrape_csf_previous_weeks_with_config(
+    source_file: str,
+    cfg: Dict[str, Any],
+    dropdown_override: Optional[list[Any]] = None,
+) -> list[dict]:
+    import shutil
+    import tempfile
+    import uuid
+    pythoncom.CoInitialize()
+    excel = win32com.client.DispatchEx("Excel.Application")
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    excel.AskToUpdateLinks = False
+    excel.EnableEvents = False
+    excel.AutomationSecurity = 3
+    wb = None
+    tmp_path = None
+    rows_out: list[dict] = []
+    def _open_via_temp_copy(src_path: str):
+        nonlocal tmp_path
+        src = os.path.abspath(os.path.expandvars(src_path))
+        if not os.path.exists(src):
+            raise FileNotFoundError(f"File not found on disk: {src}")
+        base = os.path.splitext(os.path.basename(src))[0]
+        ext = os.path.splitext(src)[1]
+        tmp_path = os.path.join(tempfile.gettempdir(), f"{base}__{uuid.uuid4().hex}{ext}")
+        shutil.copy2(src, tmp_path)
+        return _com_call(lambda: excel.Workbooks.Open(
+            tmp_path,
+            UpdateLinks=0,
+            ReadOnly=True,
+            IgnoreReadOnlyRecommended=True,
+            Notify=False,
+            AddToMru=False,
+            CorruptLoad=0,
+        ))
+    def _range_val(ws, ref: str):
+        return _com_call(lambda: ws.Range(ref).Value)
+    def _cell_val(ws, row: int, col: int):
+        return _com_call(lambda: ws.Cells(row, col).Value)
+    try:
+        wb = _open_via_temp_copy(source_file)
+        ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+        dd = _com_call(lambda: ws.Range("A2"))
+        dropdown_values = dropdown_override if dropdown_override is not None else _get_dropdown_values_from_validation(dd)
+        seen = set()
+        dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
+        cols = col_range(cfg["person_cols"][0], cfg["person_cols"][1])
+        for choice in dropdown_values:
+            _com_call(lambda: setattr(dd, "Value", choice))
+            try:
+                _com_call(lambda: wb.RefreshAll())
+            except Exception:
+                pass
+            try:
+                _com_call(lambda: excel.CalculateFullRebuild())
+            except Exception:
+                _com_call(lambda: excel.Calculate())
+            time.sleep(1)
+            period_date = _as_iso_date(_com_call(lambda: dd.Value))
+            if not period_date:
+                continue
+            min_pd = safe_str(cfg.get("min_period_date"))
+            if min_pd and period_date < min_pd:
+                continue
+            max_pd = safe_str(cfg.get("max_period_date"))
+            if max_pd and period_date > max_pd:
+                continue
+            taa_spec = cfg["cells"]["total_available_hours"]
+            if isinstance(taa_spec, str):
+                total_available_hours = safe_float(_range_val(ws, taa_spec))
+            else:
+                if taa_spec.get("type") == "sum_range":
+                    start_col, start_row, end_col, end_row = re.match(
+                        r"([A-Z]+)(\d+):([A-Z]+)(\d+)", taa_spec["range"]
+                    ).groups()
+                    total_available_hours = 0.0
+                    for c in range(column_index_from_string(start_col), column_index_from_string(end_col) + 1):
+                        for r in range(int(start_row), int(end_row) + 1):
+                            total_available_hours += safe_float(_cell_val(ws, r, c))
+                elif taa_spec.get("type") == "sum_cells":
+                    total_available_hours = sum(safe_float(_range_val(ws, cell_ref)) for cell_ref in taa_spec["cells"])
+                else:
+                    total_available_hours = 0.0
+            completed_spec = cfg["cells"]["completed_hours"]
+            if isinstance(completed_spec, str):
+                completed_hours = safe_float(_range_val(ws, completed_spec))
+            else:
+                if completed_spec.get("type") == "sum_range":
+                    start_col, start_row, end_col, end_row = re.match(
+                        r"([A-Z]+)(\d+):([A-Z]+)(\d+)", completed_spec["range"]
+                    ).groups()
+                    completed_hours = 0.0
+                    for c in range(column_index_from_string(start_col), column_index_from_string(end_col) + 1):
+                        for r in range(int(start_row), int(end_row) + 1):
+                            completed_hours += safe_float(_cell_val(ws, r, c))
+                elif completed_spec.get("type") == "sum_cells":
+                    completed_hours = sum(safe_float(_range_val(ws, cell_ref)) for cell_ref in completed_spec["cells"])
+                else:
+                    completed_hours = 0.0
+            wp1_out = safe_float(_range_val(ws, cfg["cells"]["wp1_output"]))
+            wp2_out = safe_float(_range_val(ws, cfg["cells"]["wp2_output"]))
+            wp1_tgt = safe_float(_range_val(ws, cfg["cells"]["wp1_target"]))
+            wp2_tgt = safe_float(_range_val(ws, cfg["cells"]["wp2_target"]))
+            target_output = wp1_tgt + wp2_tgt
+            actual_output = wp1_out + wp2_out
+            target_uplh = safe_div(target_output, completed_hours)
+            actual_uplh = safe_div(actual_output, completed_hours)
+            uplh_wp1 = safe_float(_range_val(ws, cfg["cells"]["uplh_wp1"]))
+            uplh_wp2 = safe_float(_range_val(ws, cfg["cells"]["uplh_wp2"]))
+            hc_row = cfg["rows"]["hc_row"]
+            hc_in_wip = 0
+            for c in cols:
+                if safe_float(_cell_val(ws, hc_row, c)) != 0.0:
+                    hc_in_wip += 1
+            actual_hc_used = safe_div(completed_hours, 32.5)
+            person_hours: Dict[str, Dict[str, float]] = {}
+            name_row_ph = cfg["rows"]["person_name_row_for_person_hours"]
+            actual_row_ph = cfg["rows"]["person_actual_row_for_person_hours"]
+            avail_row_ph = cfg["rows"]["person_available_row_for_person_hours"]
+            for c in cols:
+                name = safe_str(_cell_val(ws, name_row_ph, c))
+                if not name:
+                    continue
+                actual = safe_float(_cell_val(ws, actual_row_ph, c))
+                available = safe_float(_cell_val(ws, avail_row_ph, c))
+                person_hours[name] = {"actual": actual, "available": available}
+            outputs_by_person: Dict[str, Dict[str, float]] = {}
+            name_row_op = cfg["rows"]["person_name_row_for_outputs_by_person"]
+            target_row_op = cfg["rows"]["person_target_row_for_outputs_by_person"]
+            output_spec = cfg["outputs_by_person_output"]
+            for c in cols:
+                name = safe_str(_cell_val(ws, name_row_op, c))
+                if not name:
+                    continue
+                if output_spec["type"] == "row":
+                    output_val = safe_float(_cell_val(ws, output_spec["row"], c))
+                elif output_spec["type"] == "sum_rows":
+                    output_val = sum(safe_float(_cell_val(ws, r, c)) for r in output_spec["rows"])
+                else:
+                    output_val = 0.0
+                target_val = safe_float(_cell_val(ws, target_row_op, c))
+                if output_val != 0.0 or target_val != 0.0:
+                    outputs_by_person[name] = {"output": output_val, "target": target_val}
+            outputs_by_cell = {
+                "WP1": {"output": wp1_out, "target": wp1_tgt},
+                "WP2": {"output": wp2_out, "target": wp2_tgt},
+            }
+            cell_station_hours = {
+                "WP1": safe_float(_range_val(ws, cfg["cells"]["wp1_hours"])),
+                "WP2": safe_float(_range_val(ws, cfg["cells"]["wp2_hours"])),
+            }
+            wp3_total_cells = cfg.get("cells", {}).get("wp3_hours_sum_cells")
+            if wp3_total_cells:
+                cell_station_hours["WP3"] = sum(safe_float(_range_val(ws, cell)) for cell in wp3_total_cells)
+            hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+            wp3_hour_rows = cfg.get("rows", {}).get("wp3_hour_rows")
+            if wp3_hour_rows:
+                hours_by_cell_by_person["WP3"] = {}
+            name_row_hc = cfg["rows"]["person_name_row_for_hours_by_cell_by_person"]
+            wp1_hour_rows = cfg["rows"]["wp1_hour_rows"]
+            wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
+            for c in cols:
+                name = safe_str(_cell_val(ws, name_row_hc, c))
+                if not name:
+                    continue
+                wp1_hrs = sum(safe_float(_cell_val(ws, r, c)) for r in wp1_hour_rows)
+                wp2_hrs = sum(safe_float(_cell_val(ws, r, c)) for r in wp2_hour_rows)
+                if wp1_hrs != 0.0:
+                    hours_by_cell_by_person["WP1"][name] = wp1_hrs
+                if wp2_hrs != 0.0:
+                    hours_by_cell_by_person["WP2"][name] = wp2_hrs
+                if wp3_hour_rows:
+                    wp3_hrs = sum(safe_float(_cell_val(ws, r, c)) for r in wp3_hour_rows)
+                    if wp3_hrs != 0.0:
+                        hours_by_cell_by_person["WP3"][name] = wp3_hrs
+            output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+            name_row_oc = cfg["rows"]["person_name_row_for_output_by_cell_by_person"]
+            wp1_out_rows = cfg["rows"]["wp1_output_rows_by_person"]
+            wp2_out_rows = cfg["rows"]["wp2_output_rows_by_person"]
+            for c in cols:
+                name = safe_str(_cell_val(ws, name_row_oc, c))
+                if not name:
+                    continue
+                wp1_o = sum(safe_float(_cell_val(ws, r, c)) for r in wp1_out_rows)
+                wp2_o = sum(safe_float(_cell_val(ws, r, c)) for r in wp2_out_rows)
+                if wp1_o != 0.0:
+                    output_by_cell_by_person["WP1"][name] = wp1_o
+                if wp2_o != 0.0:
+                    output_by_cell_by_person["WP2"][name] = wp2_o
+            uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+            for wp in ("WP1", "WP2"):
+                for person, out_val in output_by_cell_by_person[wp].items():
+                    hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
+                    uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
+            rows_out.append({
+                "team": cfg["team"],
+                "period_date": period_date,
+                "source_file": os.path.abspath(os.path.expandvars(source_file)),
+                "Total Available Hours": total_available_hours,
+                "Completed Hours": completed_hours,
+                "Target Output": target_output,
+                "Actual Output": actual_output,
+                "Target UPLH": target_uplh,
+                "Actual UPLH": actual_uplh,
+                "UPLH WP1": uplh_wp1,
+                "UPLH WP2": uplh_wp2,
+                "HC in WIP": hc_in_wip,
+                "Actual HC Used": actual_hc_used,
+                "People in WIP": "",
+                "Person Hours": json.dumps(person_hours, ensure_ascii=False),
+                "Outputs by Person": json.dumps(outputs_by_person, ensure_ascii=False),
+                "Outputs by Cell/Station": json.dumps(outputs_by_cell, ensure_ascii=False),
+                "Cell/Station Hours": json.dumps(cell_station_hours, ensure_ascii=False),
+                "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
+                "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
+                "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+                "error": "",
+            })
+        return rows_out
+    finally:
+        try:
+            if wb is not None:
+                _com_call(lambda: wb.Close(SaveChanges=False), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
+        try:
+            _com_call(lambda: excel.Quit(), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+        try:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
 def scrape_dbs_dated_tabs_xlsx(
     source_file: str,
     team: str,
@@ -1708,7 +1951,15 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
         today_iso = date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
-            _com_call(lambda: excel.Calculate())
+            try:
+                _com_call(lambda: wb.RefreshAll())
+            except Exception:
+                pass
+            try:
+                _com_call(lambda: excel.CalculateFullRebuild())
+            except Exception:
+                _com_call(lambda: excel.Calculate())
+            time.sleep(1)
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
             if not period_date:
                 continue
@@ -1716,6 +1967,7 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
                 continue
             if period_date > today_iso:
                 continue
+            print(f"[CSF DEBUG] requested={choice!r} actual={_com_call(lambda: dd.Value)!r} period_date={period_date}")
             total_available_hours = safe_float(_com_call(lambda: ws.Range("R64").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("R54").Value))
             wp1_tgt = safe_float(_com_call(lambda: ws.Range("X10").Value))
@@ -1724,6 +1976,12 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
             wp2_out = safe_float(_com_call(lambda: ws.Range("Z5").Value))
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
+            print(
+                f"[CSF DEBUG] period_date={period_date} "
+                f"AD10={_com_call(lambda: ws.Range('AD10').Value)!r} "
+                f"AF10={_com_call(lambda: ws.Range('AF10').Value)!r} "
+                f"target_output={target_output!r}"
+            )
             if target_output < 0:
                 continue
             target_uplh = safe_div(target_output, completed_hours)
@@ -2960,7 +3218,7 @@ def main():
         "person_cols": ("B", "G"),
         "cells": {
             "total_available_hours": "I69",
-            "completed_hours": "I69",  # per your spec
+            "completed_hours": "I59",  # per your spec
             "wp1_target": "N10",
             "wp2_target": "P10",
             "wp1_output": "N5",
@@ -3494,6 +3752,7 @@ def main():
             lambda: load_csf_from_existing_metrics_and_refresh_3_weeks(
                 out_file,
                 csf_source_file,
+                CSF_CFG,
                 logger=logger,
             )
         )
