@@ -165,6 +165,11 @@ ACTIVITY_MAP = {
     "60 minute training with ruth": "Training/Mentoring",
     "collaboration affera ftq/integer oem":"Project Work",
     "scrum, collaboration, question":"Scrum & Action",
+    "reading through past sentrant analyse":"Reading File/Document Information",
+    "chem ordering calls (with sean)":"Shipment",
+    "rdn - thermocouple testing for capa":"CAPA",
+    "recording it issue":"IT Issue/Update",
+    "deco document reading
     "cornerstone+closurefast training review meeitng": "Training/Mentoring",
     "training on intake": "Training/Mentoring",
     "practiciting loading harmony valve": "Training/Mentoring",
