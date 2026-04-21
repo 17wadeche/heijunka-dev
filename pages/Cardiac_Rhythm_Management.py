@@ -3054,13 +3054,18 @@ with right2:
                     "Expected Hours": "max",
                 })
             )
-            wk_people["Denom"] = (
-                wk_people["WIP"]
-                + wk_people["Other Team WIP"]
-                + wk_people["Non-WIP"]
-                + wk_people["OOO"]
-                + wk_people["Unaccounted"]
+            wk_people = (
+                wk_people.groupby(["team", "period_date", "person"], as_index=False)
+                .agg({
+                    "WIP": "sum",
+                    "Other Team WIP": "sum",
+                    "Non-WIP": "sum",
+                    "OOO": "sum",
+                    "Unaccounted": "sum",
+                    "Expected Hours": "max",
+                })
             )
+            wk_people["Denom"] = pd.to_numeric(wk_people["Expected Hours"], errors="coerce")
             long_df = wk_people.melt(
                 id_vars=["team", "period_date", "person", "Denom"],
                 value_vars=[
