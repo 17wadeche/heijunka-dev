@@ -41,10 +41,7 @@ WIP_HEADERS = [
     "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person",
     "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness",
     "error",
-    "Closures",
-    "Opened",
 ]
 def json_load_safe(s: Any) -> dict:
     if s is None:
@@ -170,9 +167,6 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
         cell_station_hours = {}
         hours_by_cell_person = {}
         out_by_cell_person = {}
-        open_timeliness = ""
-        closures = ""
-        opened = ""
         errs = []
         for r in rows:
             taa += safe_float(r.get("Total Available Hours"))
@@ -227,10 +221,7 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
             "Hours by Cell/Station - by person": json.dumps(hours_by_cell_person, ensure_ascii=False),
             "Output by Cell/Station - by person": json.dumps(out_by_cell_person, ensure_ascii=False),
             "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_person, ensure_ascii=False),
-            "Open Complaint Timeliness": open_timeliness,
             "error": " | ".join(errs) if errs else "",
-            "Closures": closures,
-            "Opened": opened,
         })
     for _, label in rollups:
         for period_date in sorted(buckets_by_label[label].keys()):
@@ -715,10 +706,7 @@ HEADERS = [
     "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person",
     "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness",
     "error",
-    "Closures",
-    "Opened",
 ]
 def safe_float(v: Any) -> float:
     if v is None:
@@ -857,11 +845,6 @@ def scrape_dbs_dated_tabs_xlsx(
     wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
     rows_out: list[dict] = []
     cols = _excel_col_range("B", "R")
-    excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-    timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-    closures_lu, closures_err = read_lookup_csv(closures_path)
     today_iso = date.today().isoformat()
     upper_bound = max_period_date or today_iso
     for ws in wb.worksheets:
@@ -958,26 +941,7 @@ def scrape_dbs_dated_tabs_xlsx(
             for person, out_val in output_by_cell_by_person[wp].items():
                 hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-        key = (team, period_date)
-        open_complaint_timeliness = ""
-        closures = ""
-        opened = ""
-        trow = timeliness_lu.get(key)
-        if trow is not None:
-            open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-        crow = closures_lu.get(key)
-        if crow is not None:
-            closures = safe_str(crow.get("Closures"))
-            opened = safe_str(crow.get("Opened"))
         errs = []
-        if timeliness_err:
-            errs.append(timeliness_err)
-        if closures_err:
-            errs.append(closures_err)
-        if not trow and not timeliness_err:
-            errs.append(f"No timeliness match for {team} {period_date}")
-        if not crow and not closures_err:
-            errs.append(f"No closures match for {team} {period_date}")
         rows_out.append({
             "team": team,
             "period_date": period_date,
@@ -1000,18 +964,10 @@ def scrape_dbs_dated_tabs_xlsx(
             "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
             "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
             "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-            "Open Complaint Timeliness": open_complaint_timeliness,
             "error": " | ".join(errs) if errs else "",
-            "Closures": closures,
-            "Opened": opened,
         })
     return rows_out
 def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[dict]:
-    excel_dir = os.path.dirname(os.path.abspath(source_file))
-    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-    timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-    closures_lu, closures_err = read_lookup_csv(closures_path)
     wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
     rows_out: list[dict] = []
     cols = col_range(cfg["person_cols"][0], cfg["person_cols"][1])
@@ -1159,22 +1115,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
         team = cfg["team"]
-        key = (team, period_date)
-        open_complaint_timeliness = ""
-        closures = ""
-        opened = ""
-        trow = timeliness_lu.get(key)
-        if trow is not None:
-            open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-        crow = closures_lu.get(key)
-        if crow is not None:
-            closures = safe_str(crow.get("Closures"))
-            opened = safe_str(crow.get("Opened"))
-        errs = []
-        if timeliness_err:
-            errs.append(timeliness_err)
-        if closures_err:
-            errs.append(closures_err)
         rows_out.append(
             {
                 "team": team,
@@ -1198,10 +1138,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                 "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                "Open Complaint Timeliness": open_complaint_timeliness,
-                "error": " | ".join(errs) if errs else "",
-                "Closures": closures,
-                "Opened": opened,
             }
         )
     return rows_out
@@ -1425,11 +1361,6 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "M")
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
             _com_call(lambda: excel.Calculate())
@@ -1512,26 +1443,6 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append({
                 "team": team,
                 "period_date": period_date,
@@ -1554,10 +1465,6 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                 "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                "Open Complaint Timeliness": open_complaint_timeliness,
-                "error": " | ".join(errs) if errs else "",
-                "Closures": closures,
-                "Opened": opened,
             })
         return rows_out
     finally:
@@ -1621,11 +1528,6 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "V")
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat() 
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
@@ -1716,25 +1618,6 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
             key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append(
                 {
                     "team": team,
@@ -1758,10 +1641,6 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
                     "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                     "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                     "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                    "Open Complaint Timeliness": open_complaint_timeliness,
-                    "error": " | ".join(errs) if errs else "",
-                    "Closures": closures,
-                    "Opened": opened,
                 }
             )
         return rows_out
@@ -1826,11 +1705,6 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "P") 
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
@@ -1920,26 +1794,6 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append(
                 {
                     "team": team,
@@ -1963,10 +1817,6 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
                     "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                     "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                     "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                    "Open Complaint Timeliness": open_complaint_timeliness,
-                    "error": " | ".join(errs) if errs else "",
-                    "Closures": closures,
-                    "Opened": opened,
                 }
             )
         return rows_out
@@ -2031,11 +1881,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
@@ -2132,26 +1977,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append(
                 {
                     "team": team,
@@ -2175,10 +2000,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                     "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                     "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                    "Open Complaint Timeliness": open_complaint_timeliness,
-                    "error": " | ".join(errs) if errs else "",
-                    "Closures": closures,
-                    "Opened": opened,
                 }
             )
         return rows_out
@@ -2263,11 +2084,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
@@ -2365,25 +2181,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
             key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append(
                 {
                     "team": team,
@@ -2407,10 +2204,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                     "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                     "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                     "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                    "Open Complaint Timeliness": open_complaint_timeliness,
-                    "error": " | ".join(errs) if errs else "",
-                    "Closures": closures,
-                    "Opened": opened,
                 }
             )
         return rows_out
@@ -2549,10 +2342,7 @@ def scrape_csv_team_fixed_availability(
             "Hours by Cell/Station - by person": "",
             "Output by Cell/Station - by person": "",
             "UPLH by Cell/Station - by person": "",
-            "Open Complaint Timeliness": "",
             "error": f"Missing file: {os.path.basename(csv_path)}",
-            "Closures": "",
-            "Opened": "",
         }]
     weekly: Dict[str, Dict[str, Any]] = {}
     with open(csv_path, "r", newline="", encoding="utf-8-sig") as f:
@@ -2653,10 +2443,6 @@ def scrape_csv_team_fixed_availability(
             "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
             "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
             "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-            "Open Complaint Timeliness": "",
-            "error": "",
-            "Closures": "",
-            "Opened": "",
         })
     return rows_out
 def scrape_ent_from_csv(
@@ -2773,10 +2559,6 @@ def scrape_ent_from_csv(
             "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
             "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
             "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-            "Open Complaint Timeliness": "",
-            "error": " | ".join(errs) if errs else "",
-            "Closures": "",
-            "Opened": "",
         })
     return rows_out
 def scrape_spine_previous_weeks_xlsm(
@@ -2835,11 +2617,6 @@ def scrape_spine_previous_weeks_xlsm(
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "T")
-        excel_dir = os.path.dirname(os.path.abspath(os.path.expandvars(source_file)))
-        timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-        closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-        timeliness_lu, timeliness_err = read_lookup_csv(timeliness_path)
-        closures_lu, closures_err = read_lookup_csv(closures_path)
         today_iso = date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
@@ -2955,26 +2732,6 @@ def scrape_spine_previous_weeks_xlsm(
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            key = (team, period_date)
-            open_complaint_timeliness = ""
-            closures = ""
-            opened = ""
-            trow = timeliness_lu.get(key)
-            if trow is not None:
-                open_complaint_timeliness = safe_str(trow.get("Open Complaint Timeliness"))
-            crow = closures_lu.get(key)
-            if crow is not None:
-                closures = safe_str(crow.get("Closures"))
-                opened = safe_str(crow.get("Opened"))
-            errs = []
-            if timeliness_err:
-                errs.append(timeliness_err)
-            if closures_err:
-                errs.append(closures_err)
-            if not trow and not timeliness_err:
-                errs.append(f"No timeliness match for {team} {period_date}")
-            if not crow and not closures_err:
-                errs.append(f"No closures match for {team} {period_date}")
             rows_out.append({
                 "team": team,
                 "period_date": period_date,
@@ -2997,10 +2754,6 @@ def scrape_spine_previous_weeks_xlsm(
                 "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                 "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
-                "Open Complaint Timeliness": open_complaint_timeliness,
-                "error": " | ".join(errs) if errs else "",
-                "Closures": closures,
-                "Opened": opened,
             })
         return rows_out
     finally:
@@ -3059,8 +2812,6 @@ def read_csv_rows(path: str) -> list[dict]:
         return list(csv.DictReader(f))
 def append_missing_placeholders_from_wip(
     wip_csv_path: str,
-    closures_csv_path: str,
-    timeliness_csv_path: str,
     logger: Optional[logging.Logger] = None,
 ) -> None:
     wip_rows = read_csv_rows(wip_csv_path)
@@ -3072,32 +2823,6 @@ def append_missing_placeholders_from_wip(
             continue
         if _is_monday_iso(pd):
             wip_keys.add((team, pd))
-    closures_rows = read_csv_rows(closures_csv_path)
-    timeliness_rows = read_csv_rows(timeliness_csv_path)
-    closures_keys = {(safe_str(r.get("team")), safe_str(r.get("period_date"))) for r in closures_rows if safe_str(r.get("team")) and safe_str(r.get("period_date"))}
-    timeliness_keys = {(safe_str(r.get("team")), safe_str(r.get("period_date"))) for r in timeliness_rows if safe_str(r.get("team")) and safe_str(r.get("period_date"))}
-    missing_closures = sorted([k for k in wip_keys if k not in closures_keys])
-    missing_timeliness = sorted([k for k in wip_keys if k not in timeliness_keys])
-    if missing_closures:
-        file_exists = os.path.exists(closures_csv_path)
-        with open(closures_csv_path, "a", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["team", "period_date", "Closures", "Opened"])
-            if (not file_exists) or (os.path.getsize(closures_csv_path) == 0):
-                w.writeheader()
-            for team, pd in missing_closures:
-                w.writerow({"team": team, "period_date": pd, "Closures": "", "Opened": ""})
-    if missing_timeliness:
-        file_exists = os.path.exists(timeliness_csv_path)
-        with open(timeliness_csv_path, "a", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["team", "period_date", "Open Complaint Timeliness"])
-            if (not file_exists) or (os.path.getsize(timeliness_csv_path) == 0):
-                w.writeheader()
-            for team, pd in missing_timeliness:
-                w.writerow({"team": team, "period_date": pd, "Open Complaint Timeliness": ""})
-    if logger:
-        logger.info(f"[POST] WIP weekly keys={len(wip_keys)}")
-        logger.info(f"[POST] closures placeholders appended={len(missing_closures)} -> {os.path.basename(closures_csv_path)}")
-        logger.info(f"[POST] timeliness placeholders appended={len(missing_timeliness)} -> {os.path.basename(timeliness_csv_path)}")
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
@@ -3848,65 +3573,5 @@ def main():
     wip_rows = build_ns_wip_rows(rows)
     wip_out_file = "NS_DATA\\NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
-    logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
-    excel_dir = os.path.dirname(os.path.abspath(wip_out_file))
-    timeliness_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeliness.csv")
-    closures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "closures.csv")
-    append_missing_placeholders_from_wip(
-        wip_csv_path=wip_out_file,
-        closures_csv_path=closures_path,
-        timeliness_csv_path=timeliness_path,
-        logger=logger,
-    )
-    def apply_closures_timeliness_to_wip(
-        wip_csv_path: str,
-        closures_csv_path: str,
-        timeliness_csv_path: str,
-        logger: Optional[logging.Logger] = None,
-    ) -> None:
-        closures_rows = read_csv_rows(closures_csv_path)
-        timeliness_rows = read_csv_rows(timeliness_csv_path)
-        closures_lu: Dict[Tuple[str, str], Dict[str, Any]] = {}
-        for r in closures_rows:
-            team = safe_str(r.get("team"))
-            pd = safe_str(r.get("period_date"))
-            if team and pd:
-                closures_lu[(team, pd)] = r
-        timeliness_lu: Dict[Tuple[str, str], Dict[str, Any]] = {}
-        for r in timeliness_rows:
-            team = safe_str(r.get("team"))
-            pd = safe_str(r.get("period_date"))
-            if team and pd:
-                timeliness_lu[(team, pd)] = r
-        wip_rows = read_csv_rows(wip_csv_path)
-        updated = 0
-        for r in wip_rows:
-            team = safe_str(r.get("team"))
-            pd = safe_str(r.get("period_date"))
-            if not team or not pd:
-                continue
-            c = closures_lu.get((team, pd))
-            t = timeliness_lu.get((team, pd))
-            if c is not None:
-                r["Closures"] = safe_str(c.get("Closures"))
-                r["Opened"] = safe_str(c.get("Opened"))
-            if t is not None:
-                r["Open Complaint Timeliness"] = safe_str(t.get("Open Complaint Timeliness"))
-            if (safe_str(r.get("Closures")) or safe_str(r.get("Opened")) or safe_str(r.get("Open Complaint Timeliness"))):
-                updated += 1
-        with open(wip_csv_path, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=WIP_HEADERS)
-            w.writeheader()
-            for r in wip_rows:
-                w.writerow({h: r.get(h, "") for h in WIP_HEADERS})
-        if logger:
-            logger.info(f"[POST] NS_WIP.csv updated with closures/timeliness for {updated} rows")
-    apply_closures_timeliness_to_wip(
-        wip_csv_path=wip_out_file,
-        closures_csv_path=closures_path,
-        timeliness_csv_path=timeliness_path,
-        logger=logger,
-    )
-    logger.info("=== NS Metrics Run END ===")
 if __name__ == "__main__":
     main()
