@@ -1970,51 +1970,6 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
     diff = (float(actual) - float(target)) / float(target)
     delta_str = f"{diff:+.0%} vs target"
     col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
-with kpi_cols[0]:
-    st.subheader("Latest Week (Selected Teams)")
-row1 = st.columns(6)
-kpi(
-    row1[0],
-    "HC in WIP",
-    tot_hc_wip,
-    "{:,.0f}",
-    help="Unique people with any time in WIP for the week",
-)
-kpi(
-    row1[1],
-    "Actual HC used",
-    tot_hc_used,
-    "{:,.2f}",
-    help="Based on 6 hours per person in WIP per day",
-)
-kpi_vs_target(
-    row1[2],
-    "Open Complaint Timeliness",
-    timeliness_avg,
-    0.87,
-    "{:.0%}",
-)
-kpi(
-    row1[3],
-    "Closures",
-    tot_closures,
-    "{:,.0f}",
-    help="Events Closed",
-)
-kpi(
-    row1[4],
-    "Efficiency",
-    efficiency,
-    "{:.3f}",
-    help="Closures ÷ Completed WIP Hours",
-)
-kpi(
-    row1[5],
-    "Productivity",
-    productivity,
-    "{:,.3f}",
-    help="Closures ÷ All Available Hours",
-)
 st.markdown("---")
 if has_dates and min_date and max_date:
     st.markdown("#### Date Range")
