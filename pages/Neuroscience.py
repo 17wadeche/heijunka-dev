@@ -201,7 +201,7 @@ def normalize_person_name(name: str) -> str:
         x = x.replace("\u00A0", " ")
         x = " ".join(x.split()).strip()
         x = x.lower()
-        x = re.sub(r"[^\w\s]", "", x)   # remove punctuation
+        x = re.sub(r"[^\w\s]", "", x) 
         x = " ".join(x.split())
         return x
     raw = str(name or "")
@@ -210,6 +210,8 @@ def normalize_person_name(name: str) -> str:
     aliases = {
         _norm("mirlay morin"): "Mirlay",
         _norm("nikita schazenbach"): "Nikita",
+        _norm( "bandaru, phaneedra"): "Phaneedra Bandaru",
+        _norm("phaneedra"): "Phaneedra Bandaru",
         _norm("jacob"): "Jacob Woolley",
         _norm("jacob g"): "Jacob Geraghty",
         _norm("jake"): "Jacob Geraghty",
