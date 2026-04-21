@@ -377,8 +377,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
+    for col in ["Completed Hours", "Actual HC used"]:
         if col in df.columns:
             s = (
                 df[col]
@@ -570,9 +569,9 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             label = label.strip()
             if not label:
                 continue
-            label = re.sub(r"\([^)]*$", "", label)       # half-open "( ... "
-            label = re.sub(r"\(.*?\)", "", label)        # full "( ... )"
-            label = re.sub(r"[:\-–—]+$", "", label)      # trailing punctuation
+            label = re.sub(r"\([^)]*$", "", label)   
+            label = re.sub(r"\(.*?\)", "", label)    
+            label = re.sub(r"[:\-–—]+$", "", label)  
             label = label.strip(" ,;:()[]-–—")
             label = re.sub(r"\s+", " ", label).strip()
             label = _canon_activity(label)
