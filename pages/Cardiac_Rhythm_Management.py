@@ -1301,13 +1301,14 @@ if nonwip_mode:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
     SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
+    team_week_hours = 39.0 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
         nw_row=row,
         metrics_frame=df,
         nw_frame=nw,
-        week_hours=40.0,
+        week_hours=team_week_hours,
         irl_people=set(),
     )
     if wk_people.empty:
