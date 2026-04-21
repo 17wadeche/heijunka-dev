@@ -1551,7 +1551,7 @@ if has_dates and min_date and max_date:
         st.session_state["end_date"] = end
 else:
     start, end = None, None
-col1, col2, col3 = st.columns([2, 2, 6], gap="large")
+col1, col2 = st.columns([6, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
 current_qp = _get_qp_teams()
@@ -1571,7 +1571,6 @@ latest = (f.sort_values(["team", "period_date"])
             .tail(1)
             .copy()
 )
-tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
 nw_all = load_non_wip()
 if not nw_all.empty:
