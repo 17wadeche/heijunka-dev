@@ -156,6 +156,7 @@ ACTIVITY_MAP = {
     "crnerstone":"Cornerstone",
     "fola: liberant write up meeting":"Meeting",
     "coding, rrtt, meetings, collaboration/event review":"Coding/Code Gov",
+    "pvh coding doc update scrum":"Coding/Code Gov",
     "scrum, meeting":"Scrum & Action",
     "60 minute training with ruth": "Training/Mentoring",
     "collaboration affera ftq/integer oem":"Project Work",
