@@ -1989,7 +1989,7 @@ if has_dates and min_date and max_date:
             key="end_date",
         )
 st.markdown("---")
-left, mid, right = st.columns(3)
+left, right = st.columns(2)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
 ).encode(
@@ -1998,24 +1998,7 @@ base = alt.Chart(f).transform_calculate(
 teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
-left2, mid2, right2 = st.columns(3) 
-with left2:
-    st.subheader("HC in WIP Trend")
-    if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
-        hc = f[["team", "period_date", "HC in WIP"]].dropna()
-        base_hc = alt.Chart(hc).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("HC in WIP:Q", title="HC in WIP"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
-        )
-        st.altair_chart(
-            base_hc.mark_line(point=True).properties(height=280),
-            use_container_width=True
-        )
-    else:
-        st.info("No 'HC in WIP' data available in the selected range.")
-with mid2:
+with left:
     st.subheader("Actual HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
         ahu = f[["team", "period_date", "Actual HC used"]].dropna()
@@ -2121,7 +2104,7 @@ with mid2:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
-with right2:
+with right:
     st.subheader("Hours Trend")
     _nw = load_non_wip()
     teams_cfg = load_team_config()
