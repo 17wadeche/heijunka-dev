@@ -3585,16 +3585,23 @@ with right2:
                         .sum()
                         .rename(columns={"Hours": "TotalHours"})
                     )
-                    person_key = str(picked_person_mix).strip().lower()
-                    PERSON_WEEKLY_HOURS_DRILL = {"chelsey": 16.0, "mg": 36.0, "lindsey": 32.0}
-                    if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
+                    person_name = normalize_person_name(str(picked_person_mix).strip())
+                    if (
+                        "wk_people_kpi" in dir()
+                        and not wk_people_kpi.empty
+                        and "person" in wk_people_kpi.columns
+                        and "Expected Hours" in wk_people_kpi.columns
+                    ):
                         person_expected_match = wk_people_kpi.loc[
-                            wk_people_kpi["person"].astype(str).str.strip().str.lower() == person_key,
-                            "Expected Hours"
+                            wk_people_kpi["person"].astype(str).map(normalize_person_name) == person_name,
+                            "Expected Hours",
                         ]
-                        drill_expected_hrs = float(person_expected_match.iloc[0]) if not person_expected_match.empty else PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                        if not person_expected_match.empty:
+                            drill_expected_hrs = float(person_expected_match.iloc[0])
+                        else:
+                            drill_expected_hrs = weekly_hours_for_person(person_name, 40.0)
                     else:
-                        drill_expected_hrs = PERSON_WEEKLY_HOURS_DRILL.get(person_key, 40.0)
+                        drill_expected_hrs = weekly_hours_for_person(person_name, 40.0)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
                     drill_overflow_df["y_pos"] = 1.02
