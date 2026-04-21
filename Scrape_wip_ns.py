@@ -287,6 +287,246 @@ def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
     finally:
         stop.set()
         t.join(timeout=1)
+def load_scs_super_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    scs_super_source_file: str,
+    scs_super_old_cfg: Dict[str, Any],
+    scs_super_new_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_super_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "SCS Super Cell"
+    ]
+    frozen_super_rows = [
+        r for r in existing_super_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-30"
+    ]
+    refreshed_rows: list[dict] = []
+    old_cfg = dict(scs_super_old_cfg)
+    old_cfg["min_period_date"] = "2025-06-30"
+    old_cfg["max_period_date"] = min(weeks_to_refresh)
+    new_cfg = dict(scs_super_new_cfg)
+    new_cfg["min_period_date"] = max(
+        safe_str(scs_super_new_cfg.get("min_period_date")),
+        min(weeks_to_refresh),
+    )
+    new_cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, old_cfg))
+    refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, new_cfg))
+    refreshed_rows = [
+        r for r in refreshed_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_super_rows = merge_rows_by_team_period(frozen_super_rows + refreshed_rows)
+    if logger:
+        logger.info(
+            f"[SCS Super Cell] loaded cached rows from NS_metrics: {len(existing_super_rows)} | "
+            f"kept={len(frozen_super_rows)} | refreshed={len(refreshed_rows)} | "
+            f"final={len(merged_super_rows)}"
+        )
+    return merged_super_rows
+def load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    cos_source_file: str,
+    cos_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_cos_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "TDD COS 1"
+    ]
+    frozen_cos_rows = [
+        r for r in existing_cos_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    cfg = dict(cos_cfg)
+    cfg["min_period_date"] = min(weeks_to_refresh)
+    cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_cos_rows = scrape_workbook_with_config(cos_source_file, cfg)
+    refreshed_cos_rows = [
+        r for r in refreshed_cos_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_cos_rows = merge_rows_by_team_period(frozen_cos_rows + refreshed_cos_rows)
+    if logger:
+        logger.info(
+            f"[TDD COS 1] loaded cached rows from NS_metrics: {len(existing_cos_rows)} | "
+            f"kept={len(frozen_cos_rows)} | refreshed={len(refreshed_cos_rows)} | "
+            f"final={len(merged_cos_rows)}"
+        )
+    return merged_cos_rows
+def load_mazor_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    mazor_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_mazor_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "Mazor"
+    ]
+    frozen_mazor_rows = [
+        r for r in existing_mazor_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    refreshed_mazor_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+        mazor_source_file,
+        "Mazor",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_mazor_rows = [
+        r for r in refreshed_mazor_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_mazor_rows = merge_rows_by_team_period(frozen_mazor_rows + refreshed_mazor_rows)
+    if logger:
+        logger.info(
+            f"[Mazor] loaded cached rows from NS_metrics: {len(existing_mazor_rows)} | "
+            f"kept={len(frozen_mazor_rows)} | refreshed={len(refreshed_mazor_rows)} | "
+            f"final={len(merged_mazor_rows)}"
+        )
+    return merged_mazor_rows
+def load_csf_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    csf_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_csf_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "CSF"
+    ]
+    frozen_csf_rows = [
+        r for r in existing_csf_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    refreshed_csf_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+        csf_source_file,
+        "CSF",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_csf_rows = [
+        r for r in refreshed_csf_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_csf_rows = merge_rows_by_team_period(frozen_csf_rows + refreshed_csf_rows)
+    if logger:
+        logger.info(
+            f"[CSF] loaded cached rows from NS_metrics: {len(existing_csf_rows)} | "
+            f"kept={len(frozen_csf_rows)} | refreshed={len(refreshed_csf_rows)} | "
+            f"final={len(merged_csf_rows)}"
+        )
+    return merged_csf_rows
+def load_oarm_meic_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    oarm_meic_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_oarm_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "O-Arm MEIC"
+    ]
+    frozen_oarm_rows = [
+        r for r in existing_oarm_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    refreshed_oarm_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+        oarm_meic_source_file,
+        "O-Arm MEIC",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_oarm_rows = [
+        r for r in refreshed_oarm_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_oarm_rows = merge_rows_by_team_period(frozen_oarm_rows + refreshed_oarm_rows)
+    if logger:
+        logger.info(
+            f"[O-Arm MEIC] loaded cached rows from NS_metrics: {len(existing_oarm_rows)} | "
+            f"kept={len(frozen_oarm_rows)} | refreshed={len(refreshed_oarm_rows)} | "
+            f"final={len(merged_oarm_rows)}"
+        )
+    return merged_oarm_rows
+def load_ae_meic_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    ae_meic_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_ae_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "AE MEIC"
+    ]
+    frozen_ae_rows = [
+        r for r in existing_ae_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    refreshed_ae_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+        ae_meic_source_file,
+        "AE MEIC",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_ae_rows = [
+        r for r in refreshed_ae_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_ae_rows = merge_rows_by_team_period(frozen_ae_rows + refreshed_ae_rows)
+    if logger:
+        logger.info(
+            f"[AE MEIC] loaded cached rows from NS_metrics: {len(existing_ae_rows)} | "
+            f"kept={len(frozen_ae_rows)} | refreshed={len(refreshed_ae_rows)} | "
+            f"final={len(merged_ae_rows)}"
+        )
+    return merged_ae_rows
+def load_nav_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    nav_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_nav_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "Nav"
+    ]
+    frozen_nav_rows = [
+        r for r in existing_nav_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    refreshed_nav_rows = scrape_nav_previous_weeks_xlsm(
+        nav_source_file,
+        "Nav",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_nav_rows = [
+        r for r in refreshed_nav_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_nav_rows = merge_rows_by_team_period(frozen_nav_rows + refreshed_nav_rows)
+    if logger:
+        logger.info(
+            f"[Nav] loaded cached rows from NS_metrics: {len(existing_nav_rows)} | "
+            f"kept={len(frozen_nav_rows)} | refreshed={len(refreshed_nav_rows)} | "
+            f"final={len(merged_nav_rows)}"
+        )
+    return merged_nav_rows
 def read_existing_metrics_rows(path: str) -> list[dict]:
     if not os.path.exists(path):
         return []
@@ -295,6 +535,114 @@ def read_existing_metrics_rows(path: str) -> list[dict]:
             return list(csv.DictReader(f))
     except Exception:
         return []
+def load_nv_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    nv_source_file: str,
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_nv_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "NV"
+    ]
+    frozen_nv_rows = [
+        r for r in existing_nv_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-07-07"
+    ]
+    refreshed_nv_rows = scrape_dbs_previous_weeks_xlsm(
+        nv_source_file,
+        "NV",
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_nv_rows = [
+        r for r in refreshed_nv_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_nv_rows = merge_rows_by_team_period(frozen_nv_rows + refreshed_nv_rows)
+    if logger:
+        logger.info(
+            f"[NV] loaded cached rows from NS_metrics: {len(existing_nv_rows)} | "
+            f"kept={len(frozen_nv_rows)} | refreshed={len(refreshed_nv_rows)} | "
+            f"final={len(merged_nv_rows)}"
+        )
+    return merged_nv_rows
+def load_meic_ph_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    meic_source_file: str,
+    meic_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_meic_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "MEIC PH"
+    ]
+    frozen_meic_rows = [
+        r for r in existing_meic_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-09-01"
+    ]
+    cfg = dict(meic_cfg)
+    cfg["min_period_date"] = min(weeks_to_refresh)
+    cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_meic_rows = scrape_workbook_with_config(meic_source_file, cfg)
+    refreshed_meic_rows = [
+        r for r in refreshed_meic_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    merged_meic_rows = merge_rows_by_team_period(frozen_meic_rows + refreshed_meic_rows)
+    if logger:
+        logger.info(
+            f"[MEIC PH] loaded cached rows from NS_metrics: {len(existing_meic_rows)} | "
+            f"kept={len(frozen_meic_rows)} | refreshed={len(refreshed_meic_rows)} | "
+            f"final={len(merged_meic_rows)}"
+        )
+    return merged_meic_rows
+def load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    scs_source_file: str,
+    scs_old_cfg: Dict[str, Any],
+    scs_new_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    scs_weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_scs_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "SCS Cell 1"
+    ]
+    frozen_scs_rows = [
+        r for r in existing_scs_rows
+        if safe_str(r.get("period_date")) not in scs_weeks_to_refresh
+        and safe_str(r.get("period_date")) >= "2025-06-30"
+    ]
+    refreshed_rows: list[dict] = []
+    old_cfg = dict(scs_old_cfg)
+    old_cfg["min_period_date"] = "2025-06-30"
+    old_cfg["max_period_date"] = min(scs_weeks_to_refresh)
+    new_cfg = dict(scs_new_cfg)
+    new_cfg["min_period_date"] = max(
+        safe_str(scs_new_cfg.get("min_period_date")),
+        min(scs_weeks_to_refresh),
+    )
+    new_cfg["max_period_date"] = max(scs_weeks_to_refresh)
+    refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, old_cfg))
+    refreshed_rows.extend(scrape_workbook_with_config(scs_source_file, new_cfg))
+    refreshed_rows = [
+        r for r in refreshed_rows
+        if safe_str(r.get("period_date")) in scs_weeks_to_refresh
+    ]
+    merged_scs_rows = merge_rows_by_team_period(frozen_scs_rows + refreshed_rows)
+    if logger:
+        logger.info(
+            f"[SCS Cell 1] loaded cached rows from NS_metrics: {len(existing_scs_rows)} | "
+            f"kept={len(frozen_scs_rows)} | refreshed={len(refreshed_rows)} | "
+            f"final={len(merged_scs_rows)}"
+        )
+    return merged_scs_rows
 def load_ph_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     ph_source_file: str,
@@ -2992,37 +3340,6 @@ def main():
             "wp2_output_rows_by_person": [68, 73, 78, 83, 88],
         },
     }
-    PH_OLD_CFG = {
-        "team": "PH",
-        "person_cols": ("B", "R"),
-        "cells": {
-            "total_available_hours": "T59",
-            "completed_hours": "T50",
-            "wp1_output": "Z2",
-            "wp1_target": "Z7",
-            "wp2_output": "AB2",
-            "wp2_target": "AB7",
-            "uplh_wp1": "Z5",
-            "uplh_wp2": "AB5",
-            "wp1_hours": "Z4",
-            "wp2_hours": "AB4",
-        },
-        "rows": {
-            "hc_row": 50,
-            "person_name_row_for_person_hours": 53,
-            "person_actual_row_for_person_hours": 50,
-            "person_available_row_for_person_hours": 59,
-            "person_name_row_for_outputs_by_person": 53,
-            "person_target_row_for_outputs_by_person": 25,
-            "person_name_row_for_hours_by_cell_by_person": 30,
-            "wp1_hour_rows": [31, 35, 39, 43, 47],
-            "wp2_hour_rows": [32, 36, 40, 44, 48],
-            "person_name_row_for_output_by_cell_by_person": 10,
-            "wp1_output_rows_by_person": [11, 14, 17, 20, 23],
-            "wp2_output_rows_by_person": [12, 15, 18, 21, 24],
-        },
-        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(11, 25))},
-    }
     PH_NEW_CFG = {
         "team": "PH",
         "person_cols": ("B", "R"),
@@ -3332,18 +3649,34 @@ def main():
                 logger=logger,
             )
         )
-
         rows.extend(ph_rows)
     if should_run("PH Cell 17"):
         extend_team("PH Cell 17", lambda: scrape_workbook_with_config(ph_cell17_source_file, PH_CELL17_CFG))
     if should_run("SCS Cell 1"):
-        extend_team(
+        scs_cell1_rows = run_team(
+            logger,
             "SCS Cell 1",
-            lambda:
-                scrape_workbook_with_config(scs_source_file, SCS_CELL1_OLD_CFG)
-                + scrape_workbook_with_config(scs_source_file, SCS_CELL1_NEW_CFG)
+            lambda: load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                scs_source_file,
+                SCS_CELL1_OLD_CFG,
+                SCS_CELL1_NEW_CFG,
+                logger=logger,
+            )
         )
-    meic_rows = run_team(logger, "MEIC PH", lambda: scrape_workbook_with_config(meic_source_file, MEIC_PH_CFG))
+        rows.extend(scs_cell1_rows)
+    if should_run("MEIC PH"):
+        meic_rows = run_team(
+            logger,
+            "MEIC PH",
+            lambda: load_meic_ph_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                meic_source_file,
+                MEIC_PH_CFG,
+                logger=logger,
+            )
+        )
+        rows.extend(meic_rows)
     cutoff_dbs = "2025-07-07"
     dbs_c13_rows = run_team(
         logger,
@@ -3371,25 +3704,72 @@ def main():
     dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
     logger.info(f"[DBS C14] filter >= {cutoff_dbs}: {before} -> {len(dbs_c14_rows)}")
     rows.extend(dbs_c14_rows)
-    nv_rows = run_team(
-        logger,
-        "NV",
-        lambda: scrape_dbs_previous_weeks_xlsm(nv_source_file, "NV", ALL_MONDAYS_SINCE_2025_06_02),
-    )
-    before = len(nv_rows)
-    nv_rows = filter_rows_on_or_after(nv_rows, cutoff_dbs)
-    logger.info(f"[NV] filter >= {cutoff_dbs}: {before} -> {len(nv_rows)}")
-    rows.extend(nv_rows)
+    if should_run("NV"):
+        nv_rows = run_team(
+            logger,
+            "NV",
+            lambda: load_nv_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                nv_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(nv_rows)
     if should_run("Nav"):
-        extend_team("Nav", lambda: scrape_nav_previous_weeks_xlsm(nav_source_file, "Nav", ALL_MONDAYS_SINCE_2025_06_02))
+        nav_rows = run_team(
+            logger,
+            "Nav",
+            lambda: load_nav_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                nav_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(nav_rows)
     if should_run("AE MEIC"):
-        extend_team("AE MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(ae_meic_source_file, "AE MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+        ae_meic_rows = run_team(
+            logger,
+            "AE MEIC",
+            lambda: load_ae_meic_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                ae_meic_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(ae_meic_rows)
     if should_run("O-Arm MEIC"):
-        extend_team("O-Arm MEIC", lambda: scrape_meic_ae_oarm_previous_weeks_xlsm(oarm_meic_source_file, "O-Arm MEIC", ALL_MONDAYS_SINCE_2025_06_02))
+        oarm_meic_rows = run_team(
+            logger,
+            "O-Arm MEIC",
+            lambda: load_oarm_meic_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                oarm_meic_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(oarm_meic_rows)
     if should_run("Mazor"):
-        extend_team("Mazor", lambda: scrape_previous_weeks_xlsm_with_filters(mazor_source_file, "Mazor", MAZOR_CFG, ALL_MONDAYS_SINCE_2025_06_02))
+        mazor_rows = run_team(
+            logger,
+            "Mazor",
+            lambda: load_mazor_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                mazor_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(mazor_rows)
     if should_run("CSF"):
-        extend_team("CSF",   lambda: scrape_previous_weeks_xlsm_with_filters(csf_source_file,   "CSF",   CSF_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        csf_rows = run_team(
+            logger,
+            "CSF",
+            lambda: load_csf_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                csf_source_file,
+                logger=logger,
+            )
+        )
+        rows.extend(csf_rows)
     if should_run("PSS US"):
         extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
     if should_run("PSS MEIC"):
@@ -3413,34 +3793,31 @@ def main():
         extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
     if should_run("SCS MEIC"):
         extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
-    cos_rows = run_team(
-        logger,
-        "TDD COS 1",
-        lambda: (scrape_workbook_with_config(cos_source_file, TDD_COS1_CFG)),
-    )
-    cutoff_cos = date.fromisoformat("2025-06-02")
-    before = len(cos_rows)
-    cos_rows = [r for r in cos_rows if safe_str(r.get("period_date")) >= cutoff_cos.isoformat()]
-    logger.info(f"[TDD COS 1] filter >= {cutoff_cos.isoformat()}: {before} -> {len(cos_rows)}")
-    rows.extend(cos_rows)
-    scs_super_rows = run_team(
-        logger,
-        "SCS Super Cell",
-        lambda: (
-            scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_OLD_CFG)
-            + scrape_workbook_with_config(scs_super_source_file, SCS_SUPER_NEW_CFG)
-        ),
-    )
-    logger.info(f"[SCS Super Cell] rows scraped (pre-filter): {len(scs_super_rows)}")
-    cutoff_super = date.fromisoformat("2025-06-30")
-    before = len(scs_super_rows)
-    scs_super_rows = [r for r in scs_super_rows if safe_str(r.get("period_date")) >= cutoff_super.isoformat()]
-    logger.info(f"[SCS Super Cell] filter >= {cutoff_super.isoformat()}: {before} -> {len(scs_super_rows)}")
-    rows.extend(scs_super_rows)
-    before = len(meic_rows)
-    meic_rows = [r for r in meic_rows if safe_str(r.get("period_date")) >= "2025-09-01"]
-    logger.info(f"[MEIC PH] filter >= 2025-09-01: {before} -> {len(meic_rows)}")
-    rows.extend(meic_rows)
+    if should_run("TDD COS 1"):
+        cos_rows = run_team(
+            logger,
+            "TDD COS 1",
+            lambda: load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                cos_source_file,
+                TDD_COS1_CFG,
+                logger=logger,
+            )
+        )
+        rows.extend(cos_rows)
+    if should_run("SCS Super Cell"):
+        scs_super_rows = run_team(
+            logger,
+            "SCS Super Cell",
+            lambda: load_scs_super_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                scs_super_source_file,
+                SCS_SUPER_OLD_CFG,
+                SCS_SUPER_NEW_CFG,
+                logger=logger,
+            )
+        )
+        rows.extend(scs_super_rows)
     ph17_before = sum(1 for r in rows if r.get("team") == "PH Cell 17")
     logger.info(f"[PH Cell 17] rows before TAA filter = {ph17_before}")
     before = len(rows)

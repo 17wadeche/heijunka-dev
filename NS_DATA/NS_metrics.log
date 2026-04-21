@@ -10,3 +10,101 @@
 2026-04-20 18:47:03,367 | INFO | [PH Cell 17] START
 2026-04-20 18:47:11,586 | INFO | [PH Cell 17] DONE | rows=4 | elapsed=0:00:08.219423
 2026-04-20 18:47:11,586 | INFO | [SCS Cell 1] START
+2026-04-20 18:50:11,606 | INFO | [SCS Cell 1] still running...
+2026-04-20 18:51:51,807 | INFO | === NS Metrics Run START ===
+2026-04-20 18:51:51,807 | INFO | Selected team: all
+2026-04-20 18:51:51,807 | INFO | [Spine] START
+2026-04-20 18:53:23,473 | INFO | [Spine] DONE | rows=34 | elapsed=0:01:31.665628
+2026-04-20 18:53:23,473 | INFO | [Spine] START
+2026-04-20 18:53:49,744 | INFO | [Spine] DONE | rows=6 | elapsed=0:00:26.271051
+2026-04-20 18:53:49,745 | INFO | [PH] START
+2026-04-20 18:54:25,166 | INFO | [PH] loaded cached PH rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-20 18:54:25,166 | INFO | [PH] DONE | rows=34 | elapsed=0:00:35.420644
+2026-04-20 18:54:25,166 | INFO | [PH Cell 17] START
+2026-04-20 18:54:31,993 | INFO | [PH Cell 17] DONE | rows=4 | elapsed=0:00:06.826878
+2026-04-20 18:54:31,993 | INFO | [SCS Cell 1] START
+2026-04-20 18:56:57,119 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 38 | kept=36 | refreshed=4 | final=39
+2026-04-20 18:56:57,119 | INFO | [SCS Cell 1] DONE | rows=39 | elapsed=0:02:25.126010
+2026-04-20 18:56:57,119 | INFO | [MEIC PH] START
+2026-04-20 18:59:57,128 | INFO | [MEIC PH] still running...
+2026-04-20 19:00:37,841 | INFO | [MEIC PH] DONE | rows=90 | elapsed=0:03:40.722087
+2026-04-20 19:00:37,841 | INFO | [DBS C13] START
+2026-04-20 19:01:01,015 | INFO | [DBS C13] DONE | rows=5 | elapsed=0:00:23.174308
+2026-04-20 19:01:01,016 | INFO | [DBS C13] filter >= 2025-07-07: 5 -> 5
+2026-04-20 19:01:01,016 | INFO | [DBS C14] START
+2026-04-20 19:01:28,593 | INFO | [DBS C14] DONE | rows=5 | elapsed=0:00:27.576157
+2026-04-20 19:01:28,593 | INFO | [DBS C14] filter >= 2025-07-07: 5 -> 5
+2026-04-20 19:01:28,593 | INFO | [NV] START
+2026-04-20 19:03:24,337 | INFO | [NV] DONE | rows=47 | elapsed=0:01:55.743048
+2026-04-20 19:03:24,337 | INFO | [NV] filter >= 2025-07-07: 47 -> 42
+2026-04-20 19:03:24,338 | INFO | [Nav] START
+2026-04-20 19:06:24,346 | INFO | [Nav] still running...
+2026-04-20 19:06:50,664 | INFO | [Nav] DONE | rows=44 | elapsed=0:03:26.326684
+2026-04-20 19:06:50,664 | INFO | [AE MEIC] START
+2026-04-20 19:09:42,952 | INFO | [AE MEIC] DONE | rows=44 | elapsed=0:02:52.287987
+2026-04-20 19:09:42,952 | INFO | [O-Arm MEIC] START
+2026-04-20 19:12:42,972 | INFO | [O-Arm MEIC] still running...
+2026-04-20 19:12:58,908 | INFO | [O-Arm MEIC] DONE | rows=42 | elapsed=0:03:15.955290
+2026-04-20 19:12:58,908 | INFO | [Mazor] START
+2026-04-20 19:15:21,947 | INFO | [Mazor] DONE | rows=46 | elapsed=0:02:23.039265
+2026-04-20 19:15:21,947 | INFO | [CSF] START
+2026-04-20 19:16:31,851 | INFO | [CSF] DONE | rows=44 | elapsed=0:01:09.903363
+2026-04-20 19:16:31,851 | INFO | [PSS US] START
+2026-04-20 19:16:35,717 | ERROR | [PSS US] FAIL | elapsed=0:00:03.866806 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+2026-04-20 19:16:35,725 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 378, in run_team
+    r for r in refreshed_oarm_rows
+               ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3410, in <lambda>
+    "wp1_target": "Z7",
+                        
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1950, in scrape_previous_weeks_xlsm_with_filters
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1933, in _open_via_temp_copy
+    base = os.path.splitext(os.path.basename(src))[0]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+
+2026-04-20 19:16:35,775 | INFO | [PSS MEIC] START
+2026-04-20 19:16:38,879 | ERROR | [PSS MEIC] FAIL | elapsed=0:00:03.104002 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+2026-04-20 19:16:38,879 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 378, in run_team
+    r for r in refreshed_oarm_rows
+               ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3412, in <lambda>
+    "wp2_target": "AB7",
+                         
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1950, in scrape_previous_weeks_xlsm_with_filters
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1933, in _open_via_temp_copy
+    base = os.path.splitext(os.path.basename(src))[0]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+
+2026-04-20 19:16:38,921 | INFO | [PSS MEIC Intern] START
+2026-04-20 19:16:41,993 | ERROR | [PSS MEIC Intern] FAIL | elapsed=0:00:03.071667 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+2026-04-20 19:16:41,993 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 378, in run_team
+    r for r in refreshed_oarm_rows
+               ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3414, in <lambda>
+    "uplh_wp2": "AB5",
+                       
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1950, in scrape_previous_weeks_xlsm_with_filters
+    ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1933, in _open_via_temp_copy
+    base = os.path.splitext(os.path.basename(src))[0]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+
+2026-04-20 19:16:42,143 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-20 19:16:42,144 | INFO | [ENT] START
+2026-04-20 19:16:43,995 | INFO | [ENT] DONE | rows=47 | elapsed=0:00:01.851432
+2026-04-20 19:16:43,996 | INFO | [DBS MEIC] START
+2026-04-20 19:16:44,015 | INFO | [DBS MEIC] DONE | rows=36 | elapsed=0:00:00.019021
+2026-04-20 19:16:44,016 | INFO | [SCS MEIC] START
+2026-04-20 19:16:44,037 | INFO | [SCS MEIC] DONE | rows=36 | elapsed=0:00:00.021079
+2026-04-20 19:16:44,037 | INFO | [TDD COS 1] START
