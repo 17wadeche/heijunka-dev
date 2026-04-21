@@ -1710,19 +1710,6 @@ if nonwip_mode:
                     )
                     st.altair_chart(act_chart, use_container_width=True)
     st.stop()
-with st.expander("Glossary", expanded=False):
-    st.markdown("""
-- **Target UPLH** — Target Output ÷ Target Hours from Available Hours Tab (i.e., **Total Available Hours**)
-- **Actual UPLH** — Actual Output ÷ Actual Hours in WIP (i.e., **Completed Hours**)
-- **Capacity Utilization** — Completed Hours in WIP ÷ Available Hours from Available Hours Tab (Amount of the Capacity that has been used)
-- **HC in WIP** — Number of **unique people** who logged any time in WIP during the week
-- **Actual HC used** — Total actual hours worked in WIP ÷ **30**  
-  <small>(assumes **6 hours in WIP per person per day × 5 days**)</small>
-- **Closures** — Number of **PEs** closed during the week
-- **Efficiency** — Closures ÷ Completed WIP Hours.
-- **Productivity** — Closures ÷ (Completed WIP Hours + Non-WIP Hours)
-- **Multi-Axis View tip** — If you select **only one** series, you can project the next **3 months**.
-""", unsafe_allow_html=True)
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.csv exists and has the 'All Metrics' sheet.")
     st.stop()
