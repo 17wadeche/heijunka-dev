@@ -1548,10 +1548,10 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
     PEOPLE_END   = 12
     COL_EXPECTED = _col_letter_to_idx("B")
     COL_OOO      = _col_letter_to_idx("Y")
-    COL_NONWIP   = _col_letter_to_idx("X")
+    COL_NONWIP   = _col_letter_to_idx("Z")
     ACT_HEADER_ROW = 0
     ACT_START_COL  = _col_letter_to_idx("C")
-    ACT_END_COL    = _col_letter_to_idx("W")
+    ACT_END_COL    = _col_letter_to_idx("X")
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
