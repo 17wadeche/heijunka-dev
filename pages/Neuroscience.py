@@ -638,51 +638,6 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
     if not out_rows:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
-def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.DataFrame:
-    cols = ["team", "period_date", key_label, "Actual", "Target"]
-    if df.empty or col_name not in df.columns:
-        return pd.DataFrame(columns=cols)
-    def _bad_key(k: str) -> bool:
-        s = str(k).strip()
-        return s in {"", "-", "–", "—"}
-    rows: list[dict] = []
-    sub = df.loc[:, ["team", "period_date", col_name]].dropna(subset=[col_name]).copy()
-    for _, r in sub.iterrows():
-        payload = r[col_name]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            continue
-        if not isinstance(obj, dict):
-            continue
-        for k, vals in obj.items():
-            if _bad_key(k):
-                continue
-            if isinstance(vals, dict):
-                outv = (vals.get("output", None) if "output" in vals else
-                        vals.get("actual", None) if "actual" in vals else
-                        vals.get("Actual", None))
-                tgtv = vals.get("target", vals.get("Target"))
-            else:
-                outv, tgtv = vals, np.nan
-            outv = pd.to_numeric(outv, errors="coerce")
-            tgtv = pd.to_numeric(tgtv, errors="coerce")
-            if pd.isna(outv) and pd.isna(tgtv):
-                continue
-            val = str(k).strip()
-            if key_label == "person":
-                val = normalize_person_name(val)
-            rows.append({
-                "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                key_label: str(k).strip(),
-                "Actual": outv,
-                "Target": tgtv
-            })
-    out = pd.DataFrame(rows, columns=cols)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
@@ -931,78 +886,6 @@ def build_person_weekly_accounting(
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
-def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    for c in candidates:
-        if c in df.columns:
-            return c
-    return None
-def _maybe_as_float(x):
-    try:
-        return float(x)
-    except Exception:
-        return np.nan
-def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
-    col = _find_first_col(
-        df,
-        [
-            "Hours by Cell/Station - by person",   # <- NEW: your per-person column
-            "Hours by Cell Station - by person",   # <- tolerant variant
-            "Cell/Station Hours",                  # totals (no person breakdown)
-            "Hours by Cell/Station",
-            "Cell Station Hours",
-            "Cell Hours",
-            "Station Hours",
-        ]
-    )
-    cols = ["team","period_date","cell_station","person","Actual Hours","Available Hours"]
-    if not col or df.empty or col not in df.columns:
-        return pd.DataFrame(columns=cols)
-    sub = df.loc[df["team"] == team, ["team","period_date", col]].dropna(subset=[col]).copy()
-    rows = []
-    for _, r in sub.iterrows():
-        payload = r[col]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            obj = None
-        if not isinstance(obj, dict):
-            continue
-        for station, per in obj.items():
-            if not isinstance(per, dict):
-                continue
-            if all(not isinstance(v, dict) for v in per.values()):
-                for person, hours in per.items():
-                    a = _maybe_as_float(hours)
-                    if pd.isna(a):
-                        continue
-                    rows.append({
-                        "team": r["team"],
-                        "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                        "cell_station": str(station).strip(),
-                        "person": normalize_person_name(str(person).strip()),
-                        "Actual Hours": a,
-                        "Available Hours": np.nan,
-                    })
-                continue
-            for person, pv in per.items():
-                if not isinstance(pv, dict):
-                    continue
-                a = _maybe_as_float(pv.get("actual", pv.get("hours")))
-                t = _maybe_as_float(pv.get("available", pv.get("target")))
-                if pd.isna(a) and pd.isna(t):
-                    continue
-                rows.append({
-                    "team": r["team"],
-                    "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                    "cell_station": str(station).strip(),
-                    "person": normalize_person_name(str(person).strip()),
-                    "Actual Hours": a,
-                    "Available Hours": t,
-                })
-    out = pd.DataFrame(rows, columns=cols)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
