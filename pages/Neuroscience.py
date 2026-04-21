@@ -2043,7 +2043,6 @@ base = alt.Chart(f).transform_calculate(
 teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
-st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
     st.subheader("HC in WIP Trend")
