@@ -388,8 +388,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(s, errors="coerce")  
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
-        df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
 def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str, float]]:
     payload = row.get("non_wip_activities", "[]")
