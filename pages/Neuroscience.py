@@ -446,11 +446,6 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     )
     grp = (
         df.groupby(["activity", "name"], as_index=False)
-        .agg(
-            hours=("hours", "sum"),
-            days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
-            day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
-        )
     )
     out = (
         grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
