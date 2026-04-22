@@ -3511,7 +3511,7 @@ def main():
         "min_period_date": "2026-03-30",
         "cells": {
             "total_available_hours": "T61",
-            "completed_hours": {"type": "sum_cells", "cells": ["Z4", "AB4"]},
+            "completed_hours": "T50",
             "wp1_output": "Z2",
             "wp1_target": "Z7",
             "wp2_output": "AB2",
