@@ -29,6 +29,7 @@ ET_US_SOURCE_FILE = Path(
 )
 ET_US_WEEK_VIEWER_SHEET = "Week Viewer"
 ET_US_CURRENT_WEEK_SHEET = "Current Week"
+ET_US_ARCHIVE_SHEET = "Archive"
 def _week_start_monday(dt_series: pd.Series) -> pd.Series:
     dt = pd.to_datetime(dt_series, errors="coerce").dt.normalize()
     return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
@@ -474,6 +475,11 @@ from datetime import datetime, date
 def _excel_date_to_timestamp(v) -> Optional[pd.Timestamp]:
     if v is None:
         return None
+    try:
+        if pd.isna(v):
+            return None
+    except Exception:
+        pass
     if isinstance(v, pd.Timestamp):
         try:
             return pd.Timestamp(v).tz_localize(None).normalize()
@@ -887,6 +893,48 @@ def _try_unprotect_excel_object(obj, label: str = "") -> None:
     except Exception as e:
         if label:
             print(f"[WARN] Could not unprotect {label}: {e}", flush=True)
+
+def _read_excel_range_display_df(ws_com, range_addr: str) -> pd.DataFrame:
+    rng = _dyn(ws_com.Range(range_addr))
+    rows = int(getattr(rng.Rows, "Count", 0) or 0)
+    cols = int(getattr(rng.Columns, "Count", 0) or 0)
+    data: List[List[object]] = []
+    for r in range(1, rows + 1):
+        row_vals: List[object] = []
+        for c in range(1, cols + 1):
+            cell = _dyn(rng.Cells(r, c))
+            try:
+                val = cell.Text
+            except Exception:
+                try:
+                    val = cell.Value
+                except Exception:
+                    val = None
+            row_vals.append(val)
+        data.append(row_vals)
+    return pd.DataFrame(data)
+
+
+def _read_excel_used_range_df(ws_com) -> pd.DataFrame:
+    try:
+        raw = _dyn(ws_com.UsedRange).Value
+    except Exception:
+        raw = None
+    if raw is None:
+        return pd.DataFrame()
+    if not isinstance(raw, tuple):
+        raw = ((raw,),)
+    rows: List[List[object]] = []
+    max_cols = 0
+    for row in raw:
+        if not isinstance(row, tuple):
+            row = (row,)
+        max_cols = max(max_cols, len(row))
+        rows.append(list(row))
+    if max_cols == 0:
+        return pd.DataFrame()
+    rows = [r + [None] * (max_cols - len(r)) for r in rows]
+    return pd.DataFrame(rows)
 
 def build_selector_rows_from_capacity_workbook(
     team_src: TeamSource,
@@ -2544,6 +2592,78 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
         "nonwip_activities": activities,
         "ooo_map": ooo_map,
     }
+def _build_et_us_rows_from_archive_sheet(
+    archive_ws_com,
+    current_ws_com,
+    *,
+    team_src: TeamSource,
+    team_name: str,
+) -> List[dict]:
+    out_rows: List[dict] = []
+    archive_df = _read_excel_used_range_df(archive_ws_com)
+    if archive_df.empty or archive_df.shape[1] < 2:
+        return out_rows
+    header_df = _read_excel_range_display_df(current_ws_com, "A2:AD2")
+    header_row = header_df.iloc[0].tolist() if not header_df.empty else []
+    if len(header_row) < 30:
+        header_row = header_row + [""] * (30 - len(header_row))
+    else:
+        header_row = header_row[:30]
+    archive_dates = archive_df.iloc[:, 0].map(_excel_date_to_timestamp)
+    weeks = []
+    seen_weeks = set()
+    for dt in archive_dates.tolist():
+        if dt is None:
+            continue
+        try:
+            if pd.isna(dt):
+                continue
+        except Exception:
+            pass
+        ts = pd.Timestamp(dt)
+        if pd.isna(ts):
+            continue
+        ts = ts.normalize()
+        if ts < ET_SPLIT_START_DATE:
+            continue
+        if ts not in seen_weeks:
+            seen_weeks.add(ts)
+            weeks.append(ts)
+    weeks = sorted(weeks)
+    for week in weeks:
+        try:
+            week_mask = archive_dates == week
+            week_rows = archive_df.loc[week_mask].reset_index(drop=True)
+            if week_rows.empty:
+                continue
+            reconstructed = pd.DataFrame([[""] * 30 for _ in range(30)])
+            for c, val in enumerate(header_row[:30]):
+                reconstructed.iat[1, c] = val
+            data_block = week_rows.iloc[:, 1:31].reset_index(drop=True)
+            max_rows = min(len(data_block), 28)
+            max_cols = min(data_block.shape[1], 30)
+            for r in range(max_rows):
+                for c in range(max_cols):
+                    reconstructed.iat[2 + r, c] = data_block.iat[r, c]
+            built = build_et_us_snapshot(team_name, reconstructed, week)
+            out_rows.append({
+                "team": team_name,
+                "period_date": week.date().isoformat(),
+                "source_file": str(team_src.xlsx),
+                "people_count": 23,
+                "team_member_names": "",
+                "total_non_wip_hours": float(round(built["total_nonwip_hours"], 2)),
+                "OOO Hours": float(round(built["ooo_hours"], 2)),
+                "% in WIP": np.nan,
+                "non_wip_by_person": json.dumps(built["nonwip_by_person"], ensure_ascii=False),
+                "non_wip_activities": json.dumps(built["nonwip_activities"], ensure_ascii=False),
+                "wip_workers": "",
+                "wip_workers_count": "",
+                "wip_workers_ooo_hours": "",
+            })
+        except Exception as e:
+            print(f"[WARN] Failed {team_name} archive week {week}: {e}", flush=True)
+    return out_rows
 def _build_et_us_rows_from_sheet(
     wb,
     excel,
@@ -2557,7 +2677,26 @@ def _build_et_us_rows_from_sheet(
     out_rows: List[dict] = []
     if not date_values:
         return out_rows
-    for week in sorted({pd.Timestamp(d).normalize() for d in date_values}):
+    safe_weeks = []
+    seen_weeks = set()
+    for d in date_values:
+        if d is None:
+            continue
+        try:
+            if pd.isna(d):
+                continue
+        except Exception:
+            pass
+
+        ts = pd.Timestamp(d)
+        if pd.isna(ts):
+            continue
+
+        ts = ts.normalize()
+        if ts not in seen_weeks:
+            seen_weeks.add(ts)
+            safe_weeks.append(ts)
+    for week in sorted(safe_weeks):
         if week < ET_SPLIT_START_DATE:
             continue
         try:
@@ -2568,7 +2707,12 @@ def _build_et_us_rows_from_sheet(
                 selector_range.NumberFormat = "yyyy/mm/dd"
             except Exception:
                 pass
-            for _recalc_pass in range(3):
+            try:
+                wb.Application.Calculation = -4105
+            except Exception:
+                pass
+            built = None
+            for _recalc_pass in range(10):
                 try:
                     _com_call(lambda: ws_com.Calculate(), tries=5, sleep_s=0.2)
                 except Exception:
@@ -2586,13 +2730,13 @@ def _build_et_us_rows_from_sheet(
                 except Exception:
                     pass
                 time.sleep(0.5)
-            used = ws_com.UsedRange.Value
-            if used is None:
+                ws_df = _read_excel_range_display_df(ws_com, "A1:AD30")
+                built = build_et_us_snapshot(team_name, ws_df, week)
+                people_found = len(built.get("people_rows", []))
+                if people_found >= 10 or built.get("total_nonwip_hours", 0.0) > 0 or built.get("ooo_hours", 0.0) > 0:
+                    break
+            if built is None:
                 continue
-            if not isinstance(used, tuple):
-                used = ((used,),)
-            ws_df = pd.DataFrame(list(used))
-            built = build_et_us_snapshot(team_name, ws_df, week)
             out_rows.append({
                 "team": team_name,
                 "period_date": week.date().isoformat(),
@@ -2649,31 +2793,67 @@ def build_et_us_rows_from_capacity_workbook(
             CorruptLoad=0,
         )))
         _try_unprotect_excel_object(wb, "ET US workbook")
-        for target_sheet in [ET_US_WEEK_VIEWER_SHEET, ET_US_CURRENT_WEEK_SHEET]:
-            try:
-                ws_com = _dyn(_get_matching_worksheet(wb, target_sheet))
-            except Exception:
-                continue
-            _try_unprotect_excel_object(ws_com, f"ET US sheet '{target_sheet}'")
-            try:
-                _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
-            except Exception:
-                pass
-            date_values = _resolve_validation_list_values(wb, ws_com, "B1")
-            current_dt = _excel_date_to_timestamp(ws_com.Range("B1").Value)
-            if target_sheet == ET_US_CURRENT_WEEK_SHEET:
-                date_values = [current_dt] if current_dt is not None else []
-            elif not date_values and current_dt is not None:
+        current_ws_com = None
+        archive_ws_com = None
+        week_viewer_ws_com = None
+        try:
+            current_ws_com = _dyn(_get_matching_worksheet(wb, ET_US_CURRENT_WEEK_SHEET))
+            _try_unprotect_excel_object(current_ws_com, f"ET US sheet '{ET_US_CURRENT_WEEK_SHEET}'")
+        except Exception:
+            current_ws_com = None
+        try:
+            archive_ws_com = _dyn(_get_matching_worksheet(wb, ET_US_ARCHIVE_SHEET))
+            _try_unprotect_excel_object(archive_ws_com, f"ET US sheet '{ET_US_ARCHIVE_SHEET}'")
+        except Exception:
+            archive_ws_com = None
+        try:
+            week_viewer_ws_com = _dyn(_get_matching_worksheet(wb, ET_US_WEEK_VIEWER_SHEET))
+            _try_unprotect_excel_object(week_viewer_ws_com, f"ET US sheet '{ET_US_WEEK_VIEWER_SHEET}'")
+        except Exception:
+            week_viewer_ws_com = None
+        try:
+            _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
+        except Exception:
+            pass
+
+        historical_rows: List[dict] = []
+        if archive_ws_com is not None and current_ws_com is not None:
+            historical_rows.extend(_build_et_us_rows_from_archive_sheet(
+                archive_ws_com,
+                current_ws_com,
+                team_src=team_src,
+                team_name=team_src.team,
+            ))
+
+        if not historical_rows and week_viewer_ws_com is not None:
+            date_values = _resolve_validation_list_values(wb, week_viewer_ws_com, "B1")
+            current_dt = _excel_date_to_timestamp(week_viewer_ws_com.Range("B1").Value)
+            if not date_values and current_dt is not None:
                 date_values = [current_dt]
+            historical_rows.extend(_build_et_us_rows_from_sheet(
+                wb,
+                excel,
+                week_viewer_ws_com,
+                team_src=team_src,
+                team_name=team_src.team,
+                sheet_name=ET_US_WEEK_VIEWER_SHEET,
+                date_values=date_values,
+            ))
+        out_rows.extend(historical_rows)
+
+        if current_ws_com is not None:
+            current_dt = _excel_date_to_timestamp(current_ws_com.Range("B1").Value)
+            current_date_values = [current_dt] if current_dt is not None else []
             out_rows.extend(_build_et_us_rows_from_sheet(
                 wb,
                 excel,
-                ws_com,
+                current_ws_com,
                 team_src=team_src,
                 team_name=team_src.team,
-                sheet_name=target_sheet,
-                date_values=date_values,
+                sheet_name=ET_US_CURRENT_WEEK_SHEET,
+                date_values=current_date_values,
             ))
+
         df = pd.DataFrame(out_rows)
         if not df.empty:
             df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
