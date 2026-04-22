@@ -3288,3 +3288,6 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-22 08:30:58,669 | INFO | [Spine] START
 2026-04-22 08:31:41,562 | INFO | [Spine] DONE | rows=7 | elapsed=0:00:42.892941
 2026-04-22 08:31:41,562 | INFO | [PH] START
+2026-04-22 08:32:39,439 | INFO | [PH] loaded cached PH rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-22 08:32:39,446 | INFO | [PH] DONE | rows=34 | elapsed=0:00:57.883562
+2026-04-22 08:32:39,447 | INFO | [PH Cell 17] START
