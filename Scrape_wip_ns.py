@@ -1246,13 +1246,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
     for ws in wb.worksheets:
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
-        if cfg.get("team") == "TDD COS 1":
-            print(
-                f"[TDD DEBUG] tab={ws.title!r} "
-                f"parsed={period_date!r} "
-                f"min={cfg.get('min_period_date')!r} "
-                f"max={cfg.get('max_period_date')!r}"
-            )
         if not period_date:
             if cfg.get("team") == "PH Cell 17":
                 print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")

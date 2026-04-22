@@ -3278,3 +3278,9 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-22 08:27:22,740 | INFO | [ALL] drop period_date == 2023-11-06: 565 -> 565
 2026-04-22 08:27:22,740 | INFO | [ALL] drop period_date == 2026-09-07: 565 -> 565
 2026-04-22 08:27:22,788 | INFO | Wrote 565 rows to NS_DATA\NS_metrics.csv
+2026-04-22 08:28:08,265 | INFO | === NS Metrics Run START ===
+2026-04-22 08:28:08,266 | INFO | Selected team: all
+2026-04-22 08:28:08,267 | INFO | [TDD COS 1] START
+2026-04-22 08:28:36,716 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 7 | kept=4 | refreshed=3 | final=7
+2026-04-22 08:28:36,717 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:28.449666
+2026-04-22 08:28:36,717 | INFO | [Spine] START
