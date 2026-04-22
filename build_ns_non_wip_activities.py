@@ -873,6 +873,21 @@ def _dyn(obj):
         return win32com.client.dynamic.Dispatch(obj)
     except Exception:
         return obj
+
+def _try_unprotect_excel_object(obj, label: str = "") -> None:
+    if obj is None:
+        return
+    try:
+        _com_call(lambda: obj.Unprotect(""), tries=3, sleep_s=0.1)
+        return
+    except Exception:
+        pass
+    try:
+        _com_call(lambda: obj.Unprotect(), tries=3, sleep_s=0.1)
+    except Exception as e:
+        if label:
+            print(f"[WARN] Could not unprotect {label}: {e}", flush=True)
+
 def build_selector_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
@@ -2469,6 +2484,7 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         week=week,
         total_nonwip_cell="AI20",  
     )
+
 def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     include_rows = list(range(2, 22)) + list(range(27, 30))  # Excel rows 3:22 and 28:30
     NAME_COL = _col_letter_to_idx("A")
@@ -2545,6 +2561,7 @@ def _build_et_us_rows_from_sheet(
         if week < ET_SPLIT_START_DATE:
             continue
         try:
+            _try_unprotect_excel_object(ws_com, f"ET US sheet '{sheet_name}'")
             selector_range = _dyn(ws_com.Range("B1"))
             selector_range.Value = week.to_pydatetime()
             try:
@@ -2631,11 +2648,13 @@ def build_et_us_rows_from_capacity_workbook(
             AddToMru=False,
             CorruptLoad=0,
         )))
+        _try_unprotect_excel_object(wb, "ET US workbook")
         for target_sheet in [ET_US_WEEK_VIEWER_SHEET, ET_US_CURRENT_WEEK_SHEET]:
             try:
                 ws_com = _dyn(_get_matching_worksheet(wb, target_sheet))
             except Exception:
                 continue
+            _try_unprotect_excel_object(ws_com, f"ET US sheet '{target_sheet}'")
             try:
                 _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
             except Exception:
@@ -2681,6 +2700,7 @@ def build_et_us_rows_from_capacity_workbook(
                 shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception:
             pass
+
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
         team="PSS MEIC",
