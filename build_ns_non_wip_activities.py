@@ -24,6 +24,11 @@ MEIC_TRACKER_PATH = Path(
     r"C:\Users\wadec8\Medtronic PLC\MEIC_NMPH - Documents\NPH Tracker.xlsx"
 )
 MEIC_NON_D2D_LOG_SHEET = "Non-D2D WIP Time Log"
+ET_US_SOURCE_FILE = Path(
+    r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Documents\CST_Capacity Management.xlsm"
+)
+ET_US_WEEK_VIEWER_SHEET = "Week Viewer"
+ET_US_CURRENT_WEEK_SHEET = "Current Week"
 def _week_start_monday(dt_series: pd.Series) -> pd.Series:
     dt = pd.to_datetime(dt_series, errors="coerce").dt.normalize()
     return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
@@ -828,7 +833,7 @@ def _debug_print_et_people(team: str, week, people_rows) -> None:
         week_txt = pd.Timestamp(week).date().isoformat() if week is not None else "unknown"
     except Exception:
         week_txt = str(week)
-ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
+ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav", "ET US", "ET MEIC"}
 def _unique_people_names_from_people_rows(people_rows) -> list[str]:
     names = []
     seen = set()
@@ -1747,8 +1752,59 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
-ENABLE_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
+ET_SPLIT_START_DATE = pd.Timestamp("2026-04-13").normalize()
+ET_LEGACY_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
+ET_SPLIT_TEAMS = {"AE MEIC", "CSF", "Mazor", "Nav", "ET US", "ET MEIC"}
+ENABLE_TEAMS = set(ET_LEGACY_TEAMS | ET_SPLIT_TEAMS)
 ENABLE_TEAM_NAME = "Enabling Technologies"
+ET_FIXED_PEOPLE_COUNT = {
+    "ET US": 23,
+    "ET MEIC": 9,
+}
+def _et_component_teams_for_week(period_date) -> set[str]:
+    week = pd.Timestamp(period_date).normalize()
+    return set(ET_SPLIT_TEAMS if week >= ET_SPLIT_START_DATE else ET_LEGACY_TEAMS)
+def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty or "team" not in df.columns or "period_date" not in df.columns:
+        return df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
+    out = df.copy()
+    out["team"] = out["team"].astype(str).str.strip()
+    out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    post_split_oarm = (
+        out["team"].eq("O-Arm MEIC")
+        & out["period_date"].notna()
+        & (out["period_date"] >= ET_SPLIT_START_DATE)
+    )
+    out.loc[post_split_oarm, "team"] = "ET MEIC"
+    pre_split_new_names = (
+        out["team"].isin({"ET US", "ET MEIC"})
+        & out["period_date"].notna()
+        & (out["period_date"] < ET_SPLIT_START_DATE)
+    )
+    out = out.loc[~pre_split_new_names].copy()
+    for team_name, fixed_count in ET_FIXED_PEOPLE_COUNT.items():
+        mask = (
+            out["team"].eq(team_name)
+            & out["period_date"].notna()
+            & (out["period_date"] >= ET_SPLIT_START_DATE)
+        )
+        if not mask.any():
+            continue
+        if "people_count" in out.columns:
+            out.loc[mask, "people_count"] = fixed_count
+        if team_name == "ET US" and "% in WIP" in out.columns:
+            out.loc[mask, "% in WIP"] = np.nan
+        for col, blank_value in {
+            "team_member_names": "",
+            "wip_workers": "",
+            "wip_workers_count": "",
+            "wip_workers_ooo_hours": "",
+        }.items():
+            if col in out.columns:
+                out.loc[mask, col] = blank_value
+    out = out.drop_duplicates(subset=["team", "period_date"], keep="last")
+    out = out.sort_values(["team", "period_date"]).reset_index(drop=True)
+    return out
 MEIC_PARENT_MAP = {
     "PH-NM MEIC": {"PH MEIC", "DBS MEIC", "SCS MEIC"},
     "PSS": {"PSS Intern", "PSS US", "PSS MEIC"}
@@ -1875,35 +1931,29 @@ def _merge_workers_union(list_cells: List) -> list:
 def combine_enabling_technologies(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "team" not in df.columns or "period_date" not in df.columns:
         return df
-    df = df.copy()
-    df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+    df = _normalize_et_split_rows(df)
     subset = df[df["team"].isin(ENABLE_TEAMS)].copy()
     rest = df[~df["team"].isin(ENABLE_TEAMS)].copy()
     if subset.empty:
         if "source_file" in rest.columns:
             rest = rest.drop(columns=["source_file"])
         return rest
-    all_dates = sorted(subset["period_date"].dropna().unique())
-    for d in all_dates:
-        week_rows = subset[subset["period_date"] == d]
-        total = 0
-        parts = []
-        for team in sorted(ENABLE_TEAMS):
-            team_row = week_rows[week_rows["team"] == team]
-            count = int(pd.to_numeric(team_row["people_count"], errors="coerce").fillna(0).sum()) if not team_row.empty else 0
-            parts.append(f"{team}={count}")
-            total += count
     out_rows = []
-    for period_date, g in subset.groupby("period_date", dropna=False):
+    for period_date, g_all in subset.groupby("period_date", dropna=False):
+        teams_for_week = _et_component_teams_for_week(period_date)
+        g = g_all[g_all["team"].isin(teams_for_week)].copy()
+        if g.empty:
+            continue
         nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
         nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
         wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+        fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
         people_count_final = get_people_count_from_wip(
             wip_df=wip_df,
             team=ENABLE_TEAM_NAME,
             week=period_date,
-            fallback=int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum()),
-            component_teams=ENABLE_TEAMS,
+            fallback=fallback_people_count,
+            component_teams=teams_for_week,
         )
         out_rows.append({
             "team": ENABLE_TEAM_NAME,
@@ -2419,6 +2469,218 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         week=week,
         total_nonwip_cell="AI20",  
     )
+def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    include_rows = list(range(2, 22)) + list(range(27, 30))  # Excel rows 3:22 and 28:30
+    NAME_COL = _col_letter_to_idx("A")
+    ACT_START = _col_letter_to_idx("C")
+    ACT_END = _col_letter_to_idx("AC")
+    OOO_COL = _col_letter_to_idx("AD")
+    HEADER_ROW = 1  # Excel row 2
+    people_rows: List[dict] = []
+    nonwip_by_person: Dict[str, float] = {}
+    activities: List[dict] = []
+    ooo_map: Dict[str, float] = {}
+    for i in include_rows:
+        if i >= ws.shape[0]:
+            continue
+        name = norm_name(ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else "")
+        if not is_real_person(name):
+            continue
+        row_total = 0.0
+        row_ooo = safe_float0(ws.iat[i, OOO_COL] if ws.shape[1] > OOO_COL else 0.0)
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "OOO": float(row_ooo),
+        })
+        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
+            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
+            if not label:
+                continue
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            if pd.isna(hrs) or hrs <= 0:
+                continue
+            hrs = float(round(float(hrs), 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
+            row_total += hrs
+        row_total = float(round(row_total, 2))
+        if row_total != 0.0:
+            nonwip_by_person[name] = row_total
+        ooo_map[name] = float(round(row_ooo, 2))
+        if row_ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": float(round(row_ooo, 2)),
+            })
+    total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
+    ooo_hours = float(round(sum(ooo_map.values()), 2))
+    return {
+        "people_rows": people_rows,
+        "people_count": 23,
+        "ooo_hours": ooo_hours,
+        "total_nonwip_hours": total_nonwip_hours,
+        "nonwip_by_person": nonwip_by_person,
+        "nonwip_activities": activities,
+        "ooo_map": ooo_map,
+    }
+def _build_et_us_rows_from_sheet(
+    wb,
+    excel,
+    ws_com,
+    *,
+    team_src: TeamSource,
+    team_name: str,
+    sheet_name: str,
+    date_values: List[pd.Timestamp],
+) -> List[dict]:
+    out_rows: List[dict] = []
+    if not date_values:
+        return out_rows
+    for week in sorted({pd.Timestamp(d).normalize() for d in date_values}):
+        if week < ET_SPLIT_START_DATE:
+            continue
+        try:
+            selector_range = _dyn(ws_com.Range("B1"))
+            selector_range.Value = week.to_pydatetime()
+            try:
+                selector_range.NumberFormat = "yyyy/mm/dd"
+            except Exception:
+                pass
+            for _recalc_pass in range(3):
+                try:
+                    _com_call(lambda: ws_com.Calculate(), tries=5, sleep_s=0.2)
+                except Exception:
+                    pass
+                try:
+                    _com_call(lambda: wb.RefreshAll(), tries=5, sleep_s=0.2)
+                except Exception:
+                    pass
+                try:
+                    _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=5, sleep_s=0.2)
+                except Exception:
+                    pass
+                try:
+                    _com_call(lambda: excel.CalculateFullRebuild(), tries=5, sleep_s=0.3)
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            used = ws_com.UsedRange.Value
+            if used is None:
+                continue
+            if not isinstance(used, tuple):
+                used = ((used,),)
+            ws_df = pd.DataFrame(list(used))
+            built = build_et_us_snapshot(team_name, ws_df, week)
+            out_rows.append({
+                "team": team_name,
+                "period_date": week.date().isoformat(),
+                "source_file": str(team_src.xlsx),
+                "people_count": 23,
+                "team_member_names": "",
+                "total_non_wip_hours": float(round(built["total_nonwip_hours"], 2)),
+                "OOO Hours": float(round(built["ooo_hours"], 2)),
+                "% in WIP": np.nan,
+                "non_wip_by_person": json.dumps(built["nonwip_by_person"], ensure_ascii=False),
+                "non_wip_activities": json.dumps(built["nonwip_activities"], ensure_ascii=False),
+                "wip_workers": "",
+                "wip_workers_count": "",
+                "wip_workers_ooo_hours": "",
+            })
+        except Exception as e:
+            print(f"[WARN] Failed {team_name} week {week} on {sheet_name}: {e}", flush=True)
+    return out_rows
+def build_et_us_rows_from_capacity_workbook(
+    team_src: TeamSource,
+    wip_df: pd.DataFrame,
+    metrics_df: pd.DataFrame,
+) -> pd.DataFrame:
+    xlsx_path = team_src.xlsx
+    if not xlsx_path.exists():
+        return pd.DataFrame()
+    out_rows: List[dict] = []
+    pythoncom.CoInitialize()
+    excel = None
+    wb = None
+    temp_dir = None
+    try:
+        excel = _dyn(_start_excel_app())
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        excel.AskToUpdateLinks = False
+        excel.EnableEvents = True
+        try:
+            excel.AutomationSecurity = 1
+        except Exception:
+            pass
+        import tempfile
+        temp_dir = tempfile.mkdtemp(prefix="et_us_wb_")
+        temp_path = Path(temp_dir) / xlsx_path.name
+        shutil.copy2(xlsx_path, temp_path)
+        workbooks = _dyn(excel.Workbooks)
+        wb = _com_call(lambda: _dyn(workbooks.Open(
+            str(temp_path),
+            UpdateLinks=0,
+            ReadOnly=False,
+            IgnoreReadOnlyRecommended=True,
+            Notify=False,
+            AddToMru=False,
+            CorruptLoad=0,
+        )))
+        for target_sheet in [ET_US_WEEK_VIEWER_SHEET, ET_US_CURRENT_WEEK_SHEET]:
+            try:
+                ws_com = _dyn(_get_matching_worksheet(wb, target_sheet))
+            except Exception:
+                continue
+            try:
+                _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
+            except Exception:
+                pass
+            date_values = _resolve_validation_list_values(wb, ws_com, "B1")
+            current_dt = _excel_date_to_timestamp(ws_com.Range("B1").Value)
+            if target_sheet == ET_US_CURRENT_WEEK_SHEET:
+                date_values = [current_dt] if current_dt is not None else []
+            elif not date_values and current_dt is not None:
+                date_values = [current_dt]
+            out_rows.extend(_build_et_us_rows_from_sheet(
+                wb,
+                excel,
+                ws_com,
+                team_src=team_src,
+                team_name=team_src.team,
+                sheet_name=target_sheet,
+                date_values=date_values,
+            ))
+        df = pd.DataFrame(out_rows)
+        if not df.empty:
+            df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
+            df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
+            df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
+        return df
+    finally:
+        try:
+            if wb is not None:
+                wb.Close(SaveChanges=False)
+        except Exception:
+            pass
+        try:
+            if excel is not None:
+                excel.Quit()
+        except Exception:
+            pass
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+        try:
+            if temp_dir and Path(temp_dir).exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
         team="PSS MEIC",
@@ -2512,6 +2774,13 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
+    "ET US": TeamSource(
+        team="ET US",
+        xlsx=ET_US_SOURCE_FILE,
+        custom_builder=build_et_us_snapshot,
+        wip_workers_from="NS_metrics",
+        completed_hours_from="NS_metrics",
+    ),
     "Nav": TeamSource(
         team="Nav",
         xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Navigation Work Reports\Heijunka_MNAV_Ranges_May2025.xlsm"),
@@ -2589,12 +2858,11 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
             wip_df=wip_df,
             metrics_df=metrics_df,
         )
-    if team_src.team in {""}:
-        return build_selector_rows_from_capacity_workbook(
+    if team_src.team == "ET US":
+        return build_et_us_rows_from_capacity_workbook(
             team_src,
             wip_df=wip_df,
             metrics_df=metrics_df,
-            sheet_name="Capacity mgmt",
         )
     xlsx_path = team_src.xlsx
     if not xlsx_path.exists():
@@ -2720,6 +2988,7 @@ def main():
         new_df = new_df[new_df["period_date"].notna()].copy()
         new_df = new_df.drop_duplicates(subset=["team", "period_date"], keep="last")
         new_df = new_df.sort_values(["team", "period_date"]).reset_index(drop=True)
+        new_df = _normalize_et_split_rows(new_df)
     et_weekly = (
         new_df.loc[
             new_df["team"].isin(ENABLE_TEAMS),
@@ -2771,6 +3040,7 @@ def main():
                 old_split_df[col] = old_split_df[col].fillna("").astype(str)
         old_split_df = old_split_df[old_split_df["team"] != ""].copy()
         old_split_df = old_split_df[old_split_df["period_date"].notna()].copy()
+        old_split_df = _normalize_et_split_rows(old_split_df)
         old_split_df = _remove_split_rollup_rows(old_split_df)  # okay for split history only
         combined = pd.concat([old_split_df, new_df], ignore_index=True)
     if not combined.empty:
@@ -2783,6 +3053,7 @@ def main():
         combined = combined[combined["period_date"].notna()].copy()
         combined = combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         combined = combined.sort_values(["team", "period_date"]).reset_index(drop=True)
+        combined = _normalize_et_split_rows(combined)
     log_weekly_ph_summary(combined, "PRE-ROLLUP")
     split_combined = combined.copy()
     split_combined = _remove_split_rollup_rows(split_combined)
