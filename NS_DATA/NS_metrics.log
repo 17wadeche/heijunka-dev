@@ -2418,3 +2418,203 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-21 18:37:08,843 | INFO | [ALL] drop period_date == 2023-11-06: 562 -> 562
 2026-04-21 18:37:08,843 | INFO | [ALL] drop period_date == 2026-09-07: 562 -> 562
 2026-04-21 18:37:08,890 | INFO | Wrote 562 rows to NS_DATA\NS_metrics.csv
+2026-04-21 18:53:16,625 | INFO | === NS Metrics Run START ===
+2026-04-21 18:53:16,626 | INFO | Selected team: all
+2026-04-21 18:53:16,628 | INFO | [TDD COS 1] START
+2026-04-21 18:53:28,835 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 5 | kept=4 | refreshed=3 | final=7
+2026-04-21 18:53:28,835 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:12.207159
+2026-04-21 18:53:28,835 | INFO | [Spine] START
+2026-04-21 18:54:36,944 | INFO | [Spine] DONE | rows=34 | elapsed=0:01:08.108698
+2026-04-21 18:54:36,945 | INFO | [Spine] START
+2026-04-21 18:55:06,226 | INFO | [Spine] DONE | rows=7 | elapsed=0:00:29.281452
+2026-04-21 18:55:06,226 | INFO | [PH] START
+2026-04-21 19:05:11,862 | INFO | === NS Metrics Run START ===
+2026-04-21 19:05:11,862 | INFO | Selected team: all
+2026-04-21 19:05:11,862 | INFO | [TDD COS 1] START
+2026-04-21 19:05:25,406 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 5 | kept=4 | refreshed=3 | final=7
+2026-04-21 19:05:25,407 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:13.544920
+2026-04-21 19:05:25,407 | INFO | [Spine] START
+2026-04-21 19:06:39,148 | INFO | [Spine] DONE | rows=34 | elapsed=0:01:13.740811
+2026-04-21 19:06:39,148 | INFO | [Spine] START
+2026-04-21 19:07:10,475 | INFO | [Spine] DONE | rows=7 | elapsed=0:00:31.327094
+2026-04-21 19:07:10,475 | INFO | [PH] START
+2026-04-21 19:08:15,212 | INFO | === NS Metrics Run START ===
+2026-04-21 19:08:15,212 | INFO | Selected team: all
+2026-04-21 19:08:15,212 | INFO | [TDD COS 1] START
+2026-04-21 19:08:15,246 | ERROR | [TDD COS 1] FAIL | elapsed=0:00:00.033303 | error=[Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\COS Cell - Documents\\Heijunka v2 TDD.xlsx'
+2026-04-21 19:08:15,254 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3666, in <lambda>
+    lambda: load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 343, in load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks
+    refreshed_cos_rows = scrape_workbook_with_config(cos_source_file, cfg)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1243, in scrape_workbook_with_config
+    wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 346, in load_workbook
+    reader = ExcelReader(filename, read_only, keep_vba,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 123, in __init__
+    self.archive = _validate_archive(fn)
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 95, in _validate_archive
+    archive = ZipFile(filename, 'r')
+              ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\zipfile\__init__.py", line 1331, in __init__
+    self.fp = io.open(file, filemode)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\COS Cell - Documents\\Heijunka v2 TDD.xlsx'
+
+2026-04-21 19:08:15,255 | INFO | [Spine] START
+2026-04-21 19:09:14,497 | INFO | === NS Metrics Run START ===
+2026-04-21 19:09:14,497 | INFO | Selected team: all
+2026-04-21 19:09:14,497 | INFO | [TDD COS 1] START
+2026-04-21 19:09:26,464 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 5 | kept=4 | refreshed=3 | final=7
+2026-04-21 19:09:26,464 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:11.967178
+2026-04-21 19:09:26,466 | INFO | [Spine] START
+2026-04-21 19:16:58,233 | INFO | === NS Metrics Run START ===
+2026-04-21 19:16:58,233 | INFO | Selected team: all
+2026-04-21 19:16:58,233 | INFO | [TDD COS 1] START
+2026-04-21 19:16:58,260 | ERROR | [TDD COS 1] FAIL | elapsed=0:00:00.026894 | error=[Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\COS Cell - Documents\\Heijunka v2 TDD.xlsx'
+2026-04-21 19:16:58,266 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3666, in <lambda>
+    lambda: load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 343, in load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks
+    refreshed_cos_rows = scrape_workbook_with_config(cos_source_file, cfg)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1243, in scrape_workbook_with_config
+    wb = load_workbook(source_file, data_only=True, read_only=True, keep_links=False)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 346, in load_workbook
+    reader = ExcelReader(filename, read_only, keep_vba,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 123, in __init__
+    self.archive = _validate_archive(fn)
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\openpyxl\reader\excel.py", line 95, in _validate_archive
+    archive = ZipFile(filename, 'r')
+              ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\zipfile\__init__.py", line 1331, in __init__
+    self.fp = io.open(file, filemode)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'C:\\Users\\wadec8\\Medtronic PLC\\COS Cell - Documents\\Heijunka v2 TDD.xlsx'
+
+2026-04-21 19:16:58,268 | INFO | [Spine] START
+2026-04-21 19:17:11,472 | INFO | === NS Metrics Run START ===
+2026-04-21 19:17:11,472 | INFO | Selected team: all
+2026-04-21 19:17:11,472 | INFO | [TDD COS 1] START
+2026-04-21 19:17:23,769 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 5 | kept=4 | refreshed=3 | final=7
+2026-04-21 19:17:23,769 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:12.297039
+2026-04-21 19:17:23,770 | INFO | [Spine] START
+2026-04-21 19:18:47,660 | INFO | [Spine] DONE | rows=34 | elapsed=0:01:23.889736
+2026-04-21 19:18:47,660 | INFO | [Spine] START
+2026-04-21 19:19:27,948 | INFO | [Spine] DONE | rows=7 | elapsed=0:00:40.288191
+2026-04-21 19:19:27,948 | INFO | [PH] START
+2026-04-21 19:20:04,876 | INFO | [PH] loaded cached PH rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-21 19:20:04,876 | INFO | [PH] DONE | rows=34 | elapsed=0:00:36.927145
+2026-04-21 19:20:04,876 | INFO | [PH Cell 17] START
+2026-04-21 19:20:12,023 | INFO | [PH Cell 17] DONE | rows=4 | elapsed=0:00:07.147026
+2026-04-21 19:20:12,023 | INFO | [SCS Cell 1] START
+2026-04-21 19:20:18,086 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 39 | kept=36 | refreshed=3 | final=39 | old_weeks=[] | new_weeks=['2026-04-06', '2026-04-13', '2026-04-20']
+2026-04-21 19:20:18,086 | INFO | [SCS Cell 1] DONE | rows=39 | elapsed=0:00:06.062823
+2026-04-21 19:20:18,086 | INFO | [MEIC PH] START
+2026-04-21 19:20:23,265 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-21 19:20:23,265 | INFO | [MEIC PH] DONE | rows=34 | elapsed=0:00:05.178788
+2026-04-21 19:20:23,265 | INFO | [DBS C13] START
+2026-04-21 19:20:37,104 | INFO | [DBS C13] DONE | rows=5 | elapsed=0:00:13.838728
+2026-04-21 19:20:37,104 | INFO | [DBS C13] filter >= 2025-07-07: 5 -> 5
+2026-04-21 19:20:37,104 | INFO | [DBS C14] START
+2026-04-21 19:20:53,794 | INFO | [DBS C14] DONE | rows=5 | elapsed=0:00:16.690345
+2026-04-21 19:20:53,794 | INFO | [DBS C14] filter >= 2025-07-07: 5 -> 5
+2026-04-21 19:20:53,794 | INFO | [NV] START
+2026-04-21 19:21:04,493 | INFO | [NV] loaded cached rows from NS_metrics: 41 | kept=39 | refreshed=3 | final=42
+2026-04-21 19:21:04,495 | INFO | [NV] DONE | rows=42 | elapsed=0:00:10.700840
+2026-04-21 19:21:04,495 | INFO | [Nav] START
+2026-04-21 19:21:19,270 | INFO | [Nav] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44
+2026-04-21 19:21:19,271 | INFO | [Nav] DONE | rows=44 | elapsed=0:00:14.776151
+2026-04-21 19:21:19,271 | INFO | [AE MEIC] START
+2026-04-21 19:21:31,959 | INFO | [AE MEIC] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44
+2026-04-21 19:21:31,959 | INFO | [AE MEIC] DONE | rows=44 | elapsed=0:00:12.688271
+2026-04-21 19:21:31,959 | INFO | [O-Arm MEIC] START
+2026-04-21 19:22:30,561 | INFO | [O-Arm MEIC] loaded cached rows from NS_metrics: 42 | kept=41 | refreshed=1 | final=42
+2026-04-21 19:22:30,561 | INFO | [O-Arm MEIC] DONE | rows=42 | elapsed=0:00:58.602226
+2026-04-21 19:22:30,561 | INFO | [Mazor] START
+2026-04-21 19:22:41,171 | INFO | [Mazor] loaded cached rows from NS_metrics: 46 | kept=44 | refreshed=2 | final=46
+2026-04-21 19:22:41,171 | INFO | [Mazor] DONE | rows=46 | elapsed=0:00:10.609957
+2026-04-21 19:22:41,171 | INFO | [CSF] START
+2026-04-21 19:23:25,449 | INFO | [CSF] loaded cached rows from NS_metrics: 43 | refreshed=3 | final=45 | weeks_to_refresh=['2026-04-06', '2026-04-13', '2026-04-20']
+2026-04-21 19:23:25,449 | INFO | [CSF] DONE | rows=45 | elapsed=0:00:44.277951
+2026-04-21 19:23:25,449 | INFO | [PSS US] START
+2026-04-21 19:23:27,011 | ERROR | [PSS US] FAIL | elapsed=0:00:01.561483 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+2026-04-21 19:23:27,013 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3818, in <lambda>
+    extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+
+2026-04-21 19:23:29,498 | INFO | [PSS MEIC] START
+2026-04-21 19:23:30,994 | ERROR | [PSS MEIC] FAIL | elapsed=0:00:01.496154 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+2026-04-21 19:23:30,994 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3820, in <lambda>
+    extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+
+2026-04-21 19:23:33,426 | INFO | [PSS MEIC Intern] START
+2026-04-21 19:23:35,106 | ERROR | [PSS MEIC Intern] FAIL | elapsed=0:00:01.680084 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+2026-04-21 19:23:35,107 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3822, in <lambda>
+    extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+
+2026-04-21 19:23:37,601 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-21 19:23:37,602 | INFO | [ENT] START
+2026-04-21 19:23:37,672 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.070011
+2026-04-21 19:23:37,672 | INFO | [DBS MEIC] START
+2026-04-21 19:23:37,690 | INFO | [DBS MEIC] DONE | rows=37 | elapsed=0:00:00.017545
+2026-04-21 19:23:37,690 | INFO | [SCS MEIC] START
+2026-04-21 19:23:37,699 | INFO | [SCS MEIC] DONE | rows=37 | elapsed=0:00:00.009336
+2026-04-21 19:23:37,699 | INFO | [SCS Super Cell] START
+2026-04-21 19:26:37,706 | INFO | [SCS Super Cell] still running...
+2026-04-21 19:26:59,238 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 40 | kept=38 | refreshed=3 | final=40
+2026-04-21 19:26:59,239 | INFO | [SCS Super Cell] DONE | rows=40 | elapsed=0:03:21.540357
+2026-04-21 19:26:59,240 | INFO | [PH Cell 17] rows before TAA filter = 4
+2026-04-21 19:26:59,241 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 594 -> 565
+2026-04-21 19:26:59,241 | INFO | [PH Cell 17] rows after TAA filter = 4
+2026-04-21 19:26:59,241 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 594 -> 565
+2026-04-21 19:26:59,242 | INFO | [ALL] drop period_date == 2023-11-06: 565 -> 565
+2026-04-21 19:26:59,242 | INFO | [ALL] drop period_date == 2026-09-07: 565 -> 565
+2026-04-21 19:26:59,279 | INFO | Wrote 565 rows to NS_DATA\NS_metrics.csv

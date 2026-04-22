@@ -1246,15 +1246,26 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
     for ws in wb.worksheets:
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
+        if cfg.get("team") == "TDD COS 1":
+            print(
+                f"[TDD DEBUG] tab={ws.title!r} "
+                f"parsed={period_date!r} "
+                f"min={cfg.get('min_period_date')!r} "
+                f"max={cfg.get('max_period_date')!r}"
+            )
         if not period_date:
             if cfg.get("team") == "PH Cell 17":
                 print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
             continue
         min_pd = safe_str(cfg.get("min_period_date"))
         if min_pd and period_date < min_pd:
+            if cfg.get("team") == "TDD COS 1":
+                print(f"[TDD DEBUG] SKIP below min: tab={ws.title!r} parsed={period_date!r}")
             continue
         max_pd = safe_str(cfg.get("max_period_date"))
         if max_pd and period_date > max_pd:
+            if cfg.get("team") == "TDD COS 1":
+                print(f"[TDD DEBUG] SKIP above max: tab={ws.title!r} parsed={period_date!r}")
             continue
         if cfg.get("team") == "Spine" and safe_str(cfg.get("min_period_date")) == "2026-02-24":
             print(
@@ -1387,6 +1398,11 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
         team = cfg["team"]
+        if cfg.get("team") == "TDD COS 1":
+            print(
+                f"[TDD DEBUG] APPEND tab={ws.title!r} period_date={period_date!r} "
+                f"taa={total_available_hours!r} completed={completed_hours!r}"
+            )
         rows_out.append(
             {
                 "team": team,
@@ -3596,7 +3612,7 @@ def main():
         "person_cols": ("B", "T"),
         "date_parser": parse_sheet_date_scs_missing_year,
         "cells": {
-            "total_available_hours": "V64",
+            "total_available_hours": "V65",
             "completed_hours": "U55",
             "wp1_output": "AB2",
             "wp1_target": "AB7",
@@ -3643,6 +3659,18 @@ def main():
             d += timedelta(days=7)
         return out
     ALL_MONDAYS_SINCE_2025_06_02 = mondays_since("2025-06-02", date.today())
+    if should_run("TDD COS 1"):
+        cos_rows = run_team(
+            logger,
+            "TDD COS 1",
+            lambda: load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                cos_source_file,
+                TDD_COS1_CFG,
+                logger=logger,
+            )
+        )
+        rows.extend(cos_rows)
     if should_run("Spine"):
         extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
         extend_team(
@@ -3809,18 +3837,6 @@ def main():
         extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
     if should_run("SCS MEIC"):
         extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
-    if should_run("TDD COS 1"):
-        cos_rows = run_team(
-            logger,
-            "TDD COS 1",
-            lambda: load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
-                out_file,
-                cos_source_file,
-                TDD_COS1_CFG,
-                logger=logger,
-            )
-        )
-        rows.extend(cos_rows)
     if should_run("SCS Super Cell"):
         scs_super_rows = run_team(
             logger,
@@ -3839,7 +3855,7 @@ def main():
     before = len(rows)
     rows = [
         r for r in rows
-        if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine"))
+        if (r.get("team") in ("SCS Super Cell", "PH Cell 17", "Spine", "TDD COS 1"))
         or (safe_float(r.get("Total Available Hours")) != 0.0)
     ]
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): {before} -> {len(rows)}")
