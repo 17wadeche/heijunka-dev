@@ -2316,7 +2316,7 @@ ACTIVITY_MAP = {
     "uni 2nd visit":"Career Development",
     "admin(30)":"Admin",
     "rdn mfg meeting - capa support":"CAPA",
-    "Talks with crdn cell":"Meeting",
+    "talks with crdn cell":"Meeting",
     "venaseal secret signing":"Admin",
     "meetin":"Meeting",
     "reviewed sr events promoted last thursday to make they were all completed correctly-found":"WIP/Event Review",
