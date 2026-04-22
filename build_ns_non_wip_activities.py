@@ -1817,7 +1817,7 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     }
 ET_SPLIT_START_DATE = pd.Timestamp("2026-04-13").normalize()
 ET_LEGACY_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
-ET_SPLIT_TEAMS = {"AE MEIC", "CSF", "Mazor", "Nav", "ET US", "ET MEIC"}
+ET_SPLIT_TEAMS = {"ET US", "ET MEIC"}
 ENABLE_TEAMS = set(ET_LEGACY_TEAMS | ET_SPLIT_TEAMS)
 ENABLE_TEAM_NAME = "Enabling Technologies"
 ET_FIXED_PEOPLE_COUNT = {
@@ -2687,11 +2687,9 @@ def _build_et_us_rows_from_sheet(
                 continue
         except Exception:
             pass
-
         ts = pd.Timestamp(d)
         if pd.isna(ts):
             continue
-
         ts = ts.normalize()
         if ts not in seen_weeks:
             seen_weeks.add(ts)
