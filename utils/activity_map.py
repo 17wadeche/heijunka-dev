@@ -2309,6 +2309,7 @@ ACTIVITY_MAP = {
     "learning new way to request complaint list for audit and documenting it for future use":"Audit",
     "scrum, one on one":"Scrum & Action",
     "scrum, capa meeting": "CAPA",
+    "meetin":"Meeting",
     "reviewed sr events promoted last thursday to make they were all completed correctly-found":"WIP/Event Review",
     "meetings, training, collaboration, emails/admin":"Admin",
     "collaboration, meetings, ps coding remediation, email/admin":"Meeting",
