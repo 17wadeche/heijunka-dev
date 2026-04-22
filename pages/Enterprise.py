@@ -1339,7 +1339,7 @@ def _weekly_team_export_df(
             )
         if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","DS","CDS","ACM","VSS","Endoscopy","Surgical AST-GST"}:
             capacity_hours = float(people_count) * 40.0
-        elif team in {"NI", "CPT"}:
+        elif team in {"NI", "CPT", "CDS"}:
             capacity_hours = float(people_count) * 39.0
         elif team == "ENT":
             capacity_hours = ent_capacity_hours_for_week(
