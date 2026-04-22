@@ -2618,3 +2618,113 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-04-21 19:26:59,242 | INFO | [ALL] drop period_date == 2023-11-06: 565 -> 565
 2026-04-21 19:26:59,242 | INFO | [ALL] drop period_date == 2026-09-07: 565 -> 565
 2026-04-21 19:26:59,279 | INFO | Wrote 565 rows to NS_DATA\NS_metrics.csv
+2026-04-21 20:05:53,942 | INFO | === NS Metrics Run START ===
+2026-04-21 20:05:53,942 | INFO | Selected team: all
+2026-04-21 20:05:53,942 | INFO | [TDD COS 1] START
+2026-04-21 20:06:25,841 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 7 | kept=4 | refreshed=3 | final=7
+2026-04-21 20:06:25,843 | INFO | [TDD COS 1] DONE | rows=7 | elapsed=0:00:31.899889
+2026-04-21 20:06:25,843 | INFO | [Spine] START
+2026-04-21 20:08:15,160 | INFO | [Spine] DONE | rows=34 | elapsed=0:01:49.317551
+2026-04-21 20:08:15,160 | INFO | [Spine] START
+2026-04-21 20:09:43,405 | INFO | [Spine] DONE | rows=7 | elapsed=0:01:28.244703
+2026-04-21 20:09:43,405 | INFO | [PH] START
+2026-04-21 20:10:28,367 | INFO | [PH] loaded cached PH rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-21 20:10:28,367 | INFO | [PH] DONE | rows=34 | elapsed=0:00:44.961502
+2026-04-21 20:10:28,367 | INFO | [PH Cell 17] START
+2026-04-21 20:10:40,867 | INFO | [PH Cell 17] DONE | rows=4 | elapsed=0:00:12.500272
+2026-04-21 20:10:40,868 | INFO | [SCS Cell 1] START
+2026-04-21 20:10:54,995 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 39 | kept=36 | refreshed=3 | final=39 | old_weeks=[] | new_weeks=['2026-04-06', '2026-04-13', '2026-04-20']
+2026-04-21 20:10:54,995 | INFO | [SCS Cell 1] DONE | rows=39 | elapsed=0:00:14.126920
+2026-04-21 20:10:54,995 | INFO | [MEIC PH] START
+2026-04-21 20:11:06,621 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 34 | kept=31 | refreshed=3 | final=34
+2026-04-21 20:11:06,622 | INFO | [MEIC PH] DONE | rows=34 | elapsed=0:00:11.627249
+2026-04-21 20:11:06,623 | INFO | [DBS C13] START
+2026-04-21 20:11:35,179 | INFO | [DBS C13] DONE | rows=5 | elapsed=0:00:28.555804
+2026-04-21 20:11:35,179 | INFO | [DBS C13] filter >= 2025-07-07: 5 -> 5
+2026-04-21 20:11:35,179 | INFO | [DBS C14] START
+2026-04-21 20:11:58,859 | INFO | [DBS C14] DONE | rows=5 | elapsed=0:00:23.680052
+2026-04-21 20:11:58,859 | INFO | [DBS C14] filter >= 2025-07-07: 5 -> 5
+2026-04-21 20:11:58,859 | INFO | [NV] START
+2026-04-21 20:12:50,874 | INFO | [NV] loaded cached rows from NS_metrics: 41 | kept=39 | refreshed=3 | final=42
+2026-04-21 20:12:50,878 | INFO | [NV] DONE | rows=42 | elapsed=0:00:52.019058
+2026-04-21 20:12:50,879 | INFO | [Nav] START
+2026-04-21 20:13:10,684 | INFO | [Nav] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44
+2026-04-21 20:13:10,686 | INFO | [Nav] DONE | rows=44 | elapsed=0:00:19.807072
+2026-04-21 20:13:10,686 | INFO | [AE MEIC] START
+2026-04-21 20:13:29,186 | INFO | [AE MEIC] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44
+2026-04-21 20:13:29,186 | INFO | [AE MEIC] DONE | rows=44 | elapsed=0:00:18.499942
+2026-04-21 20:13:29,186 | INFO | [O-Arm MEIC] START
+2026-04-21 20:14:30,203 | INFO | [O-Arm MEIC] loaded cached rows from NS_metrics: 42 | kept=41 | refreshed=1 | final=42
+2026-04-21 20:14:30,204 | INFO | [O-Arm MEIC] DONE | rows=42 | elapsed=0:01:01.017692
+2026-04-21 20:14:30,205 | INFO | [Mazor] START
+2026-04-21 20:15:24,607 | INFO | [Mazor] loaded cached rows from NS_metrics: 46 | kept=44 | refreshed=2 | final=46
+2026-04-21 20:15:24,607 | INFO | [Mazor] DONE | rows=46 | elapsed=0:00:54.402701
+2026-04-21 20:15:24,607 | INFO | [CSF] START
+2026-04-21 20:16:15,167 | INFO | [CSF] loaded cached rows from NS_metrics: 43 | refreshed=3 | final=45 | weeks_to_refresh=['2026-04-06', '2026-04-13', '2026-04-20']
+2026-04-21 20:16:15,167 | INFO | [CSF] DONE | rows=45 | elapsed=0:00:50.559592
+2026-04-21 20:16:15,167 | INFO | [PSS US] START
+2026-04-21 20:16:16,763 | ERROR | [PSS US] FAIL | elapsed=0:00:01.596059 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+2026-04-21 20:16:16,763 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3818, in <lambda>
+    extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm
+
+2026-04-21 20:16:16,826 | INFO | [PSS MEIC] START
+2026-04-21 20:16:18,346 | ERROR | [PSS MEIC] FAIL | elapsed=0:00:01.520531 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+2026-04-21 20:16:18,346 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3820, in <lambda>
+    extend_team("PSS MEIC",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_meic_source_file,   "PSS MEIC",   PSS__MEIC_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm
+
+2026-04-21 20:16:18,429 | INFO | [PSS MEIC Intern] START
+2026-04-21 20:16:20,948 | ERROR | [PSS MEIC Intern] FAIL | elapsed=0:00:02.517080 | error=File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+2026-04-21 20:16:20,949 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 697, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 3822, in <lambda>
+    extend_team("PSS MEIC Intern",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_intern_source_file,   "PSS MEIC Intern",   PSS_MEIC_Intern_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2383, in scrape_previous_weeks_xlsm_with_filters
+    wb = _open_via_temp_copy(source_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2366, in _open_via_temp_copy
+    raise FileNotFoundError(f"File not found on disk: {src}")
+FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm
+
+2026-04-21 20:16:21,131 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-04-21 20:16:21,132 | INFO | [ENT] START
+2026-04-21 20:16:21,436 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.305652
+2026-04-21 20:16:21,442 | INFO | [DBS MEIC] START
+2026-04-21 20:16:21,463 | INFO | [DBS MEIC] DONE | rows=37 | elapsed=0:00:00.020929
+2026-04-21 20:16:21,465 | INFO | [SCS MEIC] START
+2026-04-21 20:16:21,484 | INFO | [SCS MEIC] DONE | rows=37 | elapsed=0:00:00.020690
+2026-04-21 20:16:21,486 | INFO | [SCS Super Cell] START
+2026-04-21 20:19:21,498 | INFO | [SCS Super Cell] still running...
+2026-04-21 20:21:03,945 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 40 | kept=38 | refreshed=3 | final=40
+2026-04-21 20:21:03,945 | INFO | [SCS Super Cell] DONE | rows=40 | elapsed=0:04:42.459366
+2026-04-21 20:21:03,945 | INFO | [PH Cell 17] rows before TAA filter = 4
+2026-04-21 20:21:03,945 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 594 -> 565
+2026-04-21 20:21:03,945 | INFO | [PH Cell 17] rows after TAA filter = 4
+2026-04-21 20:21:03,945 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 594 -> 565
+2026-04-21 20:21:03,945 | INFO | [ALL] drop period_date == 2023-11-06: 565 -> 565
+2026-04-21 20:21:03,945 | INFO | [ALL] drop period_date == 2026-09-07: 565 -> 565
+2026-04-21 20:21:03,980 | INFO | Wrote 565 rows to NS_DATA\NS_metrics.csv
