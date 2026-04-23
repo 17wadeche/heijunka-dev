@@ -1570,16 +1570,19 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
+        "other_team_wip_pct": "Other Team WIP %",
         "over_hours": "Over Hours",
         "warning": "Warning",
     }
     preferred_order = [
         "portfolio", "ou", "team", "week_start",
         "capacity_hours", "people_count",
-        "completed_hours", "wip_pct", "wip_avg_hours_day",
-        "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
-        "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
-        "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+        "completed_hours", "wip_pct",
+        "other_team_wip_hours", "other_team_wip_pct",
+        "non_wip_hours", "non_wip_pct", 
+        "ooo_hours", "ooo_pct",
+        "unaccounted_hours", "unaccounted_pct",
         "over_hours", "warning",
     ]
     cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
@@ -1606,6 +1609,7 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "ou", "week_start",
@@ -1638,6 +1642,7 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "other_team_wip_hours": "Other Team WIP Hours",
     }
     preferred_order = [
         "portfolio", "week_start",
