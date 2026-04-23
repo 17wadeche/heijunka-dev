@@ -1553,14 +1553,14 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
 def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
     team_df = _append_alert_before_display(df, include_alert=True)
     rename_map = {
-        "alert": "Alert",
+        "Alert": "Alert",
         "team": "Team",
         "week_start": "Week Start",
         "completed_hours": "Completed Hours",
-        "people_count": "People Count",
+        "people_count": "People",
         "non_wip_hours": "Non-WIP Hours",
         "ooo_hours": "OOO Hours",
-        "capacity_hours": "Capacity Hours",
+        "capacity_hours": "Capacity",
         "unaccounted_hours": "Unaccounted Hours",
         "wip_pct": "WIP %",
         "non_wip_pct": "Non-WIP %",
@@ -1572,7 +1572,7 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "warning": "Warning",
     }
     preferred_order = [
-        "alert",
+        "Alert",
         "team", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct",
@@ -2368,15 +2368,16 @@ elif page == "Export":
         selected_weeks=export_selected_weeks,
     )
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+        team_df = _append_alert_before_display(df, include_alert=True)
         rename_map = {
-            "alert": "Alert",
+            "Alert": "Alert",
             "team": "Team",
             "week_start": "Week Start",
             "completed_hours": "Completed Hours",
-            "people_count": "People Count",
+            "people_count": "People",
             "non_wip_hours": "Non-WIP Hours",
             "ooo_hours": "OOO Hours",
-            "capacity_hours": "Capacity Hours",
+            "capacity_hours": "Capacity",
             "unaccounted_hours": "Unaccounted Hours",
             "wip_pct": "WIP %",
             "non_wip_pct": "Non-WIP %",
@@ -2388,7 +2389,7 @@ elif page == "Export":
             "warning": "Warning",
         }
         preferred_order = [
-            "alert",
+            "Alert",
             "team", "week_start",
             "capacity_hours", "people_count",
             "completed_hours", "wip_pct",
@@ -2404,8 +2405,8 @@ elif page == "Export":
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
         fmt = {}
         for c in [
-            "Completed Hours", "People Count", "Other Team WIP Hours",
-            "Non-WIP Hours", "OOO Hours", "Capacity Hours",
+            "Completed Hours", "People", "Other Team WIP Hours",
+            "Non-WIP Hours", "OOO Hours", "Capacity",
             "Unaccounted Hours", "Over Hours",
         ]:
             if c in out.columns:
