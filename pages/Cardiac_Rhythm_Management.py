@@ -787,13 +787,17 @@ def build_person_weekly_accounting(
     )
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
-    out["Expected Hours"] = out["person_key"].map(PERSON_WEEKLY_HOURS).fillna(
+    base_expected = pd.Series(
         np.where(
             out["person_key"].isin(irl_people_norm),
             39.0,
             float(week_hours),
-        )
+        ),
+        index=out.index,
+        dtype="float64",
     )
+    override_expected = out["person_key"].map(PERSON_WEEKLY_HOURS).astype("float64")
+    out["Expected Hours"] = override_expected.combine_first(base_expected)
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
