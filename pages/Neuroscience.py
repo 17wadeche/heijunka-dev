@@ -1115,7 +1115,7 @@ if nonwip_mode:
     )
     kpi_card(
         c2,
-        "other team wip",
+        "Other Team WIP",
         other_team_wip_hours_val,
         fmt="{:,.1f}",
         subtext=_capacity_subtext(other_team_wip_hours_val, capacity_pct_basis),
@@ -1200,7 +1200,7 @@ if nonwip_mode:
         )
         label_map = {
             "OOO Hours": "OOO",
-            "Accounted_Other": "other team wip",
+            "Accounted_Other": "Other Team WIP",
             "Accounted_NonOther": "Accounted Non-WIP",
             "Unaccounted": "Unaccounted",
         }
@@ -1260,13 +1260,13 @@ if nonwip_mode:
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["OOO", "other team wip", "Accounted Non-WIP", "Unaccounted"],
+                        domain=["OOO", "Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
                         range=["#a855f7", "#2563eb", "#22c55e", "#9ca3af"],
                     ),
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Accounted_Other:Q", title="other team wip hours", format=",.2f"),
+                    alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
                     alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
                     alt.Tooltip("OOO Hours:Q", title="OOO Hours", format=",.2f"),
