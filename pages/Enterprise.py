@@ -1428,6 +1428,17 @@ def _weekly_team_export_df(
             over_hours=("over_hours", "sum"),
         )
     )
+    base["unaccounted_hours"] = (
+        base["capacity_hours"]
+        - base["completed_hours"]
+        - base["non_wip_hours"]
+        - base["ooo_hours"]
+    ).clip(lower=0.0)
+    base["warning"] = np.where(
+        base["over_hours"] > 0,
+        base["team"].astype(str) + " is over " + base["over_hours"].round(2).astype(str) + " hours",
+        "",
+    )
     if factor_out_ooo:
         pct_denom = (base["capacity_hours"] - base["ooo_hours"]).clip(lower=0.0)
         base["ooo_pct"] = 0.0
