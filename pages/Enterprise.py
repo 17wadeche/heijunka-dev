@@ -1566,7 +1566,7 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "non_wip_pct": "Non-WIP %",
         "ooo_pct": "OOO %",
         "unaccounted_pct": "Unaccounted %",
-        "other_team_wip_hours": "Other Team WIP Hours",
+        "other_team_wip_hours": "Other Team WIP",
         "other_team_wip_pct": "Other Team WIP %",
         "over_hours": "Over Hours",
         "warning": "Warning",
@@ -1606,7 +1606,7 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        "other_team_wip_hours": "Other Team WIP Hours",
+        "other_team_wip_hours": "Other Team WIP",
     }
     preferred_order = [
         "portfolio", "ou", "week_start",
@@ -1639,7 +1639,7 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
-        "other_team_wip_hours": "Other Team WIP Hours",
+        "other_team_wip_hours": "Other Team WIP",
     }
     preferred_order = [
         "portfolio", "week_start",
@@ -2383,7 +2383,7 @@ elif page == "Export":
             "non_wip_pct": "Non-WIP %",
             "ooo_pct": "OOO %",
             "unaccounted_pct": "Unaccounted %",
-            "other_team_wip_hours": "Other Team WIP Hours",
+            "other_team_wip_hours": "Other Team WIP",
             "other_team_wip_pct": "Other Team WIP %",
             "over_hours": "Over Hours",
             "warning": "Warning",
@@ -2405,7 +2405,7 @@ elif page == "Export":
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
         fmt = {}
         for c in [
-            "Completed Hours", "People", "Other Team WIP Hours",
+            "Completed Hours", "People", "Other Team WIP",
             "Non-WIP Hours", "OOO Hours", "Capacity",
             "Unaccounted Hours", "Over Hours",
         ]:
