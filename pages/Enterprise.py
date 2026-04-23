@@ -1339,7 +1339,19 @@ def _weekly_team_export_df(
             )
         if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","DS","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC"}:
             capacity_hours = float(people_count) * 40.0
-        elif team in {"CDS", "CPT", "NI"}:
+        elif team == "CPT":
+            cpt_31_count = 2
+            cpt_30_2_count = 1
+            cpt_37_5_count = 4
+            assigned_count = cpt_31_count + cpt_30_2_count + cpt_37_5_count
+            remaining_count = max(float(people_count) - assigned_count, 0)
+            capacity_hours = (
+                (cpt_31_count * 31.0)
+                + (cpt_30_2_count * 30.2)
+                + (cpt_37_5_count * 37.5)
+                + (remaining_count * 37.75)
+            )
+        elif team in {"CDS", "NI"}:
             capacity_hours = float(people_count) * 37.75
         elif team == "ENT":
             capacity_hours = ent_capacity_hours_for_week(
