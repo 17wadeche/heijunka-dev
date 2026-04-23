@@ -3450,7 +3450,7 @@ with right2:
                         teams_for_drill = {str(team_name).strip().upper()}
                     else:
                         teams_for_drill = set()
-                    default_drill_expected = 39.0 if teams_for_drill & SPECIAL_39_TEAMS else 40.0
+                    default_drill_expected = 37.75 if teams_for_drill & SPECIAL_39_TEAMS else 40.0
                     drill_expected_hrs = PERSON_WEEKLY_HOURS_DRILL.get(person_key, default_drill_expected)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
