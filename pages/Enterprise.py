@@ -1383,11 +1383,15 @@ def _weekly_team_export_df(
         completed_hours = float(completed_match["completed_hours"].sum()) if not completed_match.empty else 0.0
         if completed_hours == 0.0 and not wk_people.empty and "Completed Hours" in wk_people.columns:
             completed_hours = float(pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0).sum())
-        
         unaccounted_hours = max(
             capacity_hours - completed_hours - non_wip_hours - ooo_hours,
             0.0,
         )
+        over_hours = max(
+            completed_hours + non_wip_hours + ooo_hours - capacity_hours,
+            0.0,
+        )
+        warning = f"{team} is over {over_hours:.2f} hours" if over_hours > 0 else ""
         if factor_out_ooo:
             pct_denom = max(capacity_hours - ooo_hours, 0.0)
             ooo_pct = 0.0
@@ -1403,6 +1407,8 @@ def _weekly_team_export_df(
             "ooo_hours": ooo_hours,
             "capacity_hours": capacity_hours,
             "unaccounted_hours": unaccounted_hours,
+            "over_hours": over_hours,
+            "warning": warning,
             "wip_pct": (completed_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "non_wip_pct": (non_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "ooo_pct": ooo_pct,
@@ -1419,6 +1425,7 @@ def _weekly_team_export_df(
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
+            over_hours=("over_hours", "sum"),
         )
     )
     if factor_out_ooo:
@@ -1528,6 +1535,8 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
         "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+        "over_hours": "Over Hours",
+        "warning": "Warning",
     }
     preferred_order = [
         "portfolio", "ou", "team", "week_start",
@@ -1536,6 +1545,7 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
         "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
         "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+        "over_hours", "warning",
     ]
     cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
     out = df[cols].copy().rename(columns=rename_map)
