@@ -1199,7 +1199,7 @@ if nonwip_mode:
             """,
             unsafe_allow_html=True,
         )
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
     wip_hours_val = (
         float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
@@ -1236,12 +1236,23 @@ if nonwip_mode:
         capacity_val = float((irl_count * 39.0) + (non_irl_count * 40.0))
     else:
         capacity_val = np.nan
-    nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
+    total_nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
+    other_team_wip_hours_val = (
+        float(pd.to_numeric(wk_people_kpi["Other Team WIP"], errors="coerce").fillna(0.0).sum())
+        if not wk_people_kpi.empty and "Other Team WIP" in wk_people_kpi.columns
+        else 0.0
+    )
+    nonwip_hours_val = (
+        max(float(total_nonwip_hours_val) - float(other_team_wip_hours_val), 0.0)
+        if pd.notna(total_nonwip_hours_val)
+        else np.nan
+    )
     ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
         if pd.notna(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) else 0.0
     used_hours = (
         (0.0 if pd.isna(wip_hours_val) else float(wip_hours_val))
+        + (0.0 if pd.isna(other_team_wip_hours_val) else float(other_team_wip_hours_val))
         + (0.0 if pd.isna(nonwip_hours_val) else float(nonwip_hours_val))
         + (0.0 if pd.isna(ooo_hours_val) else float(ooo_hours_val))
     )
@@ -1253,10 +1264,14 @@ if nonwip_mode:
     capacity_pct_basis = capacity_val
     if not include_ooo_in_kpi_pct and pd.notna(capacity_val):
         capacity_pct_basis = max(float(capacity_val) - float(ooo_hours_val), 0.0)
-
     wip_pct = (
         wip_hours_val / capacity_pct_basis
         if pd.notna(wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    other_team_wip_pct = (
+        other_team_wip_hours_val / capacity_pct_basis
+        if pd.notna(other_team_wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
         else np.nan
     )
     nonwip_pct = (
@@ -1284,6 +1299,14 @@ if nonwip_mode:
     )
     kpi_card(
         c2,
+        "Other Team WIP",
+        other_team_wip_hours_val,
+        fmt="{:,.1f}",
+        color=percent_color(other_team_wip_pct, threshold=0.20, invert=True),
+        subtext=_capacity_subtext(other_team_wip_hours_val, capacity_pct_basis),
+    )
+    kpi_card(
+        c3,
         "Non-WIP Hours",
         nonwip_hours_val,
         fmt="{:,.1f}",
@@ -1291,7 +1314,7 @@ if nonwip_mode:
         subtext=_capacity_subtext(nonwip_hours_val, capacity_pct_basis),
     )
     kpi_card(
-        c3,
+        c4,
         "OOO Hours",
         ooo_hours_val,
         fmt="{:,.1f}",
@@ -1301,7 +1324,7 @@ if nonwip_mode:
         ),
     )
     kpi_card(
-        c4,
+        c5,
         "Unaccounted Hours",
         unaccounted_hours_val,
         fmt="{:,.1f}",
