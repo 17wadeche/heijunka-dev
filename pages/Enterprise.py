@@ -2399,8 +2399,8 @@ elif page == "Export":
             "unaccounted_hours", "unaccounted_pct",
             "over_hours", "warning",
         ]
-        cols = [c for c in preferred_order if c in df.columns]
-        out = df[cols].copy().rename(columns=rename_map)
+        cols = [c for c in preferred_order if c in team_df.columns]
+        out = team_df[cols].copy().rename(columns=rename_map)
         if "Week Start" in out.columns:
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
         fmt = {}
