@@ -1406,7 +1406,7 @@ def _weekly_team_export_df(
             completed_hours + other_team_wip_hours + non_wip_hours + ooo_hours - capacity_hours,
             0.0,
         )
-        warning = f"{team} is over {over_hours:.2f} hours" if over_hours > 0 else ""
+        warning = f"Over {over_hours:.2f} hours" if over_hours > 0 else ""
         if factor_out_ooo:
             pct_denom = max(capacity_hours - ooo_hours, 0.0)
             ooo_pct = 0.0
@@ -1505,13 +1505,9 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         + out["ooo_hours"]
         - out["capacity_hours"]
     ).clip(lower=0.0)
-    if level == "portfolio":
-        group_name = out["portfolio"].fillna("Unknown Group").astype(str)
-    else:
-        group_name = out["ou"].fillna(out["portfolio"]).fillna("Unknown Group").astype(str)
     out["warning"] = np.where(
         out["over_hours"] > 0,
-        group_name + " is over " + out["over_hours"].round(2).astype(str) + " hours",
+        "Over " + out["over_hours"].round(2).astype(str) + " hours",
         "",
     )
     if factor_out_ooo:
