@@ -536,15 +536,21 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
         activities = []
     if not isinstance(activities, list) or not activities:
         return {}, {}
-    import re
+    def _canon_activity_for_bucket(label: str) -> str:
+        raw = str(label or "").strip()
+        if not raw:
+            return ""
+        lower = raw.lower().strip()
+        mapped = ACTIVITY_MAP.get(lower, raw)
+        return re.sub(r"[^A-Z0-9]", "", str(mapped).upper())
+    other_team_key = "OTHERTEAMWIP"
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
         name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
             continue
-        act_raw = str(d.get("activity", ""))
-        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())  # normalize
+        act_key = _canon_activity_for_bucket(d.get("activity", ""))
         if act_key == "OOO":
             continue
         try:
@@ -553,6 +559,8 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
             hrs = 0.0
         if hrs <= 0:
             continue
+        if act_key == other_team_key:
+            accounted_other[name] = accounted_other.get(name, 0.0) + hrs
         else:
             accounted_nonother[name] = accounted_nonother.get(name, 0.0) + hrs
     accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
@@ -1363,6 +1371,11 @@ def _weekly_team_export_df(
         else:
             capacity_hours = float(wk_people["Expected Hours"].sum())
         ooo_hours = float(wk_people["OOO Hours"].sum())
+        other_team_wip_hours = (
+            float(pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0).sum())
+            if not wk_people.empty and "Other Team WIP" in wk_people.columns
+            else 0.0
+        )
         if team == "CPT":
             cpt_nonwip = long_nw.loc[
                 (long_nw["team"] == team) &
@@ -1403,6 +1416,7 @@ def _weekly_team_export_df(
             "week_start": wk,
             "people_count": float(people_count),
             "completed_hours": completed_hours,
+            "other_team_wip_hours": other_team_wip_hours,
             "non_wip_hours": non_wip_hours,
             "ooo_hours": ooo_hours,
             "capacity_hours": capacity_hours,
@@ -1410,6 +1424,7 @@ def _weekly_team_export_df(
             "over_hours": over_hours,
             "warning": warning,
             "wip_pct": (completed_hours / pct_denom) if pct_denom > 0 else pd.NA,
+            "other_team_wip_pct": (other_team_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "non_wip_pct": (non_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "ooo_pct": ooo_pct,
             "unaccounted_pct": (unaccounted_hours / pct_denom) if pct_denom > 0 else pd.NA,
@@ -1422,6 +1437,7 @@ def _weekly_team_export_df(
         .agg(
             people_count=("people_count", "max"),
             completed_hours=("completed_hours", "sum"),
+            other_team_wip_hours=("other_team_wip_hours", "sum"),
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
@@ -1431,6 +1447,7 @@ def _weekly_team_export_df(
     base["unaccounted_hours"] = (
         base["capacity_hours"]
         - base["completed_hours"]
+        - base["other_team_wip_hours"]
         - base["non_wip_hours"]
         - base["ooo_hours"]
     ).clip(lower=0.0)
@@ -1447,6 +1464,7 @@ def _weekly_team_export_df(
         base["ooo_pct"] = (base["ooo_hours"] / pct_denom).where(pct_denom > 0)
     base["wip_pct"] = (base["completed_hours"] / pct_denom).where(pct_denom > 0)
     base["non_wip_pct"] = (base["non_wip_hours"] / pct_denom).where(pct_denom > 0)
+    base["other_team_wip_pct"] = (base["other_team_wip_hours"] / pct_denom).where(pct_denom > 0)
     base["unaccounted_pct"] = (base["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
     base = base.merge(meta, on="team", how="left")
     base = _add_avg_hours_day_columns(base)
@@ -1465,6 +1483,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         .agg(
             people_count=("people_count", "sum"),
             completed_hours=("completed_hours", "sum"),
+            other_team_wip_hours=("other_team_wip_hours", "sum"),
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
@@ -1473,6 +1492,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     out["unaccounted_hours"] = (
         out["capacity_hours"]
         - out["completed_hours"]
+        - out["other_team_wip_hours"]
         - out["non_wip_hours"]
         - out["ooo_hours"]
     ).clip(lower=0.0)
@@ -1498,6 +1518,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         pct_denom = out["capacity_hours"]
         out["ooo_pct"] = (out["ooo_hours"] / pct_denom).where(pct_denom > 0)
     out["wip_pct"] = (out["completed_hours"] / pct_denom).where(pct_denom > 0)
+    out["other_team_wip_pct"] = (out["other_team_wip_hours"] / pct_denom).where(pct_denom > 0)
     out["non_wip_pct"] = (out["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     out["unaccounted_pct"] = (out["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
     out = _add_avg_hours_day_columns(out)
@@ -1913,12 +1934,14 @@ if page == "Overview":
                 p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
                 p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
                 st.divider()
-                _, _, c3, c4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                _, c3, c4, c5, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
                 c3.metric("Avg **OOO** Weekly Hours", _safe_metric(scoped_df["ooo_hours"].iloc[0]))
-                c4.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
-                _, _, p3, p4, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
+                c4.metric("Avg **Other Team WIP** Weekly Hours", _safe_metric(scoped_df["other_team_wip_hours"].iloc[0]))
+                c5.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
+                _, p3, p4, p5, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
                 p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
-                p4.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
+                p4.metric("**Other Team WIP** % of week", _safe_metric(scoped_df["other_team_wip_pct"].iloc[0], pct=True))
+                p5.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
                 st.divider()
                 st.subheader(f"{label} WIP % trend")
                 if history_df.empty:
