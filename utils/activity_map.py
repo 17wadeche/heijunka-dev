@@ -2319,6 +2319,7 @@ ACTIVITY_MAP = {
     "prep for visit":"Admin",
     "it issue correspondence/troubleshooting":"IT Issue/Update",
     "uni 2nd visit":"Career Development",
+    "laptop issues, coding call":"IT Issue/Update",
     "admin(30)":"Admin",
     "rdn mfg meeting - capa support":"CAPA",
     "talks with crdn cell":"Meeting",
