@@ -2469,6 +2469,7 @@ ACTIVITY_MAP = {
     "career dev review":"Career Development",
     "next gen call recording": "Next Gen",
     "acrum":"Scrum & Action",
+    "scrum.":"Scrum & Action",
     "scrum, ri, email/admin, question":"Scrum & Action",
     "questions, yellow belt work":"Problem Solving",
     "ftq affera":"Project Work",
