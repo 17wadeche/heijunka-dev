@@ -131,6 +131,7 @@ def _build_export_lookup_tables_cached(
         (
             pd.to_numeric(team_export["completed_hours"], errors="coerce").fillna(0.0)
             + pd.to_numeric(team_export["non_wip_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["other_team_wip_hours"], errors="coerce").fillna(0.0)
         ) > 0
     ].reset_index(drop=True)
     if team_export.empty:
@@ -1382,13 +1383,14 @@ def _weekly_team_export_df(
                 (pd.to_datetime(long_nw["period_date"], errors="coerce").dt.normalize() == wk),
                 "Non-WIP Hours"
             ]
-            non_wip_hours = float(
+            total_non_wip_hours = float(
                 pd.to_numeric(cpt_nonwip, errors="coerce").fillna(0.0).sum()
             )
         else:
-            non_wip_hours = float(
+            total_non_wip_hours = float(
                 pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0
             )
+        non_wip_hours = max(total_non_wip_hours - other_team_wip_hours, 0.0)
         completed_match = metrics_team[
             (metrics_team["team"] == team) &
             (pd.to_datetime(metrics_team["week_start"], errors="coerce").dt.normalize() == wk)
@@ -1397,11 +1399,11 @@ def _weekly_team_export_df(
         if completed_hours == 0.0 and not wk_people.empty and "Completed Hours" in wk_people.columns:
             completed_hours = float(pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0).sum())
         unaccounted_hours = max(
-            capacity_hours - completed_hours - non_wip_hours - ooo_hours,
+            capacity_hours - completed_hours - other_team_wip_hours - non_wip_hours - ooo_hours,
             0.0,
         )
         over_hours = max(
-            completed_hours + non_wip_hours + ooo_hours - capacity_hours,
+            completed_hours + other_team_wip_hours + non_wip_hours + ooo_hours - capacity_hours,
             0.0,
         )
         warning = f"{team} is over {over_hours:.2f} hours" if over_hours > 0 else ""
@@ -1498,6 +1500,7 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     ).clip(lower=0.0)
     out["over_hours"] = (
         out["completed_hours"]
+        + out["other_team_wip_hours"]
         + out["non_wip_hours"]
         + out["ooo_hours"]
         - out["capacity_hours"]
