@@ -363,6 +363,13 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     if not isinstance(activities, list) or not activities:
         return {}, {}
     import re
+    def _canon_activity_for_bucket(label: str) -> str:
+        raw = str(label or "").strip()
+        if not raw:
+            return ""
+        lower = raw.lower().strip()
+        mapped = ACTIVITY_MAP.get(lower, raw)
+        return re.sub(r"[^A-Z0-9]", "", str(mapped).upper())
     other_team_key = "OTHERTEAMWIP"
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
@@ -370,8 +377,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
         name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
             continue
-        act_raw = str(d.get("activity", ""))
-        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())  # normalize
+        act_key = _canon_activity_for_bucket(d.get("activity", ""))
         if act_key == "OOO":
             continue
         try:
