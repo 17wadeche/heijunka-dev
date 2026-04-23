@@ -1008,7 +1008,7 @@ if nonwip_mode:
             """,
             unsafe_allow_html=True,
         )
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people_kpi = build_person_weekly_accounting(
@@ -1052,12 +1052,14 @@ if nonwip_mode:
         if not wk_people_kpi.empty and "Completed Hours" in wk_people_kpi.columns
         else np.nan
     )
+    other_team_wip_hours_val = (
+        float(wk_people_kpi["Other Team WIP"].sum())
+        if not wk_people_kpi.empty and "Other Team WIP" in wk_people_kpi.columns
+        else 0.0
+    )
     nonwip_hours_val = (
-        float(
-            wk_people_kpi["Other Team WIP"].sum()
-            + wk_people_kpi["Accounted Non-WIP"].sum()
-        )
-        if not wk_people_kpi.empty
+        float(wk_people_kpi["Accounted Non-WIP"].sum())
+        if not wk_people_kpi.empty and "Accounted Non-WIP" in wk_people_kpi.columns
         else np.nan
     )
     ooo_hours_val = (
@@ -1081,6 +1083,11 @@ if nonwip_mode:
     wip_pct = (
         wip_hours_val / capacity_pct_basis
         if pd.notna(wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    other_team_wip_pct = (
+        other_team_wip_hours_val / capacity_pct_basis
+        if pd.notna(other_team_wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
         else np.nan
     )
     nonwip_pct = (
@@ -1108,6 +1115,13 @@ if nonwip_mode:
     )
     kpi_card(
         c2,
+        "other team wip",
+        other_team_wip_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(other_team_wip_hours_val, capacity_pct_basis),
+    )
+    kpi_card(
+        c3,
         "Non-WIP Hours",
         nonwip_hours_val,
         fmt="{:,.1f}",
@@ -1115,7 +1129,7 @@ if nonwip_mode:
         subtext=_capacity_subtext(nonwip_hours_val, capacity_pct_basis),
     )
     kpi_card(
-        c3,
+        c4,
         "OOO Hours",
         ooo_hours_val,
         fmt="{:,.1f}",
@@ -1125,7 +1139,7 @@ if nonwip_mode:
         ),
     )
     kpi_card(
-        c4,
+        c5,
         "Unaccounted Hours",
         unaccounted_hours_val,
         fmt="{:,.1f}",
@@ -1186,7 +1200,7 @@ if nonwip_mode:
         )
         label_map = {
             "OOO Hours": "OOO",
-            "Accounted_Other": "Other Team WIP",
+            "Accounted_Other": "other team wip",
             "Accounted_NonOther": "Accounted Non-WIP",
             "Unaccounted": "Unaccounted",
         }
@@ -1246,13 +1260,13 @@ if nonwip_mode:
                     "CategoryLabel:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["OOO", "Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
+                        domain=["OOO", "other team wip", "Accounted Non-WIP", "Unaccounted"],
                         range=["#a855f7", "#2563eb", "#22c55e", "#9ca3af"],
                     ),
                 ),
                 tooltip=[
                     alt.Tooltip("person:N", title="Person"),
-                    alt.Tooltip("Accounted_Other:Q", title="Other Team WIP Hours", format=",.2f"),
+                    alt.Tooltip("Accounted_Other:Q", title="other team wip hours", format=",.2f"),
                     alt.Tooltip("Accounted_NonOther:Q", title="Accounted Non-WIP Hours", format=",.2f"),
                     alt.Tooltip("Unaccounted:Q", title="Unaccounted Hours", format=",.2f"),
                     alt.Tooltip("OOO Hours:Q", title="OOO Hours", format=",.2f"),
