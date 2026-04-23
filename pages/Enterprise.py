@@ -1585,7 +1585,6 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
     ou_df = _append_alert_before_display(df, include_alert=True)
     rename_map = {
         "Alert": "Alert",
-        "portfolio": "Portfolio",
         "ou": "OU",
         "week_start": "Week Start",
         "capacity_hours": "Capacity",
@@ -1605,7 +1604,7 @@ def _display_export_ou_df(df: pd.DataFrame) -> pd.DataFrame:
     }
     preferred_order = [
         "Alert",
-        "portfolio", "ou", "week_start",
+        "ou", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct",
         "other_team_wip_hours", "other_team_wip_pct",
