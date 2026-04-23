@@ -1419,7 +1419,6 @@ def _weekly_team_export_df(
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
-            unaccounted_hours=("unaccounted_hours", "sum"),
         )
     )
     if factor_out_ooo:
@@ -1451,7 +1450,6 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
             non_wip_hours=("non_wip_hours", "sum"),
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
-            unaccounted_hours=("unaccounted_hours", "sum"),
         )
     )
     out["unaccounted_hours"] = (
