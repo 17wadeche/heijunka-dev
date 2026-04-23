@@ -1302,7 +1302,6 @@ if nonwip_mode:
         "Other Team WIP",
         other_team_wip_hours_val,
         fmt="{:,.1f}",
-        color=percent_color(other_team_wip_pct, threshold=0.20, invert=True),
         subtext=_capacity_subtext(other_team_wip_hours_val, capacity_pct_basis),
     )
     kpi_card(
