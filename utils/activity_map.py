@@ -2476,7 +2476,7 @@ ACTIVITY_MAP = {
     "sh letter querie":"Question",
     "precedent event review":"Precedent Event",
     "prededent event review":"Precedent Event",
-    "rrtt, event reviews, collaboration, meetings, email/admin":"RRTT",
+    "rrtt, event reviews, collaboration, meetings, emails/admin":"RRTT",
     "coding/capa support, event reviews, lates stuff, meetings, training/team education, collaboration":"CAPA",
     "call after scrum":"Scrum & Action",
     "global town hall":"Meeting",
