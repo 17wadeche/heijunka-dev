@@ -1551,7 +1551,9 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     cols = [c for c in cols if c in out.columns]
     return out[cols].sort_values(group_cols).reset_index(drop=True)
 def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
+    team_df = _append_alert_before_display(df, include_alert=True)
     rename_map = {
+        "alert": "Alert",
         "team": "Team",
         "week_start": "Week Start",
         "completed_hours": "Completed Hours",
@@ -1570,6 +1572,7 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "warning": "Warning",
     }
     preferred_order = [
+        "alert",
         "team", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct",
@@ -1579,8 +1582,8 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "unaccounted_hours", "unaccounted_pct",
         "over_hours", "warning",
     ]
-    cols = [c for c in preferred_order if c in df.columns]
-    out = df[cols].copy().rename(columns=rename_map)
+    cols = [c for c in preferred_order if c in team_df.columns]
+    out = team_df[cols].copy().rename(columns=rename_map)
     if "Week Start" in out.columns:
         out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
     return out
@@ -2366,6 +2369,7 @@ elif page == "Export":
     )
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
+            "alert": "Alert",
             "team": "Team",
             "week_start": "Week Start",
             "completed_hours": "Completed Hours",
@@ -2384,6 +2388,7 @@ elif page == "Export":
             "warning": "Warning",
         }
         preferred_order = [
+            "alert",
             "team", "week_start",
             "capacity_hours", "people_count",
             "completed_hours", "wip_pct",
