@@ -1934,7 +1934,7 @@ if page == "Overview":
                 p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
                 p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
                 st.divider()
-                _, _, c3, c4, c5, _, _ = st.columns([1, 1, 1.2, 1.2, 1.2, 1.0, 0.5])
+                _, _, c3, c4, c5, _, _ = st.columns([.8, .8, 1.2, 1.2, 1.2, 1.0, 0.5])
                 c4.metric(
                     "Avg **OOO** Weekly Hours",
                     _safe_metric(scoped_df["ooo_hours"].iloc[0] if "ooo_hours" in scoped_df.columns else np.nan),
@@ -1947,7 +1947,7 @@ if page == "Overview":
                     "Avg **Unaccounted** Weekly Hours",
                     _safe_metric(scoped_df["unaccounted_hours"].iloc[0] if "unaccounted_hours" in scoped_df.columns else np.nan),
                 )
-                _, _, p3, p4, p5, _, _ = st.columns([1, 1, 1.2, 1.2, 1.2, 1.0, 0.5])
+                _, _, p3, p4, p5, _, _ = st.columns([.8, .8, 1.2, 1.2, 1.2, 1.0, 0.5])
                 p4.metric(
                     "**OOO** % of week",
                     _safe_metric(scoped_df["ooo_pct"].iloc[0] if "ooo_pct" in scoped_df.columns else np.nan, pct=True),
