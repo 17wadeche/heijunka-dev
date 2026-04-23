@@ -527,9 +527,11 @@ def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str],
         rows.append(row)
     return rows
 def _get_required_sheet(wb, sheet_name: str) -> Worksheet:
-    if sheet_name not in wb.sheetnames:
-        raise KeyError(f"Missing required sheet: {sheet_name}")
-    return wb[sheet_name]
+    wanted = sheet_name.strip().lower()
+    for actual in wb.sheetnames:
+        if actual.strip().lower() == wanted:
+            return wb[actual]
+    raise KeyError(f"Missing required sheet: {sheet_name}. Found: {wb.sheetnames}")
 def iter_ds_non_wip_rows(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[str, str, float]]:
     for r in range(start_row, ws_pab.max_row + 1):
         category = _norm_text(str(ws_pab[f"D{r}"].value or ""))
