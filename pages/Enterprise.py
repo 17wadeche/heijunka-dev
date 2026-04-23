@@ -1455,7 +1455,7 @@ def _weekly_team_export_df(
     ).clip(lower=0.0)
     base["warning"] = np.where(
         base["over_hours"] > 0,
-        base["team"].astype(str) + " is over " + base["over_hours"].round(2).astype(str) + " hours",
+        "Over " + base["over_hours"].round(2).astype(str) + " hours",
         "",
     )
     if factor_out_ooo:
