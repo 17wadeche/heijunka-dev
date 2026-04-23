@@ -1935,13 +1935,31 @@ if page == "Overview":
                 p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
                 st.divider()
                 _, c3, c4, c5, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-                c3.metric("Avg **OOO** Weekly Hours", _safe_metric(scoped_df["ooo_hours"].iloc[0]))
-                c4.metric("Avg **Other Team WIP** Weekly Hours", _safe_metric(scoped_df["other_team_wip_hours"].iloc[0]))
-                c5.metric("Avg **Unaccounted** Weekly Hours", _safe_metric(scoped_df["unaccounted_hours"].iloc[0]))
+                c3.metric(
+                    "Avg **OOO** Weekly Hours",
+                    _safe_metric(scoped_df["ooo_hours"].iloc[0] if "ooo_hours" in scoped_df.columns else np.nan),
+                )
+                c4.metric(
+                    "Avg **Other Team WIP** Weekly Hours",
+                    _safe_metric(scoped_df["other_team_wip_hours"].iloc[0] if "other_team_wip_hours" in scoped_df.columns else 0.0),
+                )
+                c5.metric(
+                    "Avg **Unaccounted** Weekly Hours",
+                    _safe_metric(scoped_df["unaccounted_hours"].iloc[0] if "unaccounted_hours" in scoped_df.columns else np.nan),
+                )
                 _, p3, p4, p5, _, _, _ = st.columns([1.35, 1.2, 1.2, 1.2, 1.2, 1.0, 0.5])
-                p3.metric("**OOO** % of week", _safe_metric(scoped_df["ooo_pct"].iloc[0], pct=True))
-                p4.metric("**Other Team WIP** % of week", _safe_metric(scoped_df["other_team_wip_pct"].iloc[0], pct=True))
-                p5.metric("**Unaccounted** % remaining", _safe_metric(scoped_df["unaccounted_pct"].iloc[0], pct=True))
+                p3.metric(
+                    "**OOO** % of week",
+                    _safe_metric(scoped_df["ooo_pct"].iloc[0] if "ooo_pct" in scoped_df.columns else np.nan, pct=True),
+                )
+                p4.metric(
+                    "**Other Team WIP** % of week",
+                    _safe_metric(scoped_df["other_team_wip_pct"].iloc[0] if "other_team_wip_pct" in scoped_df.columns else 0.0, pct=True),
+                )
+                p5.metric(
+                    "**Unaccounted** % remaining",
+                    _safe_metric(scoped_df["unaccounted_pct"].iloc[0] if "unaccounted_pct" in scoped_df.columns else np.nan, pct=True),
+                )
                 st.divider()
                 st.subheader(f"{label} WIP % trend")
                 if history_df.empty:
