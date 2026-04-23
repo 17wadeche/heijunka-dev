@@ -20,7 +20,6 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-08"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-15"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-22"],
-    
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2025-12-29"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-05"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-12"],
