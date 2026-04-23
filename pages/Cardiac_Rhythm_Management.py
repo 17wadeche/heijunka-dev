@@ -671,6 +671,14 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+PERSON_WEEKLY_HOURS = {
+    "colm larkin": 30.2,
+    "megan mulligan": 31.0,
+    "roland simpson": 37.5,
+    "kara housmann": 37.5,
+    "sarah korthauer": 37.5,
+    "kyle mai": 37.5,
+}
 def build_person_weekly_accounting(
     team: str,
     week,
