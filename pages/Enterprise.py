@@ -1337,7 +1337,7 @@ def _weekly_team_export_df(
             people_count = float(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
-        if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","DS","ACM","VSS","Endoscopy","Surgical AST-GST"}:
+        if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","DS","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC"}:
             capacity_hours = float(people_count) * 40.0
         elif team in {"CDS", "CPT", "NI"}:
             capacity_hours = float(people_count) * 37.75
