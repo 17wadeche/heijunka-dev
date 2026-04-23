@@ -3442,7 +3442,7 @@ with right2:
                         .rename(columns={"Hours": "TotalHours"})
                     )
                     person_key = str(picked_person_mix).strip().lower()
-                    PERSON_WEEKLY_HOURS_DRILL = {"chelsey": 16.0, "mg": 36.0, "lindsey": 32.0, "colm larkin": 30.2, "megan mulligan": 31}
+                    PERSON_WEEKLY_HOURS_DRILL = {"chelsey": 16.0, "mg": 36.0, "lindsey": 32.0, "colm larkin": 30.2, "megan mulligan": 31, "roland simpson":37.5, "kara housmann":37.5, "sarah korthauer":37.5, "kyle mai":37.5 }
                     SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
                     if multi_team and chosen_mix_teams:
                         teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
