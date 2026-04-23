@@ -1460,6 +1460,21 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         - out["non_wip_hours"]
         - out["ooo_hours"]
     ).clip(lower=0.0)
+    out["over_hours"] = (
+        out["completed_hours"]
+        + out["non_wip_hours"]
+        + out["ooo_hours"]
+        - out["capacity_hours"]
+    ).clip(lower=0.0)
+    if level == "portfolio":
+        group_name = out["portfolio"].fillna("Unknown Group").astype(str)
+    else:
+        group_name = out["ou"].fillna(out["portfolio"]).fillna("Unknown Group").astype(str)
+    out["warning"] = np.where(
+        out["over_hours"] > 0,
+        group_name + " is over " + out["over_hours"].round(2).astype(str) + " hours",
+        "",
+    )
     if factor_out_ooo:
         pct_denom = (out["capacity_hours"] - out["ooo_hours"]).clip(lower=0.0)
         out["ooo_pct"] = 0.0
@@ -1490,6 +1505,8 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
         "unaccounted_hours",
         "unaccounted_pct",
         "unaccounted_avg_hours_day",
+        "over_hours",
+        "warning",
     ]
     cols = [c for c in cols if c in out.columns]
     return out[cols].sort_values(group_cols).reset_index(drop=True)
