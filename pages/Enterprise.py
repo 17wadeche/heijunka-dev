@@ -1862,6 +1862,11 @@ if page == "Overview":
                 history_df = lookup_df[
                     lookup_df[filter_col].astype(str) == str(selected_value)
                 ].copy()
+                warning_text = ""
+                if "warning" in scoped_df.columns and not scoped_df.empty:
+                    warning_text = str(scoped_df["warning"].iloc[0] or "").strip()
+                if warning_text:
+                    st.warning(warning_text)
                 history_df["week_start"] = pd.to_datetime(
                     history_df["week_start"], errors="coerce"
                 ).dt.normalize()
