@@ -1192,7 +1192,7 @@ if nonwip_mode:
         else np.nan
     )
     SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
-    team_week_hours = 39.0 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
+    team_week_hours = 37.75 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
     _ppl_hours_kpi = explode_person_hours(df)
     _ppl_in_wip_kpi = explode_people_in_wip(df)
     people_count_merged = merged_people_count_for_week(
@@ -3022,7 +3022,7 @@ with right2:
             if not team or pd.isna(wk):
                 continue
             wk = wk.normalize()
-            team_week_hours = 39.0 if team.upper() in SPECIAL_39_TEAMS else 40.0
+            team_week_hours = 37.75 if team.upper() in SPECIAL_39_TEAMS else 40.0
             wk_people = build_person_weekly_accounting(
                 team=team,
                 week=wk,
