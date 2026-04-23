@@ -1454,6 +1454,12 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
             unaccounted_hours=("unaccounted_hours", "sum"),
         )
     )
+    out["unaccounted_hours"] = (
+        out["capacity_hours"]
+        - out["completed_hours"]
+        - out["non_wip_hours"]
+        - out["ooo_hours"]
+    ).clip(lower=0.0)
     if factor_out_ooo:
         pct_denom = (out["capacity_hours"] - out["ooo_hours"]).clip(lower=0.0)
         out["ooo_pct"] = 0.0
