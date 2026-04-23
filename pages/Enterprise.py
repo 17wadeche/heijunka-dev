@@ -1552,8 +1552,6 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     return out[cols].sort_values(group_cols).reset_index(drop=True)
 def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
     rename_map = {
-        "portfolio": "Portfolio",
-        "ou": "OU",
         "team": "Team",
         "week_start": "Week Start",
         "completed_hours": "Completed Hours",
@@ -1563,29 +1561,25 @@ def _display_export_team_df(df: pd.DataFrame) -> pd.DataFrame:
         "capacity_hours": "Capacity Hours",
         "unaccounted_hours": "Unaccounted Hours",
         "wip_pct": "WIP %",
-        "wip_avg_hours_day": "WIP Avg. Hours/Day",
         "non_wip_pct": "Non-WIP %",
-        "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
         "ooo_pct": "OOO %",
-        "ooo_avg_hours_day": "OOO Avg. Hours/Day",
         "unaccounted_pct": "Unaccounted %",
-        "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
         "other_team_wip_hours": "Other Team WIP Hours",
         "other_team_wip_pct": "Other Team WIP %",
         "over_hours": "Over Hours",
         "warning": "Warning",
     }
     preferred_order = [
-        "portfolio", "ou", "team", "week_start",
+        "team", "week_start",
         "capacity_hours", "people_count",
         "completed_hours", "wip_pct",
         "other_team_wip_hours", "other_team_wip_pct",
-        "non_wip_hours", "non_wip_pct", 
+        "non_wip_hours", "non_wip_pct",
         "ooo_hours", "ooo_pct",
         "unaccounted_hours", "unaccounted_pct",
         "over_hours", "warning",
     ]
-    cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+    cols = [c for c in preferred_order if c in df.columns]
     out = df[cols].copy().rename(columns=rename_map)
     if "Week Start" in out.columns:
         out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
@@ -2372,8 +2366,6 @@ elif page == "Export":
     )
     def _format_export_display_team(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         rename_map = {
-            "portfolio": "Portfolio",
-            "ou": "OU",
             "team": "Team",
             "week_start": "Week Start",
             "completed_hours": "Completed Hours",
@@ -2383,40 +2375,37 @@ elif page == "Export":
             "capacity_hours": "Capacity Hours",
             "unaccounted_hours": "Unaccounted Hours",
             "wip_pct": "WIP %",
-            "wip_avg_hours_day": "WIP Avg. Hours/Day",
             "non_wip_pct": "Non-WIP %",
-            "non_wip_avg_hours_day": "Non-WIP Avg. Hours/Day",
             "ooo_pct": "OOO %",
-            "ooo_avg_hours_day": "OOO Avg. Hours/Day",
             "unaccounted_pct": "Unaccounted %",
-            "unaccounted_avg_hours_day": "Unaccounted Avg. Hours/Day",
+            "other_team_wip_hours": "Other Team WIP Hours",
+            "other_team_wip_pct": "Other Team WIP %",
+            "over_hours": "Over Hours",
+            "warning": "Warning",
         }
         preferred_order = [
-            "portfolio", "ou", "team", "week_start",
+            "team", "week_start",
             "capacity_hours", "people_count",
-            "completed_hours", "wip_pct", "wip_avg_hours_day",
-            "non_wip_hours", "non_wip_pct", "non_wip_avg_hours_day",
-            "ooo_hours", "ooo_pct", "ooo_avg_hours_day",
-            "unaccounted_hours", "unaccounted_pct", "unaccounted_avg_hours_day",
+            "completed_hours", "wip_pct",
+            "other_team_wip_hours", "other_team_wip_pct",
+            "non_wip_hours", "non_wip_pct",
+            "ooo_hours", "ooo_pct",
+            "unaccounted_hours", "unaccounted_pct",
+            "over_hours", "warning",
         ]
-        cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
+        cols = [c for c in preferred_order if c in df.columns]
         out = df[cols].copy().rename(columns=rename_map)
-        out = _append_export_alert_column(out, pct_col="Unaccounted %", alert_col_name="")
         if "Week Start" in out.columns:
             out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
-        leading_cols = [c for c in ["", "Team", "OU", "Portfolio", "Week Start"] if c in out.columns]
-        remaining_cols = [c for c in out.columns if c not in leading_cols]
-        out = out[leading_cols + remaining_cols]
         fmt = {}
         for c in [
-            "Completed Hours", "People Count", "Non-WIP Hours", "OOO Hours",
-            "Capacity Hours", "Unaccounted Hours",
-            "WIP Avg. Hours/Day", "Non-WIP Avg. Hours/Day",
-            "OOO Avg. Hours/Day", "Unaccounted Avg. Hours/Day",
+            "Completed Hours", "People Count", "Other Team WIP Hours",
+            "Non-WIP Hours", "OOO Hours", "Capacity Hours",
+            "Unaccounted Hours", "Over Hours",
         ]:
             if c in out.columns:
-                fmt[c] = "{:,.2f}"
-        for c in ["WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+                fmt[c] = "{:.2f}"
+        for c in ["WIP %", "Other Team WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
             if c in out.columns:
                 fmt[c] = "{:.1%}"
         styler = out.style.format(fmt)
