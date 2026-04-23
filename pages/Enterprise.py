@@ -1931,12 +1931,28 @@ if page == "Overview":
                 div[data-testid="stMetricValue"]{ text-align: center !important; width: 100%; }
                 </style>
                 """, unsafe_allow_html=True)
+                def _metric_from_df(df: pd.DataFrame, col: str, default=np.nan):
+                    if df.empty or col not in df.columns:
+                        return default
+                    return df[col].iloc[0]
                 _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-                c1.metric("Avg Per Person **WIP** Daily Hours", _safe_metric(scoped_df["wip_avg_hours_day"].iloc[0]))
-                c2.metric("Avg Per Person **Non-WIP** Daily Hours", _safe_metric(scoped_df["non_wip_avg_hours_day"].iloc[0]))
+                c1.metric(
+                    "Avg Per Person **WIP** Daily Hours",
+                    _safe_metric(_metric_from_df(scoped_df, "wip_avg_hours_day")),
+                )
+                c2.metric(
+                    "Avg Per Person **Non-WIP** Daily Hours",
+                    _safe_metric(_metric_from_df(scoped_df, "non_wip_avg_hours_day")),
+                )
                 _, p1, p2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
-                p1.metric("**WIP** Ratio", _safe_metric(scoped_df["wip_pct"].iloc[0], pct=True))
-                p2.metric("**Non-WIP** Ratio", _safe_metric(scoped_df["non_wip_pct"].iloc[0], pct=True))
+                p1.metric(
+                    "**WIP** Ratio",
+                    _safe_metric(_metric_from_df(scoped_df, "wip_pct"), pct=True),
+                )
+                p2.metric(
+                    "**Non-WIP** Ratio",
+                    _safe_metric(_metric_from_df(scoped_df, "non_wip_pct"), pct=True),
+                )
                 st.divider()
                 _, _, c3, c4, c5, _, _ = st.columns([.8, .8, 1.2, 1.2, 1.2, 1.0, 0.5])
                 c4.metric(
