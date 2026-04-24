@@ -2478,6 +2478,7 @@ ACTIVITY_MAP = {
     "scrum, team meeting":"Scrum & Action",
     "training on final non-eu vig report":"Training/Mentoring",
     "questions, yellow belt work":"Problem Solving",
+    "mfg & exp dates from pmpa":"PMPA",
     "ftq affera":"Project Work",
     "480: cathworks paa":"Cathworks PAA IRI",
     "questions/collaboration":"Question",
