@@ -250,14 +250,16 @@ def compute_total_available_hours_ni(ws_wip_plan: Worksheet) -> Optional[float]:
     return _cell_number(ws_wip_plan["BS3"].value)
 def compute_completed_hours_ni(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     total = _cell_number(ws_perf["R13"].value)
+    actual_col = "R"
     if total is None or total == 0:
         total = _cell_number(ws_perf["AB13"].value)
+        actual_col = "AB"
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
     for r in range(5, 13):
         person = ws_perf[f"A{r}"].value
-        actual = _cell_number(ws_perf[f"R{r}"].value)
+        actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
@@ -270,7 +272,7 @@ def compute_person_available_hours_ni(ws_perf: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for r in range(5, 13):
         person = ws_perf[f"A{r}"].value
-        available = _cell_number(ws_perf[f"AA{r}"].value)
+        available = _cell_number(ws_perf[f"AG{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
