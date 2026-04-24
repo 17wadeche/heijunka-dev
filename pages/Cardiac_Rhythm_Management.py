@@ -679,6 +679,10 @@ PERSON_WEEKLY_HOURS = {
     "sarah korthauer": 37.5,
     "kyle mai": 37.5,
 }
+PERSON_TEAM_WEEKLY_HOURS = {
+    ("peter mchugh", "CDS"): 10.0,
+    ("peter mchugh", "NI"): 27.75,
+}
 def build_person_weekly_accounting(
     team: str,
     week,
