@@ -10,6 +10,7 @@ ACTIVITY_MAP = {
     "unplanned audit support":"Audit",
     "follow up ques meeting":"Question",
     "rpa meeting action":"RPA Meeting/Action",
+    "cornerstond":"Cornerstone",
     "meetings/mentoring": "Training/Mentoring",
     "procesing question":"Question",
     "all employee meeting": "Meeting",
