@@ -3282,7 +3282,6 @@ with right2:
                 x=alt.X(
                     "person:N",
                     title="Person",
-                    sort=person_order,
                     axis=alt.Axis(
                         labelAngle=-90,
                         labelLimit=180,
