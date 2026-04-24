@@ -3520,23 +3520,12 @@ with right2:
                         "NI": 37.75,
                         "DS": 37.5,
                     }
-                    default_drill_expected = (
-                        sum(TEAM_WEEKLY_HOURS.get(t, 40.0) for t in teams_for_drill)
-                        if teams_for_drill
-                        else 40.0
-                    )
                     if multi_team and chosen_mix_teams:
                         teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
-                    elif "team_name" in locals():
+                    elif "team_name" in locals() and team_name:
                         teams_for_drill = {str(team_name).strip().upper()}
                     else:
                         teams_for_drill = set()
-                    TEAM_WEEKLY_HOURS = {
-                        "CPT": 37.75,
-                        "CDS": 37.75,
-                        "NI": 37.75,
-                        "DS": 37.5,
-                    }
                     default_drill_expected = (
                         sum(TEAM_WEEKLY_HOURS.get(t, 40.0) for t in teams_for_drill)
                         if teams_for_drill
