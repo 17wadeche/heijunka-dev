@@ -3062,6 +3062,16 @@ with right2:
                 continue
             wk_people = wk_people.copy()
             wk_people["person"] = wk_people["person"].map(canonical_person_label)
+            wk_people["person_key"] = wk_people["person"].astype(str).str.strip().str.lower()
+            wk_people["team_key"] = wk_people["team"].astype(str).str.strip().str.upper()
+            wk_people["Expected Hours"] = wk_people.apply(
+                lambda r: PERSON_TEAM_WEEKLY_HOURS.get(
+                    (r["person_key"], r["team_key"]),
+                    r["Expected Hours"],
+                ),
+                axis=1,
+            )
+            wk_people = wk_people.drop(columns=["person_key", "team_key"], errors="ignore")
             wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
             wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
