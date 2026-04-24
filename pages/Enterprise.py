@@ -1368,8 +1368,14 @@ def _weekly_team_export_df(
                 (cds_10_count * 10.0)
                 + (remaining_count * 37.75)
             )
-        elif team in {"NI"}:
-            capacity_hours = float(people_count) * 37.75
+        elif team == "NI":
+            ni_27_75_count = 1
+            assigned_count = ni_27_75_count
+            remaining_count = max(float(people_count) - assigned_count, 0)
+            capacity_hours = (
+                (ni_27_75_count * 27.75)
+                + (remaining_count * 37.75)
+            )
         elif team == "ENT":
             capacity_hours = ent_capacity_hours_for_week(
                 team=team,
