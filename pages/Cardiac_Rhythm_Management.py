@@ -1217,8 +1217,14 @@ if nonwip_mode:
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
-    team_week_hours = 37.75 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
+    TEAM_WEEKLY_HOURS = {
+        "CPT": 37.75,
+        "CDS": 37.75,
+        "NI": 37.75,
+        "DS": 37.5,
+    }
+    team_key = str(team_nw).strip().upper()
+    team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
     _ppl_hours_kpi = explode_person_hours(df)
     _ppl_in_wip_kpi = explode_people_in_wip(df)
     people_count_merged = merged_people_count_for_week(
@@ -1326,8 +1332,14 @@ if nonwip_mode:
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, use_container_width=True, hide_index=True)
-    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
-    team_week_hours = 37.75 if str(team_nw).strip().upper() in SPECIAL_39_TEAMS else 40.0
+    TEAM_WEEKLY_HOURS = {
+        "CPT": 37.75,
+        "CDS": 37.75,
+        "NI": 37.75,
+        "DS": 37.5,
+    }
+    team_key = str(team_nw).strip().upper()
+    team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
@@ -3033,7 +3045,13 @@ with mid2:
 with right2:
     st.subheader("Hours Trend")
     _nw = load_non_wip()
-    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
+    TEAM_WEEKLY_HOURS = {
+        "CPT": 37.75,
+        "CDS": 37.75,
+        "NI": 37.75,
+        "DS": 37.5,
+    }
+    team_week_hours = TEAM_WEEKLY_HOURS.get(team.upper(), 40.0)
     def canonical_person_label(name: str) -> str:
         s = normalize_person_name(name)
         s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
@@ -3048,7 +3066,13 @@ with right2:
             if not team or pd.isna(wk):
                 continue
             wk = wk.normalize()
-            team_week_hours = 37.75 if team.upper() in SPECIAL_39_TEAMS else 40.0
+            TEAM_WEEKLY_HOURS = {
+                "CPT": 37.75,
+                "CDS": 37.75,
+                "NI": 37.75,
+                "DS": 37.5,
+            }
+            team_week_hours = TEAM_WEEKLY_HOURS.get(team.upper(), 40.0)
             wk_people = build_person_weekly_accounting(
                 team=team,
                 week=wk,
@@ -3491,14 +3515,34 @@ with right2:
                         ("peter mchugh", "CDS"): 10.0,
                         ("peter mchugh", "NI"): 27.75,
                     }
-                    SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
+                    TEAM_WEEKLY_HOURS = {
+                        "CPT": 37.75,
+                        "CDS": 37.75,
+                        "NI": 37.75,
+                        "DS": 37.5,
+                    }
+                    default_drill_expected = (
+                        sum(TEAM_WEEKLY_HOURS.get(t, 40.0) for t in teams_for_drill)
+                        if teams_for_drill
+                        else 40.0
+                    )
                     if multi_team and chosen_mix_teams:
                         teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
                     elif "team_name" in locals():
                         teams_for_drill = {str(team_name).strip().upper()}
                     else:
                         teams_for_drill = set()
-                    default_drill_expected = 37.75 if teams_for_drill & SPECIAL_39_TEAMS else 40.0
+                    TEAM_WEEKLY_HOURS = {
+                        "CPT": 37.75,
+                        "CDS": 37.75,
+                        "NI": 37.75,
+                        "DS": 37.5,
+                    }
+                    default_drill_expected = (
+                        sum(TEAM_WEEKLY_HOURS.get(t, 40.0) for t in teams_for_drill)
+                        if teams_for_drill
+                        else 40.0
+                    )
                     team_specific_expected = [
                         PERSON_TEAM_WEEKLY_HOURS[(person_key, t)]
                         for t in teams_for_drill
