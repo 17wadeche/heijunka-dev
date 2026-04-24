@@ -3321,6 +3321,7 @@ with right2:
                     text="label:N",
                     tooltip=[
                         alt.Tooltip("person:N", title="Person"),
+                        alt.Tooltip("Hours:Q", title="Hours Worked", format=",.2f"),
                         alt.Tooltip("TotalPct:Q", title="Total % of Time", format=".1%"),
                     ],
                 )
