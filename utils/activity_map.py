@@ -8,6 +8,8 @@ ACTIVITY_MAP = {
     "capa": "CAPA",
     "em/etc": "Em Etc",
     "unplanned audit support":"Audit",
+    "follow up ques meeting":"Question",
+    "rpa meeting action":"RPA Meeting/Action",
     "meetings/mentoring": "Training/Mentoring",
     "procesing question":"Question",
     "all employee meeting": "Meeting",
