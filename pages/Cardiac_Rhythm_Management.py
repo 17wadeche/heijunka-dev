@@ -3488,7 +3488,15 @@ with right2:
                     else:
                         teams_for_drill = set()
                     default_drill_expected = 37.75 if teams_for_drill & SPECIAL_39_TEAMS else 40.0
-                    drill_expected_hrs = PERSON_WEEKLY_HOURS.get(person_key, default_drill_expected)
+                    team_specific_expected = [
+                        PERSON_TEAM_WEEKLY_HOURS[(person_key, t)]
+                        for t in teams_for_drill
+                        if (person_key, t) in PERSON_TEAM_WEEKLY_HOURS
+                    ]
+                    if team_specific_expected:
+                        drill_expected_hrs = sum(team_specific_expected)
+                    else:
+                        drill_expected_hrs = PERSON_WEEKLY_HOURS.get(person_key, default_drill_expected)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
                     drill_overflow_df["y_pos"] = 1.02
