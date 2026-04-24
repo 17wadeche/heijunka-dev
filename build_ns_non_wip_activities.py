@@ -2179,8 +2179,8 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     PEOPLE_END   = 25   
     TOTAL_ROW    = 26   
     COL_B  = _col_letter_to_idx("B")
+    COL_Y  = _col_letter_to_idx("Y")
     COL_Z  = _col_letter_to_idx("Z")
-    COL_AA = _col_letter_to_idx("AA")
     ACT_START  = _col_letter_to_idx("C")
     ACT_END    = _col_letter_to_idx("AG")
     HEADER_ROW = 1    
@@ -2191,15 +2191,15 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             continue
         b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
         z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
-        aa = safe_float0(ws.iat[i, COL_AA] if ws.shape[1] > COL_AA else 0.0)
-        zaa_ooo = float(round(z + aa, 2))
+        y = safe_float0(ws.iat[i, COL_Y] if ws.shape[1] > COL_Y else 0.0)
+        zy_ooo = float(round(z + y, 2))
         people_rows.append({
             "row_i": i,
             "name": name,
             "B": b,
             "Z_OOO": z,
-            "AA_OOO": aa,
-            "ZAA_OOO": zaa_ooo,
+            "Y_OOO": y,
+            "ZY_OOO": zy_ooo,
         })
     people_count = len(set(r["name"] for r in people_rows))
     activities: List[dict] = []
@@ -2229,7 +2229,7 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             })
             person_nonwip_total += hrs
         person_ooo = float(round(
-            activity_ooo_total if activity_ooo_total > 0 else pr["ZAA_OOO"],
+            activity_ooo_total if activity_ooo_total > 0 else pr["ZY_OOO"],
             2
         ))
         if person_ooo > 0:
@@ -2813,7 +2813,6 @@ def build_et_us_rows_from_capacity_workbook(
             _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
         except Exception:
             pass
-
         historical_rows: List[dict] = []
         if archive_ws_com is not None and current_ws_com is not None:
             historical_rows.extend(_build_et_us_rows_from_archive_sheet(
@@ -2822,7 +2821,6 @@ def build_et_us_rows_from_capacity_workbook(
                 team_src=team_src,
                 team_name=team_src.team,
             ))
-
         if not historical_rows and week_viewer_ws_com is not None:
             date_values = _resolve_validation_list_values(wb, week_viewer_ws_com, "B1")
             current_dt = _excel_date_to_timestamp(week_viewer_ws_com.Range("B1").Value)
@@ -2838,7 +2836,6 @@ def build_et_us_rows_from_capacity_workbook(
                 date_values=date_values,
             ))
         out_rows.extend(historical_rows)
-
         if current_ws_com is not None:
             current_dt = _excel_date_to_timestamp(current_ws_com.Range("B1").Value)
             current_date_values = [current_dt] if current_dt is not None else []
@@ -2851,7 +2848,6 @@ def build_et_us_rows_from_capacity_workbook(
                 sheet_name=ET_US_CURRENT_WEEK_SHEET,
                 date_values=current_date_values,
             ))
-
         df = pd.DataFrame(out_rows)
         if not df.empty:
             df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
