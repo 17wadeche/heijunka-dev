@@ -25,6 +25,9 @@ EXCLUDED_FILES = {
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
 }
+CDS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+def _cds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period >= CDS_NEW_HOURS_START
 MCS_ROOT_HINT = _norm_mcs = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling")
 CDS_ROOT_HINT = _norm_cds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis")
 DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB")
@@ -99,10 +102,17 @@ def _cds_use_r_layout(ws_perf: Worksheet) -> bool:
         if _cell_number(ws_perf[f"AA{r}"].value) is not None:
             return False
     return True
-def compute_completed_hours_cds(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    use_r_layout = _cds_use_r_layout(ws_perf)
-    total_col = "AB" if not use_r_layout else "R"
-    actual_col = "AB" if not use_r_layout else "R"
+def compute_completed_hours_cds(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    if _cds_use_new_hours_layout(period):
+        total_col = "W"
+        actual_col = "W"
+    else:
+        use_r_layout = _cds_use_r_layout(ws_perf)
+        total_col = "AB" if not use_r_layout else "R"
+        actual_col = "AB" if not use_r_layout else "R"
     total = _cell_number(ws_perf[f"{total_col}11"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
@@ -118,9 +128,15 @@ def compute_completed_hours_cds(ws_perf: Worksheet) -> Tuple[Optional[float], Di
             seen.add(p)
             people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
-def compute_person_available_hours_cds(ws_perf: Worksheet) -> Dict[str, float]:
-    use_r_layout = _cds_use_r_layout(ws_perf)
-    available_col = "AA" if not use_r_layout else "R"
+def compute_person_available_hours_cds(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Dict[str, float]:
+    if _cds_use_new_hours_layout(period):
+        available_col = "AA"
+    else:
+        use_r_layout = _cds_use_r_layout(ws_perf)
+        available_col = "AA" if not use_r_layout else "R"
     out: Dict[str, float] = {}
     for r in range(5, 11):
         person = ws_perf[f"A{r}"].value
@@ -1409,8 +1425,8 @@ def scrape_one_workbook_cds(path: str) -> List[Dict[str, Any]]:
         if ws_wip_plan is not None:
             total_available = compute_total_available_hours_cds(ws_wip_plan)
         if ws_perf is not None:
-            completed_hours, actual_hours_by_person, people = compute_completed_hours_cds(ws_perf)
-            person_avail = compute_person_available_hours_cds(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_cds(ws_perf, period)
+            person_avail = compute_person_available_hours_cds(ws_perf, period)
         if ws_pab is not None:
             target_output, actual_output = compute_target_actual_output_cds(ws_pab)
             outputs_by_person = compute_outputs_by_person_cds(ws_pab)
