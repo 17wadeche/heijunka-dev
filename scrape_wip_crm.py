@@ -224,6 +224,9 @@ def team_for_source(path: str) -> str:
         return "MCS"
     base = os.path.basename(np)
     return TEAM_BY_BASENAME.get(base, "")
+NI_NEW_HOURS_START = _dt.date(2026, 4, 24)
+def _ni_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period >= NI_NEW_HOURS_START
 def _is_excluded_station_ni(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
@@ -248,16 +251,25 @@ def compute_period_date_ni(ws_metrics: Worksheet) -> Optional[_dt.date]:
     return d - _dt.timedelta(days=4)
 def compute_total_available_hours_ni(ws_wip_plan: Worksheet) -> Optional[float]:
     return _cell_number(ws_wip_plan["BS3"].value)
-def compute_completed_hours_ni(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    total = _cell_number(ws_perf["R13"].value)
-    actual_col = "R"
-    if total is None or total == 0:
-        total = _cell_number(ws_perf["AB13"].value)
-        actual_col = "AB"
+def compute_completed_hours_ni(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    if _ni_use_new_hours_layout(period):
+        total = _cell_number(ws_perf["W12"].value)
+        actual_col = "W"
+        row_stop = 12   # rows 5-11; W12 is the new total Completed Hours cell
+    else:
+        total = _cell_number(ws_perf["R13"].value)
+        actual_col = "R"
+        row_stop = 13   # old NI layout: rows 5-12
+        if total is None or total == 0:
+            total = _cell_number(ws_perf["AB13"].value)
+            actual_col = "AB"
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(5, 13):
+    for r in range(5, row_stop):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -268,11 +280,20 @@ def compute_completed_hours_ni(ws_perf: Worksheet) -> Tuple[Optional[float], Dic
             seen.add(p)
             people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
-def compute_person_available_hours_ni(ws_perf: Worksheet) -> Dict[str, float]:
+def compute_person_available_hours_ni(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Dict[str, float]:
+    if _ni_use_new_hours_layout(period):
+        available_col = "AA"
+        row_stop = 12   # rows 5-11
+    else:
+        available_col = "AG"
+        row_stop = 13   # old NI layout: rows 5-12
     out: Dict[str, float] = {}
-    for r in range(5, 13):
+    for r in range(5, row_stop):
         person = ws_perf[f"A{r}"].value
-        available = _cell_number(ws_perf[f"AG{r}"].value)
+        available = _cell_number(ws_perf[f"{available_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
@@ -569,8 +590,8 @@ def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
         if ws_wip_plan is not None:
             total_available = compute_total_available_hours_ni(ws_wip_plan)
         if ws_perf is not None:
-            completed_hours, actual_hours_by_person, people = compute_completed_hours_ni(ws_perf)
-            person_avail = compute_person_available_hours_ni(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_ni(ws_perf, period)
+            person_avail = compute_person_available_hours_ni(ws_perf, period)
         if ws_pab is not None:
             target_output, actual_output = compute_target_actual_output_ni(ws_pab)
             outputs_by_person = compute_outputs_by_person_ni(ws_pab)

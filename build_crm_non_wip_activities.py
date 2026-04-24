@@ -80,6 +80,12 @@ NI_PERF_METRICS_SHEET = "#4 Performance Metrics"
 NI_PERF_WIP_SHEET = "#5 Performance WIP Time"
 NI_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 NI_PEOPLE_COUNT = 8
+NI_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 4, 24)
+NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 7
+def ni_people_count_for_period(period: _dt.date) -> int:
+    if period >= NI_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return NI_PEOPLE_COUNT
 MEIC_PAB_SHEET = "#2 PAB"
 MEIC_WIP_PLAN_SHEET = "# 1 WIP plan"
 MEIC_PERF_WIP_SHEET = "#5 Performance WIP Time"
@@ -821,7 +827,7 @@ def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str]
         ooo_total_cell="BR2",
         ooo_name_col="BI",
         ooo_hours_col="BR",
-        people_count=NI_PEOPLE_COUNT,
+        people_count=ni_people_count_for_period,
         non_wip_types=NI_NON_WIP_TYPES,
         period_date_offset_days=-4,
     )
