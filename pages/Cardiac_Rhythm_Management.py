@@ -3094,12 +3094,22 @@ with right2:
                 ),
                 axis=1,
             )
-            wk_people = wk_people.drop(columns=["person_key", "team_key"], errors="ignore")
-            wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+            wk_people["Expected Hours"] = pd.to_numeric(wk_people["Expected Hours"], errors="coerce").fillna(0.0)
+            wk_people["Completed Hours"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
-            wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
-            wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
-            wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+            wk_people["OOO Hours"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+            wk_people["Unaccounted"] = (
+                wk_people["Expected Hours"]
+                - wk_people["Completed Hours"]
+                - wk_people["Other Team WIP"]
+                - wk_people["Accounted Non-WIP"]
+                - wk_people["OOO Hours"]
+            ).clip(lower=0.0)
+            wk_people = wk_people.drop(columns=["person_key", "team_key"], errors="ignore")
+            wk_people["WIP"] = wk_people["Completed Hours"]
+            wk_people["Non-WIP"] = wk_people["Accounted Non-WIP"]
+            wk_people["OOO"] = wk_people["OOO Hours"]
             wk_people = (
                 wk_people.groupby(["team", "period_date", "person"], as_index=False)
                 .agg({
