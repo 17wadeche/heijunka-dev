@@ -52,6 +52,7 @@ ACTIVITY_MAP = {
     "training call w ruth": "Training/Mentoring",
     "scrum, training, collaboration":"Scrum & Action",
     "teams - rpa med safety ftq software": "RPA Meeting/Action",
+    "aortic rpa": "RPA Meeting/Action",
     "final eu vig training with sean": "Training/Mentoring",
     "meeting with jyn - reg report":"Meeting",
     "meeting with sarah - literature & drafted the procedure":"Meeting",
