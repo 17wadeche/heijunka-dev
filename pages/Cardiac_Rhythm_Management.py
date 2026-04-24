@@ -3051,7 +3051,6 @@ with right2:
         "NI": 37.75,
         "DS": 37.5,
     }
-    team_week_hours = TEAM_WEEKLY_HOURS.get(team.upper(), 40.0)
     def canonical_person_label(name: str) -> str:
         s = normalize_person_name(name)
         s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
