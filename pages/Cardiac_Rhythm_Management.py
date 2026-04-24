@@ -3296,9 +3296,11 @@ with right2:
                 text=alt.Text("Pct:Q", format=".0%"),
             )
             overflow_df = (
-                week_mix.groupby(["team", "period_date", "person"], as_index=False)["TruePct"]
-                .sum()
-                .rename(columns={"TruePct": "TotalPct"})
+                week_mix.groupby(["team", "period_date", "person"], as_index=False)
+                .agg(
+                    TotalPct=("TruePct", "sum"),
+                    TotalHours=("Hours", "sum"),
+                )
             )
             overflow_df = overflow_df[overflow_df["TotalPct"] > 1.0].copy()
             overflow_df["y_pos"] = 1.025
@@ -3321,7 +3323,7 @@ with right2:
                     text="label:N",
                     tooltip=[
                         alt.Tooltip("person:N", title="Person"),
-                        alt.Tooltip("Hours:Q", title="Hours Worked", format=",.2f"),
+                        alt.Tooltip("TotalHours:Q", title="Total Hours Worked", format=",.2f"),
                         alt.Tooltip("TotalPct:Q", title="Total % of Time", format=".1%"),
                     ],
                 )
