@@ -3215,30 +3215,37 @@ with right2:
                 )
             top_mix = week_mix.copy()
             if factor_out_ooo_top and not top_mix.empty:
-                weekly_person_totals = (
-                    top_mix.groupby(["period_date", "person"], as_index=False)["Hours"]
-                    .sum()
-                    .rename(columns={"Hours": "TotalHours"})
-                )
+                person_keys = ["team", "period_date", "person"]
+                if "Denom" in top_mix.columns:
+                    weekly_base = (
+                        top_mix.groupby(person_keys, as_index=False)
+                        .agg(BaseDenom=("Denom", "max"))
+                    )
+                else:
+                    weekly_base = (
+                        top_mix.groupby(person_keys, as_index=False)["Hours"]
+                        .sum()
+                        .rename(columns={"Hours": "BaseDenom"})
+                    )
                 weekly_ooo = (
                     top_mix[top_mix["Category"] == "OOO"]
-                    .groupby(["period_date", "person"], as_index=False)["Hours"]
+                    .groupby(person_keys, as_index=False)["Hours"]
                     .sum()
                     .rename(columns={"Hours": "OOOHours"})
                 )
-                weekly_base = weekly_person_totals.merge(
+                weekly_base = weekly_base.merge(
                     weekly_ooo,
-                    on=["period_date", "person"],
+                    on=person_keys,
                     how="left",
                 )
                 weekly_base["OOOHours"] = weekly_base["OOOHours"].fillna(0.0)
                 weekly_base["AdjDenom"] = (
-                    weekly_base["TotalHours"] - weekly_base["OOOHours"]
+                    weekly_base["BaseDenom"] - weekly_base["OOOHours"]
                 ).clip(lower=0.0)
                 top_mix = top_mix[top_mix["Category"] != "OOO"].copy()
                 top_mix = top_mix.merge(
-                    weekly_base[["period_date", "person", "AdjDenom"]],
-                    on=["period_date", "person"],
+                    weekly_base[person_keys + ["AdjDenom"]],
+                    on=person_keys,
                     how="left",
                 )
                 top_mix["Pct"] = np.where(
@@ -3247,18 +3254,30 @@ with right2:
                     np.nan,
                 )
                 top_mix = top_mix.dropna(subset=["Pct"]).copy()
-            top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
-            top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
-            person_order = (
-                top_mix.groupby("person", as_index=False)["Hours"]
-                .sum()
-                .sort_values("Hours", ascending=False)["person"]
-                .tolist()
+            top_mix["TruePct"] = pd.to_numeric(top_mix["Pct"], errors="coerce").fillna(0.0)
+            top_mix = top_mix.sort_values(
+                ["team", "period_date", "person", "CategoryOrder"]
+            ).copy()
+            top_mix["CumPctBefore"] = (
+                top_mix
+                .groupby(["team", "period_date", "person"])["TruePct"]
+                .cumsum()
+                - top_mix["TruePct"]
             )
-            label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
-            label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
-            label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
-            label_src = label_src[label_src["Pct"] >= 0.05].copy()
+            top_mix["PlotPct"] = np.minimum(
+                top_mix["TruePct"],
+                (1.0 - top_mix["CumPctBefore"]).clip(lower=0.0),
+            ).clip(lower=0.0)
+            label_src = top_mix.sort_values(
+                ["team", "period_date", "person", "CategoryOrder"]
+            ).copy()
+            label_src["cum_pct"] = (
+                label_src
+                .groupby(["team", "period_date", "person"])["TruePct"]
+                .cumsum()
+            )
+            label_src["y_mid"] = label_src["cum_pct"] - (label_src["TruePct"] / 2.0)
+            label_src = label_src[label_src["TruePct"] >= 0.05].copy()
             bars = alt.Chart(top_mix).mark_bar().encode(
                 x=alt.X(
                     "person:N",
