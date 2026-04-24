@@ -796,8 +796,16 @@ def build_person_weekly_accounting(
         index=out.index,
         dtype="float64",
     )
-    override_expected = out["person_key"].map(PERSON_WEEKLY_HOURS).astype("float64")
-    out["Expected Hours"] = override_expected.combine_first(base_expected)
+    team_key = str(team).strip().upper()
+    team_override_expected = out["person_key"].map(
+        lambda p: PERSON_TEAM_WEEKLY_HOURS.get((p, team_key), np.nan)
+    ).astype("float64")
+    person_override_expected = out["person_key"].map(PERSON_WEEKLY_HOURS).astype("float64")
+    out["Expected Hours"] = (
+        team_override_expected
+        .combine_first(person_override_expected)
+        .combine_first(base_expected)
+    )
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
@@ -3463,6 +3471,10 @@ with right2:
                         "kara housmann": 37.5,
                         "sarah korthauer": 37.5,
                         "kyle mai": 37.5,
+                    }
+                    PERSON_TEAM_WEEKLY_HOURS = {
+                        ("peter mchugh", "CDS"): 10.0,
+                        ("peter mchugh", "NI"): 27.75,
                     }
                     SPECIAL_39_TEAMS = {"CPT", "CDS", "NI"}
                     if multi_team and chosen_mix_teams:
