@@ -107,13 +107,13 @@ def compute_completed_hours_cds(
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     if _cds_use_new_hours_layout(period):
-        total_col = "W"
+        total = _cell_number(ws_perf["W10"].value)
         actual_col = "W"
     else:
         use_r_layout = _cds_use_r_layout(ws_perf)
         total_col = "AB" if not use_r_layout else "R"
         actual_col = "AB" if not use_r_layout else "R"
-    total = _cell_number(ws_perf[f"{total_col}11"].value)
+        total = _cell_number(ws_perf[f"{total_col}11"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()

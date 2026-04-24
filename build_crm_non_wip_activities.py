@@ -68,6 +68,12 @@ CDS_PERF_METRICS_SHEET = "#4 Performance Metrics"
 CDS_PERF_WIP_SHEET = "#5 Performance WIP Time"
 CDS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 CDS_PEOPLE_COUNT = 6
+CDS_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 4, 24)
+CDS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 5
+def cds_people_count_for_period(period: _dt.date) -> int:
+    if period >= CDS_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return CDS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return CDS_PEOPLE_COUNT
 NI_PAB_SHEET = "#2 PAB"
 NI_WIP_PLAN_SHEET = "# 1 WIP plan"
 NI_PERF_METRICS_SHEET = "#4 Performance Metrics"
@@ -701,7 +707,7 @@ def scrape_one_mapped_workbook(
     ooo_total_cell: str,
     ooo_name_col: str,
     ooo_hours_col: str,
-    people_count: int,
+    people_count: int | Any,
     non_wip_types: set[str],
     period_date_offset_days: int = 0,
 ) -> List[Dict[str, Any]]:
@@ -730,10 +736,15 @@ def scrape_one_mapped_workbook(
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
     wip_workers_ooo_hours = compute_team_wip_workers_ooo_hours(ws_wip_plan, wip_workers, ooo_name_col, ooo_hours_col)
+    effective_people_count = (
+        people_count(period)
+        if callable(people_count)
+        else people_count
+    )
     row = {
         "team": team,
         "period_date": period_iso,
-        "people_count": people_count,
+        "people_count": effective_people_count,
         "total_non_wip_hours": float(total_non_wip_hours),
         "OOO Hours": float(ooo_hours),
         "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
@@ -792,7 +803,7 @@ def scrape_one_cds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
         ooo_total_cell="CV2",
         ooo_name_col="CH",
         ooo_hours_col="CV",
-        people_count=CDS_PEOPLE_COUNT,
+        people_count=cds_people_count_for_period,
         non_wip_types=CDS_NON_WIP_TYPES,
         period_date_offset_days=-4,
     )
