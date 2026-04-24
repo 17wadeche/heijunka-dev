@@ -15,6 +15,7 @@ ACTIVITY_MAP = {
     "procesing question":"Question",
     "all employee meeting": "Meeting",
     "unplanned questions, discussion with med safety":"Question",
+    "scrum, meeting, collaboration call":"Scrum & Action",
     "review of lit pe for pmpa":"PMPA",
     "training cx email misc": "Training/Mentoring",
     "voyage integrate into next gch meeting": "Meeting",
