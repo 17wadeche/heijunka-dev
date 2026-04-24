@@ -2479,6 +2479,8 @@ ACTIVITY_MAP = {
     "training on final non-eu vig report":"Training/Mentoring",
     "questions, yellow belt work":"Problem Solving",
     "ftq affera":"Project Work",
+    "480: cathworks paa":"Cathworks",
+    "cathworks paa iri":"Cathworks",
     "questions/collaboration":"Question",
     "sh letter querie":"Question",
     "precedent event review":"Precedent Event",
