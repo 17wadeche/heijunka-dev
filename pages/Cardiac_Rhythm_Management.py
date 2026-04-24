@@ -3252,7 +3252,7 @@ with right2:
                     title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
                     stack="zero",
                     axis=alt.Axis(format=".0%"),
-                    scale=alt.Scale(domain=[0, 1], nice=False, clamp=True),
+                    scale=alt.Scale(domain=[0, 1.08], nice=False, clamp=False),
                 ),
                 color=alt.Color(
                     "Category:N",
@@ -3295,21 +3295,13 @@ with right2:
                 detail="Category:N",
                 text=alt.Text("Pct:Q", format=".0%"),
             )
-            person_totals = (
-                week_mix.groupby("person", as_index=False)["Hours"]
+            overflow_df = (
+                week_mix.groupby(["team", "period_date", "person"], as_index=False)["TruePct"]
                 .sum()
-                .rename(columns={"Hours": "TotalHours"})
+                .rename(columns={"TruePct": "TotalPct"})
             )
-            if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
-                expected_hrs = wk_people_kpi[["person", "Expected Hours"]].copy()
-                expected_hrs["person"] = expected_hrs["person"].astype(str).str.strip()
-            else:
-                expected_hrs = pd.DataFrame({"person": person_totals["person"], "Expected Hours": 40.0})
-            person_totals["person"] = person_totals["person"].astype(str).str.strip()
-            person_totals = person_totals.merge(expected_hrs, on="person", how="left")
-            person_totals["Expected Hours"] = person_totals["Expected Hours"].fillna(40.0)
-            overflow_df = person_totals[person_totals["TotalHours"] > person_totals["Expected Hours"]].copy()
-            overflow_df["y_pos"] = 1.02  # just above the top of the 100% bar
+            overflow_df = overflow_df[overflow_df["TotalPct"] > 1.0].copy()
+            overflow_df["y_pos"] = 1.025
             overflow_df["label"] = "⚠"
             overflow_layer = (
                 alt.Chart(overflow_df)
@@ -3321,12 +3313,15 @@ with right2:
                 )
                 .encode(
                     x=alt.X("person:N", sort=person_order),
-                    y=alt.Y("y_pos:Q", scale=alt.Scale(domain=[0, 1.12]), axis=None),
-                    text=alt.Text("label:N"),
+                    y=alt.Y(
+                        "y_pos:Q",
+                        scale=alt.Scale(domain=[0, 1.08], nice=False, clamp=False),
+                        axis=None,
+                    ),
+                    text="label:N",
                     tooltip=[
                         alt.Tooltip("person:N", title="Person"),
-                        alt.Tooltip("TotalHours:Q", title="Total Hours", format=",.1f"),
-                        alt.Tooltip("Expected Hours:Q", title="Expected Hours", format=",.1f"),
+                        alt.Tooltip("TotalPct:Q", title="Total % of Time", format=".1%"),
                     ],
                 )
             )
