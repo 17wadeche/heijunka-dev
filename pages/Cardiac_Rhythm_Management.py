@@ -3168,6 +3168,20 @@ with right2:
             week_mix = week_mix[week_mix["Category"].isin(category_domain)].copy()
             week_mix["CategoryOrder"] = week_mix["Category"].map(category_order_map)
             week_mix["Pct"] = pd.to_numeric(week_mix["Pct"], errors="coerce").fillna(0.0)
+            week_mix = week_mix.sort_values(
+                ["team", "period_date", "person", "CategoryOrder"]
+            ).copy()
+            week_mix["TruePct"] = week_mix["Pct"]
+            week_mix["CumPctBefore"] = (
+                week_mix
+                .groupby(["team", "period_date", "person"])["TruePct"]
+                .cumsum()
+                - week_mix["TruePct"]
+            )
+            week_mix["PlotPct"] = np.minimum(
+                week_mix["TruePct"],
+                (1.0 - week_mix["CumPctBefore"]).clip(lower=0.0),
+            ).clip(lower=0.0)
             week_mix["Hours"] = pd.to_numeric(week_mix["Hours"], errors="coerce").fillna(0.0)
             top_controls_left, top_controls_right = st.columns([1, 1])
             with top_controls_left:
@@ -3234,11 +3248,11 @@ with right2:
                     ),
                 ),
                 y=alt.Y(
-                    "Pct:Q",
+                    "PlotPct:Q",
                     title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
                     stack="zero",
                     axis=alt.Axis(format=".0%"),
-                    scale=alt.Scale(domain=[0, 1.12], nice=False, clamp=False),
+                    scale=alt.Scale(domain=[0, 1], nice=False, clamp=True),
                 ),
                 color=alt.Color(
                     "Category:N",
@@ -3261,7 +3275,7 @@ with right2:
                     alt.Tooltip("person:N", title="Person"),
                     alt.Tooltip("Category:N", title="Category"),
                     alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                    alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                    alt.Tooltip("TruePct:Q", title="% of Time", format=".1%"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
@@ -3441,7 +3455,7 @@ with right2:
                                 alt.Tooltip("period_date:T", title="Week"),
                                 alt.Tooltip("Category:N", title="Category"),
                                 alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                                alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
+                                alt.Tooltip("TruePct:Q", title="% of Time", format=".1%"),
                             ],
                         )
                     )
