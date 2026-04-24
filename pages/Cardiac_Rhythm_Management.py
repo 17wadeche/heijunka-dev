@@ -3236,9 +3236,9 @@ with right2:
                 y=alt.Y(
                     "Pct:Q",
                     title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
-                    stack="normalize",
+                    stack="zero",
                     axis=alt.Axis(format=".0%"),
-                    scale=alt.Scale(domain=[0, 1]),
+                    scale=alt.Scale(domain=[0, 1.12], nice=False, clamp=False),
                 ),
                 color=alt.Color(
                     "Category:N",
