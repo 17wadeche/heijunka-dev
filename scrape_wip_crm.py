@@ -18,9 +18,11 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker": "NI & PM MEIC",
 }
 EXCLUDED_FILES = {
-    os.path.normpath(
-        r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026\Not USED Week 20 Apr 2026 Heijunka & PAB.xlsm"
-    ),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026\Not USED Week 20 Apr 2026 Heijunka & PAB.xlsm"),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Assigned DS COS PEs for 2025.xlsx"),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\(will be archived) DS_Schedule_PAS 6.5 V1.xlsx"),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\CPT Event Support.xlsx"),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\DS Production Analysis Sheet and Schedule.xlsx"),
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
@@ -1583,6 +1585,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka",

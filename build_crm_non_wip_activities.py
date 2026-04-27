@@ -10,6 +10,7 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
+DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
@@ -23,6 +24,16 @@ TEAM_BY_SOURCE: Dict[str, str] = {
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
+}
+EXCLUDED_FILES = {
+    os.path.normpath(p)
+    for p in [
+        r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026\Not USED Week 20 Apr 2026 Heijunka & PAB.xlsm",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Assigned DS COS PEs for 2025.xlsx",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\(will be archived) DS_Schedule_PAS 6.5 V1.xlsx",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\CPT Event Support.xlsx",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\DS Production Analysis Sheet and Schedule.xlsx",
+    ]
 }
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
 _PROD_PAT = re.compile(r"\b(production|product)\s+analysis\b", re.IGNORECASE)
@@ -854,6 +865,8 @@ def expand_input_paths(paths: List[str]) -> List[str]:
     seen = set()
     def add_file(fp: str) -> None:
         np = _norm_path(fp)
+        if np in EXCLUDED_FILES:
+            return
         if np in seen:
             return
         if not os.path.isfile(np):
@@ -888,6 +901,7 @@ def main() -> int:
     inputs = args.files or [
         MCS_DEFAULT_PATH,
         DS_DEFAULT_DIR,
+        DS_ARCHIVE,
         CPT_DEFAULT_DIR,
         CPT_ARCHIVE_PAB_DIR,
         CDS_DEFAULT_DIR,
