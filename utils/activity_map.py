@@ -16,6 +16,8 @@ ACTIVITY_MAP = {
     "cornerstond":"Cornerstone",
     "meetings/mentoring": "Training/Mentoring",
     "procesing question":"Question",
+    "laptop restart":"IT Issue/Update",
+    "fu q's meeting & action":"Question",
     "all employee meeting": "Meeting",
     "unplanned questions, discussion with med safety":"Question",
     "scrum, meeting, collaboration call":"Scrum & Action",
