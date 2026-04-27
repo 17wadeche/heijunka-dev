@@ -37,6 +37,7 @@ ACTIVITY_MAP = {
     "slide":"Admin",
     "review of lit pe for pmpa":"PMPA",
     "training cx email misc": "Training/Mentoring",
+    "training/cornerstone": "Training/Mentoring",
     "voyage integrate into next gch meeting": "Meeting",
     "correction of hypercare event":"Hypercare",
     "trainng": "Training/Mentoring",
