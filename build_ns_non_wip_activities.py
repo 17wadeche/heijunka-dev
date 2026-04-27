@@ -2258,7 +2258,6 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         total_nonwip_hours = float(round(row_27_total - ooo_hours, 2))
     else:
         total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
-
     return {
         "people_rows": people_rows,
         "people_count": people_count,
