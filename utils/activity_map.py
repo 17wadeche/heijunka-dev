@@ -19,6 +19,7 @@ ACTIVITY_MAP = {
     "laptop restart":"IT Issue/Update",
     "fu q's meeting & action":"Question",
     "all employee meeting": "Meeting",
+    "clinical uat review":"Project Work",
     "unplanned questions, discussion with med safety":"Question",
     "scrum, meeting, collaboration call":"Scrum & Action",
     "scrum/tm support":"Scrum & Action",
