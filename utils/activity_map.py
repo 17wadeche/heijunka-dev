@@ -33,6 +33,8 @@ ACTIVITY_MAP = {
     "ja vig meeting": "Meeting",
     "collaboration, emails, scrum":"Scrum & Action",
     "scrum, filtering report, email":"Scrum & Action",
+    "review capa":"CAPA",
+    "slide":"Admin",
     "review of lit pe for pmpa":"PMPA",
     "training cx email misc": "Training/Mentoring",
     "voyage integrate into next gch meeting": "Meeting",
