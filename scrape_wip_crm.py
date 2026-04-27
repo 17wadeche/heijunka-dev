@@ -258,7 +258,7 @@ def compute_completed_hours_ni(
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     if _ni_use_new_hours_layout(period):
-        total = _cell_number(ws_perf["W12"].value)
+        total = _cell_number(ws_perf["C13"].value)
         actual_col = "W"
         row_stop = 12   # rows 5-11; W12 is the new total Completed Hours cell
     else:
