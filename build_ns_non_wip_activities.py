@@ -2175,23 +2175,30 @@ def classify_activity(label: str) -> str:
         return "OTHER_TEAM_WIP"
     return "OTHER_NON_WIP"
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    PEOPLE_START = 2  
-    PEOPLE_END   = 25   
-    TOTAL_ROW    = 26   
+    PEOPLE_START = 2
+    PEOPLE_END   = 25
+    TOTAL_ROW    = 26
     COL_B  = _col_letter_to_idx("B")
     COL_Y  = _col_letter_to_idx("Y")
     COL_Z  = _col_letter_to_idx("Z")
     ACT_START  = _col_letter_to_idx("C")
     ACT_END    = _col_letter_to_idx("AG")
-    HEADER_ROW = 1    
+    HEADER_ROW = 1
+    def _cell(r: int, c: int, default=None):
+        if r < 0 or c < 0:
+            return default
+        if r >= ws.shape[0] or c >= ws.shape[1]:
+            return default
+        return ws.iat[r, c]
     people_rows: List[dict] = []
-    for i in range(PEOPLE_START, PEOPLE_END + 1):
-        name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
+    last_people_row = min(PEOPLE_END, ws.shape[0] - 1)
+    for i in range(PEOPLE_START, last_people_row + 1):
+        name = norm_name(_cell(i, 0, ""))
         if not name or not is_real_person(name):
             continue
-        b = safe_float0(ws.iat[i, COL_B] if ws.shape[1] > COL_B else 0.0)
-        z = safe_float0(ws.iat[i, COL_Z] if ws.shape[1] > COL_Z else 0.0)
-        y = safe_float0(ws.iat[i, COL_Y] if ws.shape[1] > COL_Y else 0.0)
+        b = safe_float0(_cell(i, COL_B, 0.0))
+        z = safe_float0(_cell(i, COL_Z, 0.0))
+        y = safe_float0(_cell(i, COL_Y, 0.0))
         zy_ooo = float(round(z + y, 2))
         people_rows.append({
             "row_i": i,
@@ -2205,16 +2212,17 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     activities: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
     ooo_map: Dict[str, float] = {}
+    max_act_col = min(ACT_END, ws.shape[1] - 1)
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
         person_nonwip_total = 0.0
         activity_ooo_total = 0.0
-        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
-            label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
+        for c in range(ACT_START, max_act_col + 1):
+            label = norm_name(_cell(HEADER_ROW, c, ""))
             if not label:
                 continue
-            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
+            hrs = safe_float(_cell(i, c, np.nan))
             if pd.isna(hrs) or hrs <= 0:
                 continue
             hrs = float(round(hrs, 2))
@@ -2242,11 +2250,15 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             nonwip_by_person[name] = float(round(person_nonwip_total, 2))
         ooo_map[name] = person_ooo
     ooo_hours = float(round(sum(ooo_map.values()), 2))
-    row_27_total = float(round(sum(
-        safe_float0(ws.iat[TOTAL_ROW, c] if ws.shape[0] > TOTAL_ROW and ws.shape[1] > c else 0.0)
-        for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1)
-    ), 2))
-    total_nonwip_hours = float(round(row_27_total - ooo_hours, 2))
+    if 0 <= TOTAL_ROW < ws.shape[0]:
+        row_27_total = float(round(sum(
+            safe_float0(_cell(TOTAL_ROW, c, 0.0))
+            for c in range(ACT_START, max_act_col + 1)
+        ), 2))
+        total_nonwip_hours = float(round(row_27_total - ooo_hours, 2))
+    else:
+        total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
+
     return {
         "people_rows": people_rows,
         "people_count": people_count,
