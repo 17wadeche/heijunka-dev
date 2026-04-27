@@ -92,7 +92,7 @@ NI_PERF_METRICS_SHEET = "#4 Performance Metrics"
 NI_PERF_WIP_SHEET = "#5 Performance WIP Time"
 NI_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 NI_PEOPLE_COUNT = 8
-NI_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 4, 24)
+NI_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 4, 17)
 NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 7
 def ni_people_count_for_period(period: _dt.date) -> int:
     if period >= NI_PEOPLE_COUNT_EFFECTIVE_DATE:

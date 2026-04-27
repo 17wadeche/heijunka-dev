@@ -226,7 +226,7 @@ def team_for_source(path: str) -> str:
         return "MCS"
     base = os.path.basename(np)
     return TEAM_BY_BASENAME.get(base, "")
-NI_NEW_HOURS_START = _dt.date(2026, 4, 24)
+NI_NEW_HOURS_START = _dt.date(2026, 4, 17)
 def _ni_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= NI_NEW_HOURS_START
 def _is_excluded_station_ni(v: Any) -> bool:
