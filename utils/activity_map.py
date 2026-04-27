@@ -41,6 +41,7 @@ ACTIVITY_MAP = {
     "dt equipment pack up for rice creek":"Admin",
     "/cas tour":"Admin",
     "may sustainability":"Admin",
+    "cas/":"",
     "grad project data analysi":"Project Work",
     "training cx email misc": "Training/Mentoring",
     "training/cornerstone": "Training/Mentoring",
