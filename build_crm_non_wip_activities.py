@@ -16,6 +16,7 @@ CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and
 CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
 NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\April 2026 - PAB"
+NI_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB"
 MEIC_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker"
 TEAM_BY_SOURCE: Dict[str, str] = {
     os.path.normpath(MCS_DEFAULT_PATH): "MCS",
@@ -893,6 +894,7 @@ def main() -> int:
         CDS_ARCHIVE_PAB_DIR,
         NI_DEFAULT_DIR,
         NI_ARCHIVE_APRIL_2026_DIR,
+        NI_ARCHIVE,
         MEIC_DEFAULT_DIR,
     ]
     files = expand_input_paths(inputs)
