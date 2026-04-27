@@ -199,6 +199,7 @@ ACTIVITY_MAP = {
     "training, collaboration, email":"Scrum & Action",
     "scrum, collaboration, self performance review":"Scrum & Action",
     "ds request for oem integer complaint report":"Data Request/Review",
+    "sap transaction check and organise":"Data Request/Review",
     "scrum, collaboration, question":"Scrum & Action",
     "reading through past sentrant analyse":"Reading File/Document Information",
     "chem ordering calls (with sean)":"Shipment",
