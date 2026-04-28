@@ -319,6 +319,7 @@ ACTIVITY_MAP = {
     "crdn tier 2": "Meeting",
     "setting up devices to send":"Admin",
     "cas report update":"Team Report",
+    "report update":"Team Report",
     "relabelling archived device":"Admin",
     "desk set up":"Admin",
     "meeting in lab": "Meeting",
