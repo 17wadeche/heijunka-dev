@@ -7,6 +7,7 @@ ACTIVITY_MAP = {
     "pmpa call":"PMPA",
     "ja meeting":"Meeting",
     "1":"Meeting",
+    "scrum; email":"Scrum & Action",
     "capa": "CAPA",
     "em/etc": "Em Etc",
     "unplanned audit support":"Audit",
