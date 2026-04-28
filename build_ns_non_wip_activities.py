@@ -2542,23 +2542,43 @@ def build_csf_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         total_nonwip_cell="AI20",  
     )
 
-def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    include_rows = list(range(2, 22)) + list(range(27, 30))  # Excel rows 3:22 and 28:30
+def _build_et_capacity_snapshot(
+    team: str,
+    ws: pd.DataFrame,
+    week: Optional[pd.Timestamp] = None,
+    *,
+    include_rows: List[int],
+    people_count: int,
+) -> Dict:
+    """Build one non-WIP snapshot from the shared Enabling Technologies sheet.
+
+    The sheet layout uses:
+      - Excel row 2 for activity headers
+      - Excel column A for names
+      - Excel columns C:AC for non-WIP activity hours
+      - Excel column AD for OOO
+
+    `include_rows` is zero-based, so Excel rows 23:27 are range(22, 27).
+    """
     NAME_COL = _col_letter_to_idx("A")
     ACT_START = _col_letter_to_idx("C")
     ACT_END = _col_letter_to_idx("AC")
     OOO_COL = _col_letter_to_idx("AD")
     HEADER_ROW = 1  # Excel row 2
+
     people_rows: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
     activities: List[dict] = []
     ooo_map: Dict[str, float] = {}
+
     for i in include_rows:
         if i >= ws.shape[0]:
             continue
+
         name = norm_name(ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else "")
         if not is_real_person(name):
             continue
+
         row_total = 0.0
         row_ooo = safe_float0(ws.iat[i, OOO_COL] if ws.shape[1] > OOO_COL else 0.0)
         people_rows.append({
@@ -2566,6 +2586,7 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
             "name": name,
             "OOO": float(row_ooo),
         })
+
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
             label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
             if not label:
@@ -2594,13 +2615,29 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
     ooo_hours = float(round(sum(ooo_map.values()), 2))
     return {
         "people_rows": people_rows,
-        "people_count": 23,
+        "people_count": int(people_count),
         "ooo_hours": ooo_hours,
         "total_nonwip_hours": total_nonwip_hours,
         "nonwip_by_person": nonwip_by_person,
         "nonwip_activities": activities,
         "ooo_map": ooo_map,
     }
+def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return _build_et_capacity_snapshot(
+        team,
+        ws,
+        week,
+        include_rows=list(range(2, 22)) + list(range(27, 30)),  # Excel rows 3:22 and 28:30
+        people_count=23,
+    )
+def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    return _build_et_capacity_snapshot(
+        team,
+        ws,
+        week,
+        include_rows=list(range(22, 27)),  # Excel rows 23:27; these are skipped by ET US
+        people_count=5,
+    )
 def _build_et_us_rows_from_archive_sheet(
     archive_ws_com,
     current_ws_com,
@@ -2654,13 +2691,15 @@ def _build_et_us_rows_from_archive_sheet(
             for r in range(max_rows):
                 for c in range(max_cols):
                     reconstructed.iat[2 + r, c] = data_block.iat[r, c]
-            built = build_et_us_snapshot(team_name, reconstructed, week)
+            builder = team_src.custom_builder or build_et_us_snapshot
+            built = builder(team_name, reconstructed, week)
+            people_names = _unique_people_names_from_people_rows(built.get("people_rows", []))
             out_rows.append({
                 "team": team_name,
                 "period_date": week.date().isoformat(),
                 "source_file": str(team_src.xlsx),
-                "people_count": 23,
-                "team_member_names": "",
+                "people_count": int(built.get("people_count", 0)),
+                "team_member_names": json.dumps(people_names, ensure_ascii=False),
                 "total_non_wip_hours": float(round(built["total_nonwip_hours"], 2)),
                 "OOO Hours": float(round(built["ooo_hours"], 2)),
                 "% in WIP": np.nan,
@@ -2738,9 +2777,12 @@ def _build_et_us_rows_from_sheet(
                     pass
                 time.sleep(0.5)
                 ws_df = _read_excel_range_display_df(ws_com, "A1:AD30")
-                built = build_et_us_snapshot(team_name, ws_df, week)
+                builder = team_src.custom_builder or build_et_us_snapshot
+                built = builder(team_name, ws_df, week)
                 people_found = len(built.get("people_rows", []))
-                if people_found >= 10 or built.get("total_nonwip_hours", 0.0) > 0 or built.get("ooo_hours", 0.0) > 0:
+                expected_people = int(built.get("people_count", 0) or 0)
+                enough_people = expected_people > 0 and people_found >= min(expected_people, 10)
+                if enough_people or built.get("total_nonwip_hours", 0.0) > 0 or built.get("ooo_hours", 0.0) > 0:
                     break
             if built is None:
                 continue
@@ -2748,8 +2790,8 @@ def _build_et_us_rows_from_sheet(
                 "team": team_name,
                 "period_date": week.date().isoformat(),
                 "source_file": str(team_src.xlsx),
-                "people_count": 23,
-                "team_member_names": "",
+                "people_count": int(built.get("people_count", 0)),
+                "team_member_names": json.dumps(_unique_people_names_from_people_rows(built.get("people_rows", [])), ensure_ascii=False),
                 "total_non_wip_hours": float(round(built["total_nonwip_hours"], 2)),
                 "OOO Hours": float(round(built["ooo_hours"], 2)),
                 "% in WIP": np.nan,
@@ -2895,9 +2937,8 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     ),
     "PSS US": TeamSource(
         team="PSS US",
-        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS_US_Heijunka.xlsm"),
-        week_from_sheet=week_from_pss_us_tab,
-        custom_builder=build_pss_us_row,
+        xlsx=ET_US_SOURCE_FILE,
+        custom_builder=build_pss_us_from_et_snapshot,
         wip_workers_from="NS_metrics",
         completed_hours_from="NS_metrics",
     ),
@@ -3061,7 +3102,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
             wip_df=wip_df,
             metrics_df=metrics_df,
         )
-    if team_src.team == "ET US":
+    if team_src.xlsx == ET_US_SOURCE_FILE and team_src.team in {"ET US", "PSS US"}:
         return build_et_us_rows_from_capacity_workbook(
             team_src,
             wip_df=wip_df,
