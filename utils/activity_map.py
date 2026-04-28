@@ -366,7 +366,7 @@ ACTIVITY_MAP = {
     "meetings/emails/reg inquirie":"RI",
     "scrums/email/reg inquirie":"RI",
     "clinical":"Clinical Review",
-    "emails/admin collaboration clinical meetings training
+    "emails/admin collaboration clinical meetings training": "Training/Mentoring",
     "late mdr":"WIP/Event Review",
     "q3 town hall recording": "Meeting",
     "town hall meeting": "Meeting",
