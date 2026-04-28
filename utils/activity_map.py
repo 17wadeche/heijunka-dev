@@ -369,6 +369,7 @@ ACTIVITY_MAP = {
     "cornerstone, voyager meeting":"Cornerstone",
     "fwt, reading agile document": "Metrics & Schedule",
     "liberant training meeting": "Training/Mentoring",
+    "device training online": "Training/Mentoring",
     "fwt, emails, training": "Metrics & Schedule",
     "emails,cornerstone,dmaic":"Email & IM",
     "admin, emails, shipping and cornerstone training":"Admin",
