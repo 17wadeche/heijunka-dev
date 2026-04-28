@@ -333,6 +333,8 @@ ACTIVITY_MAP = {
     "sh/a meeting": "Meeting",
     "shipping device to us - aortic capa":"CAPA",
     "sorting out req's with cell":"Collaboration",
+    "sprinter legend review files -detached in vivo- legal case":"Reading File/Document Information",
+    "pc re-start": "IT Issue/Update",
     "nicola lab audit walk through":"Audit",
     "new desk setup":"Admin",
     "reading aortic educational document":"Reading File/Document Information",
