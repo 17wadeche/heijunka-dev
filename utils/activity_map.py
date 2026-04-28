@@ -363,6 +363,11 @@ ACTIVITY_MAP = {
     "laptop forced restart (new update)": "IT Issue/Update",
     "meeting (voyager fume hood)": "Meeting",
     "nellcor shipping":"Shipment",
+    "meetings/emails/reg inquirie":"RI",
+    "scrums/email/reg inquirie":"RI",
+    "clinical":"Clinical Review",
+    "emails/admin collaboration clinical meetings training
+    "late mdr":"WIP/Event Review",
     "q3 town hall recording": "Meeting",
     "town hall meeting": "Meeting",
     "emails, dealing with issues from devices,dmaic":"Email & IM",
