@@ -14,7 +14,7 @@ ACTIVITY_MAP = {
     "rpa meeting action":"RPA Meeting/Action",
     "problem solving meeting w stacy poe, scrum, self-training, collaboration":"Problem Solving",
     "collaboration, scrum, training video":"Training/Mentoring",
-    "scrum, collaboration/questions, late":"Scrum & Action",
+    "scrum, collaboration/questions, lates tracker":"Scrum & Action",
     "email/collaboration":"Email & IM",
     "fca meeting":"FCA",
     "emails & gary fu":"Email & IM",
