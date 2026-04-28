@@ -107,7 +107,7 @@ def _build_export_lookup_tables_cached(
     nonwip_df: Optional[pd.DataFrame],
     org,
     factor_out_ooo: bool,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     team_export = _weekly_team_export_df(
         metrics_df,
         nonwip_df,
@@ -116,7 +116,7 @@ def _build_export_lookup_tables_cached(
     )
     if team_export is None or team_export.empty:
         empty = pd.DataFrame()
-        return empty, empty, empty
+        return empty, empty, empty, empty
     team_export = team_export.copy()
     today = pd.Timestamp.now().normalize()
     if "week_start" in team_export.columns:
@@ -136,7 +136,12 @@ def _build_export_lookup_tables_cached(
     ].reset_index(drop=True)
     if team_export.empty:
         empty = pd.DataFrame()
-        return empty, empty, empty
+        return empty, empty, empty, empty
+    enterprise_export = _rollup_export_level(
+        team_export,
+        "enterprise",
+        factor_out_ooo=factor_out_ooo,
+    )
     ou_export = _rollup_export_level(
         team_export,
         "ou",
@@ -147,7 +152,7 @@ def _build_export_lookup_tables_cached(
         "portfolio",
         factor_out_ooo=factor_out_ooo,
     )
-    return team_export, ou_export, portfolio_export
+    return team_export, ou_export, portfolio_export, enterprise_export
 @st.cache_resource
 def load_precomputed(repo_root_str: str):
     data = load_common_data(repo_root_str)
@@ -211,12 +216,14 @@ def _cached_excel_bytes(
     team_export_display: pd.DataFrame,
     ou_export_display: pd.DataFrame,
     portfolio_export_display: pd.DataFrame,
+    enterprise_export_display: pd.DataFrame,
     missing_teams_display: pd.DataFrame,
 ) -> bytes:
     return _excel_bytes_from_export_dfs(
         team_export_display,
         ou_export_display,
         portfolio_export_display,
+        enterprise_export_display,
         missing_teams_display,
     )
 @dataclass(frozen=True)
@@ -1490,12 +1497,14 @@ def _weekly_team_export_df(
 def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = False) -> pd.DataFrame:
     if df.empty:
         return df.copy()
-    if level == "ou":
+    if level == "enterprise":
+        group_cols = ["week_start"]
+    elif level == "ou":
         group_cols = ["week_start", "portfolio", "ou"]
     elif level == "portfolio":
         group_cols = ["week_start", "portfolio"]
     else:
-        raise ValueError("level must be 'ou' or 'portfolio'")
+        raise ValueError("level must be 'enterprise', 'ou', or 'portfolio'")
     out = (
         df.groupby(group_cols, as_index=False)
         .agg(
@@ -1537,10 +1546,15 @@ def _rollup_export_level(df: pd.DataFrame, level: str, factor_out_ooo: bool = Fa
     out["non_wip_pct"] = (out["non_wip_hours"] / pct_denom).where(pct_denom > 0)
     out["unaccounted_pct"] = (out["unaccounted_hours"] / pct_denom).where(pct_denom > 0)
     out = _add_avg_hours_day_columns(out)
-    if level == "portfolio":
+    if level == "enterprise":
+        out["enterprise"] = "Enterprise"
+        out["portfolio"] = pd.NA
+        out["ou"] = pd.NA
+    elif level == "portfolio":
         out["ou"] = pd.NA
     cols = [
         "week_start",
+        "enterprise",
         "portfolio",
         "ou",
         "people_count",
@@ -1675,6 +1689,43 @@ def _display_export_portfolio_df(df: pd.DataFrame) -> pd.DataFrame:
     if "Week Start" in out.columns:
         out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
     return out
+def _display_export_enterprise_df(df: pd.DataFrame) -> pd.DataFrame:
+    enterprise_df = _append_alert_before_display(df, include_alert=True)
+    rename_map = {
+        "Alert": "Alert",
+        "enterprise": "Enterprise",
+        "week_start": "Week Start",
+        "capacity_hours": "Capacity",
+        "people_count": "People",
+        "completed_hours": "Completed Hours",
+        "wip_pct": "WIP %",
+        "other_team_wip_hours": "Other Team WIP",
+        "other_team_wip_pct": "Other Team WIP %",
+        "non_wip_hours": "Non-WIP Hours",
+        "non_wip_pct": "Non-WIP %",
+        "ooo_hours": "OOO Hours",
+        "ooo_pct": "OOO %",
+        "unaccounted_hours": "Unaccounted Hours",
+        "unaccounted_pct": "Unaccounted %",
+        "over_hours": "Over Hours",
+        "warning": "Warning",
+    }
+    preferred_order = [
+        "Alert",
+        "enterprise", "week_start",
+        "capacity_hours", "people_count",
+        "completed_hours", "wip_pct",
+        "other_team_wip_hours", "other_team_wip_pct",
+        "non_wip_hours", "non_wip_pct",
+        "ooo_hours", "ooo_pct",
+        "unaccounted_hours", "unaccounted_pct",
+        "over_hours", "warning",
+    ]
+    cols = [c for c in preferred_order if c in enterprise_df.columns]
+    out = enterprise_df[cols].copy().rename(columns=rename_map)
+    if "Week Start" in out.columns:
+        out["Week Start"] = pd.to_datetime(out["Week Start"], errors="coerce").dt.date
+    return out
 def _over_100_row_highlight_style(row: pd.Series) -> list[str]:
     required = ["WIP %", "Non-WIP %", "OOO %"]
     if not all(c in row.index for c in required):
@@ -1724,6 +1775,7 @@ def _excel_bytes_from_export_dfs(
     team_df: pd.DataFrame,
     ou_df: pd.DataFrame,
     portfolio_df: pd.DataFrame,
+    enterprise_df: pd.DataFrame,
     missing_teams_df: pd.DataFrame,
 ) -> bytes:
     last_err = None
@@ -1735,6 +1787,7 @@ def _excel_bytes_from_export_dfs(
                     ("Team Weekly", team_df),
                     ("OU Weekly", ou_df),
                     ("Portfolio Weekly", portfolio_df),
+                    ("Enterprise Weekly", enterprise_df),
                     ("Missing Teams", missing_teams_df),
                 ]
                 for sheet_name, df in sheets:
@@ -1743,7 +1796,7 @@ def _excel_bytes_from_export_dfs(
                     safe_name = _safe_sheet_name(sheet_name)
                     df.to_excel(writer, index=False, sheet_name=safe_name)
                 if engine == "xlsxwriter":
-                    for sheet_name, df in sheets[:3]:
+                    for sheet_name, df in sheets[:4]:
                         if df is not None and not df.empty:
                             _apply_over_100_outline_xlsxwriter(writer, _safe_sheet_name(sheet_name), df)
             buf.seek(0)
@@ -1821,7 +1874,7 @@ shared_metrics_df = _concat_frames(metrics_frames)
 shared_nonwip_df = _concat_frames(nonwip_frames)
 factor_out_ooo = st.toggle(
     "Factor out OOO from calculations",
-    value=False,
+    value=True,
     key="factor_out_ooo",
 )
 page = st.segmented_control(
@@ -1836,7 +1889,7 @@ def _get_export_lookup_bundle(
     shared_nonwip_df: Optional[pd.DataFrame],
     org,
     factor_out_ooo: bool,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return _build_export_lookup_tables_cached(
         shared_metrics_df,
         shared_nonwip_df,
@@ -1848,12 +1901,13 @@ def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 if page == "Overview":
     st.subheader("Summary")
-    overview_team_export, overview_ou_export, overview_portfolio_export = _get_export_lookup_bundle(
+    overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
     )
     team_lookup = overview_team_export
     ou_lookup = overview_ou_export
     portfolio_lookup = overview_portfolio_export
+    enterprise_lookup = overview_enterprise_export
     if team_lookup.empty:
         st.info("No overview data available.")
     else:
@@ -1885,12 +1939,16 @@ if page == "Overview":
                 )
             filter_level = control_cols[1].radio(
                 "Filter by",
-                options=["Portfolio", "OU", "Team"],
+                options=["Enterprise", "Portfolio", "OU", "Team"],
                 index=0,
                 horizontal=True,
                 key="overview_filter_level",
             )
-            if filter_level == "Portfolio":
+            if filter_level == "Enterprise":
+                lookup_df = enterprise_lookup.copy()
+                filter_col = "enterprise"
+                label = "Enterprise"
+            elif filter_level == "Portfolio":
                 lookup_df = portfolio_lookup.copy()
                 filter_col = "portfolio"
                 label = "Portfolio"
@@ -2325,13 +2383,13 @@ elif page == "Non-WIP":
     st.pyplot(fig)
 elif page == "Export":
     st.subheader("Export")
-    team_export, ou_export, portfolio_export = _get_export_lookup_bundle(
+    team_export, ou_export, portfolio_export, enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
     )
-    export_scope_df = team_export.copy()
-    export_filter_col = "team"
-    export_filter_label = "Team"
-    export_filter_level = "Team"
+    export_scope_df = enterprise_export.copy()
+    export_filter_col = "enterprise"
+    export_filter_label = "Enterprise"
+    export_filter_level = "Enterprise"
     export_selected_weeks = []
     if not team_export.empty:
         export_filter_card = st.container(border=True)
@@ -2352,12 +2410,16 @@ elif page == "Export":
             )
             export_filter_level = export_cols[1].radio(
                 "Filter by",
-                options=["Portfolio", "OU", "Team"],
+                options=["Enterprise", "Portfolio", "OU", "Team"],
                 index=0,
                 horizontal=True,
                 key="export_filter_level",
             )
-            if export_filter_level == "Portfolio":
+            if export_filter_level == "Enterprise":
+                export_scope_df = enterprise_export.copy()
+                export_filter_col = "enterprise"
+                export_filter_label = "Enterprise"
+            elif export_filter_level == "Portfolio":
                 export_scope_df = portfolio_export.copy()
                 export_filter_col = "portfolio"
                 export_filter_label = "Portfolio"
@@ -2487,6 +2549,31 @@ elif page == "Export":
                 subset=["Non-WIP %"],
             )
         return styler
+    def _format_export_display_enterprise(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+        out = _display_export_enterprise_df(df).copy()
+        fmt = {}
+        for c in [
+            "Capacity", "People", "Completed Hours", "Other Team WIP",
+            "Non-WIP Hours", "OOO Hours", "Unaccounted Hours", "Over Hours",
+        ]:
+            if c in out.columns:
+                fmt[c] = "{:.2f}"
+        for c in ["WIP %", "Other Team WIP %", "Non-WIP %", "OOO %", "Unaccounted %"]:
+            if c in out.columns:
+                fmt[c] = "{:.1%}"
+        styler = out.style.format(fmt)
+        styler = styler.apply(_over_100_row_highlight_style, axis=1)
+        if "WIP %" in out.columns:
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.80, good_if_gte=True),
+                subset=["WIP %"],
+            )
+        if "Non-WIP %" in out.columns:
+            styler = styler.map(
+                lambda v: _threshold_cell_style(v, 0.20),
+                subset=["Non-WIP %"],
+            )
+        return styler
     def _format_export_display_portfolio(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         out = _display_export_portfolio_df(df).copy()
         fmt = {}
@@ -2518,7 +2605,18 @@ elif page == "Export":
         if export_scope_df.empty:
             st.info("No export rows match the selected filters.")
         else:
-            if export_filter_level == "Team":
+            if export_filter_level == "Enterprise":
+                st.markdown("#### Enterprise weekly")
+                st.dataframe(
+                    _format_export_display_enterprise(export_scope_df),
+                    width="stretch",
+                    hide_index=True,
+                )
+                team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
+                ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
+                portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
+                enterprise_export_display = _display_export_enterprise_df(export_scope_df)
+            elif export_filter_level == "Team":
                 st.markdown("#### Team weekly")
                 st.dataframe(
                     _format_export_display_team(export_scope_df),
@@ -2528,6 +2626,7 @@ elif page == "Export":
                 team_export_display = _display_export_team_df(export_scope_df)
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
+                enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
             elif export_filter_level == "OU":
                 st.markdown("#### OU weekly")
                 st.dataframe(
@@ -2538,6 +2637,7 @@ elif page == "Export":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(export_scope_df)
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
+                enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
             else:
                 st.markdown("#### Portfolio weekly")
                 st.dataframe(
@@ -2548,6 +2648,7 @@ elif page == "Export":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(export_scope_df)
+                enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
             st.markdown("#### Teams missing weekly data")
             if missing_teams_display.empty:
                 st.success("No missing teams for the selected week(s).")
@@ -2562,6 +2663,7 @@ elif page == "Export":
                     team_export_display,
                     ou_export_display,
                     portfolio_export_display,
+                    enterprise_export_display,
                     missing_teams_display,
                 )
                 st.download_button(
