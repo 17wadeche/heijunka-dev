@@ -879,7 +879,6 @@ def _dyn(obj):
         return win32com.client.dynamic.Dispatch(obj)
     except Exception:
         return obj
-
 def _try_unprotect_excel_object(obj, label: str = "") -> None:
     if obj is None:
         return
@@ -893,7 +892,6 @@ def _try_unprotect_excel_object(obj, label: str = "") -> None:
     except Exception as e:
         if label:
             print(f"[WARN] Could not unprotect {label}: {e}", flush=True)
-
 def _read_excel_range_display_df(ws_com, range_addr: str) -> pd.DataFrame:
     rng = _dyn(ws_com.Range(range_addr))
     rows = int(getattr(rng.Rows, "Count", 0) or 0)
