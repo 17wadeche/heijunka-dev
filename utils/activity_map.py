@@ -5,6 +5,7 @@ ACTIVITY_MAP = {
     "age files action email": "Email & IM",
     "emails/admin collaboration": "Email & IM",
     "pmpa call":"PMPA",
+    "ja meeting":"Meeting",
     "1":"Meeting",
     "capa": "CAPA",
     "em/etc": "Em Etc",
