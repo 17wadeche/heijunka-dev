@@ -1181,7 +1181,7 @@ if nonwip_mode:
         pct_non_wip = (100.0 - pct_in_wip) if pd.notna(pct_in_wip) else np.nan
     include_ooo_in_kpi_pct = st.toggle(
         "Include OOO Hours in KPI % of capacity",
-        value=True,
+        value=False,
         key="include_ooo_in_kpi_pct",
         help="When off, OOO Hours shows 0.0% of capacity and other KPI percentages are calculated against capacity excluding OOO hours.",
     )
@@ -3167,7 +3167,7 @@ with right2:
             with top_controls_left:
                 factor_out_ooo_top = st.toggle(
                     "Factor out OOO (top chart)",
-                    value=False,
+                    value=True,
                     key="time_mix_factor_out_ooo_top_right2",
                 )
             top_mix = week_mix.copy()
