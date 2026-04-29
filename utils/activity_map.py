@@ -357,7 +357,7 @@ ACTIVITY_MAP = {
     "reading aortic documanet": "Reading File/Document Information",
     "investigation updates meeting":"Meeting",
     "ng, meetings, lates, event reviews, collaboration, cornerstone, performance review, email/admin": "Next Gen",
-    "training, ng, coding, event reviews, document review, collaboration, email/admin": "Training/Mentoring",
+    "training, ng, coding, event reviews, document reviews, collaboration, email/admin": "Training/Mentoring",
     "affera training/prep": "Training/Mentoring",
     "fda query meeting":"Question",
     "emails, admin":"Email & IM",
