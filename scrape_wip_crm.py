@@ -28,6 +28,10 @@ TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
 }
 CDS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+CDS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+AF_ACTUAL_HOURS_START = _dt.date(2026, 4, 24)
+def _use_af_actual_hours(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period > AF_ACTUAL_HOURS_START
 def _cds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= CDS_NEW_HOURS_START
 MCS_ROOT_HINT = _norm_mcs = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling")
@@ -108,7 +112,10 @@ def compute_completed_hours_cds(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    if _cds_use_new_hours_layout(period):
+    if _use_af_actual_hours(period):
+        total = _cell_number(ws_perf["AF10"].value)
+        actual_col = "AF"
+    elif _cds_use_new_hours_layout(period):
         total = _cell_number(ws_perf["W10"].value)
         actual_col = "W"
     else:
@@ -119,6 +126,7 @@ def compute_completed_hours_cds(
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
+    summed_actual = 0.0
     for r in range(5, 11):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
@@ -126,9 +134,12 @@ def compute_completed_hours_cds(
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
         actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        summed_actual += actual
         if p not in seen:
             seen.add(p)
             people_in_wip.append(p)
+    if total is None and _use_af_actual_hours(period):
+        total = summed_actual
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_cds(
     ws_perf: Worksheet,
@@ -257,7 +268,11 @@ def compute_completed_hours_ni(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    if _ni_use_new_hours_layout(period):
+    if _use_af_actual_hours(period):
+        total = _cell_number(ws_perf["AF12"].value)
+        actual_col = "AF"
+        row_stop = 12   # rows 5-11; AF12 should be the total if present
+    elif _ni_use_new_hours_layout(period):
         total = _cell_number(ws_perf["C13"].value)
         actual_col = "W"
         row_stop = 12   # rows 5-11; W12 is the new total Completed Hours cell
@@ -271,6 +286,7 @@ def compute_completed_hours_ni(
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
+    summed_actual = 0.0
     for r in range(5, row_stop):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
@@ -278,9 +294,12 @@ def compute_completed_hours_ni(
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
         actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        summed_actual += actual
         if p not in seen:
             seen.add(p)
             people_in_wip.append(p)
+    if total is None and _use_af_actual_hours(period):
+        total = summed_actual
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_ni(
     ws_perf: Worksheet,
