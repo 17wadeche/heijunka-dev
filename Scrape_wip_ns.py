@@ -286,38 +286,58 @@ def load_scs_super_from_existing_metrics_and_refresh_3_weeks(
     logger: Optional[logging.Logger] = None,
 ) -> list[dict]:
     existing_rows = read_existing_metrics_rows(ns_metrics_path)
-    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
+    weeks_set = set(weeks_to_refresh)
     existing_super_rows = [
         r for r in existing_rows
         if safe_str(r.get("team")) == "SCS Super Cell"
     ]
     frozen_super_rows = [
         r for r in existing_super_rows
-        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        if safe_str(r.get("period_date")) not in weeks_set
         and safe_str(r.get("period_date")) >= "2025-06-30"
     ]
     refreshed_rows: list[dict] = []
+    switch_date = safe_str(scs_super_new_cfg.get("min_period_date")) or "9999-12-31"
+    if existing_super_rows:
+        old_weeks = [w for w in weeks_to_refresh if w < switch_date]
+        new_weeks = [w for w in weeks_to_refresh if w >= switch_date]
+        if old_weeks:
+            old_cfg = dict(scs_super_old_cfg)
+            old_cfg["min_period_date"] = min(old_weeks)
+            old_cfg["max_period_date"] = max(old_weeks)
+            refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, old_cfg))
+        if new_weeks:
+            new_cfg = dict(scs_super_new_cfg)
+            new_cfg["min_period_date"] = min(new_weeks)
+            new_cfg["max_period_date"] = max(new_weeks)
+            refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, new_cfg))
+        refreshed_rows = [
+            r for r in refreshed_rows
+            if safe_str(r.get("period_date")) in weeks_set
+        ]
+        merged_super_rows = merge_rows_by_team_period(frozen_super_rows + refreshed_rows)
+        if logger:
+            logger.info(
+                f"[SCS Super Cell] loaded cached rows from NS_metrics: {len(existing_super_rows)} | "
+                f"kept={len(frozen_super_rows)} | refreshed={len(refreshed_rows)} | "
+                f"final={len(merged_super_rows)} | "
+                f"old_weeks={old_weeks} | new_weeks={new_weeks}"
+            )
+        return merged_super_rows
     old_cfg = dict(scs_super_old_cfg)
     old_cfg["min_period_date"] = "2025-06-30"
-    old_cfg["max_period_date"] = min(weeks_to_refresh)
+    old_cfg["max_period_date"] = safe_str(scs_super_old_cfg.get("max_period_date")) or "2026-02-23"
     new_cfg = dict(scs_super_new_cfg)
-    new_cfg["min_period_date"] = max(
-        safe_str(scs_super_new_cfg.get("min_period_date")),
-        min(weeks_to_refresh),
-    )
+    new_cfg["min_period_date"] = safe_str(scs_super_new_cfg.get("min_period_date")) or "2026-03-01"
     new_cfg["max_period_date"] = max(weeks_to_refresh)
     refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, old_cfg))
     refreshed_rows.extend(scrape_workbook_with_config(scs_super_source_file, new_cfg))
-    refreshed_rows = [
-        r for r in refreshed_rows
-        if safe_str(r.get("period_date")) in weeks_to_refresh
-    ]
-    merged_super_rows = merge_rows_by_team_period(frozen_super_rows + refreshed_rows)
+    merged_super_rows = merge_rows_by_team_period(refreshed_rows)
     if logger:
         logger.info(
-            f"[SCS Super Cell] loaded cached rows from NS_metrics: {len(existing_super_rows)} | "
-            f"kept={len(frozen_super_rows)} | refreshed={len(refreshed_rows)} | "
-            f"final={len(merged_super_rows)}"
+            f"[SCS Super Cell] no cached rows found; performed backfill | "
+            f"refreshed={len(refreshed_rows)} | final={len(merged_super_rows)}"
         )
     return merged_super_rows
 def load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
