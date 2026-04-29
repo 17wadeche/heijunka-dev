@@ -1067,7 +1067,7 @@ def compute_completed_hours_cpt(ws_perf: Worksheet) -> Tuple[Optional[float], Di
         actual_col = "AB"
         total = _cell_number(ws_perf["B48"].value)
     elif use_c:
-        actual_col = "W"
+        actual_col = "AF"
         total = _cell_number(ws_perf["C48"].value)
     else:
         actual_col = "AB"
