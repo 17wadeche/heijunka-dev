@@ -355,6 +355,8 @@ ACTIVITY_MAP = {
     "looking for lost device":"Looking For A Device",
     "meeting with nelcor":"Meeting",
     "reading aortic documanet": "Reading File/Document Information",
+    "investigation updates meeting":"Meeting",
+    "fda query meeting":"Question",
     "emails, admin":"Email & IM",
     "code remediations, reportable pe to pe merge support, scrum, town hall":"Scrum & Action",
     "affera code request":"Coding/Code Gov",
