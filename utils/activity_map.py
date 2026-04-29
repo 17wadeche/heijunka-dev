@@ -387,6 +387,7 @@ ACTIVITY_MAP = {
     "1:1 ab": "Meeting",
     "laminating":"Admin",
     "fwt, reading agile document": "Metrics & Schedule",
+    "hijunka": "Metrics & Schedule",
     "liberant training meeting": "Training/Mentoring",
     "device training online": "Training/Mentoring",
     "fwt, emails, training": "Metrics & Schedule",
