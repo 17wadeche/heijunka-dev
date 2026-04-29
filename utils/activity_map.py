@@ -360,6 +360,8 @@ ACTIVITY_MAP = {
     "training, ng, coding, event reviews, document reviews, collaboration, email/admin": "Training/Mentoring",
     "affera training/prep": "Training/Mentoring",
     "fda query meeting":"Question",
+    "cornerstone xx shadowing 2b": "Training/Mentoring",
+    "shadowing 2b": "Training/Mentoring",
     "emails, admin":"Email & IM",
     "code remediations, reportable pe to pe merge support, scrum, town hall":"Scrum & Action",
     "affera code request":"Coding/Code Gov",
