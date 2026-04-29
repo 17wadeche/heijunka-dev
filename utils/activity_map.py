@@ -344,6 +344,7 @@ ACTIVITY_MAP = {
     "qa collaboration":"QA",
     "aged file/metrics review":"WIP/Event Review",
     "grad project measure work":"Project Work",
+    "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "iri":"Project Work",
     "parkmore townhall recording":"Meeting",
