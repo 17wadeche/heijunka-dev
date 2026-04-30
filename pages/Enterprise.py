@@ -2895,12 +2895,12 @@ elif page == "Export":
                             width=None,
                         ),
                         "Unaccounted Hours": st.column_config.NumberColumn(
-                            "Unaccounted Hours",
+                            "Missing Hours",
                             format="%.2f",
                             width=None,
                         ),
                         "Unaccounted %": st.column_config.NumberColumn(
-                            "Unaccounted %",
+                            "Missing %",
                             format="%.1f%%",
                             width=None,
                         ),
