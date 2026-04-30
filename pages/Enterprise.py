@@ -2600,10 +2600,13 @@ elif page == "Export":
     ) -> None:
         key = _rollup_row_key(level, row)
         is_open = key in open_keys
-
+        raw_over_hours = pd.to_numeric(row.get("over_hours", 0), errors="coerce")
+        is_over_hours = bool(pd.notna(raw_over_hours) and float(raw_over_hours) > 0)
         rows.append({
             "_row_key": key,
             "_has_children": bool(has_children),
+            "_level_depth": int(depth),
+            "_is_over_hours": is_over_hours,
             "Open": bool(is_open) if has_children else False,
             "Level": level,
             "Roll-up": _tree_rollup_label(level, row, depth, has_children, is_open),
@@ -2778,7 +2781,74 @@ elif page == "Export":
                 out[col] = pd.to_numeric(out[col], errors="coerce") * 100
 
         return out
+    def _normalize_tree_weeks(df: pd.DataFrame) -> pd.DataFrame:
+        if df is None or df.empty or "week_start" not in df.columns:
+            return pd.DataFrame()
 
+        out = df.copy()
+        out["week_start"] = pd.to_datetime(out["week_start"], errors="coerce").dt.normalize()
+        return out.dropna(subset=["week_start"]).copy()
+
+    def _all_expandable_tree_keys(export_scope_df: pd.DataFrame) -> set[str]:
+        keys: set[str] = set()
+        scoped = _normalize_tree_weeks(export_scope_df)
+
+        if scoped.empty:
+            return keys
+
+        def _add_keys(df: pd.DataFrame, level: str) -> None:
+            if df is None or df.empty:
+                return
+            for _, r in df.iterrows():
+                keys.add(_rollup_row_key(level, r))
+
+        if export_filter_level == "Enterprise":
+            _add_keys(scoped, "Enterprise")
+
+            weeks = scoped[["week_start"]].drop_duplicates()
+
+            portfolios = _normalize_tree_weeks(portfolio_export)
+            if not portfolios.empty:
+                portfolios = portfolios.merge(weeks, on="week_start", how="inner")
+            _add_keys(portfolios, "Portfolio")
+
+            ous = _normalize_tree_weeks(ou_export)
+            if not ous.empty:
+                ous = ous.merge(weeks, on="week_start", how="inner")
+            _add_keys(ous, "OU")
+
+        elif export_filter_level == "Portfolio":
+            _add_keys(scoped, "Portfolio")
+
+            scope_pairs = scoped[["week_start", "portfolio"]].drop_duplicates()
+
+            ous = _normalize_tree_weeks(ou_export)
+            if not ous.empty:
+                ous = ous.merge(scope_pairs, on=["week_start", "portfolio"], how="inner")
+            _add_keys(ous, "OU")
+
+        elif export_filter_level == "OU":
+            _add_keys(scoped, "OU")
+
+        return keys
+
+    def _style_export_tree_row(row: pd.Series) -> list[str]:
+        level = str(row.get("Level", "")).strip()
+        is_over = bool(row.get("_is_over_hours", False))
+
+        if is_over:
+            style = "background-color: #fef08a; color: #713f12; font-weight: 600;"
+        else:
+            level_backgrounds = {
+                "Enterprise": "#ffffff",
+                "Portfolio": "#f8fafc",
+                "OU": "#eef2f7",
+                "Team": "#e5e7eb",
+            }
+            bg = level_backgrounds.get(level, "")
+            style = f"background-color: {bg};" if bg else ""
+
+        return [style] * len(row.index)
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
@@ -2795,20 +2865,13 @@ elif page == "Export":
                     st.rerun()
 
             with action_cols[1]:
-                if st.button("Expand visible", key="export_tree_expand_visible"):
-                    visible_tree = _build_export_tree_table(export_scope_df)
-                    if not visible_tree.empty:
-                        visible_parent_keys = set(
-                            visible_tree.loc[
-                                visible_tree["_has_children"].fillna(False).astype(bool),
-                                "_row_key",
-                            ].astype(str)
-                        )
-                        st.session_state["export_rollup_open_keys"] = (
-                            set(st.session_state.get("export_rollup_open_keys", set()))
-                            | visible_parent_keys
-                        )
-                        st.rerun()
+                if st.button("Expand all", key="export_tree_expand_all"):
+                    all_parent_keys = _all_expandable_tree_keys(export_scope_df)
+                    st.session_state["export_rollup_open_keys"] = (
+                        set(st.session_state.get("export_rollup_open_keys", set()))
+                        | all_parent_keys
+                    )
+                    st.rerun()
 
             tree_df = _build_export_tree_table(export_scope_df)
 
@@ -2816,9 +2879,12 @@ elif page == "Export":
                 st.info("No export rows match the selected filters.")
             else:
                 display_tree_df = _format_tree_for_display(tree_df)
-
+                styled_display_tree_df = display_tree_df.style.apply(
+                    _style_export_tree_row,
+                    axis=1,
+                )
                 edited_tree = st.data_editor(
-                    display_tree_df,
+                    styled_display_tree_df,
                     use_container_width=True,
                     hide_index=True,
                     num_rows="fixed",
