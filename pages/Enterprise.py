@@ -2413,29 +2413,24 @@ elif page == "Non-WIP":
     st.pyplot(fig)
 elif page == "Export":
     st.subheader("Export")
-
     team_export, ou_export, portfolio_export, enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
     )
-
     export_scope_df = enterprise_export.copy()
     export_filter_col = None
     export_filter_label = "Enterprise"
     export_filter_level = "Enterprise"
     export_selected_weeks = []
     export_selected_values = []
-
     if not team_export.empty:
         export_filter_card = st.container(border=True)
         with export_filter_card:
             st.markdown("#### Export filters")
             export_cols = st.columns([1.15, 1.0, 1.4])
-
             export_week_options = sorted(
                 team_export["week_start"].dropna().unique(),
                 reverse=True,
             )
-
             export_selected_weeks = export_cols[0].multiselect(
                 "Weeks",
                 options=export_week_options,
@@ -2444,7 +2439,6 @@ elif page == "Export":
                 key="export_selected_weeks",
                 placeholder="Select one or more weeks",
             )
-
             export_filter_level = export_cols[1].radio(
                 "Filter by",
                 options=["Enterprise", "Portfolio", "OU", "Team"],
@@ -2452,7 +2446,6 @@ elif page == "Export":
                 horizontal=True,
                 key="export_filter_level",
             )
-
             if export_filter_level == "Enterprise":
                 export_scope_df = enterprise_export.copy()
                 export_filter_col = None
@@ -2469,20 +2462,16 @@ elif page == "Export":
                 export_scope_df = team_export.copy()
                 export_filter_col = "team"
                 export_filter_label = "Team"
-
             export_scope_df["week_start"] = pd.to_datetime(
                 export_scope_df["week_start"], errors="coerce"
             ).dt.normalize()
-
             selected_week_set = {
                 pd.Timestamp(x).normalize()
                 for x in export_selected_weeks
             }
-
             export_scoped_weeks = export_scope_df[
                 export_scope_df["week_start"].isin(selected_week_set)
             ].copy()
-
             if export_filter_level == "Enterprise":
                 export_options = ["Enterprise"] if not export_scoped_weeks.empty else []
             else:
@@ -2491,7 +2480,6 @@ elif page == "Export":
                     for x in export_scoped_weeks[export_filter_col].dropna().astype(str).unique()
                     if str(x).strip()
                 )
-
             export_selected_values = export_cols[2].multiselect(
                 export_filter_label,
                 options=export_options,
@@ -2499,38 +2487,31 @@ elif page == "Export":
                 key=f"export_selected_{export_filter_level.lower()}",
                 placeholder=f"Select one or more {export_filter_label.lower()} values",
             )
-
         if export_selected_weeks and export_selected_values:
             export_scope_df = export_scope_df[
                 export_scope_df["week_start"].isin(selected_week_set)
             ].copy()
-
             if export_filter_col is not None:
                 export_scope_df = export_scope_df[
                     export_scope_df[export_filter_col].astype(str).isin(export_selected_values)
                 ].copy()
         else:
             export_scope_df = export_scope_df.iloc[0:0].copy()
-
     missing_teams_display = _build_missing_team_weeks_df(
         team_export=team_export,
         org=org,
         selected_weeks=export_selected_weeks,
     )
-
     def _tree_safe_str(value: Any) -> str:
         if pd.isna(value):
             return ""
         return str(value).strip()
-
     def _tree_week_value(value: Any) -> str:
         if pd.isna(value):
             return ""
         return pd.Timestamp(value).strftime("%Y-%m-%d")
-
     def _rollup_row_key(level: str, row: pd.Series) -> str:
         week = _tree_week_value(row.get("week_start"))
-
         if level == "Enterprise":
             name = "Enterprise"
         elif level == "Portfolio":
@@ -2539,25 +2520,18 @@ elif page == "Export":
             name = f"{_tree_safe_str(row.get('portfolio'))}::{_tree_safe_str(row.get('ou'))}"
         else:
             name = _tree_safe_str(row.get("team"))
-
         return f"{level}|{week}|{name}"
-
     def _rows_for_week(df: pd.DataFrame, week_value: Any) -> pd.DataFrame:
         if df is None or df.empty or "week_start" not in df.columns:
             return pd.DataFrame()
-
         out = df.copy()
         out["week_start"] = pd.to_datetime(out["week_start"], errors="coerce").dt.normalize()
         week_value = pd.Timestamp(week_value).normalize()
-
         return out[out["week_start"] == week_value].copy()
-
     def _filter_value(df: pd.DataFrame, col: str, value: Any) -> pd.DataFrame:
         if df is None or df.empty or col not in df.columns or pd.isna(value):
             return pd.DataFrame()
-
         return df[df[col].astype(str) == str(value)].copy()
-
     def _tree_rollup_label(
         level: str,
         row: pd.Series,
@@ -2568,9 +2542,7 @@ elif page == "Export":
         icon = ""
         if has_children:
             icon = "▾ " if is_open else "▸ "
-
         indent = " " * depth
-
         if level == "Enterprise":
             label = "Enterprise"
         elif level == "Portfolio":
@@ -2579,17 +2551,13 @@ elif page == "Export":
             label = _tree_safe_str(row.get("ou"))
         else:
             label = _tree_safe_str(row.get("team"))
-
         return f"{indent}{icon}{label}"
-
     def _tree_alert(row: pd.Series) -> str:
         raw_unaccounted = row.get("unaccounted_pct", 0)
-
         try:
             return "❗" if pd.notna(raw_unaccounted) and float(raw_unaccounted) > 0.25 else ""
         except Exception:
             return ""
-
     def _append_tree_row(
         rows: list[dict],
         row: pd.Series,
@@ -2630,133 +2598,95 @@ elif page == "Export":
             "Over Hours": row.get("over_hours"),
             "Warning": row.get("warning", ""),
         })
-
     def _build_export_tree_table(export_scope_df: pd.DataFrame) -> pd.DataFrame:
         open_keys = st.session_state.setdefault("export_rollup_open_keys", set())
         rows: list[dict] = []
-
         if export_scope_df is None or export_scope_df.empty:
             return pd.DataFrame()
-
         scoped = export_scope_df.copy()
         scoped["week_start"] = pd.to_datetime(scoped["week_start"], errors="coerce").dt.normalize()
         scoped = scoped.dropna(subset=["week_start"]).copy()
-
         if export_filter_level == "Enterprise":
             root_rows = scoped.sort_values(["week_start"]).reset_index(drop=True)
-
             for _, ent_row in root_rows.iterrows():
                 wk = ent_row["week_start"]
                 ent_key = _rollup_row_key("Enterprise", ent_row)
-
                 _append_tree_row(rows, ent_row, "Enterprise", 0, True, open_keys)
-
                 if ent_key not in open_keys:
                     continue
-
                 portfolios = _rows_for_week(portfolio_export, wk)
                 if not portfolios.empty:
                     portfolios = portfolios.sort_values(["portfolio"], na_position="last")
-
                 for _, port_row in portfolios.iterrows():
                     port_key = _rollup_row_key("Portfolio", port_row)
-
                     _append_tree_row(rows, port_row, "Portfolio", 1, True, open_keys)
-
                     if port_key not in open_keys:
                         continue
-
                     ous = _rows_for_week(ou_export, wk)
                     ous = _filter_value(ous, "portfolio", port_row.get("portfolio"))
                     if not ous.empty:
                         ous = ous.sort_values(["ou"], na_position="last")
-
                     for _, ou_row in ous.iterrows():
                         ou_key = _rollup_row_key("OU", ou_row)
-
                         _append_tree_row(rows, ou_row, "OU", 2, True, open_keys)
-
                         if ou_key not in open_keys:
                             continue
-
                         teams = _rows_for_week(team_export, wk)
                         teams = _filter_value(teams, "portfolio", ou_row.get("portfolio"))
                         teams = _filter_value(teams, "ou", ou_row.get("ou"))
                         if not teams.empty:
                             teams = teams.sort_values(["team"], na_position="last")
-
                         for _, team_row in teams.iterrows():
                             _append_tree_row(rows, team_row, "Team", 3, False, open_keys)
-
         elif export_filter_level == "Portfolio":
             root_rows = scoped.sort_values(["week_start", "portfolio"], na_position="last").reset_index(drop=True)
-
             for _, port_row in root_rows.iterrows():
                 wk = port_row["week_start"]
                 port_key = _rollup_row_key("Portfolio", port_row)
-
                 _append_tree_row(rows, port_row, "Portfolio", 0, True, open_keys)
-
                 if port_key not in open_keys:
                     continue
-
                 ous = _rows_for_week(ou_export, wk)
                 ous = _filter_value(ous, "portfolio", port_row.get("portfolio"))
                 if not ous.empty:
                     ous = ous.sort_values(["ou"], na_position="last")
-
                 for _, ou_row in ous.iterrows():
                     ou_key = _rollup_row_key("OU", ou_row)
-
                     _append_tree_row(rows, ou_row, "OU", 1, True, open_keys)
-
                     if ou_key not in open_keys:
                         continue
-
                     teams = _rows_for_week(team_export, wk)
                     teams = _filter_value(teams, "portfolio", ou_row.get("portfolio"))
                     teams = _filter_value(teams, "ou", ou_row.get("ou"))
                     if not teams.empty:
                         teams = teams.sort_values(["team"], na_position="last")
-
                     for _, team_row in teams.iterrows():
                         _append_tree_row(rows, team_row, "Team", 2, False, open_keys)
-
         elif export_filter_level == "OU":
             root_rows = scoped.sort_values(["week_start", "portfolio", "ou"], na_position="last").reset_index(drop=True)
-
             for _, ou_row in root_rows.iterrows():
                 wk = ou_row["week_start"]
                 ou_key = _rollup_row_key("OU", ou_row)
-
                 _append_tree_row(rows, ou_row, "OU", 0, True, open_keys)
-
                 if ou_key not in open_keys:
                     continue
-
                 teams = _rows_for_week(team_export, wk)
                 teams = _filter_value(teams, "portfolio", ou_row.get("portfolio"))
                 teams = _filter_value(teams, "ou", ou_row.get("ou"))
                 if not teams.empty:
                     teams = teams.sort_values(["team"], na_position="last")
-
                 for _, team_row in teams.iterrows():
                     _append_tree_row(rows, team_row, "Team", 1, False, open_keys)
-
         else:
             root_rows = scoped.sort_values(
                 ["week_start", "portfolio", "ou", "team"],
                 na_position="last",
             ).reset_index(drop=True)
-
             for _, team_row in root_rows.iterrows():
                 _append_tree_row(rows, team_row, "Team", 0, False, open_keys)
-
         return pd.DataFrame(rows)
-
     def _format_tree_for_display(df: pd.DataFrame) -> pd.DataFrame:
         out = df.copy()
-
         for col in [
             "Capacity",
             "People",
@@ -2769,7 +2699,6 @@ elif page == "Export":
         ]:
             if col in out.columns:
                 out[col] = pd.to_numeric(out[col], errors="coerce")
-
         for col in [
             "WIP %",
             "Other Team WIP %",
@@ -2779,59 +2708,44 @@ elif page == "Export":
         ]:
             if col in out.columns:
                 out[col] = pd.to_numeric(out[col], errors="coerce") * 100
-
         return out
     def _normalize_tree_weeks(df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.empty or "week_start" not in df.columns:
             return pd.DataFrame()
-
         out = df.copy()
         out["week_start"] = pd.to_datetime(out["week_start"], errors="coerce").dt.normalize()
         return out.dropna(subset=["week_start"]).copy()
-
     def _all_expandable_tree_keys(export_scope_df: pd.DataFrame) -> set[str]:
         keys: set[str] = set()
         scoped = _normalize_tree_weeks(export_scope_df)
-
         if scoped.empty:
             return keys
-
         def _add_keys(df: pd.DataFrame, level: str) -> None:
             if df is None or df.empty:
                 return
             for _, r in df.iterrows():
                 keys.add(_rollup_row_key(level, r))
-
         if export_filter_level == "Enterprise":
             _add_keys(scoped, "Enterprise")
-
             weeks = scoped[["week_start"]].drop_duplicates()
-
             portfolios = _normalize_tree_weeks(portfolio_export)
             if not portfolios.empty:
                 portfolios = portfolios.merge(weeks, on="week_start", how="inner")
             _add_keys(portfolios, "Portfolio")
-
             ous = _normalize_tree_weeks(ou_export)
             if not ous.empty:
                 ous = ous.merge(weeks, on="week_start", how="inner")
             _add_keys(ous, "OU")
-
         elif export_filter_level == "Portfolio":
             _add_keys(scoped, "Portfolio")
-
             scope_pairs = scoped[["week_start", "portfolio"]].drop_duplicates()
-
             ous = _normalize_tree_weeks(ou_export)
             if not ous.empty:
                 ous = ous.merge(scope_pairs, on=["week_start", "portfolio"], how="inner")
             _add_keys(ous, "OU")
-
         elif export_filter_level == "OU":
             _add_keys(scoped, "OU")
-
         return keys
-
     def _style_export_tree_row(row: pd.Series) -> list[str]:
         level = str(row.get("Level", "")).strip()
         is_over = bool(row.get("_is_over_hours", False))
@@ -2869,14 +2783,11 @@ elif page == "Export":
             st.info("No export rows match the selected filters.")
         else:
             st.markdown("#### Weekly roll-up")
-
             action_cols = st.columns([1, 1, 5])
-
             with action_cols[0]:
                 if st.button("Collapse all", key="export_tree_collapse_all"):
                     st.session_state["export_rollup_open_keys"] = set()
                     st.rerun()
-
             with action_cols[1]:
                 if st.button("Expand all", key="export_tree_expand_all"):
                     all_parent_keys = _all_expandable_tree_keys(export_scope_df)
@@ -2885,9 +2796,7 @@ elif page == "Export":
                         | all_parent_keys
                     )
                     st.rerun()
-
             tree_df = _build_export_tree_table(export_scope_df)
-
             if tree_df.empty:
                 st.info("No export rows match the selected filters.")
             else:
@@ -3003,16 +2912,13 @@ elif page == "Export":
                     },
                     key="export_rollup_tree_editor",
                 )
-
                 current_open_keys = set(st.session_state.get("export_rollup_open_keys", set()))
-
                 visible_parent_keys = set(
                     edited_tree.loc[
                         edited_tree["_has_children"].fillna(False).astype(bool),
                         "_row_key",
                     ].astype(str)
                 )
-
                 checked_visible_keys = set(
                     edited_tree.loc[
                         edited_tree["Open"].fillna(False).astype(bool)
@@ -3020,41 +2926,33 @@ elif page == "Export":
                         "_row_key",
                     ].astype(str)
                 )
-
                 next_open_keys = (
                     current_open_keys - visible_parent_keys
                 ) | checked_visible_keys
-
                 if next_open_keys != current_open_keys:
                     st.session_state["export_rollup_open_keys"] = next_open_keys
                     st.rerun()
-
             if export_filter_level == "Enterprise":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(export_scope_df)
-
             elif export_filter_level == "Team":
                 team_export_display = _display_export_team_df(export_scope_df)
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
-
             elif export_filter_level == "OU":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(export_scope_df)
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
-
             else:
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(export_scope_df)
                 enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
-
             st.markdown("#### Teams missing weekly data")
-
             if missing_teams_display.empty:
                 st.success("No missing teams for the selected week(s).")
             else:
@@ -3063,7 +2961,6 @@ elif page == "Export":
                     use_container_width=True,
                     hide_index=True,
                 )
-
             try:
                 xlsx_bytes = _cached_excel_bytes(
                     team_export_display,
@@ -3072,13 +2969,11 @@ elif page == "Export":
                     enterprise_export_display,
                     missing_teams_display,
                 )
-
                 st.download_button(
                     label="Download Excel export",
                     data=xlsx_bytes,
                     file_name="enterprise_weekly_export.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-
             except Exception as e:
                 st.error(f"Excel export failed: {e}")
