@@ -2419,6 +2419,7 @@ elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export, enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
+        cache_key=cfg_path_str or "default",
     )
     export_scope_df = enterprise_export.copy()
     export_filter_col = None
