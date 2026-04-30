@@ -344,6 +344,7 @@ ACTIVITY_MAP = {
     "aortic mfg assessment lab visit":"Admin",
     "emails cornerstone fy":"Cornerstone",
     "event reviews, ng, coding, meetings, education, emails/admin":"Next Gen",
+    "next gen doc review":"Next Gen",
     "cornerstone, tl meeting":"Cornerstone",
     "deco shadowing tier": "Training/Mentoring",
     "emails, desk set up, access check, team meeting":"Admin",
