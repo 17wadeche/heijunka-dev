@@ -352,6 +352,8 @@ ACTIVITY_MAP = {
     "training eugene on clinical files and prep for same": "Training/Mentoring",
     "clinical files training": "Training/Mentoring",
     "in lab with toma": "Training/Mentoring",
+    "updated pes": "WIP/Event Review",
+    "shadowing/training files/corrections session": "Training/Mentoring",
     "cornerstone workday call":"Cornerstone",
     "scrum, collaboration, update meeting":"Scrum & Action",
     "pmq coding call": "Meeting",
