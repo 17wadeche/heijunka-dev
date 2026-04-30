@@ -101,6 +101,20 @@ def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
             except Exception:
                 pass
     return None, attempted
+def _apply_effective_capacity_for_export_display(
+    df: pd.DataFrame,
+    factor_out_ooo: bool,
+) -> pd.DataFrame:
+    out = df.copy()
+    if (
+        factor_out_ooo
+        and "capacity_hours" in out.columns
+        and "ooo_hours" in out.columns
+    ):
+        cap = pd.to_numeric(out["capacity_hours"], errors="coerce").fillna(0.0)
+        ooo = pd.to_numeric(out["ooo_hours"], errors="coerce").fillna(0.0)
+        out["capacity_hours"] = (cap - ooo).clip(lower=0.0)
+    return out
 @st.cache_data(show_spinner=False)
 def _build_export_lookup_tables_cached(
     metrics_df: Optional[pd.DataFrame],
@@ -151,6 +165,22 @@ def _build_export_lookup_tables_cached(
         team_export,
         "portfolio",
         factor_out_ooo=factor_out_ooo,
+    )
+    team_export = _apply_effective_capacity_for_export_display(
+        team_export,
+        factor_out_ooo,
+    )
+    ou_export = _apply_effective_capacity_for_export_display(
+        ou_export,
+        factor_out_ooo,
+    )
+    portfolio_export = _apply_effective_capacity_for_export_display(
+        portfolio_export,
+        factor_out_ooo,
+    )
+    enterprise_export = _apply_effective_capacity_for_export_display(
+        enterprise_export,
+        factor_out_ooo,
     )
     return team_export, ou_export, portfolio_export, enterprise_export
 @st.cache_resource
