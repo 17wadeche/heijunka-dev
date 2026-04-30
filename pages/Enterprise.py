@@ -2163,7 +2163,7 @@ if page == "Overview":
                         else 0
                     )
                     st.caption(
-                        f"Metric cards summarize {data_week_count} week(s) with data "
+                        f"Metric cards summarize {data_week_count} week(s)"
                     )
                     _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
                     c1.metric(
