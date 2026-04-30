@@ -2855,7 +2855,7 @@ elif page == "Export":
                             width=None,
                         ),
                         "Completed Hours": st.column_config.NumberColumn(
-                            "Completed Hours",
+                            "WIP Hours",
                             format="%.2f",
                             width=None,
                         ),
