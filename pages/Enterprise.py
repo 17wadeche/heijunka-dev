@@ -2629,52 +2629,142 @@ elif page == "Export":
                 subset=["Non-WIP %"],
             )
         return styler
+    def _export_week_rows(df: pd.DataFrame, week_value) -> pd.DataFrame:
+        if df is None or df.empty or "week_start" not in df.columns:
+            return pd.DataFrame()
+        out = df.copy()
+        out["week_start"] = pd.to_datetime(out["week_start"], errors="coerce").dt.normalize()
+        week_value = pd.Timestamp(week_value).normalize()
+        return out[out["week_start"] == week_value].copy()
+    def _export_value_rows(df: pd.DataFrame, col: str, value: Any) -> pd.DataFrame:
+        if df is None or df.empty or col not in df.columns or pd.isna(value):
+            return pd.DataFrame()
+        return df[df[col].astype(str) == str(value)].copy()
+    def _render_export_dataframe(level: str, df: pd.DataFrame) -> None:
+        if df is None or df.empty:
+            st.caption(f"No {level.lower()} rows.")
+            return
+        if level == "Enterprise":
+            styled = _format_export_display_enterprise(df)
+        elif level == "Portfolio":
+            styled = _format_export_display_portfolio(df)
+        elif level == "OU":
+            styled = _format_export_display_ou(df)
+        else:
+            styled = _format_export_display_team(df)
+        st.dataframe(
+            styled,
+            width="stretch",
+            hide_index=True,
+        )
+    def _rollup_title(level: str, row: pd.Series) -> str:
+        raw_week = row.get("week_start")
+        week_label = (
+            pd.Timestamp(raw_week).strftime("%Y-%m-%d")
+            if pd.notna(raw_week)
+            else "Unknown week"
+        )
+        if level == "Enterprise":
+            value_label = "Enterprise"
+        elif level == "Portfolio":
+            value_label = str(row.get("portfolio", "")).strip()
+        elif level == "OU":
+            value_label = str(row.get("ou", "")).strip()
+        else:
+            value_label = str(row.get("team", "")).strip()
+        raw_unaccounted = row.get("unaccounted_pct", 0)
+        try:
+            high_unaccounted = pd.notna(raw_unaccounted) and float(raw_unaccounted) > 0.25
+        except Exception:
+            high_unaccounted = False
+        alert = "❗ " if high_unaccounted else ""
+        return f"{alert}{level}: {value_label} | Week {week_label}"
+    def _render_export_rollup(row: pd.Series, level: str, expanded: bool = False) -> None:
+        week_value = pd.Timestamp(row["week_start"]).normalize()
+        parent_df = pd.DataFrame([row.to_dict()])
+        with st.expander(_rollup_title(level, row), expanded=expanded):
+            st.markdown(f"**{level} weekly**")
+            _render_export_dataframe(level, parent_df)
+            if level == "Enterprise":
+                portfolio_rows = _export_week_rows(portfolio_export, week_value)
+                ou_rows = _export_week_rows(ou_export, week_value)
+                team_rows = _export_week_rows(team_export, week_value)
+                st.markdown("**Portfolio roll-up**")
+                _render_export_dataframe("Portfolio", portfolio_rows)
+                st.markdown("**OU roll-up**")
+                _render_export_dataframe("OU", ou_rows)
+                st.markdown("**Team detail**")
+                _render_export_dataframe("Team", team_rows)
+            elif level == "Portfolio":
+                portfolio_value = row.get("portfolio")
+                ou_rows = _export_value_rows(
+                    _export_week_rows(ou_export, week_value),
+                    "portfolio",
+                    portfolio_value,
+                )
+                team_rows = _export_value_rows(
+                    _export_week_rows(team_export, week_value),
+                    "portfolio",
+                    portfolio_value,
+                )
+                st.markdown("**OU roll-up**")
+                _render_export_dataframe("OU", ou_rows)
+                st.markdown("**Team detail**")
+                _render_export_dataframe("Team", team_rows)
+            elif level == "OU":
+                portfolio_value = row.get("portfolio")
+                ou_value = row.get("ou")
+                team_rows = _export_value_rows(
+                    _export_week_rows(team_export, week_value),
+                    "ou",
+                    ou_value,
+                )
+                if "portfolio" in team_rows.columns and pd.notna(portfolio_value):
+                    team_rows = _export_value_rows(
+                        team_rows,
+                        "portfolio",
+                        portfolio_value,
+                    )
+                st.markdown("**Team detail**")
+                _render_export_dataframe("Team", team_rows)
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
         if export_scope_df.empty:
             st.info("No export rows match the selected filters.")
         else:
-            if export_filter_level == "Enterprise":
-                st.markdown("#### Enterprise weekly")
-                st.dataframe(
-                    _format_export_display_enterprise(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
+            st.markdown("#### Weekly roll-up")
+            sort_cols = ["week_start"]
+            if export_filter_col in export_scope_df.columns and export_filter_col not in sort_cols:
+                sort_cols.append(export_filter_col)
+            export_rollup_rows = (
+                export_scope_df
+                .copy()
+                .sort_values(sort_cols)
+                .reset_index(drop=True)
+            )
+            for idx, row in export_rollup_rows.iterrows():
+                _render_export_rollup(
+                    row=row,
+                    level=export_filter_level,
+                    expanded=(len(export_rollup_rows) == 1),
                 )
+            if export_filter_level == "Enterprise":
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(export_scope_df)
             elif export_filter_level == "Team":
-                st.markdown("#### Team weekly")
-                st.dataframe(
-                    _format_export_display_team(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
                 team_export_display = _display_export_team_df(export_scope_df)
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
             elif export_filter_level == "OU":
-                st.markdown("#### OU weekly")
-                st.dataframe(
-                    _format_export_display_ou(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(export_scope_df)
                 portfolio_export_display = _display_export_portfolio_df(portfolio_export.iloc[0:0].copy())
                 enterprise_export_display = _display_export_enterprise_df(enterprise_export.iloc[0:0].copy())
             else:
-                st.markdown("#### Portfolio weekly")
-                st.dataframe(
-                    _format_export_display_portfolio(export_scope_df),
-                    width="stretch",
-                    hide_index=True,
-                )
                 team_export_display = _display_export_team_df(team_export.iloc[0:0].copy())
                 ou_export_display = _display_export_ou_df(ou_export.iloc[0:0].copy())
                 portfolio_export_display = _display_export_portfolio_df(export_scope_df)
