@@ -2552,7 +2552,7 @@ elif page == "Export":
                         continue
                     for _, ou_row in wk_ou.iterrows():
                         ou_name = ou_row.get("ou") or "(Unassigned OU)"
-                        with st.expander(_summary_line(f"🏢 {ou_name}", ou_row), expanded=False):
+                        with st.expander(_summary_line(f"{ou_name}", ou_row), expanded=False):
                             _kpi_block(ou_row)
                             st.divider()
                             wk_tm = tm_df[
