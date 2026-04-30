@@ -2848,10 +2848,119 @@ elif page == "Export":
                     "_is_over_hours",
                 }
                 export_tree_column_config = {
-                    col: None
-                    for col in always_hidden_cols
-                    if col in display_tree_df.columns
+                    "Open": st.column_config.CheckboxColumn(
+                        "",
+                        help="Check to expand this roll-up row. Uncheck to collapse it.",
+                        width=45,
+                    ),
+                    "Level": st.column_config.TextColumn(
+                        "Lvl",
+                        width=None,
+                    ),
+                    "Roll-up": st.column_config.TextColumn(
+                        "Roll-up",
+                        width=None,
+                    ),
+                    "Alert": st.column_config.TextColumn(
+                        "!",
+                        width=40,
+                    ),
+                    "Week Start": st.column_config.DateColumn(
+                        "Week",
+                        width=None,
+                    ),
+                    "Portfolio": st.column_config.TextColumn(
+                        "Portfolio",
+                        width=None,
+                    ),
+                    "OU": st.column_config.TextColumn(
+                        "OU",
+                        width=None,
+                    ),
+                    "Team": st.column_config.TextColumn(
+                        "Team",
+                        width=None,
+                    ),
+                    "Capacity": st.column_config.NumberColumn(
+                        "Cap",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "People": st.column_config.NumberColumn(
+                        "Ppl",
+                        format="%.1f",
+                        width=None,
+                    ),
+                    "Completed Hours": st.column_config.NumberColumn(
+                        "Done",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "WIP %": st.column_config.NumberColumn(
+                        "WIP %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Other Team WIP": st.column_config.NumberColumn(
+                        "Other",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Other Team WIP %": st.column_config.NumberColumn(
+                        "Other %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Non-WIP Hours": st.column_config.NumberColumn(
+                        "Non-WIP",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Non-WIP %": st.column_config.NumberColumn(
+                        "Non-WIP %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "OOO Hours": st.column_config.NumberColumn(
+                        "OOO",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "OOO %": st.column_config.NumberColumn(
+                        "OOO %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Unaccounted Hours": st.column_config.NumberColumn(
+                        "Unacct",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Unaccounted %": st.column_config.NumberColumn(
+                        "Unacct %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Over Hours": st.column_config.NumberColumn(
+                        "Over",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Warning": st.column_config.TextColumn(
+                        "Warn",
+                        width=None,
+                    ),
                 }
+
+                # Hide internal helper columns last.
+                for col in always_hidden_cols:
+                    if col in display_tree_df.columns:
+                        export_tree_column_config[col] = None
+
+                # Hide user-selected columns last, so they do not get overwritten.
+                for col in hidden_export_cols:
+                    if col in display_tree_df.columns:
+                        export_tree_column_config[col] = None
                 export_tree_column_config.update({
                     col: None
                     for col in hidden_export_cols
