@@ -2835,9 +2835,8 @@ elif page == "Export":
     def _style_export_tree_row(row: pd.Series) -> list[str]:
         level = str(row.get("Level", "")).strip()
         is_over = bool(row.get("_is_over_hours", False))
-
         if is_over:
-            style = "background-color: #fef08a; color: #713f12; font-weight: 600;"
+            base_style = "background-color: #fef08a; color: #713f12; font-weight: 600;"
         else:
             level_backgrounds = {
                 "Enterprise": "#ffffff",
@@ -2846,9 +2845,23 @@ elif page == "Export":
                 "Team": "#e5e7eb",
             }
             bg = level_backgrounds.get(level, "")
-            style = f"background-color: {bg};" if bg else ""
-
-        return [style] * len(row.index)
+            base_style = f"background-color: {bg};" if bg else ""
+        styles = [base_style] * len(row.index)
+        if "WIP %" in row.index:
+            idx = row.index.get_loc("WIP %")
+            styles[idx] = _threshold_cell_style(
+                row.get("WIP %"),
+                threshold=80.0,
+                good_if_gte=True,
+            )
+        if "Non-WIP %" in row.index:
+            idx = row.index.get_loc("Non-WIP %")
+            styles[idx] = _threshold_cell_style(
+                row.get("Non-WIP %"),
+                threshold=20.0,
+                good_if_gte=False,
+            )
+        return styles
     if team_export.empty:
         st.info("No exportable team/week data found.")
     else:
