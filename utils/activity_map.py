@@ -347,6 +347,7 @@ ACTIVITY_MAP = {
     "next gen doc review":"Next Gen",
     "cornerstone, tl meeting":"Cornerstone",
     "deco shadowing tier": "Training/Mentoring",
+    "scrum, update meeting, training activitie":"Scrum & Action",
     "emails, desk set up, access check, team meeting":"Admin",
     "training eugene on clinical files and prep for same": "Training/Mentoring",
     "clinical files training": "Training/Mentoring",
