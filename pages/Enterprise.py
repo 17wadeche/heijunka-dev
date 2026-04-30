@@ -2896,6 +2896,8 @@ elif page == "Export":
                     column_config={
                         "_row_key": None,
                         "_has_children": None,
+                        "_level_depth": None,
+                        "_is_over_hours": None,
                         "Open": st.column_config.CheckboxColumn(
                             "Open",
                             help="Check to expand this roll-up row. Uncheck to collapse it.",
