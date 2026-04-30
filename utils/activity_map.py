@@ -346,6 +346,7 @@ ACTIVITY_MAP = {
     "event reviews, ng, coding, meetings, education, emails/admin":"Next Gen",
     "cornerstone workday call":"Cornerstone",
     "scrum, collaboration, update meeting":"Scrum & Action",
+    "concerto verso":"Concerto Versa",
     "scrum, meeting, collaboration, yellow belt work":"Scrum & Action",
     "team collaboration, update meeting":"Meeting",
     "affera training call/ team meeting": "Training/Mentoring",
