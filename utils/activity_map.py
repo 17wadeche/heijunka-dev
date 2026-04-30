@@ -342,6 +342,7 @@ ACTIVITY_MAP = {
     "mandatory meeting": "Meeting",
     "3 evaluations write ups":"Admin",
     "aortic mfg assessment lab visit":"Admin",
+    "cornerstone workday call":"Cornerstone",
     "scrum, collaboration, update meeting":"Scrum & Action",
     "scrum, meeting, collaboration, yellow belt work":"Scrum & Action",
     "team collaboration, update meeting":"Meeting",
