@@ -2164,7 +2164,6 @@ if page == "Overview":
                     )
                     st.caption(
                         f"Metric cards summarize {data_week_count} week(s) with data "
-                        f"from {selected_week_count} selected week(s)."
                     )
                     _, c1, c2, _ = st.columns([1.2, 1.2, 1.2, 1.2])
                     c1.metric(
