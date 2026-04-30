@@ -506,7 +506,7 @@ def merged_people_count_for_week(
     long_nw: pd.DataFrame | None = None,
 ) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "SCS", "TDD", "ACM","CPT","DS","CDS","NI", "VSS","Endoscopy","Surgical AST-GST","PH-NM MEIC"}:
+    if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "SCS", "TDD", "ACM","CPT","DS","CDS","NI", "VSS","Endoscopy","Surgical AST-GST","PH-NM MEIC","TCT"}:
         raw_nw = nw_frame.copy()
         if "period_date" in raw_nw.columns:
             raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
@@ -1353,7 +1353,7 @@ def _weekly_team_export_df(
             people_count = float(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
-        if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC"}:
+        if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC", "TCT"}:
             capacity_hours = float(people_count) * 40.0
         elif team == "DS":
             capacity_hours = float(people_count) * 37.5
