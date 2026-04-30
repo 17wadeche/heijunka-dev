@@ -2870,7 +2870,7 @@ elif page == "Export":
                             width=None,
                         ),
                         "Other Team WIP %": st.column_config.NumberColumn(
-                            "Other Team WIP %",
+                            "Other %",
                             format="%.1f%%",
                             width=None,
                         ),
