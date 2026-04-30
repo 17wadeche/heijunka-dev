@@ -119,13 +119,14 @@ def _apply_effective_capacity_for_export_display(
 def _build_export_lookup_tables_cached(
     metrics_df: Optional[pd.DataFrame],
     nonwip_df: Optional[pd.DataFrame],
-    org,
+    _org,                    # underscore prefix → not hashed
     factor_out_ooo: bool,
+    cache_key: str,          # stable hashable key for cache identity
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     team_export = _weekly_team_export_df(
         metrics_df,
         nonwip_df,
-        org,
+        _org,
         factor_out_ooo=factor_out_ooo,
     )
     if team_export is None or team_export.empty:
@@ -183,7 +184,7 @@ def _build_export_lookup_tables_cached(
         factor_out_ooo,
     )
     return team_export, ou_export, portfolio_export, enterprise_export
-@st.cache_resource
+@st.cache_data(show_spinner=False)
 def load_precomputed(repo_root_str: str):
     data = load_common_data(repo_root_str)
     metrics = data["metrics"]
@@ -1917,14 +1918,16 @@ page = st.segmented_control(
 def _get_export_lookup_bundle(
     shared_metrics_df: Optional[pd.DataFrame],
     shared_nonwip_df: Optional[pd.DataFrame],
-    org,
+    _org,
     factor_out_ooo: bool,
+    cache_key: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return _build_export_lookup_tables_cached(
         shared_metrics_df,
         shared_nonwip_df,
-        org,
+        _org,
         factor_out_ooo=factor_out_ooo,
+        cache_key=cache_key,
     )
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
 def _norm_activity_name(val: Any) -> str:
@@ -1933,6 +1936,7 @@ if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
+        cache_key=cfg_path_str or "default",
     )
     team_lookup = overview_team_export
     ou_lookup = overview_ou_export
