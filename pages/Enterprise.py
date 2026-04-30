@@ -2820,94 +2820,98 @@ elif page == "Export":
                         "_has_children": None,
                         "_level_depth": None,
                         "_is_over_hours": None,
+                        "Portfolio": None,
+                        "OU": None,
+                        "Team": None,
                         "Open": st.column_config.CheckboxColumn(
                             "Open",
                             help="Check to expand this roll-up row. Uncheck to collapse it.",
-                            width="small",
+                            width=None,
                         ),
                         "Level": st.column_config.TextColumn(
                             "Level",
-                            width="small",
+                            width=None,
                         ),
                         "Roll-up": st.column_config.TextColumn(
                             "Roll-up",
-                            width="medium",
+                            width=None,
                         ),
                         "Alert": st.column_config.TextColumn(
                             "Alert",
-                            width="small",
+                            width=None,
                         ),
                         "Week Start": st.column_config.DateColumn(
                             "Week Start",
-                            width="small",
-                        ),
-                        "Portfolio": st.column_config.TextColumn(
-                            "Portfolio",
-                            width="medium",
-                        ),
-                        "OU": st.column_config.TextColumn(
-                            "OU",
-                            width="medium",
-                        ),
-                        "Team": st.column_config.TextColumn(
-                            "Team",
-                            width="medium",
+                            width=None,
                         ),
                         "Capacity": st.column_config.NumberColumn(
                             "Capacity",
                             format="%.2f",
+                            width=None,
                         ),
                         "People": st.column_config.NumberColumn(
                             "People",
                             format="%.2f",
+                            width=None,
                         ),
                         "Completed Hours": st.column_config.NumberColumn(
                             "Completed Hours",
                             format="%.2f",
+                            width=None,
                         ),
                         "WIP %": st.column_config.NumberColumn(
                             "WIP %",
                             format="%.1f%%",
+                            width=None,
                         ),
                         "Other Team WIP": st.column_config.NumberColumn(
                             "Other Team WIP",
                             format="%.2f",
+                            width=None,
                         ),
                         "Other Team WIP %": st.column_config.NumberColumn(
                             "Other Team WIP %",
                             format="%.1f%%",
+                            width=None,
                         ),
                         "Non-WIP Hours": st.column_config.NumberColumn(
                             "Non-WIP Hours",
                             format="%.2f",
+                            width=None,
                         ),
                         "Non-WIP %": st.column_config.NumberColumn(
                             "Non-WIP %",
                             format="%.1f%%",
+                            width=None,
                         ),
                         "OOO Hours": st.column_config.NumberColumn(
                             "OOO Hours",
                             format="%.2f",
+                            width=None,
                         ),
                         "OOO %": st.column_config.NumberColumn(
                             "OOO %",
                             format="%.1f%%",
+                            width=None,
                         ),
                         "Unaccounted Hours": st.column_config.NumberColumn(
                             "Unaccounted Hours",
                             format="%.2f",
+                            width=None,
                         ),
                         "Unaccounted %": st.column_config.NumberColumn(
                             "Unaccounted %",
                             format="%.1f%%",
+                            width=None,
                         ),
                         "Over Hours": st.column_config.NumberColumn(
                             "Over Hours",
                             format="%.2f",
+                            width=None,
                         ),
                         "Warning": st.column_config.TextColumn(
                             "Warning",
-                            width="medium",
+                            width=None,
                         ),
                     },
                     key="export_rollup_tree_editor",
