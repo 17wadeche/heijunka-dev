@@ -351,6 +351,7 @@ ACTIVITY_MAP = {
     "qa collaboration":"QA",
     "aged file/metrics review":"WIP/Event Review",
     "creating lit sr 609089969":"WIP/Event Review",
+    "review training file": "Training/Mentoring",
     "grad project measure work":"Project Work",
     "uat call":"Meeting",
     "next gen rd review":"Next Gen",
