@@ -2904,11 +2904,7 @@ elif page == "Export":
                             format="%.1f%%",
                             width=None,
                         ),
-                        "Over Hours": st.column_config.NumberColumn(
-                            "Over Hours",
-                            format="%.2f",
-                            width=None,
-                        ),
+                        "Over Hours": None,
                         "Warning": st.column_config.TextColumn(
                             "Warning",
                             width=None,
