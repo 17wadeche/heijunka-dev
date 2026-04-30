@@ -358,6 +358,7 @@ ACTIVITY_MAP = {
     "tier 2 prep and meeting":"Meeting",
     "pmpa review meeting":"PMPA",
     "teir":"Meeting",
+    "teir 2 x 2":"Meeting",
     "x":"",
     "affera training call/ team meeting": "Training/Mentoring",
     "scrum, meeting, collaboration":"Scrum & Action",
