@@ -2882,7 +2882,7 @@ elif page == "Export":
                         width=None,
                     ),
                     "Capacity": st.column_config.NumberColumn(
-                        "Cap",
+                        "Capacity",
                         format="%.0f",
                         width=None,
                     ),
@@ -2892,7 +2892,7 @@ elif page == "Export":
                         width=None,
                     ),
                     "Completed Hours": st.column_config.NumberColumn(
-                        "Done",
+                        "Completed",
                         format="%.0f",
                         width=None,
                     ),
