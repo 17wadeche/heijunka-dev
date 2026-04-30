@@ -2805,9 +2805,165 @@ elif page == "Export":
                     _style_export_tree_row,
                     axis=1,
                 )
+                hideable_export_cols = [
+                    "Level",
+                    "Alert",
+                    "Week Start",
+                    "Portfolio",
+                    "OU",
+                    "Team",
+                    "Capacity",
+                    "People",
+                    "Completed Hours",
+                    "WIP %",
+                    "Other Team WIP",
+                    "Other Team WIP %",
+                    "Non-WIP Hours",
+                    "Non-WIP %",
+                    "OOO Hours",
+                    "OOO %",
+                    "Unaccounted Hours",
+                    "Unaccounted %",
+                    "Over Hours",
+                    "Warning",
+                ]
+                default_hidden_export_cols = [
+                    "Portfolio",
+                    "OU",
+                    "Team",
+                    "Other Team WIP",
+                    "Other Team WIP %",
+                ]
+                hidden_export_cols = st.multiselect(
+                    "Hide columns",
+                    options=[c for c in hideable_export_cols if c in display_tree_df.columns],
+                    default=[c for c in default_hidden_export_cols if c in display_tree_df.columns],
+                    key="export_rollup_hidden_columns",
+                    help="Pick columns to hide from the weekly roll-up table.",
+                )
+                always_hidden_cols = {
+                    "_row_key",
+                    "_has_children",
+                    "_level_depth",
+                    "_is_over_hours",
+                }
+                export_tree_column_config = {
+                    col: None
+                    for col in always_hidden_cols
+                    if col in display_tree_df.columns
+                }
+                export_tree_column_config.update({
+                    col: None
+                    for col in hidden_export_cols
+                    if col in display_tree_df.columns
+                })
+                export_tree_column_config.update({
+                    "Open": st.column_config.CheckboxColumn(
+                        "",
+                        help="Check to expand this roll-up row. Uncheck to collapse it.",
+                        width=45,
+                    ),
+                    "Level": st.column_config.TextColumn(
+                        "Lvl",
+                        width=None,
+                    ),
+                    "Roll-up": st.column_config.TextColumn(
+                        "Roll-up",
+                        width=None,
+                    ),
+                    "Alert": st.column_config.TextColumn(
+                        "!",
+                        width=40,
+                    ),
+                    "Week Start": st.column_config.DateColumn(
+                        "Week",
+                        width=None,
+                    ),
+                    "Portfolio": st.column_config.TextColumn(
+                        "Portfolio",
+                        width=None,
+                    ),
+                    "OU": st.column_config.TextColumn(
+                        "OU",
+                        width=None,
+                    ),
+                    "Team": st.column_config.TextColumn(
+                        "Team",
+                        width=None,
+                    ),
+                    "Capacity": st.column_config.NumberColumn(
+                        "Cap",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "People": st.column_config.NumberColumn(
+                        "Ppl",
+                        format="%.1f",
+                        width=None,
+                    ),
+                    "Completed Hours": st.column_config.NumberColumn(
+                        "Done",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "WIP %": st.column_config.NumberColumn(
+                        "WIP %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Other Team WIP": st.column_config.NumberColumn(
+                        "Other",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Other Team WIP %": st.column_config.NumberColumn(
+                        "Other %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Non-WIP Hours": st.column_config.NumberColumn(
+                        "Non-WIP",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Non-WIP %": st.column_config.NumberColumn(
+                        "Non-WIP %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "OOO Hours": st.column_config.NumberColumn(
+                        "OOO",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "OOO %": st.column_config.NumberColumn(
+                        "OOO %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Unaccounted Hours": st.column_config.NumberColumn(
+                        "Unacct",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Unaccounted %": st.column_config.NumberColumn(
+                        "Unacct %",
+                        format="%.1f%%",
+                        width=None,
+                    ),
+                    "Over Hours": st.column_config.NumberColumn(
+                        "Over",
+                        format="%.0f",
+                        width=None,
+                    ),
+                    "Warning": st.column_config.TextColumn(
+                        "Warn",
+                        width=None,
+                    ),
+                })
                 edited_tree = st.data_editor(
                     styled_display_tree_df,
-                    use_container_width=True,
+                    width="content",
                     hide_index=True,
                     num_rows="fixed",
                     disabled=[
@@ -2815,101 +2971,7 @@ elif page == "Export":
                         for c in display_tree_df.columns
                         if c != "Open"
                     ],
-                    column_config={
-                        "_row_key": None,
-                        "_has_children": None,
-                        "_level_depth": None,
-                        "_is_over_hours": None,
-                        "Open": st.column_config.CheckboxColumn(
-                            "Open",
-                            help="Check to expand this roll-up row. Uncheck to collapse it.",
-                            width="small",
-                        ),
-                        "Level": st.column_config.TextColumn(
-                            "Level",
-                            width="small",
-                        ),
-                        "Roll-up": st.column_config.TextColumn(
-                            "Roll-up",
-                            width="medium",
-                        ),
-                        "Alert": st.column_config.TextColumn(
-                            "Alert",
-                            width="small",
-                        ),
-                        "Week Start": st.column_config.DateColumn(
-                            "Week Start",
-                            width="small",
-                        ),
-                        "Portfolio": st.column_config.TextColumn(
-                            "Portfolio",
-                            width="medium",
-                        ),
-                        "OU": st.column_config.TextColumn(
-                            "OU",
-                            width="medium",
-                        ),
-                        "Team": st.column_config.TextColumn(
-                            "Team",
-                            width="medium",
-                        ),
-                        "Capacity": st.column_config.NumberColumn(
-                            "Capacity",
-                            format="%.2f",
-                        ),
-                        "People": st.column_config.NumberColumn(
-                            "People",
-                            format="%.2f",
-                        ),
-                        "Completed Hours": st.column_config.NumberColumn(
-                            "Completed Hours",
-                            format="%.2f",
-                        ),
-                        "WIP %": st.column_config.NumberColumn(
-                            "WIP %",
-                            format="%.1f%%",
-                        ),
-                        "Other Team WIP": st.column_config.NumberColumn(
-                            "Other Team WIP",
-                            format="%.2f",
-                        ),
-                        "Other Team WIP %": st.column_config.NumberColumn(
-                            "Other Team WIP %",
-                            format="%.1f%%",
-                        ),
-                        "Non-WIP Hours": st.column_config.NumberColumn(
-                            "Non-WIP Hours",
-                            format="%.2f",
-                        ),
-                        "Non-WIP %": st.column_config.NumberColumn(
-                            "Non-WIP %",
-                            format="%.1f%%",
-                        ),
-                        "OOO Hours": st.column_config.NumberColumn(
-                            "OOO Hours",
-                            format="%.2f",
-                        ),
-                        "OOO %": st.column_config.NumberColumn(
-                            "OOO %",
-                            format="%.1f%%",
-                        ),
-                        "Unaccounted Hours": st.column_config.NumberColumn(
-                            "Unaccounted Hours",
-                            format="%.2f",
-                        ),
-                        "Unaccounted %": st.column_config.NumberColumn(
-                            "Unaccounted %",
-                            format="%.1f%%",
-                        ),
-                        "Over Hours": st.column_config.NumberColumn(
-                            "Over Hours",
-                            format="%.2f",
-                        ),
-                        "Warning": st.column_config.TextColumn(
-                            "Warning",
-                            width="medium",
-                        ),
-                    },
+                    column_config=export_tree_column_config,
                     key="export_rollup_tree_editor",
                 )
                 current_open_keys = set(st.session_state.get("export_rollup_open_keys", set()))
