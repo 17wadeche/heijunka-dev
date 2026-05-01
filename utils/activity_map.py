@@ -1339,6 +1339,7 @@ ACTIVITY_MAP = {
     "training, gch access troubleshooting":"Training/Mentoring",
     "analysis training reading":"Training/Mentoring",
     "training, spyder and closurefast documentation reading":"Training/Mentoring",
+    "closures training":"Training/Mentoring",
     "training, gch troubleshooting, spider analysis prep":"Training/Mentoring",
     "fwt":"Admin",
     "morning admin, meeting with scott":"Admin",
