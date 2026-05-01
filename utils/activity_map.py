@@ -1345,6 +1345,7 @@ ACTIVITY_MAP = {
     "update to team meeting":"Meeting",
     "phone call on pe":"WIP/Event Review",
     "files correction":"WIP/Event Review",
+    "files meeting":"WIP/Event Review",
     "capital equipement meeting":"Meeting",
     "supplemental training":"Training/Mentoring",
     "scrum/email":"Scrum & Action",
