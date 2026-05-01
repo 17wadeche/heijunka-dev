@@ -944,13 +944,15 @@ def compute_person_available_hours(ws_av: Worksheet) -> Dict[str, float]:
         avail = sum_range(ws_av, c1, c2)
         out[name] = out.get(name, 0.0) + avail
     return out
-
 def _sheet_ci(wb, name: str) -> Optional[str]:
     want = name.strip().lower()
     for sheet_name in wb.sheetnames:
         if sheet_name.strip().lower() == want:
             return sheet_name
     return None
+DS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period >= DS_NEW_HOURS_START
 def _is_ds_excluded_category(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
@@ -975,11 +977,18 @@ def _ds_use_r_layout(ws_perf: Worksheet) -> bool:
         if _cell_number(ws_perf[f"AA{r}"].value) is not None:
             return False
     return True
-def compute_completed_hours_ds(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    use_r_layout = _ds_use_r_layout(ws_perf)
-    total_col = "R" if use_r_layout else "AB"
-    actual_col = "R" if use_r_layout else "AB"
-    total = _cell_number(ws_perf[f"{total_col}46"].value)
+def compute_completed_hours_ds(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    if _ds_use_new_hours_layout(period):
+        total = _cell_number(ws_perf["C47"].value)
+        actual_col = "W"
+    else:
+        use_r_layout = _ds_use_r_layout(ws_perf)
+        total_col = "R" if use_r_layout else "AB"
+        actual_col = "R" if use_r_layout else "AB"
+        total = _cell_number(ws_perf[f"{total_col}46"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
@@ -994,9 +1003,15 @@ def compute_completed_hours_ds(ws_perf: Worksheet) -> Tuple[Optional[float], Dic
             seen.add(p)
             people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
-def compute_person_available_hours_ds(ws_perf: Worksheet) -> Dict[str, float]:
-    use_r_layout = _ds_use_r_layout(ws_perf)
-    available_col = "R" if use_r_layout else "AA"
+def compute_person_available_hours_ds(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Dict[str, float]:
+    if _ds_use_new_hours_layout(period):
+        available_col = "AB"
+    else:
+        use_r_layout = _ds_use_r_layout(ws_perf)
+        available_col = "R" if use_r_layout else "AA"
     out: Dict[str, float] = {}
     for r in range(5, 46):
         person = ws_perf[f"A{r}"].value
@@ -1292,8 +1307,8 @@ def scrape_one_workbook_ds(path: str) -> List[Dict[str, Any]]:
         if ws_wip_plan is not None:
             total_available = compute_total_available_hours_ds(ws_wip_plan)
         if ws_perf is not None:
-            completed_hours, actual_hours_by_person, people = compute_completed_hours_ds(ws_perf)
-            person_avail = compute_person_available_hours_ds(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_ds(ws_perf, period)
+            person_avail = compute_person_available_hours_ds(ws_perf, period)
         if ws_pab is not None:
             target_output, actual_output = compute_target_actual_output_ds(ws_pab)
             outputs_by_person = compute_outputs_by_person_ds(ws_pab)
