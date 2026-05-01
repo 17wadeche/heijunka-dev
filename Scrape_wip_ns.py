@@ -1267,8 +1267,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         date_parser = cfg.get("date_parser", parse_sheet_date)
         period_date = date_parser(ws.title)
         if not period_date:
-            if cfg.get("team") == "PH Cell 17":
-                print(f"[PH Cell 17] SKIP tab (unparsed): {ws.title!r}")
             continue
         min_pd = safe_str(cfg.get("min_period_date"))
         if min_pd and period_date < min_pd:
