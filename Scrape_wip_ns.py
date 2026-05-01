@@ -935,7 +935,6 @@ def scrape_csf_previous_weeks_with_config(
                 _com_call(lambda: excel.Calculate())
             time.sleep(1)
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
-            print(f"[CSF DEBUG] requested={choice!r} actual={_com_call(lambda: dd.Value)!r} period_date={period_date}")
             if not period_date:
                 continue
             min_pd = safe_str(cfg.get("min_period_date"))
@@ -1078,11 +1077,6 @@ def scrape_csf_previous_weeks_with_config(
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            print(
-                f"[CSF DEBUG] APPEND period_date={period_date} "
-                f"target_output={target_output!r} actual_output={actual_output!r} "
-                f"completed_hours={completed_hours!r}"
-            )
             rows_out.append({
                 "team": team_name,
                 "period_date": period_date,
@@ -1107,7 +1101,6 @@ def scrape_csf_previous_weeks_with_config(
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
                 "error": "",
             })
-        print(f"[CSF DEBUG] rows_out total={len(rows_out)}")
         return rows_out
     finally:
         try:
@@ -2004,7 +1997,6 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
                 continue
             if period_date > today_iso:
                 continue
-            print(f"[CSF DEBUG] requested={choice!r} actual={_com_call(lambda: dd.Value)!r} period_date={period_date}")
             total_available_hours = safe_float(_com_call(lambda: ws.Range("R64").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("R54").Value))
             wp1_tgt = safe_float(_com_call(lambda: ws.Range("X10").Value))
@@ -2013,12 +2005,6 @@ def scrape_meic_ae_oarm_previous_weeks_xlsm(source_file: str, team: str, dropdow
             wp2_out = safe_float(_com_call(lambda: ws.Range("Z5").Value))
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
-            print(
-                f"[CSF DEBUG] period_date={period_date} "
-                f"AD10={_com_call(lambda: ws.Range('AD10').Value)!r} "
-                f"AF10={_com_call(lambda: ws.Range('AF10').Value)!r} "
-                f"target_output={target_output!r}"
-            )
             if target_output < 0:
                 continue
             target_uplh = safe_div(target_output, completed_hours)
