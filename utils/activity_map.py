@@ -1324,6 +1324,8 @@ ACTIVITY_MAP = {
     "connection issue": "IT Issue/Update",
     "dmaic training":"Problem Solving",
     "supporting":"Collaboration",
+    "grad project work and scheduling tour":"Project Work",
+    "co-op placement in person visit":"Career Development",
     "kaizen follow up":"Kaizen",
     "clinical call":"Meeting",
     "meetings On liberant issue":"Meeting",
