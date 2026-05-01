@@ -1338,6 +1338,7 @@ ACTIVITY_MAP = {
     "eod uat call":"Meeting",
     "next gen document review":"Next Gen",
     "workday review":"Career Development",
+    "pvh reportability matrix":"Reportability Matrix",
     "dexter meeting":"Meeting",
     "pmpa bomedicul meeting":"PMPA",
     "update to team meeting":"Meeting",
