@@ -1319,6 +1319,7 @@ ACTIVITY_MAP = {
     "emails 15": "Email & IM",
     "call for change order":"Change Order",
     "emial": "Email & IM",
+    "emails scrum": "Email & IM",
     "emai": "Email & IM",
     "connection issue": "IT Issue/Update",
     "dmaic training":"Problem Solving",
