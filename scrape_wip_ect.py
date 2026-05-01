@@ -325,9 +325,15 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
     seen: set[Path] = set()
     files: list[Path] = []
     for folder in folders:
+        print(f"Checking folder: {folder}")
+        print(f"Exists? {folder.exists()}")
         if not folder.exists():
             continue
-        for path in sorted(folder.rglob(f"{TEAM} Future Heijunka *.xls*")):
+        matches = list(folder.rglob(f"{TEAM} Future Heijunka *.xls*"))
+        print(f"Matches found: {len(matches)}")
+        for match in matches:
+            print(f"  {match}")
+        for path in sorted(matches):
             resolved = path.resolve()
             if resolved in seen:
                 continue
