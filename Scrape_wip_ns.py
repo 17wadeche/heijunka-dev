@@ -1272,24 +1272,10 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
             continue
         min_pd = safe_str(cfg.get("min_period_date"))
         if min_pd and period_date < min_pd:
-            if cfg.get("team") == "TDD COS 1":
-                print(f"[TDD DEBUG] SKIP below min: tab={ws.title!r} parsed={period_date!r}")
             continue
         max_pd = safe_str(cfg.get("max_period_date"))
         if max_pd and period_date > max_pd:
-            if cfg.get("team") == "TDD COS 1":
-                print(f"[TDD DEBUG] SKIP above max: tab={ws.title!r} parsed={period_date!r}")
             continue
-        if cfg.get("team") == "Spine" and safe_str(cfg.get("min_period_date")) == "2026-02-24":
-            print(
-                f"[SPINE NEW DEBUG] tab={ws.title!r} period_date={period_date} "
-                f"W53={ws['W53'].value!r} W54={ws['W54'].value!r} W55={ws['W55'].value!r} "
-                f"W63={ws['W63'].value!r} W64={ws['W64'].value!r} W65={ws['W65'].value!r}"
-            )
-            print(
-                f"[SPINE NEW DEBUG] completed_hours cell={cfg['cells']['completed_hours']!r} "
-                f"value={ws[cfg['cells']['completed_hours']].value!r}"
-            )
         taa_spec = cfg["cells"]["total_available_hours"]
         if isinstance(taa_spec, str):
             total_available_hours = safe_float(ws[taa_spec].value)
@@ -1411,11 +1397,6 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
                 hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                 uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
         team = cfg["team"]
-        if cfg.get("team") == "TDD COS 1":
-            print(
-                f"[TDD DEBUG] APPEND tab={ws.title!r} period_date={period_date!r} "
-                f"taa={total_available_hours!r} completed={completed_hours!r}"
-            )
         rows_out.append(
             {
                 "team": team,
@@ -2944,16 +2925,6 @@ def scrape_spine_previous_weeks_xlsm(
                 continue
             if period_date > today_iso:
                 continue
-            print(
-                f"[SPINE NEW DEBUG] choice={choice!r} period_date={period_date} "
-                f"W53={_com_call(lambda: ws.Range('W53').Value)!r} "
-                f"W54={_com_call(lambda: ws.Range('W54').Value)!r} "
-                f"W55={_com_call(lambda: ws.Range('W55').Value)!r} "
-                f"W63={_com_call(lambda: ws.Range('W63').Value)!r} "
-                f"W64={_com_call(lambda: ws.Range('W64').Value)!r} "
-                f"W65={_com_call(lambda: ws.Range('W65').Value)!r} "
-                f"X55={_com_call(lambda: ws.Range('X55').Value)!r}"
-            )
             total_available_hours = safe_float(
                 _com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value)
             )
