@@ -1321,6 +1321,7 @@ ACTIVITY_MAP = {
     "emial": "Email & IM",
     "emails scrum": "Email & IM",
     "emai": "Email & IM",
+    "uat":"Project Work",
     "connection issue": "IT Issue/Update",
     "dmaic training":"Problem Solving",
     "supporting":"Collaboration",
