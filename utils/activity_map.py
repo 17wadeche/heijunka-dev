@@ -1320,6 +1320,7 @@ ACTIVITY_MAP = {
     "call for change order":"Change Order",
     "emial": "Email & IM",
     "emails scrum": "Email & IM",
+    "emails admin cross functional meeting":"Admin",
     "emai": "Email & IM",
     "uat":"Project Work",
     "connection issue": "IT Issue/Update",
