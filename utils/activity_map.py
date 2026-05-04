@@ -1687,6 +1687,7 @@ ACTIVITY_MAP = {
     "scrum, prep, collaboration":"Scrum & Action",
     "pulled work, questions, cornerstone":"Metrics & Schedule",
     "workday goal":"Career Development",
+    "cqs speed networking":"Career Development",
     "emails + shipment issue":"Email & IM",
     "fw/emails (30)":"Email & IM",
     "sh t2 meeting":"Meeting",
