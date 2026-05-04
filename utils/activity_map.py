@@ -1780,6 +1780,7 @@ ACTIVITY_MAP = {
     "a3 for late":"Problem Solving",
     "emails/adming":"Email & IM",
     "meetings other": "Meeting",
+    "meeting manager": "Meeting",
     "meetings": "Meeting",
     "data analysis for grad project":"Project Work",
     "looking at previous file":"WIP/Event Review",
