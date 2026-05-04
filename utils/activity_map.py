@@ -399,6 +399,7 @@ ACTIVITY_MAP = {
     "uat call":"Meeting",
     "next gen rd review":"Next Gen",
     "pvh reportability versa":"Reportability Matrix",
+    "malf matrix update":"Reportability Matrix",
     "clinical doc review/approval":"Clinical Review",
     "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
