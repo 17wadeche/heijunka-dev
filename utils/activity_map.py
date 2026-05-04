@@ -409,6 +409,8 @@ ACTIVITY_MAP = {
     "affera training, scrum, cornerstone": "Training/Mentoring",
     "scrum/metric/schedule":"Metrics & Schedule",
     "cross func meeting":"Meeting",
+    "psr apv project uat, coding call":"Project Work",
+    "cornrstone":"Cornerstone",
     "late review":"WIP Event/Review",
     "workshop, event review":"Next Gen",
     "fume hood meeting":"Meeting",
