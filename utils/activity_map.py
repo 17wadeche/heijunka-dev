@@ -1347,6 +1347,7 @@ ACTIVITY_MAP = {
     "files correction":"WIP/Event Review",
     "files meeting":"WIP/Event Review",
     "capital equipement meeting":"Meeting",
+    "film call & action":"Meeting",
     "supplemental training":"Training/Mentoring",
     "scrum/email":"Scrum & Action",
     "quality review":"QA",
