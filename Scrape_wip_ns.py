@@ -3547,7 +3547,7 @@ def main():
         "min_period_date": "2026-03-01",
         "cells": {
             "total_available_hours": {"type": "sum_range", "range": "B61:Y61"},
-            "completed_hours": "Z50",
+            "completed_hours": {"type": "sum_range", "range": "B50:Y50"},
             "wp1_output": "AH2",
             "wp1_target": "AH7",
             "wp2_output": "AJ2",
