@@ -1784,6 +1784,13 @@ ACTIVITY_MAP = {
     "meetings": "Meeting",
     "data analysis for grad project":"Project Work",
     "looking at previous file":"WIP/Event Review",
+    "scrums / email / reg inquirie":"Scrum & Action",
+    "meetings / emails / reg inquirie":"Meeting",
+    "team meeting / emails / teams messages / performance self-eval / reg inquirie":"Email & IM",
+    "event corrections w/":"WIP Event/Review"
+    "scrum / training / reg inquirie":"Training/Mentoring",
+    "scrum / email / reg inquirie":"RI",
+    "email; cornerstone":"Email & IM",
     "cied event":"WIP/Event Review",
     "ng china rd, collaboration, scrum":"Next Gen",
     "scrum, training/letter review, collaboration, email":"Scrum & Action",
