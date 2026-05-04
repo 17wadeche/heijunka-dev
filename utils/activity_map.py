@@ -410,6 +410,7 @@ ACTIVITY_MAP = {
     "scrum/metric/schedule":"Metrics & Schedule",
     "cross func meeting":"Meeting",
     "late review":"WIP Event/Review",
+    "workshop, event review":"Next Gen",
     "fume hood meeting":"Meeting",
     "emails about additional testing to stella":"Email & IM",
     "daily schedule":"Metrics & Schedule",
