@@ -1787,7 +1787,7 @@ ACTIVITY_MAP = {
     "scrums / email / reg inquirie":"Scrum & Action",
     "meetings / emails / reg inquirie":"Meeting",
     "team meeting / emails / teams messages / performance self-eval / reg inquirie":"Email & IM",
-    "event corrections w/":"WIP Event/Review"
+    "event corrections w/":"WIP Event/Review",
     "scrum / training / reg inquirie":"Training/Mentoring",
     "scrum / email / reg inquirie":"RI",
     "email; cornerstone":"Email & IM",
