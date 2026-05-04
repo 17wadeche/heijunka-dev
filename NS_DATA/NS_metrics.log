@@ -1616,3 +1616,24 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-05-04 12:49:47,274 | INFO | [ALL] drop period_date == 2023-11-06: 604 -> 604
 2026-05-04 12:49:47,274 | INFO | [ALL] drop period_date == 2026-09-07: 604 -> 604
 2026-05-04 12:49:47,432 | INFO | Wrote 604 rows to NS_DATA\NS_metrics.csv
+2026-05-04 13:03:16,231 | INFO | === NS Metrics Run START ===
+2026-05-04 13:03:16,231 | INFO | Selected team: all
+2026-05-04 13:03:16,231 | INFO | [TDD COS 1] START
+2026-05-04 13:03:42,497 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 9 | kept=6 | refreshed=3 | final=9
+2026-05-04 13:03:42,497 | INFO | [TDD COS 1] DONE | rows=9 | elapsed=0:00:26.266350
+2026-05-04 13:03:42,497 | INFO | [Spine] START
+2026-05-04 13:06:12,373 | INFO | [Spine] DONE | rows=34 | elapsed=0:02:29.875754
+2026-05-04 13:06:12,373 | INFO | [Spine] START
+2026-05-04 13:07:25,082 | INFO | [Spine] DONE | rows=9 | elapsed=0:01:12.709150
+2026-05-04 13:07:25,082 | INFO | [PH] START
+2026-05-04 13:08:44,131 | INFO | [PH] loaded cached PH rows from NS_metrics: 36 | kept=33 | refreshed=4 | final=36
+2026-05-04 13:08:44,131 | INFO | [PH] DONE | rows=36 | elapsed=0:01:19.049143
+2026-05-04 13:08:44,131 | INFO | [PH Cell 17] START
+2026-05-04 13:09:03,895 | INFO | [PH Cell 17] DONE | rows=6 | elapsed=0:00:19.763145
+2026-05-04 13:09:03,895 | INFO | [SCS Cell 1] START
+2026-05-04 13:09:20,538 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 41 | kept=38 | refreshed=3 | final=41 | old_weeks=[] | new_weeks=['2026-04-20', '2026-04-27', '2026-05-04']
+2026-05-04 13:09:20,538 | INFO | [SCS Cell 1] DONE | rows=41 | elapsed=0:00:16.643631
+2026-05-04 13:09:20,538 | INFO | [MEIC PH] START
+2026-05-04 13:09:34,045 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 36 | kept=33 | refreshed=3 | final=36
+2026-05-04 13:09:34,048 | INFO | [MEIC PH] DONE | rows=36 | elapsed=0:00:13.510123
+2026-05-04 13:09:34,048 | INFO | [DBS C13] START
