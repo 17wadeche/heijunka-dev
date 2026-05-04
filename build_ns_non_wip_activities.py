@@ -3088,6 +3088,20 @@ def build_nonwip_by_person_b_minus_c(people_rows: List[dict]) -> Dict[str, float
             continue
         out[r["name"]] = v
     return out
+def find_total_row_optional(ws: pd.DataFrame, name_col: int = 0, start_row: int = 0) -> Optional[int]:
+    for i in range(start_row, len(ws)):
+        name = norm_name(ws.iat[i, name_col] if ws.shape[1] > name_col else "")
+        if name.casefold() in {"total", "totals"}:
+            return i
+    return None
+def _safe_iat(ws: pd.DataFrame, r: int, c: int, default=np.nan):
+    if r is None or c is None:
+        return default
+    if r < 0 or c < 0:
+        return default
+    if r >= ws.shape[0] or c >= ws.shape[1]:
+        return default
+    return ws.iat[r, c]
 def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
     if team_src.team == "PH-NM MEIC":
         return build_meic_rows_from_non_d2d_log(
@@ -3138,34 +3152,43 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 continue
             if ws.shape[0] < cfg.min_rows or ws.shape[1] < cfg.min_cols:
                 continue
-            if team_src.team == "SCS":
-                actual_totals_row = find_total_row(ws, name_col=0, start_row=cfg.people_start_row)
-                people_rows = read_people_block(
-                    ws,
-                    start_row_i=cfg.people_start_row,
-                    end_row_i=actual_totals_row - 1,
-                    team=team_src.team,
-                    sheet_name=sheet_name,
-                    week=week,
+            actual_totals_row = find_total_row_optional(
+                ws,
+                name_col=0,
+                start_row=cfg.people_start_row,
+            )
+            if actual_totals_row is None:
+                if 0 <= cfg.totals_row < ws.shape[0]:
+                    actual_totals_row = cfg.totals_row
+                else:
+                    print(
+                        f"[WARN] {team_src.team} sheet={sheet_name!r}: "
+                        f"configured totals_row={cfg.totals_row} is outside worksheet shape={ws.shape}. "
+                        f"Using last available row index {ws.shape[0] - 1}.",
+                        flush=True,
+                    )
+                    actual_totals_row = ws.shape[0] - 1
+            if actual_totals_row <= cfg.people_start_row:
+                print(
+                    f"[WARN] {team_src.team} sheet={sheet_name!r}: "
+                    f"bad total row {actual_totals_row}; people_start_row={cfg.people_start_row}. Skipping sheet.",
+                    flush=True,
                 )
-                people_count = len(set(
-                    r["name"] for r in people_rows
-                    if is_real_person(r["name"])
-                ))
-                b = safe_float(ws.iat[actual_totals_row, 1] if ws.shape[1] > 1 else np.nan)
-                c = safe_float(ws.iat[actual_totals_row, 2] if ws.shape[1] > 2 else np.nan)
-            else:
-                people_rows = read_people_block(
-                    ws,
-                    start_row_i=cfg.people_start_row,
-                    end_row_i=cfg.totals_row - 1,
-                    team=team_src.team,
-                    sheet_name=sheet_name,
-                    week=week,
-                )
-                people_count = len(set(r["name"] for r in people_rows))
-                b = safe_float(ws.iat[cfg.totals_row, 1] if ws.shape[1] > 1 else np.nan)
-                c = safe_float(ws.iat[cfg.totals_row, 2] if ws.shape[1] > 2 else np.nan)
+                continue
+            people_rows = read_people_block(
+                ws,
+                start_row_i=cfg.people_start_row,
+                end_row_i=actual_totals_row - 1,
+                team=team_src.team,
+                sheet_name=sheet_name,
+                week=week,
+            )
+            people_count = len({
+                r["name"] for r in people_rows
+                if is_real_person(r.get("name", ""))
+            })
+            b = safe_float(_safe_iat(ws, actual_totals_row, 1))
+            c = safe_float(_safe_iat(ws, actual_totals_row, 2))
             total_nonwip_hours = (b - c) if pd.notna(b) and pd.notna(c) else np.nan
             ooo_hours = c if pd.notna(c) else np.nan
             nonwip_by_person = build_nonwip_by_person_b_minus_c(people_rows)
