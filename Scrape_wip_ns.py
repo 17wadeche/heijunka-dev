@@ -124,7 +124,7 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
     et_combine_teams = {"O-Arm MEIC", "Nav", "Mazor", "AE MEIC", "CSF"}
     et_label = "Enabling Technologies"
     rollups = [
-        ({"MEIC PH", "SCS MEIC", "DBS MEIC"}, "PH-NM MEIC"),
+        ({"MEIC PH", "SCS MEIC", "DBS MEIC", "Other MEIC"}, "PH-NM MEIC"),
         ({"DBS C13", "DBS C14"}, "DBS"),
         ({"PH", "PH Cell 17"}, "PH"),
         ({"SCS Cell 1", "SCS Super Cell"}, "SCS"),
@@ -3124,6 +3124,7 @@ def main():
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
     scs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\SCS\SCS_Data.csv"
+    other_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\Other MEIC\Other_MEIC_Data.csv"
     ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 New Heijunka.xlsx"
     out_file = "NS_DATA\\NS_metrics.csv"
     if not os.path.exists(ph_source_file):
@@ -3805,6 +3806,8 @@ def main():
         extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
     if should_run("SCS MEIC"):
         extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
+    if should_run("Other MEIC"):
+        extend_team("Other MEIC", lambda: scrape_csv_team_fixed_availability(other_meic_csv, team="Other MEIC", hours_per_person=20.0))
     if should_run("SCS Super Cell"):
         scs_super_rows = run_team(
             logger,
