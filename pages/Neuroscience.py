@@ -436,8 +436,9 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
             continue
         if is_excluded_from_team_after_date(team, wk, name):
             continue
+        raw_act = str(d.get("activity", "")).strip().upper()
         act_key = _canon_activity_for_bucket(d.get("activity", ""))
-        if act_key == "OOO":
+        if act_key == "OOO" or raw_act in {"OOO", "OUT OF OFFICE", "HOLIDAY"}:
             continue
         try:
             hrs = float(d.get("hours", 0) or 0)
@@ -769,6 +770,7 @@ def build_person_weekly_accounting(
     except Exception:
         activities = []
     ooo_by_person: dict[str, float] = {}
+    OOO_LABELS = {"OOO", "OUT OF OFFICE", "HOLIDAY"}
     if isinstance(activities, list):
         for item in activities:
             if not isinstance(item, dict):
@@ -783,7 +785,7 @@ def build_person_weekly_accounting(
                 hrs = 0.0
             if not person or hrs <= 0:
                 continue
-            if activity == "OOO":
+            if activity in OOO_LABELS:
                 ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
     ooo_df = pd.DataFrame(
         [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
