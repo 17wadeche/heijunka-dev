@@ -418,6 +418,7 @@ ACTIVITY_MAP = {
     "emails about additional testing to stella":"Email & IM",
     "daily schedule":"Metrics & Schedule",
     "potential hot key list for parker event":"Project Work",
+    "scrum, cornerstone, admin, collabaration":"Scrum & Action",
     "concerto versa training": "Training/Mentoring",
     "ri tour":"RI",
     "lab book wrie up":"Admin",
