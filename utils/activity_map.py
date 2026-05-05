@@ -408,6 +408,7 @@ ACTIVITY_MAP = {
     "training call with ruth. affera rfg, pfg, pump": "Training/Mentoring",
     "affera training, scrum, cornerstone": "Training/Mentoring",
     "scrum/metric/schedule":"Metrics & Schedule",
+    "metrics / scrums / admin / reg inquirie":"Metrics & Schedule",
     "cross func meeting":"Meeting",
     "psr apv project uat, coding call":"Project Work",
     "cornrstone":"Cornerstone",
