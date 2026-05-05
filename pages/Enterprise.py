@@ -1446,7 +1446,10 @@ def _weekly_team_export_df(
             total_non_wip_hours = float(
                 pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0
             )
-        non_wip_hours = max(total_non_wip_hours - other_team_wip_hours, 0.0)
+        if team == "PH-NM MEIC":
+            non_wip_hours = max(total_non_wip_hours - other_team_wip_hours - ooo_hours, 0.0)
+        else:
+            non_wip_hours = max(total_non_wip_hours - other_team_wip_hours, 0.0)
         completed_match = metrics_team[
             (metrics_team["team"] == team) &
             (pd.to_datetime(metrics_team["week_start"], errors="coerce").dt.normalize() == wk)
