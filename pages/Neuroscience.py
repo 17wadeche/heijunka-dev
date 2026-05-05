@@ -122,6 +122,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
 DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
 if hasattr(st, "autorefresh"):
@@ -227,6 +228,9 @@ def normalize_person_name(name: str) -> str:
         _norm("shanmugasundaram, naveen"): "Naveen Shanmugasundaram",
         _norm("shanmugasundaram, naveenkumar"): "Naveen Shanmugasundaram",
         _norm("naveenkumar shanmugasundaram"): "Naveen Shanmugasundaram",
+        _norm("badugu, aravind kumar"): "Aravind Kumar Badugu",
+        _norm("aravind badugu"): "Aravind Kumar Badugu",
+        _norm("aravind kumar badugu"): "Aravind Kumar Badugu",
         _norm("s, giridhar"): "Giridhar S",
         _norm("vemulapalli, reshmita"): "Reshmita",
         _norm("rick kennedy"): "Rick",
@@ -264,6 +268,45 @@ def normalize_person_name(name: str) -> str:
         _norm("goutham kumar, p"): "P Goutham Kumar",
     }
     return aliases.get(key, clean)
+ENT_EXCLUSION_START = pd.Timestamp("2026-04-27")
+ENT_EXCLUDED_PEOPLE = {
+    normalize_person_name(x)
+    for x in [
+        "Aravind Kumar Badugu",
+        "Jagruti Damahe",
+        "Naveen Shanmugasundaram",
+        "Prabhu S",
+    ]
+}
+def is_excluded_from_team_after_date(team: str, week, person: str) -> bool:
+    if str(team or "").strip().upper() != "ENT":
+        return False
+    wk = pd.to_datetime(week, errors="coerce")
+    if pd.isna(wk):
+        return False
+    wk = wk.normalize()
+    if wk < ENT_EXCLUSION_START:
+        return False
+    return normalize_person_name(str(person or "").strip()) in ENT_EXCLUDED_PEOPLE
+def _filter_excluded_people_frame(
+    df_in: pd.DataFrame,
+    team_col: str = "team",
+    week_col: str = "period_date",
+    person_col: str = "person",
+) -> pd.DataFrame:
+    if df_in is None or df_in.empty:
+        return df_in
+    needed = {team_col, week_col, person_col}
+    if not needed.issubset(df_in.columns):
+        return df_in
+    out = df_in.copy()
+    exclude_mask = out.apply(
+        lambda r: is_excluded_from_team_after_date(
+            r.get(team_col), r.get(week_col), r.get(person_col)
+        ),
+        axis=1,
+    )
+    return out.loc[~exclude_mask].copy()
 PSS_GROUPS = {
     "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
     "MEIC": set(), 
@@ -374,6 +417,8 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
         activities = []
     if not isinstance(activities, list) or not activities:
         return {}, {}
+    team = row.get("team", "")
+    wk = row.get("period_date")
     import re
     def _canon_activity_for_bucket(label: str) -> str:
         raw = str(label or "").strip()
@@ -388,6 +433,8 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     for d in activities:
         name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
+            continue
+        if is_excluded_from_team_after_date(team, wk, name):
             continue
         act_key = _canon_activity_for_bucket(d.get("activity", ""))
         if act_key == "OOO":
@@ -413,6 +460,8 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
         obj = []
     if not isinstance(obj, list) or not obj:
         return pd.DataFrame(columns=["Activity", "Name", "Time"])
+    team = row.get("team", "")
+    wk = row.get("period_date")
     df = pd.DataFrame(obj)
     for c in ["activity", "name", "hours"]:
         if c not in df.columns:
@@ -436,6 +485,13 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
               Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
           )
     )
+    if not out.empty:
+        out = out.loc[
+            ~out.apply(
+                lambda r: is_excluded_from_team_after_date(team, wk, r["Name"]),
+                axis=1,
+            )
+        ].copy()
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
     out = (
         out[["Activity", "Name", "Time", "HoursRaw"]]
@@ -619,6 +675,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame(rows, columns=["team", "period_date", "person"])
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Person Hours" not in df.columns:
@@ -664,6 +721,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     )
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
 def build_person_weekly_accounting(
     team: str,
@@ -716,6 +774,8 @@ def build_person_weekly_accounting(
             if not isinstance(item, dict):
                 continue
             person = normalize_person_name(str(item.get("name", "")).strip())
+            if is_excluded_from_team_after_date(team, wk, person):
+                continue
             activity = str(item.get("activity", "")).strip().upper()
             try:
                 hrs = float(item.get("hours", 0) or 0)
