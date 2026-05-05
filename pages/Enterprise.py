@@ -2069,11 +2069,7 @@ if page == "Overview":
                             scoped_df["week_start"].nunique(),
                             1,
                         )
-                        pct_denom = (
-                            max(totals["capacity_hours"] - totals["ooo_hours"], 0.0)
-                            if factor_out_ooo
-                            else totals["capacity_hours"]
-                        )
+                        pct_denom = totals["capacity_hours"]
                         period_summary = pd.DataFrame([{
                             **totals,
                             "avg_other_team_wip_hours": totals["other_team_wip_hours"] / data_week_count,
