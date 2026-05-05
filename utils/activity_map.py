@@ -421,7 +421,7 @@ ACTIVITY_MAP = {
     "scrum, cornerstone, admin, collabaration":"Scrum & Action",
     "coach training sessions (teams meetings)": "Training/Mentoring",
     "spyral pho testing":"Project Work",
-    "it problems (computer kept crashing (3 times)- working after the 4th re-boot)": "IT Issue/Update",
+    "it problems (computer kept crashing (3 times)-working after the 4th re-boot)": "IT Issue/Update",
     "cidex order from stores (chem handlers)":"Shipment",
     "dhr check on fwt: investigations, pa, tech": "Metrics & Schedule",
     "concerto versa training": "Training/Mentoring",
