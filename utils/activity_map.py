@@ -521,6 +521,7 @@ ACTIVITY_MAP = {
     "reading training document": "Training/Mentoring",
     "meetings, server issue": "Meeting",
     "tier 2 / colective": "Meeting",
+    "tier 2 / collective": "Meeting",
     "fwt, lab meeting": "Meeting",
     "meeting regarding activa sc device to be shipped, dealing with the activa sc": "Meeting",
     "emails, dealing with req's and devices to be shipped":"Email & IM",
