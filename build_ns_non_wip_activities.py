@@ -2929,7 +2929,7 @@ def build_et_us_rows_from_capacity_workbook(
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
         team="PSS MEIC",
-        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Heijunka.xlsm"),
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC Folders\Archive\PSS MEIC_Heijunka.xlsm"),
         week_from_sheet=week_from_pss_meic_tab,
         custom_builder=build_pss_meic_dated_row,
         wip_workers_from="NS_metrics",
@@ -2944,7 +2944,7 @@ TEAM_SOURCES: Dict[str, TeamSource] = {
     ),
     "PSS Intern": TeamSource(
         team="PSS Intern",
-        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC_Interns Heijunka.xlsm"),
+        xlsx=Path(r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC Folders\Archive\PSS MEIC_Interns Heijunka.xlsm"),
         week_from_sheet=week_from_pss_meic_tab,
         custom_builder=build_pss_intern_capacity_row,
         wip_workers_from="NS_metrics",
