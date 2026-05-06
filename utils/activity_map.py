@@ -434,6 +434,7 @@ ACTIVITY_MAP = {
     "misc emails etc":"Email & IM",
     "training query meeting": "Training/Mentoring",
     "mfg & exp dates email":"Email & IM",
+    "emails admin qa":"Email & IM",
     "pull complaint report":"Admin",
     "lab book wrie up":"Admin",
     "mandatory training meeting": "Training/Mentoring",
