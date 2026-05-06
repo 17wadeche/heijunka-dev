@@ -534,6 +534,7 @@ ACTIVITY_MAP = {
     "lab setup":"Set Up",
     "lab set up":"Set Up",
     "meetings, server issue": "Meeting",
+    "meetings (other)": "Meeting",
     "speed networking":"Career Development",
     "workshop, coding":"Next Gen",
     "collaboration, scrum, pulling aes, help with inbox":"Collaboration",
