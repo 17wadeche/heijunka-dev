@@ -507,6 +507,8 @@ ACTIVITY_MAP = {
     "live case videos, cornerstone":"Reviewing Documents & Case Video",
     "emails, admin, project":"Email & IM",
     "graduates clinic, cornerstone":"Cornerstone",
+    "wip pulls/ assignment/ anomaly check":"Metrics & Schedule",
+    "2 15 min break":"Break",
     "fwt, it issues, training": "IT Issue/Update",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
     "development":"Career Development",
