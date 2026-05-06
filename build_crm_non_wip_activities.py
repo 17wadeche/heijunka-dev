@@ -64,6 +64,10 @@ CSV_COLUMNS = [
     "wip_workers_count",
     "wip_workers_ooo_hours",
 ]
+LIT_LETTERS_TEAM_NAME = "Lit & Letters"
+LIT_LETTERS_PAB_SHEET = "#3 PAB"
+LIT_LETTERS_PERF_WIP_SHEET = "#6 Performance WIP Time"
+LIT_LETTERS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 DS_PAB_SHEET = "#2 PAB"
 DS_WIP_PLAN_SHEET = "# 1 WIP plan"
 DS_PERF_WIP_SHEET = "#5 Performance WIP Time"
@@ -106,8 +110,17 @@ MEIC_PEOPLE_COUNT = 19
 MEIC_TEAM_NAME = "NI & PM MEIC"
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
+def is_lit_letters_path(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    return (
+        "pab for letters" in base
+        and "lit" in base
+        and "principals" in base
+    )
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
+    if is_lit_letters_path(np):
+        return LIT_LETTERS_TEAM_NAME
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     ds_root = _norm_path(DS_DEFAULT_DIR)
@@ -129,6 +142,8 @@ def team_for_source(path: str) -> str:
     if base in TEAM_BY_BASENAME:
         return TEAM_BY_BASENAME[base]
     np_lower = np.lower()
+    if "pab for letters" in np_lower and "lit" in np_lower and "principals" in np_lower:
+        return LIT_LETTERS_TEAM_NAME
     if "defibrillation solutions" in np_lower:
         return "DS"
     if "cardiac pacing therapies" in np_lower:
@@ -154,6 +169,131 @@ def normalize_person_key(name: str) -> str:
 def is_excluded_person(name: str) -> bool:
     n = _norm_text(name)
     return n in {"", "do not use", "team member(s)"}
+def _find_header_col(ws: Worksheet, header_text: str, *, max_header_row: int = 10) -> Optional[int]:
+    want = _norm_text(header_text)
+    for r in range(1, min(ws.max_row, max_header_row) + 1):
+        for c in range(1, ws.max_column + 1):
+            if _norm_text(str(ws.cell(r, c).value or "")) == want:
+                return c
+    return None
+def _find_number_right_of_label(
+    ws: Worksheet,
+    label_text: str,
+    *,
+    lookahead: int = 10,
+) -> Optional[float]:
+    want = _norm_text(label_text)
+    for r in range(1, ws.max_row + 1):
+        for c in range(1, ws.max_column + 1):
+            if want in _norm_text(str(ws.cell(r, c).value or "")):
+                for cc in range(c + 1, min(ws.max_column, c + lookahead) + 1):
+                    n = _cell_number(ws.cell(r, cc).value)
+                    if n is not None:
+                        return n
+    return None
+def _is_lit_letters_summary_row(name: str) -> bool:
+    n = _norm_text(name)
+    return (
+        n in {
+            "team tally",
+            "total wip hours",
+            "total non-wip hours",
+            "total team workable hours",
+            "team ooo hours",
+            "team % wip",
+            "team% non-wip",
+        }
+        or n.startswith("total ")
+        or n.startswith("team ")
+        or n.startswith("team%")
+    )
+def iter_lit_letters_non_wip_rows(
+    ws_pab: Worksheet,
+    start_row: int = 2,
+) -> Iterable[Tuple[str, str, float]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        area = _norm_text(str(ws_pab[f"D{r}"].value or ""))
+        if area not in LIT_LETTERS_NON_WIP_TYPES:
+            continue
+        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
+        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or "")) or area.title()
+        mins = _cell_number(ws_pab[f"H{r}"].value)
+        if not person or is_excluded_person(person) or mins is None:
+            continue
+        yield person, activity, float(mins) / 60.0
+def compute_lit_letters_total_non_wip_hours(ws_pab: Worksheet) -> float:
+    return float(sum(hours for _, _, hours in iter_lit_letters_non_wip_rows(ws_pab)))
+def compute_lit_letters_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for person, _, hours in iter_lit_letters_non_wip_rows(ws_pab):
+        out[person] = out.get(person, 0.0) + float(hours)
+    return {person: float(total) for person, total in out.items() if total != 0}
+def compute_lit_letters_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
+    ooo_col = _find_header_col(ws_perf, "OOO hours") or ws_perf["AL1"].column
+    out: Dict[str, float] = {}
+    for r in range(5, ws_perf.max_row + 1):
+        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+        if not raw_name:
+            continue
+        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+            continue
+        person = normalize_person_name(raw_name)
+        hours = _cell_number(ws_perf.cell(r, ooo_col).value)
+        if not person or hours is None or hours == 0:
+            continue
+        out[person] = out.get(person, 0.0) + float(hours)
+    return out
+def compute_lit_letters_total_ooo_hours(ws_perf: Worksheet) -> float:
+    summary_val = (
+        _find_number_right_of_label(ws_perf, "Team OOO hours")
+        or _find_number_right_of_label(ws_perf, "Total OOO hours")
+    )
+    if summary_val is not None:
+        return float(summary_val)
+    return float(sum(compute_lit_letters_ooo_by_person(ws_perf).values()))
+def compute_lit_letters_non_wip_activities(
+    ws_pab: Worksheet,
+    ws_perf: Worksheet,
+) -> List[Dict[str, Any]]:
+    agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in iter_lit_letters_non_wip_rows(ws_pab):
+        key = (person, activity)
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    for person, hours in compute_lit_letters_ooo_by_person(ws_perf).items():
+        key = (person, "OOO")
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    return [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(
+            agg.items(),
+            key=lambda x: (x[0][0].lower(), x[0][1].lower()),
+        )
+        if hours != 0
+    ]
+def compute_lit_letters_wip_workers_ooo_hours(
+    ws_perf: Worksheet,
+    wip_workers: List[str],
+) -> float:
+    worker_keys = {normalize_person_key(x) for x in wip_workers if x}
+    if not worker_keys:
+        return 0.0
+    total = 0.0
+    for person, hours in compute_lit_letters_ooo_by_person(ws_perf).items():
+        if normalize_person_key(person) in worker_keys:
+            total += float(hours)
+    return float(total)
+def compute_lit_letters_people_count(ws_perf: Worksheet) -> int:
+    seen = set()
+    for r in range(5, ws_perf.max_row + 1):
+        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+        if not raw_name:
+            continue
+        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+            continue
+        key = normalize_person_key(raw_name)
+        if key:
+            seen.add(key)
+    return len(seen)
 def parse_period_date_from_sheetname(sheet_name: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
     if default_year is None:
         default_year = _dt.date.today().year
@@ -512,6 +652,47 @@ def safe_div(n: float, d: float) -> Optional[float]:
     if d == 0:
         return None
     return n / d
+def scrape_one_lit_letters_workbook(
+    path: str,
+    people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
+) -> List[Dict[str, Any]]:
+    team = LIT_LETTERS_TEAM_NAME
+    wb = load_workbook(path, data_only=True)
+    period = parse_period_date_from_filename(path)
+    if period is None:
+        period = parse_period_date_from_workbook_sheetnames(wb)
+    if period is None:
+        return []
+    period_iso = iso_date(period)
+    ws_pab = _get_required_sheet(wb, LIT_LETTERS_PAB_SHEET)
+    ws_perf = _get_required_sheet(wb, LIT_LETTERS_PERF_WIP_SHEET)
+    total_non_wip_hours = compute_lit_letters_total_non_wip_hours(ws_pab)
+    ooo_hours = compute_lit_letters_total_ooo_hours(ws_perf)
+    pct_in_wip = _find_number_right_of_label(ws_perf, "Team % WIP")
+    if pct_in_wip is None:
+        total_wip_hours = _find_number_right_of_label(ws_perf, "Total WIP Hours")
+        total_workable_hours = _find_number_right_of_label(ws_perf, "Total Team workable hours")
+        if total_wip_hours is not None and total_workable_hours is not None:
+            pct_in_wip = safe_div(float(total_wip_hours), float(total_workable_hours))
+    non_wip_by_person = compute_lit_letters_non_wip_by_person(ws_pab)
+    non_wip_activities = compute_lit_letters_non_wip_activities(ws_pab, ws_perf)
+    wip_workers = people_in_wip_lookup.get((team, period_iso), [])
+    wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
+    wip_workers_ooo_hours = compute_lit_letters_wip_workers_ooo_hours(ws_perf, wip_workers)
+    row = {
+        "team": team,
+        "period_date": period_iso,
+        "people_count": compute_lit_letters_people_count(ws_perf),
+        "total_non_wip_hours": float(total_non_wip_hours),
+        "OOO Hours": float(ooo_hours),
+        "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
+        "non_wip_by_person": json.dumps(non_wip_by_person, ensure_ascii=False),
+        "non_wip_activities": json.dumps(non_wip_activities, ensure_ascii=False),
+        "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+        "wip_workers_count": int(wip_workers_count),
+        "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+    }
+    return [row]
 def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str], float]) -> List[Dict[str, Any]]:
     team = team_for_source(path)
     wb = load_workbook(path, data_only=True)
@@ -918,7 +1099,9 @@ def main() -> int:
     for f in files:
         team = team_for_source(f)
         try:
-            if team == "DS":
+            if team == LIT_LETTERS_TEAM_NAME:
+                all_rows.extend(scrape_one_lit_letters_workbook(f, people_in_wip_lookup))
+            elif team == "DS":
                 all_rows.extend(scrape_one_ds_workbook(f, people_in_wip_lookup))
             elif team == "CPT":
                 all_rows.extend(scrape_one_cpt_workbook(f, people_in_wip_lookup))
