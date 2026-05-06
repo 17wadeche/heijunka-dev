@@ -1235,7 +1235,7 @@ if nonwip_mode:
         "CDS": 37.75,
         "NI": 37.75,
         "DS": 37.5,
-        "Lit & Letters": 37.5
+        "LIT & LETTERS": 37.5,
     }
     team_key = str(team_nw).strip().upper()
     team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
@@ -1351,7 +1351,7 @@ if nonwip_mode:
         "CDS": 37.75,
         "NI": 37.75,
         "DS": 37.5,
-        "Lit & Letters": 37.5
+        "LIT & LETTERS": 37.5,
     }
     team_key = str(team_nw).strip().upper()
     team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
@@ -3065,7 +3065,7 @@ with right2:
         "CDS": 37.75,
         "NI": 37.75,
         "DS": 37.5,
-        "Lit & Letters": 37.5
+        "LIT & LETTERS": 37.5,
     }
     def canonical_person_label(name: str) -> str:
         s = normalize_person_name(name)
@@ -3086,7 +3086,7 @@ with right2:
                 "CDS": 37.75,
                 "NI": 37.75,
                 "DS": 37.5,
-                "Lit & Letters": 37.5
+                "LIT & LETTERS": 37.5,
             }
             team_week_hours = TEAM_WEEKLY_HOURS.get(team.upper(), 40.0)
             wk_people = build_person_weekly_accounting(
@@ -3545,7 +3545,7 @@ with right2:
                         "CDS": 37.75,
                         "NI": 37.75,
                         "DS": 37.5,
-                        "Lit & Letters": 37.5
+                        "LIT & LETTERS": 37.5,
                     }
                     if multi_team and chosen_mix_teams:
                         teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
