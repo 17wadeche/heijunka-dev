@@ -523,6 +523,8 @@ ACTIVITY_MAP = {
     "meetings, server issue": "Meeting",
     "speed networking":"Career Development",
     "weekly complaint review meeting":"WIP Event/Review",
+    "files review":"WIP Event/Review",
+    "fixe":"WIP Event/Review",
     "daily scheudle":"Metrics & Schedule",
     "tier 2 / colective": "Meeting",
     "tier 2 / collective": "Meeting",
