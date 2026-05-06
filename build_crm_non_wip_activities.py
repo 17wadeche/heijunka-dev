@@ -68,6 +68,7 @@ LIT_LETTERS_TEAM_NAME = "Lit & Letters"
 LIT_LETTERS_PAB_SHEET = "#3 PAB"
 LIT_LETTERS_PERF_WIP_SHEET = "#6 Performance WIP Time"
 LIT_LETTERS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
+LIT_LETTERS_PEOPLE_COUNT = 9
 DS_PAB_SHEET = "#2 PAB"
 DS_WIP_PLAN_SHEET = "# 1 WIP plan"
 DS_PERF_WIP_SHEET = "#5 Performance WIP Time"
@@ -682,7 +683,7 @@ def scrape_one_lit_letters_workbook(
     row = {
         "team": team,
         "period_date": period_iso,
-        "people_count": compute_lit_letters_people_count(ws_perf),
+        "people_count": LIT_LETTERS_PEOPLE_COUNT,
         "total_non_wip_hours": float(total_non_wip_hours),
         "OOO Hours": float(ooo_hours),
         "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
