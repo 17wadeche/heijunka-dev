@@ -509,6 +509,7 @@ ACTIVITY_MAP = {
     "graduates clinic, cornerstone":"Cornerstone",
     "fwt, it issues, training": "IT Issue/Update",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
+    "development":"Career Development",
     "shipments, devices returned in error": "Shipment",
     "change order docs updated to new template":"Change Order",
     "lab meeting sorting cf": "Meeting",
