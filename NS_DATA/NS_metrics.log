@@ -3172,3 +3172,25 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-05-06 14:09:00,460 | INFO | [PSS US] DONE | rows=49 | elapsed=0:00:40.619619
 2026-05-06 14:09:00,460 | INFO | [PSS MEIC] START
 2026-05-06 14:12:00,470 | INFO | [PSS MEIC] still running...
+2026-05-06 14:13:52,492 | INFO | [PSS MEIC] DONE | rows=48 | elapsed=0:04:52.031988
+2026-05-06 14:13:52,493 | INFO | [PSS MEIC Intern] START
+2026-05-06 14:15:38,857 | INFO | [PSS MEIC Intern] DONE | rows=49 | elapsed=0:01:46.363393
+2026-05-06 14:15:38,945 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-05-06 14:15:38,946 | INFO | [ENT] START
+2026-05-06 14:15:39,140 | INFO | [ENT] DONE | rows=47 | elapsed=0:00:00.194906
+2026-05-06 14:15:39,140 | INFO | [DBS MEIC] START
+2026-05-06 14:15:39,157 | INFO | [DBS MEIC] DONE | rows=39 | elapsed=0:00:00.016655
+2026-05-06 14:15:39,158 | INFO | [SCS MEIC] START
+2026-05-06 14:15:39,173 | INFO | [SCS MEIC] DONE | rows=39 | elapsed=0:00:00.014750
+2026-05-06 14:15:39,174 | INFO | [Other MEIC] START
+2026-05-06 14:15:39,257 | INFO | [Other MEIC] DONE | rows=71 | elapsed=0:00:00.083935
+2026-05-06 14:15:39,258 | INFO | [SCS Super Cell] START
+2026-05-06 14:16:32,154 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 43 | kept=40 | refreshed=4 | final=43 | old_weeks=[] | new_weeks=['2026-04-20', '2026-04-27', '2026-05-04']
+2026-05-06 14:16:32,173 | INFO | [SCS Super Cell] DONE | rows=43 | elapsed=0:00:52.914284
+2026-05-06 14:16:32,193 | INFO | [PH Cell 17] rows before TAA filter = 6
+2026-05-06 14:16:32,205 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 845 -> 728
+2026-05-06 14:16:32,208 | INFO | [PH Cell 17] rows after TAA filter = 6
+2026-05-06 14:16:32,208 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 845 -> 728
+2026-05-06 14:16:32,208 | INFO | [ALL] drop period_date == 2023-11-06: 728 -> 728
+2026-05-06 14:16:32,210 | INFO | [ALL] drop period_date == 2026-09-07: 728 -> 728
+2026-05-06 14:16:32,350 | INFO | Wrote 728 rows to NS_DATA\NS_metrics.csv
