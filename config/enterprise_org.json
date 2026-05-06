@@ -17,6 +17,7 @@
     { "portfolio": "CRM", "team": "NI & PM MEIC", "ou": "PCS" },
     { "portfolio": "CRM", "team": "PM-CTS", "ou": "PCS" },
     { "portfolio": "MCS", "team": "MCS", "ou": "MCS" },
+    { "portfolio": "CRM", "team": "Lit & Letters", "ou": "Lit & Letters" },
     { "portfolio": "Interventional Vascular", "team": "PVH", "ou": "PVH" },
     { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "SHA" },
     { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "SHA" },

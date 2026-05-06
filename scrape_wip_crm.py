@@ -9,6 +9,14 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
+LIT_LETTERS_TEAM = "Lit & Letters"
+def _is_lit_letters_path(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    return (
+        "pab for letters" in base
+        and "lit" in base
+        and "principals" in base
+    )
 TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm": "MCS",
     r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis": "CDS",
@@ -79,6 +87,221 @@ def _cell_date(v: Any, *, default_year: Optional[int] = None) -> Optional[_dt.da
                 pass
         return parse_period_date_from_text(s, default_year=default_year)
     return None
+def _col_idx(col: str) -> int:
+    n = 0
+    for ch in col.upper():
+        n = n * 26 + (ord(ch) - ord("A") + 1)
+    return n
+def _norm_ws_text(v: Any) -> str:
+    return re.sub(r"\s+", " ", str(v or "").strip().lower())
+def _find_col_by_header(ws: Worksheet, header_text: str, *, max_header_row: int = 10) -> Optional[int]:
+    want = _norm_ws_text(header_text)
+    for r in range(1, min(ws.max_row, max_header_row) + 1):
+        for c in range(1, ws.max_column + 1):
+            if _norm_ws_text(ws.cell(r, c).value) == want:
+                return c
+    return None
+def _find_number_right_of_label(ws: Worksheet, label_text: str, *, lookahead: int = 8) -> Optional[float]:
+    want = _norm_ws_text(label_text)
+    for row in ws.iter_rows():
+        for cell in row:
+            if want in _norm_ws_text(cell.value):
+                for c in range(cell.column + 1, min(ws.max_column, cell.column + lookahead) + 1):
+                    n = _cell_number(ws.cell(cell.row, c).value)
+                    if n is not None:
+                        return n
+    return None
+def _is_excluded_station_lit(area: Any) -> bool:
+    s = str(area).strip().lower() if area is not None else ""
+    return s in {"non-wip", "essential non-wip"}
+def _lit_cell_station(area: Any, subarea: Any) -> str:
+    a = str(area).strip() if area is not None else ""
+    s = str(subarea).strip() if subarea is not None else ""
+    return s if s and s.lower() != "no subareas" else a
+def _iter_rows_lit_pab(
+    ws_pab: Worksheet, start_row: int = 2
+) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float]]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        person = ws_pab[f"C{r}"].value
+        area = ws_pab[f"D{r}"].value
+        subarea = ws_pab[f"E{r}"].value
+        mins = _cell_number(ws_pab[f"H{r}"].value)
+        output = _cell_number(ws_pab[f"J{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        a = str(area).strip() if area is not None else ""
+        s = str(subarea).strip() if subarea is not None else ""
+        if p == "" and a == "" and s == "" and mins is None and output is None:
+            continue
+        hours = mins / 60.0 if mins is not None else None
+        yield (r, p, a, s, hours, output)
+def compute_total_available_hours_lit(ws_perf: Worksheet) -> Optional[float]:
+    return _find_number_right_of_label(ws_perf, "Total Team workable hours")
+def compute_completed_hours_lit(
+    ws_perf: Worksheet,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    actual_col = _find_col_by_header(ws_perf, "Overall VIP hours") or _col_idx("AI")
+    total = _find_number_right_of_label(ws_perf, "Total WIP Hours")
+    actual_by_person: Dict[str, float] = {}
+    people_in_wip: List[str] = []
+    seen = set()
+    for r in range(5, ws_perf.max_row + 1):
+        person = ws_perf[f"A{r}"].value
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p):
+            continue
+        actual = _cell_number(ws_perf.cell(r, actual_col).value)
+        if actual is None or actual == 0:
+            continue
+        actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        if p not in seen:
+            seen.add(p)
+            people_in_wip.append(p)
+    if total is None:
+        total = sum(actual_by_person.values())
+    return total, actual_by_person, people_in_wip
+def compute_person_available_hours_lit(ws_perf: Worksheet) -> Dict[str, float]:
+    available_col = _find_col_by_header(ws_perf, "Total Workable Hours") or _col_idx("AM")
+    out: Dict[str, float] = {}
+    for r in range(5, ws_perf.max_row + 1):
+        person = ws_perf[f"A{r}"].value
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p):
+            continue
+        available = _cell_number(ws_perf.cell(r, available_col).value)
+        if available is not None:
+            out[p] = out.get(p, 0.0) + available
+    return out
+def compute_target_actual_output_lit(ws_pab: Worksheet) -> Tuple[float, float]:
+    target = 0.0
+    actual = 0.0
+    for _, _, area, _, _, output in _iter_rows_lit_pab(ws_pab):
+        if _is_excluded_station_lit(area):
+            continue
+        if output is not None:
+            actual += output
+    return target, actual
+def compute_outputs_by_person_lit(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, area, _, _, output in _iter_rows_lit_pab(ws_pab):
+        if not person or is_excluded_person(person) or _is_excluded_station_lit(area):
+            continue
+        out.setdefault(person, {"output": 0.0, "target": 0.0})
+        if output is not None:
+            out[person]["output"] += output
+    return out
+def compute_outputs_by_station_lit(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, _, area, subarea, _, output in _iter_rows_lit_pab(ws_pab):
+        if _is_excluded_station_lit(area):
+            continue
+        station = _lit_cell_station(area, subarea)
+        if not station:
+            continue
+        out.setdefault(station, {"output": 0.0, "target": 0.0})
+        if output is not None:
+            out[station]["output"] += output
+    return out
+def compute_station_hours_lit(ws_pab: Worksheet) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    for _, person, area, subarea, hours, _ in _iter_rows_lit_pab(ws_pab):
+        if _is_excluded_station_lit(area):
+            continue
+        station = _lit_cell_station(area, subarea)
+        if not station or hours is None:
+            continue
+        station_hours[station] = station_hours.get(station, 0.0) + hours
+        if person and not is_excluded_person(person):
+            station_hours_by_person.setdefault(station, {})
+            station_hours_by_person[station][person] = (
+                station_hours_by_person[station].get(person, 0.0) + hours
+            )
+    return station_hours, station_hours_by_person
+def compute_output_by_station_by_person_lit(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    for _, person, area, subarea, _, output in _iter_rows_lit_pab(ws_pab):
+        if not person or is_excluded_person(person) or _is_excluded_station_lit(area):
+            continue
+        station = _lit_cell_station(area, subarea)
+        if not station or output is None:
+            continue
+        out.setdefault(station, {})
+        out[station][person] = out[station].get(person, 0.0) + output
+    return out
+def scrape_one_workbook_lit_letters(path: str) -> List[Dict[str, Any]]:
+    team = LIT_LETTERS_TEAM
+    wb = load_workbook(path, data_only=True)
+    err_msgs: List[str] = []
+    ws_pab = wb[_sheet_ci(wb, "#3 PAB")] if _sheet_ci(wb, "#3 PAB") else None
+    ws_perf = wb[_sheet_ci(wb, "#6 Performance WIP Time")] if _sheet_ci(wb, "#6 Performance WIP Time") else None
+    if ws_pab is None:
+        err_msgs.append("missing_#3_pab_sheet")
+    if ws_perf is None:
+        err_msgs.append("missing_#6_performance_wip_time_sheet")
+    period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        err_msgs.append("missing_period_date_from_filename")
+    total_available = None
+    completed_hours = None
+    actual_hours_by_person: Dict[str, float] = {}
+    people: List[str] = []
+    person_avail: Dict[str, float] = {}
+    target_output = None
+    actual_output = None
+    outputs_by_person: Dict[str, Dict[str, float]] = {}
+    outputs_by_station: Dict[str, Dict[str, float]] = {}
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    output_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    try:
+        if ws_perf is not None:
+            total_available = compute_total_available_hours_lit(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_lit(ws_perf)
+            person_avail = compute_person_available_hours_lit(ws_perf)
+        if ws_pab is not None:
+            target_output, actual_output = compute_target_actual_output_lit(ws_pab)
+            outputs_by_person = compute_outputs_by_person_lit(ws_pab)
+            outputs_by_station = compute_outputs_by_station_lit(ws_pab)
+            station_hours, station_hours_by_person = compute_station_hours_lit(ws_pab)
+            output_by_station_by_person = compute_output_by_station_by_person_lit(ws_pab)
+            uplh_by_station_by_person = compute_uplh_by_station_by_person(
+                output_by_station_by_person,
+                station_hours_by_person,
+            )
+    except Exception as e:
+        err_msgs.append(f"lit_letters_parse_error: {e!r}")
+    target_uplh = safe_div(float(target_output or 0.0), float(completed_hours or 0.0))
+    actual_uplh = safe_div(float(actual_output or 0.0), float(completed_hours or 0.0))
+    hc_in_wip = len(people) if people else 0
+    actual_hc_used = safe_div(float(completed_hours or 0.0), 32.5)
+    return [{
+        "team": team,
+        "period_date": iso_date(period),
+        "source_file": path,
+        "Total Available Hours": float(total_available) if total_available is not None else "",
+        "Completed Hours": float(completed_hours) if completed_hours is not None else "",
+        "Target Output": float(target_output) if target_output is not None else "",
+        "Actual Output": float(actual_output) if actual_output is not None else "",
+        "Target UPLH": float(target_uplh) if target_uplh is not None else "",
+        "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
+        "UPLH WP1": "",
+        "UPLH WP2": "",
+        "HC in WIP": hc_in_wip,
+        "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
+        "People in WIP": dumps_json(people) if ws_perf is not None else "",
+        "Person Hours": build_person_hours_json(person_avail, actual_hours_by_person) if ws_perf is not None else "",
+        "Outputs by Person": dumps_json(outputs_by_person) if ws_pab is not None else "",
+        "Outputs by Cell/Station": dumps_json(outputs_by_station) if ws_pab is not None else "",
+        "Cell/Station Hours": dumps_json(station_hours) if ws_pab is not None else "",
+        "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
+        "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
+        "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
+        "Open Complaint Timeliness": "",
+        "error": "; ".join(err_msgs) if err_msgs else "",
+        "Closures": "",
+        "Opened": "",
+    }]
 def _is_excluded_station_cds(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
@@ -221,6 +444,9 @@ def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
+    base = os.path.basename(np)
+    if _is_lit_letters_path(np):
+        return LIT_LETTERS_TEAM
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     if np.startswith(DS_ROOT_HINT):
@@ -235,7 +461,6 @@ def team_for_source(path: str) -> str:
         return "NI"
     if np.startswith(MCS_ROOT_HINT):
         return "MCS"
-    base = os.path.basename(np)
     return TEAM_BY_BASENAME.get(base, "")
 NI_NEW_HOURS_START = _dt.date(2026, 4, 17)
 def _ni_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
@@ -1535,6 +1760,8 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             return scrape_one_workbook_mcs(path)
         if team == "CDS":
             return scrape_one_workbook_cds(path)
+        if team == LIT_LETTERS_TEAM:
+            return scrape_one_workbook_lit_letters(path)
         if team == "DS":
             return scrape_one_workbook_ds(path)
         if team == "CPT":
