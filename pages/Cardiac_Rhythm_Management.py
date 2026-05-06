@@ -680,7 +680,6 @@ PERSON_WEEKLY_HOURS = {
     "kyle mai": 37.5,
 }
 PERSON_TEAM_WEEKLY_HOURS = {
-    ("peter mchugh", "CDS"): 10.0,
     ("peter mchugh", "NI"): 27.75,
 }
 def build_person_weekly_accounting(
@@ -705,13 +704,15 @@ def build_person_weekly_accounting(
     person_hours = explode_person_hours(metrics_frame)
     wip_people = person_hours.loc[
         (person_hours["team"] == team) & (person_hours["period_date"] == wk),
-        ["person", "Actual Hours"]
+        ["person", "Actual Hours", "Available Hours"]
     ].copy()
     if wip_people.empty:
-        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
+        wip_people = pd.DataFrame(columns=["person", "Actual Hours", "Available Hours"])
     wip_people["person"] = wip_people["person"].astype(str).str.strip()
     wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
-    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
+    wip_people["Available Hours"] = pd.to_numeric(wip_people["Available Hours"], errors="coerce")
+    available_people = wip_people[["person", "Available Hours"]].copy()
+    wip_people = wip_people[["person", "Completed Hours"]]
     acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
     other_df = pd.DataFrame(
         [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
@@ -764,11 +765,13 @@ def build_person_weekly_accounting(
         return out[["person", value_col]]
     nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
     wip_people = _clean_person_col(wip_people, "Completed Hours")
+    available_people = _clean_person_col(available_people, "Available Hours")
     other_df = _clean_person_col(other_df, "Other Team WIP")
     acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
     ooo_df = _clean_person_col(ooo_df, "OOO Hours")
     nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
     wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
+    available_people = available_people.groupby("person", as_index=False)["Available Hours"].sum()
     other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
     acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
     ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
@@ -784,6 +787,7 @@ def build_person_weekly_accounting(
         people
         .merge(nw_people.astype({"person": "string"}), on="person", how="left")
         .merge(wip_people.astype({"person": "string"}), on="person", how="left")
+        .merge(available_people.astype({"person": "string"}), on="person", how="left")
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
@@ -810,6 +814,15 @@ def build_person_weekly_accounting(
         .combine_first(person_override_expected)
         .combine_first(base_expected)
     )
+    peter_cds_mask = (
+        (team_key == "CDS")
+        & out["person_key"].eq("peter mchugh")
+    )
+    peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
+    out.loc[
+        peter_cds_mask & peter_available.gt(0),
+        "Expected Hours"
+    ] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
@@ -3521,7 +3534,6 @@ with right2:
                         "kyle mai": 37.5,
                     }
                     PERSON_TEAM_WEEKLY_HOURS = {
-                        ("peter mchugh", "CDS"): 10.0,
                         ("peter mchugh", "NI"): 27.75,
                     }
                     TEAM_WEEKLY_HOURS = {
@@ -3551,6 +3563,47 @@ with right2:
                     else:
                         drill_expected_hrs = PERSON_WEEKLY_HOURS.get(person_key, default_drill_expected)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
+                    if person_key == "peter mchugh" and "CDS" in teams_for_drill:
+                        peter_cds_avail = (
+                            explode_person_hours(df)
+                            .loc[
+                                lambda d: (
+                                    d["team"].astype(str).str.strip().str.upper().eq("CDS")
+                                    & d["person"].astype(str).str.strip().str.lower().eq("peter mchugh")
+                                ),
+                                ["period_date", "Available Hours"]
+                            ]
+                            .copy()
+                        )
+                        if not peter_cds_avail.empty:
+                            peter_cds_avail["period_date"] = pd.to_datetime(
+                                peter_cds_avail["period_date"],
+                                errors="coerce"
+                            ).dt.normalize()
+                            peter_cds_avail["Available Hours"] = pd.to_numeric(
+                                peter_cds_avail["Available Hours"],
+                                errors="coerce"
+                            )
+                            peter_cds_avail = (
+                                peter_cds_avail
+                                .dropna(subset=["period_date"])
+                                .groupby("period_date", as_index=False)["Available Hours"]
+                                .sum()
+                            )
+                            drill_totals["period_date"] = pd.to_datetime(
+                                drill_totals["period_date"],
+                                errors="coerce"
+                            ).dt.normalize()
+                            drill_totals = drill_totals.merge(
+                                peter_cds_avail.rename(columns={"Available Hours": "PeterCDSAvailableHours"}),
+                                on="period_date",
+                                how="left",
+                            )
+                            drill_totals["ExpectedHours"] = np.where(
+                                drill_totals["PeterCDSAvailableHours"].gt(0),
+                                drill_totals["ExpectedHours"] - TEAM_WEEKLY_HOURS.get("CDS", 37.75) + drill_totals["PeterCDSAvailableHours"],
+                                drill_totals["ExpectedHours"],
+                            )
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
                     drill_overflow_df["y_pos"] = 1.02
                     drill_overflow_df["label"] = "⚠"
