@@ -1440,6 +1440,8 @@ def _weekly_team_export_df(
             capacity_hours = float(people_count) * 40.0
         elif team == "DS":
             capacity_hours = float(people_count) * 37.5
+        elif team == "Lit & Letters":
+            capacity_hours = float(people_count) * 37.5
         elif team == "CPT":
             cpt_31_count = 2
             cpt_30_2_count = 1
