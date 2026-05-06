@@ -626,13 +626,18 @@ def build_person_weekly_accounting(
     nw_people["Non-WIP Hours"] = pd.to_numeric(nw_people["Non-WIP Hours"], errors="coerce").fillna(0.0)
     wip_people = person_hours.loc[
         (person_hours["team"] == team) & (person_hours["period_date"] == wk),
-        ["person", "Actual Hours"]
+        ["person", "Actual Hours", "Available Hours"]
     ].copy()
     if wip_people.empty:
-        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
+        wip_people = pd.DataFrame(columns=["person", "Actual Hours", "Available Hours"])
     wip_people["person"] = wip_people["person"].astype(str).str.strip()
     wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
-    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
+    wip_people["Available Hours"] = pd.to_numeric(
+        wip_people["Available Hours"],
+        errors="coerce",
+    )
+    available_people = wip_people[["person", "Available Hours"]].copy()
+    wip_people = wip_people[["person", "Completed Hours"]]
     acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
     other_df = pd.DataFrame(
         [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
@@ -686,11 +691,13 @@ def build_person_weekly_accounting(
         return out[["person", value_col]]
     nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
     wip_people = _clean_person_col(wip_people, "Completed Hours")
+    available_people = _clean_person_col(available_people, "Available Hours")
     other_df = _clean_person_col(other_df, "Other Team WIP")
     acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
     ooo_df = _clean_person_col(ooo_df, "OOO Hours")
     nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
     wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
+    available_people = available_people.groupby("person", as_index=False)["Available Hours"].sum()
     other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
     acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
     ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
@@ -706,6 +713,7 @@ def build_person_weekly_accounting(
         people
         .merge(nw_people.astype({"person": "string"}), on="person", how="left")
         .merge(wip_people.astype({"person": "string"}), on="person", how="left")
+        .merge(available_people.astype({"person": "string"}), on="person", how="left")
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
@@ -728,6 +736,13 @@ def build_person_weekly_accounting(
         39.0,
         float(week_hours),
     )
+    if str(team).strip().upper() == "CDS" and "Available Hours" in out.columns:
+        peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
+        peter_cds_mask = (
+            out["person_key"].eq("peter mchugh")
+            & peter_available.gt(0)
+        )
+        out.loc[peter_cds_mask, "Expected Hours"] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
@@ -1284,6 +1299,41 @@ def ent_capacity_hours_for_week(
     irl_count = min(irl_count, people_count)
     non_irl_count = max(people_count - irl_count, 0)
     return float((irl_count * 39.0) + (non_irl_count * 40.0))
+def _person_available_hours_for_week(
+    person_hours: pd.DataFrame,
+    team: str,
+    week,
+    person_key: str,
+) -> float:
+    if person_hours is None or person_hours.empty:
+        return np.nan
+    needed = {"team", "period_date", "person", "Available Hours"}
+    if not needed.issubset(person_hours.columns):
+        return np.nan
+    wk = pd.to_datetime(week, errors="coerce")
+    if pd.isna(wk):
+        return np.nan
+    wk = pd.Timestamp(wk).normalize()
+    ph = person_hours.copy()
+    ph["period_date"] = pd.to_datetime(
+        ph["period_date"],
+        errors="coerce"
+    ).dt.normalize()
+    ph_team = ph["team"].astype(str).str.strip().str.upper()
+    ph_person = ph["person"].astype(str).map(
+        lambda x: normalize_person_name(x).strip().lower()
+    )
+    vals = pd.to_numeric(
+        ph.loc[
+            ph_team.eq(str(team).strip().upper())
+            & ph["period_date"].eq(wk)
+            & ph_person.eq(person_key),
+            "Available Hours",
+        ],
+        errors="coerce",
+    ).dropna()
+    vals = vals[vals > 0]
+    return float(vals.sum()) if not vals.empty else np.nan
 def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
     dfnw: Optional[pd.DataFrame],
@@ -1403,11 +1453,21 @@ def _weekly_team_export_df(
                 + (remaining_count * 37.75)
             )
         elif team == "CDS":
-            cds_10_count = 1
-            assigned_count = cds_10_count
+            peter_available = _person_available_hours_for_week(
+                person_hours=person_hours,
+                team=team,
+                week=wk,
+                person_key="peter mchugh",
+            )
+            peter_capacity = (
+                float(peter_available)
+                if pd.notna(peter_available) and float(peter_available) > 0
+                else 10.0
+            )
+            assigned_count = 1 if float(people_count) > 0 else 0
             remaining_count = max(float(people_count) - assigned_count, 0)
             capacity_hours = (
-                (cds_10_count * 10.0)
+                (assigned_count * peter_capacity)
                 + (remaining_count * 37.75)
             )
         elif team == "NI":
