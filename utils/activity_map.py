@@ -437,6 +437,8 @@ ACTIVITY_MAP = {
     "pull complaint report":"Admin",
     "lab book wrie up":"Admin",
     "mandatory training meeting": "Training/Mentoring",
+    "onboarding meeting": "Training/Mentoring",
+    "pe files review with emma": "Training/Mentoring",
     "concerto versa training video": "Training/Mentoring",
     "sh/a meeting email":"Meeting",
     "looking for lost device":"Looking For A Device",
