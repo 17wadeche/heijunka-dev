@@ -676,6 +676,53 @@ def load_scs_cell1_from_existing_metrics_and_refresh_3_weeks(
             f"old_weeks={old_weeks} | new_weeks={new_weeks}"
         )
     return merged_scs_rows
+def recalc_workbook_to_temp_copy(source_file: str) -> str:
+    pythoncom.CoInitialize()
+    excel = win32com.client.DispatchEx("Excel.Application")
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    excel.AskToUpdateLinks = False
+    excel.EnableEvents = False
+    excel.AutomationSecurity = 3
+    src = os.path.abspath(os.path.expandvars(source_file))
+    base = os.path.splitext(os.path.basename(src))[0]
+    ext = os.path.splitext(src)[1]
+    tmp_path = os.path.join(tempfile.gettempdir(), f"{base}__calc__{uuid.uuid4().hex}{ext}")
+    shutil.copy2(src, tmp_path)
+    wb = None
+    try:
+        wb = excel.Workbooks.Open(
+            tmp_path,
+            UpdateLinks=0,
+            ReadOnly=False,
+            IgnoreReadOnlyRecommended=True,
+            Notify=False,
+            AddToMru=False,
+        )
+        try:
+            wb.RefreshAll()
+        except Exception:
+            pass
+        try:
+            excel.CalculateFullRebuild()
+        except Exception:
+            excel.Calculate()
+        wb.Save()
+        return tmp_path
+    finally:
+        try:
+            if wb is not None:
+                wb.Close(SaveChanges=True)
+        except Exception:
+            pass
+        try:
+            excel.Quit()
+        except Exception:
+            pass
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
 def load_ph_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     ph_source_file: str,
@@ -696,7 +743,16 @@ def load_ph_from_existing_metrics_and_refresh_3_weeks(
     cfg = dict(ph_new_cfg)
     cfg["min_period_date"] = min(ph_weeks_to_refresh)
     cfg["max_period_date"] = max(ph_weeks_to_refresh)
-    refreshed_ph_rows = scrape_workbook_with_config(ph_source_file, cfg)
+    tmp_calc_path = None
+    try:
+        tmp_calc_path = recalc_workbook_to_temp_copy(ph_source_file)
+        refreshed_ph_rows = scrape_workbook_with_config(tmp_calc_path, cfg)
+    finally:
+        if tmp_calc_path and os.path.exists(tmp_calc_path):
+            try:
+                os.remove(tmp_calc_path)
+            except OSError:
+                pass
     refreshed_ph_rows = [
         r for r in refreshed_ph_rows
         if safe_str(r.get("period_date")) in ph_weeks_to_refresh
