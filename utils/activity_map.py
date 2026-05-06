@@ -516,6 +516,7 @@ ACTIVITY_MAP = {
     "development":"Career Development",
     "shipments, devices returned in error": "Shipment",
     "change order docs updated to new template":"Change Order",
+    "tm meeting/support":"Meeting",
     "lab meeting sorting cf": "Meeting",
     "meetings, calls, shipping device": "Meeting",
     "reading training document": "Training/Mentoring",
