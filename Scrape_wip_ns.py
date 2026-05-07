@@ -723,6 +723,91 @@ def recalc_workbook_to_temp_copy(source_file: str) -> str:
             pythoncom.CoUninitialize()
         except Exception:
             pass
+def load_spine_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    spine_source_file: str,
+    spine_new_source_file: str,
+    spine_old_cfg: Dict[str, Any],
+    spine_new_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
+    weeks_set = set(weeks_to_refresh)
+    existing_spine_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "Spine"
+    ]
+    spine_min_date = safe_str(spine_old_cfg.get("min_period_date")) or "2025-06-30"
+    frozen_spine_rows = [
+        r for r in existing_spine_rows
+        if safe_str(r.get("period_date")) not in weeks_set
+        and safe_str(r.get("period_date")) >= spine_min_date
+    ]
+    switch_date = safe_str(spine_new_cfg.get("min_period_date")) or "9999-12-31"
+    old_weeks = [w for w in weeks_to_refresh if w < switch_date]
+    new_weeks = [w for w in weeks_to_refresh if w >= switch_date]
+    refreshed_rows: list[dict] = []
+    if existing_spine_rows:
+        if old_weeks:
+            old_cfg = dict(spine_old_cfg)
+            old_cfg["min_period_date"] = min(old_weeks)
+            old_cfg["max_period_date"] = max(old_weeks)
+            refreshed_rows.extend(scrape_workbook_with_config(spine_source_file, old_cfg))
+        if new_weeks:
+            new_cfg = dict(spine_new_cfg)
+            new_cfg["min_period_date"] = min(new_weeks)
+            new_cfg["max_period_date"] = max(new_weeks)
+            refreshed_rows.extend(
+                scrape_spine_previous_weeks_xlsm(
+                    spine_new_source_file,
+                    new_cfg,
+                    team="Spine",
+                    dropdown_override=sorted(new_weeks),
+                )
+            )
+        refreshed_rows = [
+            r for r in refreshed_rows
+            if safe_str(r.get("period_date")) in weeks_set
+        ]
+        if not refreshed_rows:
+            if logger:
+                logger.warning(
+                    f"[Spine] refresh returned 0 rows; keeping existing cached Spine rows only | "
+                    f"existing={len(existing_spine_rows)} | weeks_to_refresh={sorted(weeks_set)}"
+                )
+            return existing_spine_rows
+        merged_spine_rows = merge_rows_by_team_period(frozen_spine_rows + refreshed_rows)
+
+        if logger:
+            logger.info(
+                f"[Spine] loaded cached rows from NS_metrics: {len(existing_spine_rows)} | "
+                f"kept={len(frozen_spine_rows)} | refreshed={len(refreshed_rows)} | "
+                f"final={len(merged_spine_rows)} | "
+                f"old_weeks={old_weeks} | new_weeks={new_weeks}"
+            )
+        return merged_spine_rows
+    old_cfg = dict(spine_old_cfg)
+    old_cfg["min_period_date"] = safe_str(spine_old_cfg.get("min_period_date")) or "2025-06-30"
+    old_cfg["max_period_date"] = safe_str(spine_old_cfg.get("max_period_date")) or "2026-02-23"
+    refreshed_rows.extend(scrape_workbook_with_config(spine_source_file, old_cfg))
+    new_cfg = dict(spine_new_cfg)
+    new_cfg["min_period_date"] = safe_str(spine_new_cfg.get("min_period_date")) or "2026-03-02"
+    new_cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_rows.extend(
+        scrape_spine_previous_weeks_xlsm(
+            spine_new_source_file,
+            new_cfg,
+            team="Spine",
+        )
+    )
+    merged_spine_rows = merge_rows_by_team_period(refreshed_rows)
+    if logger:
+        logger.info(
+            f"[Spine] no cached rows found; performed backfill | "
+            f"refreshed={len(refreshed_rows)} | final={len(merged_spine_rows)}"
+        )
+    return merged_spine_rows
 def load_ph_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     ph_source_file: str,
@@ -2954,16 +3039,17 @@ def scrape_spine_previous_weeks_xlsm(
         seen = set()
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range("B", "T")
-        today_iso = date.today().isoformat()
+        min_pd = safe_str(cfg.get("min_period_date")) or "2026-03-02"
+        max_pd = safe_str(cfg.get("max_period_date")) or date.today().isoformat()
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
             _com_call(lambda: excel.Calculate())
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
             if not period_date:
                 continue
-            if period_date < "2026-03-02":
+            if period_date < min_pd:
                 continue
-            if period_date > today_iso:
+            if period_date > max_pd:
                 continue
             total_available_hours = safe_float(
                 _com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value)
@@ -3697,21 +3783,25 @@ def main():
         )
         rows.extend(cos_rows)
     if should_run("Spine"):
-        extend_team("Spine", lambda: scrape_workbook_with_config(spine_source_file, SPINE_CFG))
-        extend_team(
+        spine_rows = run_team(
+            logger,
             "Spine",
-            lambda: scrape_spine_previous_weeks_xlsm(
+            lambda: load_spine_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                spine_source_file,
                 spine_new_source_file,
+                SPINE_CFG,
                 SPINE_NEW_CFG,
-                team="Spine",
+                logger=logger,
             )
         )
+        rows.extend(spine_rows)
     if should_run("PH"):
         ph_rows = run_team(
             logger,
             "PH",
             lambda: load_ph_from_existing_metrics_and_refresh_3_weeks(
-                out_file,         # this is NS_metrics.csv
+                out_file,
                 ph_source_file,
                 PH_NEW_CFG,
                 logger=logger,
