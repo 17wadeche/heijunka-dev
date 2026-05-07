@@ -425,6 +425,8 @@ ACTIVITY_MAP = {
     "workshop, event review":"Next Gen",
     "fume hood meeting":"Meeting",
     "emails about additional testing to stella":"Email & IM",
+    "bpk meeting":"Meeting",
+    "1meeting":"Meeting",
     "daily schedule":"Metrics & Schedule",
     "potential hot key list for parker event":"Project Work",
     "scrum, cornerstone, admin, collabaration":"Scrum & Action",
