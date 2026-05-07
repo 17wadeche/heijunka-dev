@@ -413,6 +413,7 @@ ACTIVITY_MAP = {
     "psr apv project uat, coding call":"Project Work",
     "cornrstone":"Cornerstone",
     "late review":"WIP Event/Review",
+    "wip event/review":"WIP Event/Review",
     "workshop, event review":"Next Gen",
     "fume hood meeting":"Meeting",
     "emails about additional testing to stella":"Email & IM",
