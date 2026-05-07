@@ -278,6 +278,57 @@ def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
     finally:
         stop.set()
         t.join(timeout=1)
+def load_pss_us_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    pss_us_source_file: str,
+    pss_us_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = set(iso_monday_weeks_back(date.today(), weeks_back=2))
+    existing_pss_us_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "PSS US"
+    ]
+    min_keep_date = safe_str(pss_us_cfg.get("min_period_date")) or "2025-06-02"
+    frozen_pss_us_rows = [
+        r for r in existing_pss_us_rows
+        if safe_str(r.get("period_date")) not in weeks_to_refresh
+        and safe_str(r.get("period_date")) >= min_keep_date
+    ]
+    cfg = dict(pss_us_cfg)
+    cfg["min_period_date"] = min(weeks_to_refresh)
+    cfg["max_period_date"] = max(weeks_to_refresh)
+    refreshed_pss_us_rows = scrape_previous_weeks_xlsm_with_filters(
+        pss_us_source_file,
+        "PSS US",
+        cfg,
+        dropdown_override=sorted(weeks_to_refresh),
+    )
+    refreshed_pss_us_rows = [
+        r for r in refreshed_pss_us_rows
+        if safe_str(r.get("period_date")) in weeks_to_refresh
+    ]
+    if not refreshed_pss_us_rows:
+        if logger:
+            logger.warning(
+                f"[PSS US] refresh returned 0 rows; keeping existing cached PSS US rows only | "
+                f"existing={len(existing_pss_us_rows)} | "
+                f"weeks_to_refresh={sorted(weeks_to_refresh)}"
+            )
+        return existing_pss_us_rows
+    merged_pss_us_rows = merge_rows_by_team_period(
+        frozen_pss_us_rows + refreshed_pss_us_rows
+    )
+    if logger:
+        logger.info(
+            f"[PSS US] loaded cached rows from NS_metrics: {len(existing_pss_us_rows)} | "
+            f"kept={len(frozen_pss_us_rows)} | "
+            f"refreshed={len(refreshed_pss_us_rows)} | "
+            f"final={len(merged_pss_us_rows)} | "
+            f"weeks_to_refresh={sorted(weeks_to_refresh)}"
+        )
+    return merged_pss_us_rows
 def load_scs_super_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     scs_super_source_file: str,
@@ -4032,7 +4083,17 @@ def main():
         )
         rows.extend(csf_rows)
     if should_run("PSS US"):
-        extend_team("PSS US",   lambda: scrape_previous_weeks_xlsm_with_filters(pss_us_source_file,   "PSS US",   PSS_US_CFG,   ALL_MONDAYS_SINCE_2025_06_02))
+        pss_us_rows = run_team(
+            logger,
+            "PSS US",
+            lambda: load_pss_us_from_existing_metrics_and_refresh_3_weeks(
+                out_file,
+                pss_us_source_file,
+                PSS_US_CFG,
+                logger=logger,
+            )
+        )
+        rows.extend(pss_us_rows)
     if should_run("PSS MEIC"):
         pss_meic_rows = run_team(
             logger,
