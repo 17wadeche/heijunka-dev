@@ -77,6 +77,37 @@ def normalize_person_name(name: str) -> str:
     s = " ".join(s.split())
     key = s.lower()
     return NAME_ALIASES.get(key, s)
+FY27_START = pd.Timestamp("2026-04-27").normalize()
+FY27_END = pd.Timestamp("2027-04-25").normalize()
+FY27_FISCAL_MONTHS = {
+    "May '26":       ("2026-04-27", "2026-05-24"),
+    "June '26":      ("2026-05-25", "2026-06-21"),
+    "July '26":      ("2026-06-22", "2026-07-26"),
+    "August '26":    ("2026-07-27", "2026-08-23"),
+    "September '26": ("2026-08-24", "2026-09-20"),
+    "October '26":   ("2026-09-21", "2026-10-25"),
+    "November '26":  ("2026-10-26", "2026-11-22"),
+    "December '26":  ("2026-11-23", "2026-12-20"),
+    "January '27":   ("2026-12-21", "2027-01-24"),
+    "February '27":  ("2027-01-25", "2027-02-21"),
+    "March '27":     ("2027-02-22", "2027-03-21"),
+    "April '27":     ("2027-03-22", "2027-04-25"),
+}
+FY27_FISCAL_MONTHS = {
+    k: (pd.Timestamp(v[0]).normalize(), pd.Timestamp(v[1]).normalize())
+    for k, v in FY27_FISCAL_MONTHS.items()
+}
+def _weeks_between(week_options, start_ts, end_ts) -> list[pd.Timestamp]:
+    start_ts = pd.Timestamp(start_ts).normalize()
+    end_ts = pd.Timestamp(end_ts).normalize()
+
+    return [
+        pd.Timestamp(w).normalize()
+        for w in week_options
+        if start_ts <= pd.Timestamp(w).normalize() <= end_ts
+    ]
+def _fy27_weeks(week_options) -> list[pd.Timestamp]:
+    return _weeks_between(week_options, FY27_START, FY27_END)
 def find_org_config_path() -> Tuple[Optional[Path], List[Path]]:
     attempted: List[Path] = []
     start = Path(__file__).resolve()
@@ -2020,9 +2051,44 @@ if page == "Overview":
             st.markdown("#### Overview filters")
             control_cols = st.columns([1.15, 1.0, 1.25])
             week_options = sorted(
-                team_lookup["week_start"].dropna().unique(),
+                [
+                    pd.Timestamp(w).normalize()
+                    for w in team_lookup["week_start"].dropna().unique()
+                ],
                 reverse=True,
             )
+            if "overview_selected_weeks" in st.session_state:
+                valid_weeks = set(week_options)
+                st.session_state["overview_selected_weeks"] = [
+                    pd.Timestamp(w).normalize()
+                    for w in st.session_state["overview_selected_weeks"]
+                    if pd.Timestamp(w).normalize() in valid_weeks
+                ]
+            @st.dialog("Choose fiscal month")
+            def _overview_fiscal_month_dialog():
+                fiscal_month = st.selectbox(
+                    "Fiscal month",
+                    options=list(FY27_FISCAL_MONTHS.keys()),
+                    key="overview_fiscal_month_choice",
+                )
+                start_ts, end_ts = FY27_FISCAL_MONTHS[fiscal_month]
+                st.caption(
+                    f"{fiscal_month}: {start_ts.strftime('%Y-%m-%d')} through "
+                    f"{end_ts.strftime('%Y-%m-%d')}"
+                )
+                if st.button("Apply", type="primary", key="overview_apply_fiscal_month"):
+                    st.session_state["overview_selected_weeks"] = _weeks_between(
+                        week_options,
+                        start_ts,
+                        end_ts,
+                    )
+                    st.rerun()
+            shortcut_cols = control_cols[0].columns([1, 1])
+            if shortcut_cols[0].button("FY27", key="overview_fy27_btn"):
+                st.session_state["overview_selected_weeks"] = _fy27_weeks(week_options)
+                st.rerun()
+            if shortcut_cols[1].button("Fiscal month", key="overview_fiscal_month_btn"):
+                _overview_fiscal_month_dialog()
             selected_weeks = control_cols[0].multiselect(
                 "Weeks",
                 options=week_options,
