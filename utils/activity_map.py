@@ -431,6 +431,8 @@ ACTIVITY_MAP = {
     "potential hot key list for parker event":"Project Work",
     "scrum, cornerstone, admin, collabaration":"Scrum & Action",
     "coach training sessions (teams meetings)": "Training/Mentoring",
+    "cornerstone, shadowing": "Training/Mentoring",
+    "meetings, shadowing": "Training/Mentoring",
     "spyral pho testing":"Project Work",
     "it problems (computer kept crashing (3 times)-working after the 4th re-boot)": "IT Issue/Update",
     "cidex order from stores (chem handlers)":"Shipment",
