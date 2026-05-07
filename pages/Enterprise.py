@@ -100,7 +100,6 @@ FY27_FISCAL_MONTHS = {
 def _weeks_between(week_options, start_ts, end_ts) -> list[pd.Timestamp]:
     start_ts = pd.Timestamp(start_ts).normalize()
     end_ts = pd.Timestamp(end_ts).normalize()
-
     return [
         pd.Timestamp(w).normalize()
         for w in week_options
