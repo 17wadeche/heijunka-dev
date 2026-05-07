@@ -541,6 +541,8 @@ ACTIVITY_MAP = {
     "meetings (other)": "Meeting",
     "speed networking":"Career Development",
     "workshop, coding":"Next Gen",
+    "tm support / tm training": "Training/Mentoring",
+    "emails call with tm":"Email & IM",
     "collaboration, scrum, pulling aes, help with inbox":"Collaboration",
     "finish pe to pe merge":"WIP Event/Review",
     "collaboration /rpa":"Collaboration",
