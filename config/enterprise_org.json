@@ -22,7 +22,7 @@
     { "portfolio": "Interventional Vascular", "team": "TCT", "ou": "SHA" },
     { "portfolio": "Interventional Vascular", "team": "Aortic", "ou": "SHA" },
     { "portfolio": "Interventional Vascular", "team": "CRDN", "ou": "CRDN" },
-    { "portfolio": "Interventional Vascular", "team": "RPA Lab", "ou": "CRDN" },
+    { "portfolio": "RPA Lab", "team": "RPA Lab", "ou": "RPA Lab" },
     { "portfolio": "Interventional Vascular", "team": "CAS", "ou": "CAS" },
     { "portfolio": "Interventional Vascular", "team": "ECT", "ou": "CS" },
     { "portfolio": "Interventional Vascular", "team": "SVT", "ou": "CS" },
