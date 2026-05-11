@@ -2945,11 +2945,13 @@ def build_tdd_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             "ooo_map": {r["name"]: float(r.get("C", 0.0)) for r in people_rows},
         }
     NAME_COL = 0
-    HEADER_ROW = 1          # Excel row 2
-    PEOPLE_START = 2        # Excel row 3
-    ACT_START = 3           # Excel col D
-    ACT_END = 36            # Excel col AK
-    TOTAL_ROW = TDD_NEW_TOTALS_ROW  # zero-based; Excel row 22 if this is 21
+    TOTAL_COL = 1          # Excel col B
+    OOO_COL = 2            # Excel col C
+    HEADER_ROW = 1         # Excel row 2
+    PEOPLE_START = 2       # Excel row 3
+    ACT_START = 3          # Excel col D
+    ACT_END = 36           # Excel col AK
+    TOTAL_ROW = TDD_NEW_TOTALS_ROW
     people_rows = []
     activities = []
     nonwip_by_person = {}
@@ -2961,9 +2963,16 @@ def build_tdd_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         name = norm_name(_safe_iat(ws, i, NAME_COL, ""))
         if not is_real_person(name):
             continue
-        people_rows.append({"row_i": i, "name": name})
-        person_total = 0.0
-        person_ooo = 0.0
+        row_total = safe_float(_safe_iat(ws, i, TOTAL_COL, np.nan))  # B
+        person_ooo = float(round(safe_float0(_safe_iat(ws, i, OOO_COL, 0.0)), 2))  # C
+        people_rows.append({
+            "row_i": i,
+            "name": name,
+            "B": float(row_total) if pd.notna(row_total) else 0.0,
+            "C": float(person_ooo),
+            "OOO": float(person_ooo),
+        })
+        activity_total = 0.0
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
             label = norm_name(_safe_iat(ws, HEADER_ROW, c, ""))
             if not label:
@@ -2972,17 +2981,37 @@ def build_tdd_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
             if pd.isna(hrs) or hrs <= 0:
                 continue
             hrs = float(round(hrs, 2))
-            if label.strip().casefold() in {"ooo", "out of office", "pto", "vacation"}:
-                person_ooo += hrs
-                activities.append({"name": name, "activity": "OOO", "hours": hrs})
-            else:
-                person_total += hrs
-                activities.append({"name": name, "activity": label, "hours": hrs})
-        if person_total > 0:
-            nonwip_by_person[name] = float(round(person_total, 2))
-        ooo_map[name] = float(round(person_ooo, 2))
-    total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
-    ooo_hours = float(round(sum(ooo_map.values()), 2))
+            activities.append({
+                "name": name,
+                "activity": label,
+                "hours": hrs,
+            })
+            activity_total += hrs
+        if pd.notna(row_total):
+            person_nonwip = float(round(float(row_total) - person_ooo, 2))
+        else:
+            person_nonwip = float(round(activity_total, 2))
+        if person_nonwip > 0:
+            nonwip_by_person[name] = person_nonwip
+        if person_ooo > 0:
+            activities.append({
+                "name": name,
+                "activity": "OOO",
+                "hours": person_ooo,
+            })
+        ooo_map[name] = person_ooo
+    total_b = safe_float(_safe_iat(ws, TOTAL_ROW, TOTAL_COL, np.nan))
+    total_c = safe_float(_safe_iat(ws, TOTAL_ROW, OOO_COL, np.nan))
+    ooo_hours = (
+        float(round(total_c, 2))
+        if pd.notna(total_c)
+        else float(round(sum(ooo_map.values()), 2))
+    )
+    total_nonwip_hours = (
+        float(round(float(total_b) - float(total_c), 2))
+        if pd.notna(total_b) and pd.notna(total_c)
+        else float(round(sum(nonwip_by_person.values()), 2))
+    )
     return {
         "people_rows": people_rows,
         "people_count": len({r["name"] for r in people_rows}),
