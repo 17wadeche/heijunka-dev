@@ -462,6 +462,7 @@ ACTIVITY_MAP = {
     "training new hires another": "Training/Mentoring",
     "review practice closure": "Training/Mentoring",
     "ehs refresher": "Training/Mentoring",
+    "emails/queries/etc":"Email & IM",
     "ehs refresher training": "Training/Mentoring",
     "ehs update": "Training/Mentoring",
     "one on one, collaboration":"Meeting",
