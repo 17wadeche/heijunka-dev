@@ -79,6 +79,12 @@ CPT_WIP_PLAN_SHEET = "# 1 WIP plan"
 CPT_PERF_WIP_SHEET = "#6 Performance WIP Time"
 CPT_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 CPT_PEOPLE_COUNT = 42
+CPT_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 5, 4)
+CPT_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 43
+def cpt_people_count_for_period(period: _dt.date) -> int:
+    if period >= CPT_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return CPT_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return CPT_PEOPLE_COUNT
 CDS_PAB_SHEET = "#2 PAB"
 CDS_WIP_PLAN_SHEET = "# 1 WIP plan"
 CDS_PERF_METRICS_SHEET = "#4 Performance Metrics"
@@ -986,7 +992,7 @@ def scrape_one_cpt_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
         ooo_total_cell="DT2",
         ooo_name_col="DB",
         ooo_hours_col="DT",
-        people_count=CPT_PEOPLE_COUNT,
+        people_count=cpt_people_count_for_period,
         non_wip_types=CPT_NON_WIP_TYPES,
     )
 def scrape_one_cds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:

@@ -1317,45 +1317,79 @@ def _iter_rows_cpt_pab(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[
         if p == "" and cat == "" and cs == "" and target is None and hours_i is None and actual_j is None:
             continue
         yield (r, p, cat, cs, target, hours_i, actual_j)
-def compute_total_available_hours_cpt(ws_wip_plan: Worksheet) -> Optional[float]:
+CPT_NEW_HOURS_START = _dt.date(2026, 5, 4)
+def _cpt_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period >= CPT_NEW_HOURS_START
+def _first_number_from_cells(ws: Worksheet, *cells: str) -> Optional[float]:
+    for cell in cells:
+        n = _cell_number(ws[cell].value)
+        if n is not None:
+            return n
+    return None
+def compute_total_available_hours_cpt(
+    ws_wip_plan: Optional[Worksheet],
+    ws_perf: Optional[Worksheet] = None,
+    period: Optional[_dt.date] = None,
+) -> Optional[float]:
+    if _cpt_use_new_hours_layout(period) and ws_perf is not None:
+        total = _first_number_from_cells(ws_perf, "B49", "C49")
+        if total is not None:
+            return total
+    if ws_wip_plan is None:
+        return None
     return _cell_number(ws_wip_plan["DU3"].value)
-def compute_completed_hours_cpt(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
-    use_b = ws_perf["B48"].value not in (None, "")
-    use_c = ws_perf["C48"].value not in (None, "")
-    if use_b:
-        actual_col = "AB"
-        total = _cell_number(ws_perf["B48"].value)
-    elif use_c:
+def compute_completed_hours_cpt(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    if _cpt_use_new_hours_layout(period):
         actual_col = "AF"
-        total = _cell_number(ws_perf["C48"].value)
+        total = _first_number_from_cells(ws_perf, "B49", "C49", "AF48")
     else:
-        actual_col = "AB"
-        total = _cell_number(ws_perf["C48"].value)
-        if total in (None, 0):
-            total = _cell_number(ws_perf["B48"].value)
+        b48 = _cell_number(ws_perf["B48"].value)
+        c48 = _cell_number(ws_perf["C48"].value)
+        if b48 is not None:
+            actual_col = "AB"
+            total = b48
+        elif c48 is not None:
+            actual_col = "AF"
+            total = c48
+        else:
+            actual_col = "AB"
+            total = None
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(5, 48):
+    summed_actual = 0.0
+    for r in range(5, 49):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or actual is None or actual == 0:
             continue
         actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        summed_actual += actual
         if p not in seen:
             seen.add(p)
             people_in_wip.append(p)
+    if total is None:
+        total = summed_actual
     return total, actual_by_person, people_in_wip
-def compute_person_available_hours_cpt(ws_perf: Worksheet) -> Dict[str, float]:
-    use_b = ws_perf["B48"].value not in (None, "")
-    use_c = ws_perf["C48"].value not in (None, "")
-    if use_c:
+def compute_person_available_hours_cpt(
+    ws_perf: Worksheet,
+    period: Optional[_dt.date] = None,
+) -> Dict[str, float]:
+    if _cpt_use_new_hours_layout(period):
         available_col = "AA"
-    elif use_b:
-        available_col = "V"
     else:
-        available_col = "AA"
+        b48 = _cell_number(ws_perf["B48"].value)
+        c48 = _cell_number(ws_perf["C48"].value)
+        if c48 is not None:
+            available_col = "AA"
+        elif b48 is not None:
+            available_col = "V"
+        else:
+            available_col = "AA"
     out: Dict[str, float] = {}
     for r in range(5, 48):
         person = ws_perf[f"A{r}"].value
@@ -1454,11 +1488,10 @@ def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     output_by_station_by_person: Dict[str, Dict[str, float]] = {}
     uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
     try:
-        if ws_wip_plan is not None:
-            total_available = compute_total_available_hours_cpt(ws_wip_plan)
+        total_available = compute_total_available_hours_cpt(ws_wip_plan, ws_perf, period)
         if ws_perf is not None:
-            completed_hours, actual_hours_by_person, people = compute_completed_hours_cpt(ws_perf)
-            person_avail = compute_person_available_hours_cpt(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_cpt(ws_perf, period)
+            person_avail = compute_person_available_hours_cpt(ws_perf, period)
         if ws_pab is not None:
             target_output, actual_output = compute_target_actual_output_cpt(ws_pab)
             outputs_by_person = compute_outputs_by_person_cpt(ws_pab)
