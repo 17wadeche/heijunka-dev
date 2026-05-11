@@ -5151,3 +5151,74 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-05-11 12:58:22,724 | INFO | [ALL] drop period_date == 2023-11-06: 742 -> 742
 2026-05-11 12:58:22,724 | INFO | [ALL] drop period_date == 2026-09-07: 742 -> 742
 2026-05-11 12:58:22,802 | INFO | Wrote 742 rows to NS_DATA\NS_metrics.csv
+2026-05-11 13:56:23,963 | INFO | === NS Metrics Run START ===
+2026-05-11 13:56:23,964 | INFO | Selected team: all
+2026-05-11 13:56:23,969 | INFO | [TDD COS 1] START
+2026-05-11 13:57:03,497 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 10 | kept=7 | refreshed=3 | final=10
+2026-05-11 13:57:03,499 | INFO | [TDD COS 1] DONE | rows=10 | elapsed=0:00:39.529721
+2026-05-11 13:57:03,499 | INFO | [Spine] START
+2026-05-11 13:58:02,782 | INFO | [Spine] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 13:58:02,784 | INFO | [Spine] DONE | rows=44 | elapsed=0:00:59.285578
+2026-05-11 13:58:02,785 | INFO | [PH] START
+2026-05-11 14:00:37,916 | INFO | [PH] loaded cached PH rows from NS_metrics: 37 | kept=34 | refreshed=4 | final=37
+2026-05-11 14:00:37,916 | INFO | [PH] DONE | rows=37 | elapsed=0:02:35.130532
+2026-05-11 14:00:37,919 | INFO | [PH Cell 17] START
+2026-05-11 14:01:08,792 | INFO | [PH Cell 17] DONE | rows=7 | elapsed=0:00:30.873681
+2026-05-11 14:01:08,792 | INFO | [SCS Cell 1] START
+2026-05-11 14:02:03,581 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 42 | kept=39 | refreshed=7 | final=42 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:02:03,583 | INFO | [SCS Cell 1] DONE | rows=42 | elapsed=0:00:54.790645
+2026-05-11 14:02:03,583 | INFO | [MEIC PH] START
+2026-05-11 14:02:23,597 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 37 | kept=34 | refreshed=3 | final=37
+2026-05-11 14:02:23,599 | INFO | [MEIC PH] DONE | rows=37 | elapsed=0:00:20.016235
+2026-05-11 14:02:23,599 | INFO | [DBS C13] START
+2026-05-11 14:03:53,908 | INFO | [DBS C13] DONE | rows=8 | elapsed=0:01:30.309454
+2026-05-11 14:03:53,908 | INFO | [DBS C13] filter >= 2025-07-07: 8 -> 8
+2026-05-11 14:03:53,908 | INFO | [DBS C14] START
+2026-05-11 14:05:15,443 | INFO | [DBS C14] DONE | rows=8 | elapsed=0:01:21.534974
+2026-05-11 14:05:15,443 | INFO | [DBS C14] filter >= 2025-07-07: 8 -> 8
+2026-05-11 14:05:15,443 | INFO | [NV] START
+2026-05-11 14:05:35,250 | INFO | [NV] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=3 | final=45
+2026-05-11 14:05:35,250 | INFO | [NV] DONE | rows=45 | elapsed=0:00:19.806858
+2026-05-11 14:05:35,266 | INFO | [Nav] START
+2026-05-11 14:05:58,453 | INFO | [Nav] loaded cached rows from NS_metrics: 47 | kept=45 | refreshed=2 | final=47
+2026-05-11 14:05:58,453 | INFO | [Nav] DONE | rows=47 | elapsed=0:00:23.186885
+2026-05-11 14:05:58,455 | INFO | [AE MEIC] START
+2026-05-11 14:06:23,528 | INFO | [AE MEIC] loaded cached rows from NS_metrics: 47 | kept=45 | refreshed=2 | final=47
+2026-05-11 14:06:23,530 | INFO | [AE MEIC] DONE | rows=47 | elapsed=0:00:25.074544
+2026-05-11 14:06:23,530 | INFO | [O-Arm MEIC] START
+2026-05-11 14:07:42,422 | INFO | [O-Arm MEIC] loaded cached rows from NS_metrics: 46 | kept=44 | refreshed=2 | final=46
+2026-05-11 14:07:42,428 | INFO | [O-Arm MEIC] DONE | rows=46 | elapsed=0:01:18.898805
+2026-05-11 14:07:42,431 | INFO | [Mazor] START
+2026-05-11 14:08:36,625 | INFO | [Mazor] loaded cached rows from NS_metrics: 49 | kept=47 | refreshed=2 | final=49
+2026-05-11 14:08:36,628 | INFO | [Mazor] DONE | rows=49 | elapsed=0:00:54.196660
+2026-05-11 14:08:36,628 | INFO | [CSF] START
+2026-05-11 14:09:23,058 | INFO | [CSF] loaded cached rows from NS_metrics: 46 | refreshed=3 | final=47 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:09:23,060 | INFO | [CSF] DONE | rows=47 | elapsed=0:00:46.431947
+2026-05-11 14:09:23,060 | INFO | [PSS US] START
+2026-05-11 14:09:36,681 | INFO | [PSS US] loaded cached rows from NS_metrics: 2 | kept=0 | refreshed=3 | final=3 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:09:36,685 | INFO | [PSS US] DONE | rows=3 | elapsed=0:00:13.624732
+2026-05-11 14:09:36,686 | INFO | [PSS MEIC] START
+2026-05-11 14:10:27,169 | INFO | [PSS MEIC] loaded cached rows from NS_metrics: 46 | kept=44 | refreshed=2 | final=46 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:10:27,172 | INFO | [PSS MEIC] DONE | rows=46 | elapsed=0:00:50.486062
+2026-05-11 14:10:27,172 | INFO | [PSS MEIC Intern] START
+2026-05-11 14:11:19,411 | INFO | [PSS MEIC Intern] loaded cached rows from NS_metrics: 8 | kept=6 | refreshed=3 | final=9 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:11:19,415 | INFO | [PSS MEIC Intern] DONE | rows=9 | elapsed=0:00:52.243300
+2026-05-11 14:11:19,535 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-05-11 14:11:19,536 | INFO | [ENT] START
+2026-05-11 14:11:21,831 | INFO | [ENT] DONE | rows=47 | elapsed=0:00:02.295096
+2026-05-11 14:11:21,833 | INFO | [DBS MEIC] START
+2026-05-11 14:11:21,898 | INFO | [DBS MEIC] DONE | rows=39 | elapsed=0:00:00.065398
+2026-05-11 14:11:21,898 | INFO | [SCS MEIC] START
+2026-05-11 14:11:21,928 | INFO | [SCS MEIC] DONE | rows=39 | elapsed=0:00:00.030012
+2026-05-11 14:11:21,928 | INFO | [Other MEIC] START
+2026-05-11 14:11:22,081 | INFO | [Other MEIC] DONE | rows=71 | elapsed=0:00:00.152563
+2026-05-11 14:11:22,082 | INFO | [SCS Super Cell] START
+2026-05-11 14:12:45,736 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 44 | kept=41 | refreshed=5 | final=44 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 14:12:45,738 | INFO | [SCS Super Cell] DONE | rows=44 | elapsed=0:01:23.656611
+2026-05-11 14:12:45,740 | INFO | [PH Cell 17] rows before TAA filter = 7
+2026-05-11 14:12:45,741 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 772 -> 742
+2026-05-11 14:12:45,742 | INFO | [PH Cell 17] rows after TAA filter = 7
+2026-05-11 14:12:45,743 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 772 -> 742
+2026-05-11 14:12:45,744 | INFO | [ALL] drop period_date == 2023-11-06: 742 -> 742
+2026-05-11 14:12:45,745 | INFO | [ALL] drop period_date == 2026-09-07: 742 -> 742
+2026-05-11 14:12:45,825 | INFO | Wrote 742 rows to NS_DATA\NS_metrics.csv
