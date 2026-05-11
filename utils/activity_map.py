@@ -463,6 +463,7 @@ ACTIVITY_MAP = {
     "review first can this be closed as duplicate of":"WIP Event/Review",
     "training new hires another": "Training/Mentoring",
     "review practice closure": "Training/Mentoring",
+    "training, scrum, collaboration": "Training/Mentoring",
     "parking permit":"Admin",
     "ehs refresher": "Training/Mentoring",
     "emails/queries/etc":"Email & IM",
