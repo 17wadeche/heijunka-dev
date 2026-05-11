@@ -442,6 +442,7 @@ ACTIVITY_MAP = {
     "emails admin training":"Email & IM",
     "scrum / meeting / reg inquirie":"Scrum & Action",
     "training new hires another": "Training/Mentoring",
+    "review practice closure": "Training/Mentoring",
     "one on one, collaboration":"Meeting",
     "event review, scrum, collaboration":"WIP Event/Review",
     "scrum, training prep":"Scrum & Action",
