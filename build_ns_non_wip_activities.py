@@ -16,6 +16,8 @@ import warnings
 from pathlib import Path
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
+TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
+TDD_NEW_TOTALS_ROW = 21
 warnings.filterwarnings(
     "ignore",
     message="Data Validation extension is not supported and will be removed"
@@ -3196,29 +3198,47 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
                 continue
             if ws.shape[0] < cfg.min_rows or ws.shape[1] < cfg.min_cols:
                 continue
-            actual_totals_row = find_total_row_optional(
-                ws,
-                name_col=0,
-                start_row=cfg.people_start_row,
-            )
-            if actual_totals_row is None:
-                if 0 <= cfg.totals_row < ws.shape[0]:
-                    actual_totals_row = cfg.totals_row
+            forced_totals_row = None
+            if (
+                team_src.team == "TDD"
+                and pd.Timestamp(week).normalize() >= TDD_TOTALS_ROW_CHANGE_DATE
+            ):
+                forced_totals_row = TDD_NEW_TOTALS_ROW
+            if forced_totals_row is not None:
+                if 0 <= forced_totals_row < ws.shape[0]:
+                    actual_totals_row = forced_totals_row
                 else:
                     print(
                         f"[WARN] {team_src.team} sheet={sheet_name!r}: "
-                        f"configured totals_row={cfg.totals_row} is outside worksheet shape={ws.shape}. "
-                        f"Using last available row index {ws.shape[0] - 1}.",
+                        f"forced totals_row={forced_totals_row} is outside worksheet shape={ws.shape}. "
+                        f"Skipping sheet.",
                         flush=True,
                     )
-                    actual_totals_row = ws.shape[0] - 1
+                    continue
+            else:
+                actual_totals_row = find_total_row_optional(
+                    ws,
+                    name_col=0,
+                    start_row=cfg.people_start_row,
+                )
+                if actual_totals_row is None:
+                    if 0 <= cfg.totals_row < ws.shape[0]:
+                        actual_totals_row = cfg.totals_row
+                    else:
+                        print(
+                            f"[WARN] {team_src.team} sheet={sheet_name!r}: "
+                            f"configured totals_row={cfg.totals_row} is outside worksheet shape={ws.shape}. "
+                            f"Using last available row index {ws.shape[0] - 1}.",
+                            flush=True,
+                        )
+                        actual_totals_row = ws.shape[0] - 1
             if actual_totals_row <= cfg.people_start_row:
                 print(
                     f"[WARN] {team_src.team} sheet={sheet_name!r}: "
                     f"bad total row {actual_totals_row}; people_start_row={cfg.people_start_row}. Skipping sheet.",
                     flush=True,
                 )
-                continue
+                continue           
             people_rows = read_people_block(
                 ws,
                 start_row_i=cfg.people_start_row,
