@@ -439,6 +439,8 @@ ACTIVITY_MAP = {
     "email process assessment south africa":"Email & IM",
     "reportability guidance update":"Reportability Matrix",
     "workshop, emails/admin":"Next Gen",
+    "emails admin training":"Email & IM",
+    "scrum / meeting / reg inquirie":"Scrum & Action",
     "training new hires another": "Training/Mentoring",
     "one on one, collaboration":"Meeting",
     "event review, scrum, collaboration":"WIP Event/Review",
