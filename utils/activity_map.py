@@ -459,6 +459,8 @@ ACTIVITY_MAP = {
     "tergazyme order discussion with aurelie":"Collaboration",
     "emails admin training":"Email & IM",
     "scrum / meeting / reg inquirie":"Scrum & Action",
+    "death case procedural notes meeting.":"Meeting",
+    "review first can this be closed as duplicate of":"WIP Event/Review",
     "training new hires another": "Training/Mentoring",
     "review practice closure": "Training/Mentoring",
     "ehs refresher": "Training/Mentoring",
