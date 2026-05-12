@@ -169,7 +169,14 @@ def _build_export_lookup_tables_cached(
             team_export["week_start"], errors="coerce"
         ).dt.normalize()
         team_export = team_export[team_export["week_start"] <= today].copy()
-    for col in ["completed_hours", "non_wip_hours","other_team_wip_hours", "ooo_hours", "unaccounted_hours"]:
+    for col in [
+        "completed_hours",
+        "non_wip_hours",
+        "other_team_wip_hours",
+        "ooo_hours",
+        "unaccounted_hours",
+        "capacity_hours",
+    ]:
         if col not in team_export.columns:
             team_export[col] = 0.0
     team_export = team_export[
@@ -177,6 +184,8 @@ def _build_export_lookup_tables_cached(
             pd.to_numeric(team_export["completed_hours"], errors="coerce").fillna(0.0)
             + pd.to_numeric(team_export["non_wip_hours"], errors="coerce").fillna(0.0)
             + pd.to_numeric(team_export["other_team_wip_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["unaccounted_hours"], errors="coerce").fillna(0.0)
+            + pd.to_numeric(team_export["capacity_hours"], errors="coerce").fillna(0.0)
         ) > 0
     ].reset_index(drop=True)
     if team_export.empty:
@@ -1095,6 +1104,7 @@ enabled_teams = [t for t in org.teams if t.enabled]
 all_team_names = [t.name for t in org.teams]
 enabled_team_names = [t.name for t in enabled_teams] or all_team_names
 team_filter = enabled_team_names or all_team_names
+org_cache_key = json.dumps(org.raw, sort_keys=True, default=str)
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
@@ -1277,6 +1287,71 @@ def _team_meta_lookup(org: OrgConfig) -> pd.DataFrame:
             "ou": meta.get("ou"),
             "portfolio": meta.get("portfolio"),
         })
+    return pd.DataFrame(rows)
+def _is_truthy_meta(value: Any) -> bool:
+    return _coerce_bool(value, default=False)
+def _to_float_meta(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return default
+        return float(value)
+    except Exception:
+        return default
+def _unaccounted_only_team_rows(
+    org: OrgConfig,
+    weeks: list[pd.Timestamp],
+    existing_team_weeks: set[tuple[str, pd.Timestamp]],
+    factor_out_ooo: bool = False,
+) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    normalized_weeks = sorted({pd.Timestamp(w).normalize() for w in weeks if pd.notna(w)})
+    if not normalized_weeks:
+        return pd.DataFrame()
+    for team_cfg in org.teams:
+        if not team_cfg.enabled:
+            continue
+        meta = team_cfg.meta or {}
+        if not _is_truthy_meta(meta.get("unaccounted_only")):
+            continue
+        people_count = _to_float_meta(
+            meta.get("people_count", meta.get("headcount", meta.get("people"))),
+            default=0.0,
+        )
+        weekly_hours = _to_float_meta(
+            meta.get("weekly_hours_per_person", meta.get("hours_per_person", meta.get("week_hours"))),
+            default=40.0,
+        )
+        capacity_hours = _to_float_meta(
+            meta.get("weekly_capacity_hours", meta.get("capacity_hours")),
+            default=people_count * weekly_hours,
+        )
+        if capacity_hours <= 0:
+            continue
+        for wk in normalized_weeks:
+            key = (team_cfg.name, wk)
+            if key in existing_team_weeks:
+                continue
+            pct_denom = capacity_hours
+            rows.append({
+                "team": team_cfg.name,
+                "week_start": wk,
+                "people_count": people_count,
+                "completed_hours": 0.0,
+                "other_team_wip_hours": 0.0,
+                "non_wip_hours": 0.0,
+                "ooo_hours": 0.0,
+                "capacity_hours": capacity_hours,
+                "unaccounted_hours": capacity_hours,
+                "over_hours": 0.0,
+                "warning": str(meta.get("warning") or "Missing weekly data"),
+                "wip_pct": 0.0,
+                "other_team_wip_pct": 0.0,
+                "non_wip_pct": 0.0,
+                "ooo_pct": 0.0,
+                "unaccounted_pct": (capacity_hours / pct_denom) if pct_denom > 0 else pd.NA,
+            })
+    if not rows:
+        return pd.DataFrame()
     return pd.DataFrame(rows)
 def _prepare_weekly_accounting_inputs(
     metrics_frame: pd.DataFrame,
@@ -1585,6 +1660,25 @@ def _weekly_team_export_df(
             "ooo_pct": ooo_pct,
             "unaccounted_pct": (unaccounted_hours / pct_denom) if pct_denom > 0 else pd.NA,
         })
+    known_weeks = [pd.Timestamp(w).normalize() for w in nw["week_start"].dropna().unique()]
+    if not metrics_team.empty and "week_start" in metrics_team.columns:
+        known_weeks.extend(
+            pd.Timestamp(w).normalize()
+            for w in metrics_team["week_start"].dropna().unique()
+        )
+    existing_team_weeks = {
+        (str(r.get("team", "")).strip(), pd.Timestamp(r.get("week_start")).normalize())
+        for r in rows
+        if str(r.get("team", "")).strip() and pd.notna(r.get("week_start"))
+    }
+    synthetic_rows = _unaccounted_only_team_rows(
+        org,
+        known_weeks,
+        existing_team_weeks,
+        factor_out_ooo=factor_out_ooo,
+    )
+    if not synthetic_rows.empty:
+        rows.extend(synthetic_rows.to_dict("records"))
     if not rows:
         return pd.DataFrame()
     base = pd.DataFrame(rows)
@@ -2039,7 +2133,7 @@ if page == "Overview":
         shared_nonwip_df,
         org,
         factor_out_ooo,
-        cache_key=cfg_path_str or "default",
+        cache_key=org_cache_key,
     )
     team_lookup = overview_team_export
     ou_lookup = overview_ou_export
@@ -2703,7 +2797,7 @@ elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export, enterprise_export = _get_export_lookup_bundle(
         shared_metrics_df, shared_nonwip_df, org, factor_out_ooo,
-        cache_key=cfg_path_str or "default",
+        cache_key=org_cache_key,
     )
     export_scope_df = enterprise_export.copy()
     export_filter_col = None
