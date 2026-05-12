@@ -239,8 +239,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         lc = c.lower()
         if lc == "hc in wip":
             canon_map[c] = "HC in WIP"
-        elif lc in ("open complaint timeliness", "open complaints timeliness", "complaint timeliness"):
-            canon_map[c] = "Open Complaint Timeliness"
         elif lc in ("actual hc used", "actual_hc_used", "actual-hc-used"):
             canon_map[c] = "Actual HC used"
         elif lc in ("people in wip", "people_wip", "people-in-wip", "people_wip_list"):
@@ -249,16 +247,10 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    if "Open Complaint Timeliness" in df.columns:
-        s = (df["Open Complaint Timeliness"]
-                .astype(str)
-                .str.strip()
-                .replace({"": np.nan, "—": np.nan, "-": np.nan}))
         s = s.str.replace("%", "", regex=False).str.replace(",", "", regex=False)
         v = pd.to_numeric(s, errors="coerce")
         if pd.notna(v.max()) and float(v.max()) > 1.5:
             v = v / 100.0
-        df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
                 "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
         if col in df.columns:
@@ -1784,18 +1776,6 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
     return out
-def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
-    if pd.isna(v):
-        return np.nan, "{:.0%}"
-    try:
-        v = float(v)
-    except Exception:
-        return np.nan, "{:.0%}"
-    if v <= 1.0:
-        return v, "{:.0%}"
-    return v / 100.0, "{:.0%}"
-timeliness_avg_raw = latest["Open Complaint Timeliness"].dropna().mean() if "Open Complaint Timeliness" in latest.columns else np.nan
-timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 nw_all = load_non_wip()
 if not nw_all.empty:
     if "total_non_wip_hours" in nw_all.columns:
@@ -1833,7 +1813,7 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
     col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
 with kpi_cols[0]:
     st.subheader("Latest Week (Selected Teams)")
-row1 = st.columns(7)
+row1 = st.columns(6)
 kpi(
     row1[0],
     "HC in WIP",
@@ -1855,30 +1835,22 @@ kpi(
     "{:.0%}",
     help="Completed vs Available hours",
 )
-kpi_vs_target(
-    row1[3],
-    "Open Complaint Timeliness",
-    timeliness_avg,
-    0.87,
-    "{:.0%}",
-)
-row2 = st.columns(3)
 kpi(
-    row1[4],
+    row1[3],
     "Closures",
     tot_closures,
     "{:,.0f}",
     help="Events Closed",
 )
 kpi(
-    row1[5],
+    row1[4],
     "Efficiency",
     efficiency,
     "{:.3f}",
     help="Closures ÷ Completed WIP Hours",
 )
 kpi(
-    row1[6],
+    row1[5],
     "Productivity",
     productivity,
     "{:,.3f}",
@@ -3529,7 +3501,6 @@ if len(teams_in_view) == 1:
         single["Efficiency"] = np.nan
     metric_options = [
         "HC in WIP",
-        "Open Complaint Timeliness",
         "Actual UPLH",
         "Actual Output",
         "Actual Hours",
@@ -3558,7 +3529,6 @@ if len(teams_in_view) == 1:
     if selected:
         display_to_col = {
             "HC in WIP": "HC in WIP",
-            "Open Complaint Timeliness": "Open Complaint Timeliness",
             "Actual UPLH": "Actual UPLH",
             "Actual Output": "Actual Output",
             "Actual Hours": "Completed Hours",
@@ -3571,8 +3541,6 @@ if len(teams_in_view) == 1:
         base = alt.Chart(single).encode(x=alt.X("period_date:T", title="Week"))
         def tooltip_for(metric: str):
             col = display_to_col[metric]
-            if metric == "Open Complaint Timeliness":
-                return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".0%")]
             if metric in ("Actual UPLH", "Actual HC used"):
                 return ["period_date:T", "metric:N", alt.Tooltip(f"{col}:Q", format=".2f")]
             if metric == "Actual UPLH":
@@ -3592,8 +3560,6 @@ if len(teams_in_view) == 1:
             title = metric if single_sel else None
             show = single_sel
             kwargs = dict(title=title, labels=show, ticks=show, domain=show)
-            if metric == "Open Complaint Timeliness":
-                kwargs["format"] = "%"
             return alt.Axis(**kwargs)
         def y_enc(metric: str, field: str) -> alt.Y:
             ax = axis_for(metric)
@@ -3661,10 +3627,6 @@ if len(teams_in_view) == 1:
                     resid_sd = float(np.std(resid, ddof=1)) if len(resid) > 2 else 0.0
                     lower = ypred - 1.96 * resid_sd
                     upper = ypred + 1.96 * resid_sd
-                    if metric == "Open Complaint Timeliness":
-                        ypred = np.clip(ypred, 0.0, 1.0)
-                        lower = np.clip(lower, 0.0, 1.0)
-                        upper = np.clip(upper, 0.0, 1.0)
                     forecast_df = pd.DataFrame({
                         "period_date": future_index,
                         col: ypred,
@@ -3707,15 +3669,6 @@ if len(teams_in_view) == 1:
                     y=alt.Y("HC in WIP:Q", axis=alt.Axis(title=None, labels=False)),
                     color=alt.value("steelblue"),
                     tooltip=["period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
-                )
-            )
-            i += 1
-        if "Open Complaint Timeliness" in selected and "Open Complaint Timeliness" in single.columns:
-            layers.append(
-                base.mark_line(point=True).encode(
-                    y=alt.Y("Open Complaint Timeliness:Q", axis=alt.Axis(title=None, labels=False)),
-                    color=alt.value("orange"),
-                    tooltip=["period_date:T", alt.Tooltip("Open Complaint Timeliness:Q", format=".0%")]
                 )
             )
             i += 1
@@ -3789,8 +3742,6 @@ f_table = (
     .sort_values(["team", "period_date"], ascending=[True, False])
 )
 fmt_map: dict[str, str] = {}
-if "Open Complaint Timeliness" in f_table.columns:
-    fmt_map["Open Complaint Timeliness"] = "{:.0%}"
 if "Capacity Utilization" in f_table.columns:
     fmt_map["Capacity Utilization"] = "{:.2%}"
 for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output"]:
