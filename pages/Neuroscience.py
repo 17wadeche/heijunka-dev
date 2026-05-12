@@ -1,6 +1,7 @@
 # pages/Neuroscience.py
 import os, sys
 from pathlib import Path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -9,7 +10,6 @@ import json
 import re
 import unicodedata
 from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
