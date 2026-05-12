@@ -1763,39 +1763,6 @@ if nonwip_mode:
                     .properties(height=240, title="% Non-WIP")
                 )
                 st.altair_chart(ch2, use_container_width=True)
-    st.markdown("#### Weekly Non-WIP Rows")
-    team_hist_tbl = team_hist.copy()
-    team_hist_tbl["people_count"] = team_hist_tbl["period_date"].apply(
-        lambda wk: merged_people_count_for_week(
-            team_nw,
-            wk,
-            metrics_frame_for_accounting,
-            nw_view_for_accounting,
-        )
-    )
-    show_cols = ["team", "period_date", "people_count", "total_non_wip_hours", "% Non-WIP"]
-    tbl = (
-        team_hist_tbl[show_cols]
-        .rename(columns={
-            "team": "Team",
-            "period_date": "Date",
-            "people_count": "People Count",
-            "total_non_wip_hours": "Non-WIP Hours",
-            "% Non-WIP": "% Non-WIP",
-        })
-        .sort_values("Date", ascending=False)
-    )
-    if "Date" in tbl.columns:
-        tbl["Date"] = pd.to_datetime(tbl["Date"], errors="coerce").dt.date
-    st.dataframe(
-        tbl.style.format({
-            "People Count": "{:,.0f}",
-            "Non-WIP Hours": "{:,.1f}",
-            "% Non-WIP": "{:.2f}%",
-        }),
-        use_container_width=True,
-        hide_index=True,
-    )
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
