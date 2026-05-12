@@ -1298,6 +1298,10 @@ if nonwip_mode:
         completed_hours=wip_hours_val,
         total_non_wip_hours=locals().get("total_nonwip_hours_val", locals().get("nonwip_hours_val", np.nan)),
         factor_out_ooo=not include_ooo_in_kpi_pct,
+        person_hours=locals().get("_ppl_hours_kpi"),
+        people_in_wip=locals().get("_ppl_in_wip_kpi"),
+        nw_frame=nw,
+        metrics_frame=df,
         ent_capacity_callback=globals().get("ent_capacity_hours_for_week"),
         ent_capacity_kwargs={
             "team": team_nw,
