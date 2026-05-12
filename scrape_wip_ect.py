@@ -15,7 +15,6 @@ FOLDERS = [
 START_DATE = date(2026, 1, 4)
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_CSV = SCRIPT_DIR / f"IV_DATA\\{TEAM.lower()}_heijunka_extract.csv"
-TIMELINESS_CSV = SCRIPT_DIR / "timeliness.csv"
 CLOSURES_CSV = SCRIPT_DIR / "closures.csv"
 METRICS_AGGREGATE_CSV = SCRIPT_DIR / "IV_DATA\\metrics_aggregate_dev.csv"
 AVAILABLE_SHEET = "Available WIP Hours"
@@ -46,7 +45,6 @@ OUTPUT_COLUMNS = [
     "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person",
     "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness",
     "error",
     "Closures",
     "Opened",
@@ -186,17 +184,6 @@ def get_available_person_hours(ws) -> dict[str, dict[str, float]]:
         person_hours.setdefault(name, {"actual": 0.0, "available": 0.0})
         person_hours[name]["available"] += available
     return person_hours
-def load_timeliness_lookup(path: Path) -> dict[tuple[str, str], float]:
-    lookup: dict[tuple[str, str], float] = {}
-    with path.open("r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for record in reader:
-            team = normalize_team(record.get("team"))
-            period = parse_iso_date(record.get("period_date"))
-            if not team or not period:
-                continue
-            lookup[(team, period.isoformat())] = safe_float(record.get("Open Complaint Timeliness"))
-    return lookup
 def load_closures_lookup(path: Path) -> dict[tuple[str, str], dict[str, float]]:
     lookup: dict[tuple[str, str], dict[str, float]] = {}
     with path.open("r", newline="", encoding="utf-8-sig") as f:
@@ -213,7 +200,6 @@ def load_closures_lookup(path: Path) -> dict[tuple[str, str], dict[str, float]]:
     return lookup
 def process_workbook(
     path: Path,
-    timeliness_lookup: dict[tuple[str, str], float],
     closures_lookup: dict[tuple[str, str], dict[str, float]],
 ) -> dict[str, Any]:
     row = {col: "" for col in OUTPUT_COLUMNS}
@@ -311,9 +297,6 @@ def process_workbook(
     row["Output by Cell/Station - by person"] = json_string(output_by_station_person)
     row["UPLH by Cell/Station - by person"] = json_string(uplh_by_station_person)
     key = (normalize_team(row["team"]), row["period_date"])
-    timeliness_value = timeliness_lookup.get(key)
-    if timeliness_value is not None:
-        row["Open Complaint Timeliness"] = round(timeliness_value, 1)
     closures_info = closures_lookup.get(key)
     if closures_info:
         row["Closures"] = round(closures_info["Closures"], 1)
@@ -398,12 +381,11 @@ def main() -> None:
     if not files:
         searched = ", ".join(str(f) for f in FOLDERS)
         raise FileNotFoundError(f"No matching files found in: {searched}")
-    timeliness_lookup = load_timeliness_lookup(TIMELINESS_CSV)
     closures_lookup = load_closures_lookup(CLOSURES_CSV)
     rows: list[dict[str, Any]] = []
     for path in files:
         try:
-            row = process_workbook(path, timeliness_lookup, closures_lookup)
+            row = process_workbook(path, closures_lookup)
             period = row.get("period_date")
             if period:
                 period_date = datetime.strptime(period, "%Y-%m-%d").date()
