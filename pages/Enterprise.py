@@ -405,6 +405,7 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+@st.cache_data(show_spinner=False)
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team", "period_date", "person", "Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
@@ -441,6 +442,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False)
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     cols = ["team", "period_date", "person", "Actual Hours", "Available Hours", "Utilization"]
     if df is None or df.empty:
@@ -494,6 +496,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False)
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     cols = ["team", "period_date", "person"]
     if df is None or df.empty:
@@ -3247,19 +3250,25 @@ elif page == "Export":
                     use_container_width=True,
                     hide_index=True,
                 )
-            try:
-                xlsx_bytes = _cached_excel_bytes(
-                    team_export_display,
-                    ou_export_display,
-                    portfolio_export_display,
-                    enterprise_export_display,
-                    missing_teams_display,
-                )
+            if st.button("Prepare Excel export", key="prepare_enterprise_excel_export"):
+                try:
+                    st.session_state["enterprise_excel_export_bytes"] = _cached_excel_bytes(
+                        team_export_display,
+                        ou_export_display,
+                        portfolio_export_display,
+                        enterprise_export_display,
+                        missing_teams_display,
+                    )
+                except Exception as e:
+                    st.session_state.pop("enterprise_excel_export_bytes", None)
+                    st.error(f"Excel export failed: {e}")
+            xlsx_bytes = st.session_state.get("enterprise_excel_export_bytes")
+            if xlsx_bytes:
                 st.download_button(
                     label="Download Excel export",
                     data=xlsx_bytes,
                     file_name="enterprise_weekly_export.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-            except Exception as e:
-                st.error(f"Excel export failed: {e}")
+            else:
+                st.caption("Excel bytes are generated only when requested so the dashboard can render faster.")

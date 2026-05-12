@@ -222,6 +222,7 @@ def filter_team_view(frame: pd.DataFrame, team_group: str, subgroup: str = "All"
         else:
             sub = exact
     return sub
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
@@ -679,6 +680,7 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
     if not out_rows:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.DataFrame:
     cols = ["team", "period_date", key_label, "Actual", "Target"]
     if df.empty or col_name not in df.columns:
@@ -724,6 +726,7 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
@@ -764,6 +767,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Person Hours" not in df.columns:
         return pd.DataFrame(columns=[
@@ -952,6 +956,7 @@ def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
         if c in df.columns:
             return c
     return None
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
     col = _find_first_col(
         df,
@@ -992,6 +997,7 @@ def _maybe_as_float(x):
         return float(x)
     except Exception:
         return np.nan
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
     col = _find_first_col(
         df,
@@ -1034,6 +1040,7 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
     col = _find_first_col(
         df,
@@ -1096,6 +1103,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_person_station_hours_over_time(frame: pd.DataFrame, team: str, person: str) -> pd.DataFrame:
     hrs = explode_cell_person_hours(frame, team)
     if hrs.empty:
@@ -1116,6 +1124,7 @@ def build_person_station_hours_over_time(frame: pd.DataFrame, team: str, person:
                .groupby(["period_date", "cell_station"], as_index=False)
                .agg({"Actual Hours": "sum", "Available Hours": "sum"}))
     return sub.sort_values(["period_date", "cell_station"])
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_station_person_hours_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
     hrs = explode_cell_person_hours(frame, team)
     if hrs.empty:
@@ -1133,6 +1142,7 @@ def build_station_person_hours_over_time(frame: pd.DataFrame, team: str, station
     )
     keep = ["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"]
     return sub[keep].sort_values(["period_date","person"])
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_station_person_outputs_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
     cp = explode_outputs_by_cell_person(frame, team)
     if cp.empty:
@@ -1147,6 +1157,7 @@ def build_station_person_outputs_over_time(frame: pd.DataFrame, team: str, stati
         "none"
     )
     return sub.sort_values(["period_date","person"])
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
     outs = explode_outputs_by_cell_person(frame, team)
     hrs  = explode_cell_person_hours(frame, team)
@@ -1174,6 +1185,7 @@ def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station:
     )
     keep = ["period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"]
     return m[keep].sort_values(["period_date","person"])
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
     if outp.empty:
@@ -1191,7 +1203,8 @@ def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     m["Target UPLH"] = (m["Target Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
     m["team"] = team
     cols = ["team", "period_date", "person", "Actual Output", "Target Output", "Actual Hours", "Actual UPLH", "Target UPLH"]
-    return m[cols].dropna(subset=["Actual Hours"])  # keep rows with hours; UPLH itself can be NaN if target missing
+    return m[cols].dropna(subset=["Actual Hours"]) 
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_uplh_by_cell_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outc = explode_outputs_json(frame[frame["team"] == team], "Outputs by Cell/Station", "cell_station")
     if outc.empty:
@@ -1696,7 +1709,6 @@ if nonwip_mode:
             agg_map["% in WIP"] = "mean"
         if "% Non-WIP" in team_hist.columns:
             agg_map["% Non-WIP"] = "mean"
-
         if agg_map:
             team_hist = (
                 team_hist.groupby("period_date", as_index=False)
@@ -1706,20 +1718,15 @@ if nonwip_mode:
             team_hist["team"] = team_nw if subgroup_nw == "All" else f"{team_nw} - {subgroup_nw}"
             team_hist["team_group"] = team_nw
             team_hist["team_subgroup"] = subgroup_nw
-
-    # force chart columns to proper types
     if not team_hist.empty:
         team_hist["period_date"] = pd.to_datetime(team_hist["period_date"], errors="coerce")
         if "total_non_wip_hours" in team_hist.columns:
             team_hist["total_non_wip_hours"] = pd.to_numeric(team_hist["total_non_wip_hours"], errors="coerce")
         if "% Non-WIP" in team_hist.columns:
             team_hist["% Non-WIP"] = pd.to_numeric(team_hist["% Non-WIP"], errors="coerce")
-
         trend_hours = team_hist.dropna(subset=["period_date", "total_non_wip_hours"]).copy()
         trend_pct = team_hist.dropna(subset=["period_date", "% Non-WIP"]).copy()
-
         t1, t2 = st.columns(2)
-
         with t1:
             if trend_hours.empty:
                 st.info("No trendable Non-WIP Hours data available.")
@@ -1738,7 +1745,6 @@ if nonwip_mode:
                     .properties(height=240, title="Total Non-WIP Hours")
                 )
                 st.altair_chart(ch1, use_container_width=True)
-
         with t2:
             if trend_pct.empty:
                 st.info("No trendable % Non-WIP data available.")
@@ -1876,6 +1882,7 @@ tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.colum
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
 target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
 actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_person_station_outputs_over_time(df, team_name, person):
     import json
     rows = []
@@ -1906,6 +1913,7 @@ def build_person_station_outputs_over_time(df, team_name, person):
                     "Target": tgtv,
                 })
     return pd.DataFrame(rows)
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
     def _first_col(cands):
         for c in cands:

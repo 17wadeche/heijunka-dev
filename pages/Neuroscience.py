@@ -94,6 +94,7 @@ def load_non_wip(
                 pct_wip_0_100 = s
             df["% Non-WIP"] = 100.0 - pct_wip_0_100
     return df
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
     if nw.empty or "non_wip_by_person" not in nw.columns:
@@ -639,6 +640,7 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
     if not out_rows:
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
@@ -679,6 +681,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     out = _filter_excluded_people_frame(out)
     return out
+@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Person Hours" not in df.columns:
         return pd.DataFrame(columns=[
