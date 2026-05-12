@@ -5364,3 +5364,32 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-05-11 16:03:10,545 | INFO | [ALL] drop period_date == 2023-11-06: 742 -> 742
 2026-05-11 16:03:10,547 | INFO | [ALL] drop period_date == 2026-09-07: 742 -> 742
 2026-05-11 16:03:10,680 | INFO | Wrote 742 rows to NS_DATA\NS_metrics.csv
+2026-05-11 18:44:37,590 | INFO | === NS Metrics Run START ===
+2026-05-11 18:44:37,593 | INFO | Selected team: all
+2026-05-11 18:44:37,602 | INFO | [TDD COS 1] START
+2026-05-11 18:45:12,478 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 10 | kept=7 | refreshed=3 | final=10
+2026-05-11 18:45:12,479 | INFO | [TDD COS 1] DONE | rows=10 | elapsed=0:00:34.876955
+2026-05-11 18:45:12,480 | INFO | [Spine] START
+2026-05-11 18:45:53,271 | INFO | [Spine] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=2 | final=44 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 18:45:53,272 | INFO | [Spine] DONE | rows=44 | elapsed=0:00:40.792022
+2026-05-11 18:45:53,272 | INFO | [PH] START
+2026-05-11 18:47:38,016 | INFO | [PH] loaded cached PH rows from NS_metrics: 37 | kept=34 | refreshed=4 | final=37
+2026-05-11 18:47:38,018 | INFO | [PH] DONE | rows=37 | elapsed=0:01:44.746502
+2026-05-11 18:47:38,018 | INFO | [PH Cell 17] START
+2026-05-11 18:48:03,145 | INFO | [PH Cell 17] DONE | rows=7 | elapsed=0:00:25.126879
+2026-05-11 18:48:03,146 | INFO | [SCS Cell 1] START
+2026-05-11 18:48:29,881 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 42 | kept=39 | refreshed=7 | final=42 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-11 18:48:29,883 | INFO | [SCS Cell 1] DONE | rows=42 | elapsed=0:00:26.736292
+2026-05-11 18:48:29,884 | INFO | [MEIC PH] START
+2026-05-11 18:48:42,514 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 37 | kept=34 | refreshed=3 | final=37
+2026-05-11 18:48:42,516 | INFO | [MEIC PH] DONE | rows=37 | elapsed=0:00:12.632796
+2026-05-11 18:48:42,516 | INFO | [DBS C13] START
+2026-05-11 18:49:35,970 | INFO | [DBS C13] DONE | rows=8 | elapsed=0:00:53.453424
+2026-05-11 18:49:35,970 | INFO | [DBS C13] filter >= 2025-07-07: 8 -> 8
+2026-05-11 18:49:35,970 | INFO | [DBS C14] START
+2026-05-11 19:14:28,554 | INFO | [DBS C14] DONE | rows=8 | elapsed=0:24:52.584238
+2026-05-11 19:14:28,554 | INFO | [DBS C14] filter >= 2025-07-07: 8 -> 8
+2026-05-11 19:14:28,554 | INFO | [NV] START
+2026-05-11 19:15:11,682 | INFO | [NV] loaded cached rows from NS_metrics: 44 | kept=42 | refreshed=3 | final=45
+2026-05-11 19:15:11,686 | INFO | [NV] DONE | rows=45 | elapsed=0:00:43.132104
+2026-05-11 19:15:11,686 | INFO | [Nav] START
