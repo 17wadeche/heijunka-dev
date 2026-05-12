@@ -142,7 +142,7 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
                 v = np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "period_date": safe_normalize_date(r["period_date"]),
                 "person": normalize_person_name(str(person).strip()),
                 "Non-WIP Hours": v
             })
@@ -580,7 +580,7 @@ def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.
                 continue
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "period_date": safe_normalize_date(r["period_date"]),
                 key_label: str(k).strip(),
                 "Actual": outv,
                 "Target": tgtv
@@ -593,6 +593,8 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
     sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
+    sub["period_date"] = sub["period_date"].map(safe_normalize_date)
+    sub = sub.dropna(subset=["period_date"])
     BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
     def _is_good_name(s: str) -> bool:
         return s.strip() and s.strip() not in BAD_NAMES
@@ -610,22 +612,20 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
                     return [str(k).strip() for k, v in obj.items() if _is_good_name(str(k))]
             except Exception:
                 pass
-            import re
             parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if _is_good_name(p)]
             return parts
         if isinstance(x, dict):
             return [str(k).strip() for k in x.keys() if _is_good_name(str(k))]
         return []
-    import re
     for _, r in sub.iterrows():
         people = _as_names(r["People in WIP"])
         for person in people:
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
-                "person": person
+                "period_date": r["period_date"],
+                "person": normalize_person_name(person),
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=["team", "period_date", "person"])
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     return out
@@ -879,7 +879,7 @@ def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
                 t = np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "period_date": safe_normalize_date(r["period_date"]),
                 "cell_station": str(cell).strip(),
                 "Actual Hours": a,
                 "Available Hours": t,
@@ -925,7 +925,7 @@ def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         continue
                     rows.append({
                         "team": r["team"],
-                        "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                        "period_date": safe_normalize_date(r["period_date"]),
                         "cell_station": str(station).strip(),
                         "person": normalize_person_name(str(person).strip()),
                         "Actual": a,
@@ -971,7 +971,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                         continue
                     rows.append({
                         "team": r["team"],
-                        "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                        "period_date": safe_normalize_date(r["period_date"]),
                         "cell_station": str(station).strip(),
                         "person": normalize_person_name(str(person).strip()),
                         "Actual Hours": a,
@@ -987,7 +987,7 @@ def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
                     continue
                 rows.append({
                     "team": r["team"],
-                    "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                    "period_date": safe_normalize_date(r["period_date"]),
                     "cell_station": str(station).strip(),
                     "person": normalize_person_name(str(person).strip()),
                     "Actual Hours": a,
@@ -1075,6 +1075,9 @@ def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station:
     )
     keep = ["period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"]
     return m[keep].sort_values(["period_date","person"])
+def safe_normalize_date(x):
+    ts = pd.to_datetime(x, errors="coerce")
+    return pd.NaT if pd.isna(ts) else ts.normalize()
 def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
     outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
     if outp.empty:
