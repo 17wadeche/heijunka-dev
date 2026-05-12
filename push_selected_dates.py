@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse, csv, os
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Any, Optional
+from utils.date_floor import MIN_PERIOD_DATE_ISO
 def _clean(s: Any) -> str:
     return "" if s is None else str(s).strip()
 def _get(d: dict, *keys: str) -> Optional[str]:
@@ -87,8 +88,9 @@ def _parse_dates(args) -> List[str]:
     for d in dates:
         if d not in seen:
             seen.add(d); out.append(d)
+    out = [d for d in out if d >= MIN_PERIOD_DATE_ISO]
     if not out:
-        raise SystemExit("No valid dates provided.")
+        raise SystemExit(f"No valid dates on or after {MIN_PERIOD_DATE_ISO} provided.")
     return out
 METRICS_AGG_HEADERS = [
     "team","period_date","source_file","Total Available Hours","Completed Hours","Target Output",
@@ -181,8 +183,8 @@ def push_nonwip(dates_iso: List[str], src_path: str, out_path: str, source_file_
     print(f"[non_wip] Wrote {len(merged)} total rows -> {out_path} (added/updated {len(want)})")
 def main():
     ap = argparse.ArgumentParser(description="Push selected dates from metrics.csv & non_wip.csv to their aggregate CSVs.")
-    ap.add_argument("--dates", help="Comma-separated dates (e.g. 2025-10-27,2025-11-03)")
-    ap.add_argument("--date", action="append", help="Specific date (repeatable). Example: --date 2025-10-27")
+    ap.add_argument("--dates", help="Comma-separated dates (e.g. 2026-01-05,2026-01-12)")
+    ap.add_argument("--date", action="append", help="Specific date (repeatable). Example: --date 2026-01-05")
     ap.add_argument("--date-from", help="Inclusive start date (YYYY-MM-DD)")
     ap.add_argument("--date-to", help="Inclusive end date (YYYY-MM-DD)")
     ap.add_argument("--metrics", default="IV_DATA\\metrics.csv", help="Path to metrics.csv")

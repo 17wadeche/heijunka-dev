@@ -4,6 +4,7 @@ import argparse, csv, json, math, os, sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from utils.date_floor import filter_period_rows
 def _to_date(v) -> Optional[date]:
     if v is None or (isinstance(v, float) and math.isnan(v)):
         return None
@@ -429,8 +430,9 @@ def main():
         print(str(e), file=sys.stderr); sys.exit(2)
     except Exception as e:
         print(f"Failed: {e}", file=sys.stderr); sys.exit(1)
+    rows = filter_period_rows(rows)
     if not rows:
-        print("No data produced.", file=sys.stderr); sys.exit(1)
+        print("No data produced on or after 2026-01-01.", file=sys.stderr); sys.exit(1)
     cols = [
         "Team", "Week",
         "People Count",

@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, date
 from pathlib import Path
+from utils.date_floor import filter_period_rows
 from typing import Any
 from openpyxl import load_workbook
 TEAM = "ECT"
@@ -368,6 +369,7 @@ def ensure_fieldnames(existing_fieldnames: list[str], required_fieldnames: list[
             final.append(col)
     return final
 def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+    rows = filter_period_rows(rows)
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()

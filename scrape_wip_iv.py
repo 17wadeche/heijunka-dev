@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Optional, Any, Iterable
 from collections import defaultdict
+from utils.date_floor import filter_period_rows, is_on_or_after_min_period
 import shutil, tempfile, uuid
 def _excel_path_for_open(p: str) -> str:
     return os.path.abspath(p)
@@ -762,7 +763,13 @@ def main():
                 prod_cfg = entry.get("prod_sheets") or entry.get("prod_sheet") or default_prod
                 prod_hints = prod_cfg if isinstance(prod_cfg, list) else [prod_cfg]
             avail_hint = args.avail_sheet or entry.get("avail_sheet") or default_avail
-            jobs.append((team, wb, prod_hints, avail_hint, entry.get("week_anchors", {})))
+            week_anchors = entry.get("week_anchors", {})
+            if isinstance(week_anchors, dict):
+                week_anchors = {
+                    sheet: [anchor for anchor in anchors if is_on_or_after_min_period(anchor.get("date"))]
+                    for sheet, anchors in week_anchors.items()
+                }
+            jobs.append((team, wb, prod_hints, avail_hint, week_anchors))
     elif args.workbook:
         team_label = args.team_name or "Unnamed"
         prod_cfg = args.prod_sheet or default_prod
@@ -802,7 +809,7 @@ def main():
         sys.exit(1)
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
     merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
-    merged_rows = _sort_rows(merged_rows)
+    merged_rows = filter_period_rows(_sort_rows(merged_rows))
     closures_map = {}
     opened_map   = {}
     if getattr(args, "closures", None):

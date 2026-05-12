@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, date
 from pathlib import Path
 from typing import Any
+from utils.date_floor import filter_period_rows
 from openpyxl import load_workbook
 TEAM = "ECT"
 FOLDERS = [
@@ -407,6 +408,7 @@ def dedupe_rows_by_team_week(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
             deduped[key] = row
     return sorted(deduped.values(), key=non_wip_sort_key)
 def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+    rows = filter_period_rows(rows)
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
