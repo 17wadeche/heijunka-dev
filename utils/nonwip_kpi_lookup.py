@@ -7,6 +7,11 @@ FORTY_HOUR_TEAMS = {
     "PSS", "SCS", "TDD", "ACM", "VSS", "Endoscopy", "Surgical AST-GST",
     "PH-NM MEIC", "TCT",
 }
+ENTERPRISE_PEOPLE_COUNT_FROM_NW_TEAMS = {
+    "ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "SCS",
+    "TDD", "ACM", "CPT", "DS", "CDS", "NI", "VSS", "Endoscopy",
+    "Surgical AST-GST", "PH-NM MEIC", "TCT",
+}
 def _to_float(value: Any, default: float = 0.0) -> float:
     try:
         out = pd.to_numeric(value, errors="coerce")
@@ -19,6 +24,33 @@ def _sum_col(df: pd.DataFrame | None, col: str) -> float:
     if df is None or df.empty or col not in df.columns:
         return 0.0
     return float(pd.to_numeric(df[col], errors="coerce").fillna(0.0).sum())
+def _person_available_hours_for_week(
+    person_hours: pd.DataFrame | None,
+    team: str,
+    week,
+    person_key: str,
+) -> float:
+    if person_hours is None or person_hours.empty:
+        return np.nan
+    needed = {"team", "period_date", "person", "Available Hours"}
+    if not needed.issubset(person_hours.columns):
+        return np.nan
+    wk = pd.to_datetime(week, errors="coerce")
+    if pd.isna(wk):
+        return np.nan
+    ph = person_hours.copy()
+    ph["period_date"] = pd.to_datetime(ph["period_date"], errors="coerce").dt.normalize()
+    vals = pd.to_numeric(
+        ph.loc[
+            ph["team"].astype(str).str.strip().str.upper().eq(str(team).strip().upper())
+            & ph["period_date"].eq(pd.Timestamp(wk).normalize())
+            & ph["person"].astype(str).str.strip().str.lower().eq(person_key),
+            "Available Hours",
+        ],
+        errors="coerce",
+    ).dropna()
+    vals = vals[vals > 0]
+    return float(vals.sum()) if not vals.empty else np.nan
 def enterprise_nonwip_kpi_lookup(
     *,
     team: str,
@@ -29,6 +61,9 @@ def enterprise_nonwip_kpi_lookup(
     completed_hours: float,
     total_non_wip_hours: float,
     factor_out_ooo: bool = True,
+    peter_available_hours: float | None = None,
+    cpt_total_non_wip_hours: float | None = None,
+    person_hours: pd.DataFrame | None = None,
     ent_capacity_callback: Callable[..., float] | None = None,
     ent_capacity_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -38,10 +73,14 @@ def enterprise_nonwip_kpi_lookup(
         for col in ["Expected Hours", "OOO Hours", "Other Team WIP"]:
             if col in wk_people.columns:
                 wk_people[col] = pd.to_numeric(wk_people[col], errors="coerce").fillna(0.0)
-    try:
-        count = float(people_count) if people_count is not None and pd.notna(people_count) else 0.0
-    except Exception:
-        count = 0.0
+    row_people_count = _to_float(nw_row.get("people_count", np.nan), np.nan) if nw_row is not None else np.nan
+    if team_name in ENTERPRISE_PEOPLE_COUNT_FROM_NW_TEAMS and pd.notna(row_people_count):
+        count = float(row_people_count)
+    else:
+        try:
+            count = float(people_count) if people_count is not None and pd.notna(people_count) else 0.0
+        except Exception:
+            count = 0.0
     if count <= 0 and not wk_people.empty and "person" in wk_people.columns:
         count = float(wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique())
     if team_name in FORTY_HOUR_TEAMS:
@@ -61,9 +100,23 @@ def enterprise_nonwip_kpi_lookup(
             + (remaining_count * 37.75)
         )
     elif team_name == "CDS":
+        if peter_available_hours is None or pd.isna(peter_available_hours):
+            peter_available_hours = _person_available_hours_for_week(
+                person_hours=person_hours,
+                team=team_name,
+                week=week,
+                person_key="peter mchugh",
+            )
+        peter_capacity = (
+            float(peter_available_hours)
+            if peter_available_hours is not None
+            and pd.notna(peter_available_hours)
+            and float(peter_available_hours) > 0
+            else 10.0
+        )
         assigned_count = 1 if count > 0 else 0
         remaining_count = max(count - assigned_count, 0.0)
-        capacity_hours = (assigned_count * 10.0) + (remaining_count * 37.75)
+        capacity_hours = (assigned_count * peter_capacity) + (remaining_count * 37.75)
     elif team_name == "NI":
         assigned_count = 1
         remaining_count = max(count - assigned_count, 0.0)
@@ -77,7 +130,10 @@ def enterprise_nonwip_kpi_lookup(
         capacity_hours = _sum_col(wk_people, "Expected Hours")
     ooo_hours = _sum_col(wk_people, "OOO Hours")
     other_team_wip_hours = _sum_col(wk_people, "Other Team WIP")
-    total_non_wip_hours = _to_float(total_non_wip_hours, 0.0)
+    total_non_wip_hours = _to_float(
+        cpt_total_non_wip_hours if team_name == "CPT" and cpt_total_non_wip_hours is not None else total_non_wip_hours,
+        0.0,
+    )
     if team_name == "PH-NM MEIC":
         non_wip_hours = max(total_non_wip_hours - other_team_wip_hours - ooo_hours, 0.0)
     else:
@@ -113,6 +169,7 @@ def enterprise_nonwip_kpi_lookup(
         "ooo_hours": ooo_hours,
         "unaccounted_hours": unaccounted_hours,
         "over_hours": over_hours,
+        "warning": f"Over {over_hours:.2f} hours" if over_hours > 0 else "",
         "wip_pct": pct(completed_hours),
         "other_team_wip_pct": pct(other_team_wip_hours),
         "non_wip_pct": pct(non_wip_hours),
