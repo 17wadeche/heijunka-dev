@@ -8,6 +8,7 @@ import streamlit as st
 import altair as alt
 import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
@@ -1294,6 +1295,35 @@ if nonwip_mode:
         if pd.notna(unaccounted_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
         else np.nan
     )
+    _enterprise_kpi = enterprise_nonwip_kpi_lookup(
+        team=team_nw,
+        week=week_nw,
+        nw_row=row,
+        wk_people=wk_people_kpi,
+        people_count=locals().get("people_count_merged", locals().get("people_count_val", np.nan)),
+        completed_hours=wip_hours_val,
+        total_non_wip_hours=locals().get("total_nonwip_hours_val", locals().get("nonwip_hours_val", np.nan)),
+        factor_out_ooo=not include_ooo_in_kpi_pct,
+        ent_capacity_callback=globals().get("ent_capacity_hours_for_week"),
+        ent_capacity_kwargs={
+            "team": team_nw,
+            "week": week_nw,
+            "nw_frame": nw,
+            "irl_people": locals().get("team_irl_people", set()),
+        },
+    )
+    capacity_val = _enterprise_kpi["capacity_hours"]
+    capacity_pct_basis = _enterprise_kpi["pct_denom"]
+    wip_hours_val = _enterprise_kpi["completed_hours"]
+    other_team_wip_hours_val = _enterprise_kpi["other_team_wip_hours"]
+    nonwip_hours_val = _enterprise_kpi["non_wip_hours"]
+    ooo_hours_val = _enterprise_kpi["ooo_hours"]
+    unaccounted_hours_val = _enterprise_kpi["unaccounted_hours"]
+    wip_pct = _enterprise_kpi["wip_pct"]
+    other_team_wip_pct = _enterprise_kpi["other_team_wip_pct"]
+    nonwip_pct = _enterprise_kpi["non_wip_pct"]
+    ooo_pct = _enterprise_kpi["ooo_pct"]
+    unaccounted_pct = _enterprise_kpi["unaccounted_pct"]
     kpi_card(
         c1,
         "WIP Hours",

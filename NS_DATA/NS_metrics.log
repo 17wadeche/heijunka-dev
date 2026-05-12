@@ -49,3 +49,24 @@
 2026-05-12 14:01:50,542 | INFO | [PSS MEIC] loaded cached rows from NS_metrics: 18 | kept=16 | refreshed=2 | final=18 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
 2026-05-12 14:01:50,542 | INFO | [PSS MEIC] DONE | rows=18 | elapsed=0:00:47.684119
 2026-05-12 14:01:50,544 | INFO | [PSS MEIC Intern] START
+2026-05-12 14:02:15,081 | INFO | [PSS MEIC Intern] loaded cached rows from NS_metrics: 8 | kept=6 | refreshed=3 | final=9 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-12 14:02:15,083 | INFO | [PSS MEIC Intern] DONE | rows=9 | elapsed=0:00:24.540754
+2026-05-12 14:02:15,298 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-05-12 14:02:15,299 | INFO | [ENT] START
+2026-05-12 14:02:15,575 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.275458
+2026-05-12 14:02:15,575 | INFO | [DBS MEIC] START
+2026-05-12 14:02:15,607 | INFO | [DBS MEIC] DONE | rows=40 | elapsed=0:00:00.032536
+2026-05-12 14:02:15,607 | INFO | [SCS MEIC] START
+2026-05-12 14:02:15,628 | INFO | [SCS MEIC] DONE | rows=40 | elapsed=0:00:00.020620
+2026-05-12 14:02:15,628 | INFO | [Other MEIC] START
+2026-05-12 14:02:15,749 | INFO | [Other MEIC] DONE | rows=72 | elapsed=0:00:00.120917
+2026-05-12 14:02:15,749 | INFO | [SCS Super Cell] START
+2026-05-12 14:03:20,035 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 18 | kept=15 | refreshed=5 | final=18 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-12 14:03:20,035 | INFO | [SCS Super Cell] DONE | rows=18 | elapsed=0:01:04.286174
+2026-05-12 14:03:20,035 | INFO | [PH Cell 17] rows before TAA filter = 7
+2026-05-12 14:03:20,035 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 459 -> 429
+2026-05-12 14:03:20,035 | INFO | [PH Cell 17] rows after TAA filter = 7
+2026-05-12 14:03:20,035 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 459 -> 429
+2026-05-12 14:03:20,035 | INFO | [ALL] drop period_date == 2023-11-06: 429 -> 429
+2026-05-12 14:03:20,047 | INFO | [ALL] drop period_date == 2026-09-07: 429 -> 429
+2026-05-12 14:03:20,076 | INFO | Wrote 429 rows to NS_DATA\NS_metrics.csv
