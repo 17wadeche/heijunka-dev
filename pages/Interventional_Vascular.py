@@ -249,10 +249,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-        s = s.str.replace("%", "", regex=False).str.replace(",", "", regex=False)
-        v = pd.to_numeric(s, errors="coerce")
-        if pd.notna(v.max()) and float(v.max()) > 1.5:
-            v = v / 100.0
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
                 "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
         if col in df.columns:
@@ -262,9 +258,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
                 .str.strip()
                 .replace(_NA_STRINGS)
             )
-            df[col] = pd.to_numeric(s, errors="coerce")  
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = pd.to_numeric(s, errors="coerce")
     if {"Actual Output", "Target Output"}.issubset(df.columns):
         df["Efficiency vs Target"] = (df["Actual Output"] / df["Target Output"]).replace([np.inf, -np.inf], np.nan)
     if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
