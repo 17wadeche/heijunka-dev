@@ -1648,6 +1648,12 @@ if has_dates and min_date and max_date:
         st.session_state["start_date"] = max(min_date, default_start)
     if "end_date" not in st.session_state:
         st.session_state["end_date"] = max_date
+    stored_start = st.session_state["start_date"]
+    stored_end = st.session_state["end_date"]
+    if stored_start < min_date or stored_start > max_date:
+        st.session_state["start_date"] = max(min_date, min(stored_start, max_date))
+    if stored_end < min_date or stored_end > max_date:
+        st.session_state["end_date"] = max(min_date, min(stored_end, max_date))
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
     if start > end:
