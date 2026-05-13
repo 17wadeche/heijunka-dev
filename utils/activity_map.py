@@ -414,6 +414,7 @@ ACTIVITY_MAP = {
     "cornrstone":"Cornerstone",
     "late review":"WIP/Event Review",
     "training with michelle": "Training/Mentoring",
+    "cs classroom training": "Training/Mentoring",
     "twd demo training": "Training/Mentoring",
     "no internet":"IT Issue/Update",
     "email cathworks meeting":"Email & IM",
