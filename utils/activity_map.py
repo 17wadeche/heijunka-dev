@@ -2834,6 +2834,7 @@ ACTIVITY_MAP = {
     "team lead meeting & action": "Meeting",
     "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",     
     "reportability matrix update":"Reportability Matrix",
+    "pvh reportabiliy":"Reportability Matrix",
     "aortic matrix":"Reportability Matrix",
     "pvh matrix":"Reportability Matrix",
     "reportability matrix":"Reportability Matrix",
