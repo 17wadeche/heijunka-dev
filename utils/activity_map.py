@@ -405,6 +405,7 @@ ACTIVITY_MAP = {
     "cidex odering issues (sap issues with denis)":"Shipment",
     "sap it transaction sorting": "IT Issue/Update",
     "+ update": "IT Issue/Update",
+    "tfw":"Meeting",
     "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "effective presentation skills workshop": "Training/Mentoring",
