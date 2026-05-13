@@ -415,6 +415,7 @@ ACTIVITY_MAP = {
     "late review":"WIP/Event Review",
     "training with michelle": "Training/Mentoring",
     "twd demo training": "Training/Mentoring",
+    "no internet":"IT Issue/Update",
     "email cathworks meeting":"Email & IM",
     "wip event/review":"WIP/Event Review",
     "tmv concerto versa":"Admin",
