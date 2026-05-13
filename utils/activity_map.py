@@ -414,7 +414,7 @@ ACTIVITY_MAP = {
     "cornrstone":"Cornerstone",
     "late review":"WIP/Event Review",
     "training with michelle": "Training/Mentoring",
-    "Twd demo training": "Training/Mentoring",
+    "twd demo training": "Training/Mentoring",
     "email cathworks meeting":"Email & IM",
     "wip event/review":"WIP/Event Review",
     "tmv concerto versa":"Admin",
