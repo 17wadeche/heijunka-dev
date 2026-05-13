@@ -411,6 +411,7 @@ ACTIVITY_MAP = {
     "training document reading": "Training/Mentoring",
     "emails, fw getting car permit.":"Email & IM",
     "permit pickup":"Admin",
+    "dt equipment issues (sorted out)": "IT Issue/Update",
     "intelgrid cd issue": "IT Issue/Update",
     "dt equipment transfer doc review":"Reading File/Document Information",
     "lab tour":"Admin",
