@@ -404,6 +404,7 @@ ACTIVITY_MAP = {
     "chemical odering (pr created-could not push through po) it ticket opened again":"Shipment",
     "cidex odering issues (sap issues with denis)":"Shipment",
     "sap it transaction sorting": "IT Issue/Update",
+    "+ update": "IT Issue/Update",
     "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "effective presentation skills workshop": "Training/Mentoring",
