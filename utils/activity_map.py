@@ -401,6 +401,7 @@ ACTIVITY_MAP = {
     "pvh reportability versa":"Reportability Matrix",
     "malf matrix update":"Reportability Matrix",
     "clinical doc review/approval":"Clinical Review",
+    "chemical odering (pr created-could not push through po) it ticket opened again":"Shipment",
     "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "effective presentation skills workshop": "Training/Mentoring",
