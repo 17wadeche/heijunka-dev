@@ -418,6 +418,8 @@ ACTIVITY_MAP = {
     "code governance":"Coding/Code Gov",
     "prism 2 reverse shadowing": "Training/Mentoring",
     "one on one":"Meeting",
+    "training information request": "Training/Mentoring",
+    "call with olivia for her a":"Meeting",
     "collaboration scrum":"Collaboration",
     "email/team":"Email & IM",
     "complex event review":"WIP/Event Review",
