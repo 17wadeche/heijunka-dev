@@ -1093,6 +1093,21 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
+def _first_valid_team(value, options):
+    if value in options:
+        return value
+    return options[0] if options else None
+_all_wip_teams = (
+    sorted([t for t in df["team"].dropna().unique()])
+    if not df.empty and "team" in df.columns
+    else []
+)
+if "selected_team" not in st.session_state:
+    existing_teams = st.session_state.get("teams_sel", [])
+    if existing_teams:
+        st.session_state.selected_team = existing_teams[0]
+    elif _all_wip_teams:
+        st.session_state.selected_team = _all_wip_teams[0]
 def kpi_card(
     container,
     label: str,
@@ -1151,8 +1166,25 @@ if nonwip_mode:
     st.markdown("### Non-WIP Overview")
     teams_nw = sorted([t for t in nw["team"].dropna().unique()])
     c_team, c_week = st.columns(2)
+    preferred_team = st.session_state.get("selected_team")
+    if preferred_team not in teams_nw:
+        preferred_team = _first_valid_team(preferred_team, teams_nw)
+    if preferred_team is not None:
+        st.session_state["nw_team"] = preferred_team
+    def _sync_from_nonwip_team():
+        team = st.session_state.get("nw_team")
+        if team:
+            st.session_state.selected_team = team
+            st.session_state.teams_sel = [team]
     with c_team:
-        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+        team_nw = st.selectbox(
+            "Team",
+            options=teams_nw,
+            key="nw_team",
+            on_change=_sync_from_nonwip_team,
+        )
+    st.session_state.selected_team = team_nw
+    st.session_state.teams_sel = [team_nw]
     weeks_nw = sorted(
         pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
         reverse=True
@@ -1639,10 +1671,16 @@ def _set_qp_teams(values: list[str]) -> None:
 def _sets_equal(a, b) -> bool:
     return set(a) == set(b)
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_teams = [teams[0]] if teams else []
+default_team = _first_valid_team(st.session_state.get("selected_team"), teams)
+default_teams = [default_team] if default_team else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
+else:
+    st.session_state.teams_sel = [
+        t for t in st.session_state.teams_sel
+        if t in teams
+    ] or default_teams
 has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
@@ -1670,6 +1708,8 @@ else:
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
+if selected_teams:
+    st.session_state.selected_team = selected_teams[0]
 current_qp = _get_qp_teams()
 if not _sets_equal(st.session_state.teams_sel, current_qp):
     _set_qp_teams(sorted(st.session_state.teams_sel))
