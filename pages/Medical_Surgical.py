@@ -1230,6 +1230,28 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
+def _first_valid_team(value, options):
+    if value in options:
+        return value
+    return options[0] if options else None
+def _first_valid_subgroup(value, team_group):
+    opts = subgroup_options_for_team(team_group)
+    if value in opts:
+        return value
+    return "All" if "All" in opts else (opts[0] if opts else "All")
+if "selected_team_subgroup" not in st.session_state:
+    st.session_state.selected_team_subgroup = st.session_state.get("nw_team_subgroup", "All")
+_all_wip_teams = (
+    sorted([t for t in df["team"].dropna().unique()])
+    if not df.empty and "team" in df.columns
+    else []
+)
+if "selected_team" not in st.session_state:
+    existing_teams = st.session_state.get("teams_sel", [])
+    if existing_teams:
+        st.session_state.selected_team = existing_teams[0]
+    elif _all_wip_teams:
+        st.session_state.selected_team = _all_wip_teams[0]
 wip_group_df = add_team_group_columns(load_wip_group_metrics())
 nonwip_group_df = add_team_group_columns(load_nonwip_group_metrics())
 df = add_team_group_columns(df)
@@ -1322,19 +1344,55 @@ if nonwip_mode:
     st.markdown("### Non-WIP Overview")
     teams_nw = grouped_team_options(nw_base)
     c_team, c_week = st.columns(2)
+    preferred_team = _first_valid_team(
+        st.session_state.get("selected_team"),
+        teams_nw,
+    )
+    if preferred_team is not None:
+        st.session_state["nw_team"] = preferred_team
+    preferred_subgroup = _first_valid_subgroup(
+        st.session_state.get("selected_team_subgroup", "All"),
+        preferred_team,
+    )
+    st.session_state["nw_team_subgroup"] = preferred_subgroup
+    def _sync_from_nonwip_team():
+        team = st.session_state.get("nw_team")
+        if team:
+            st.session_state.selected_team = team
+            st.session_state.teams_sel = [team]
+        st.session_state.selected_team_subgroup = _first_valid_subgroup(
+            st.session_state.get("nw_team_subgroup", "All"),
+            team,
+        )
+        st.session_state.nw_team_subgroup = st.session_state.selected_team_subgroup
+    def _sync_from_nonwip_subgroup():
+        st.session_state.selected_team_subgroup = st.session_state.get("nw_team_subgroup", "All")
     with c_team:
-        team_nw = st.selectbox("Team", options=teams_nw, index=0, key="nw_team")
+        team_nw = st.selectbox(
+            "Team",
+            options=teams_nw,
+            key="nw_team",
+            on_change=_sync_from_nonwip_team,
+        )
         subgroup_opts = subgroup_options_for_team(team_nw)
         has_extra_groups = len(subgroup_opts) > 1
         if has_extra_groups:
+            st.session_state["nw_team_subgroup"] = _first_valid_subgroup(
+                st.session_state.get("selected_team_subgroup", "All"),
+                team_nw,
+            )
             subgroup_nw = st.selectbox(
                 "Group:",
                 options=subgroup_opts,
-                index=0,   # default = All
                 key="nw_team_subgroup",
+                on_change=_sync_from_nonwip_subgroup,
             )
         else:
             subgroup_nw = "All"
+            st.session_state.selected_team_subgroup = "All"
+    st.session_state.selected_team = team_nw
+    st.session_state.teams_sel = [team_nw]
+    st.session_state.selected_team_subgroup = subgroup_nw
     nw_source = nw_base if subgroup_nw == "All" else nonwip_group_df
     nw_view = filter_team_view(nw_source, team_nw, subgroup_nw)
     nw = nw_source
@@ -1833,10 +1891,19 @@ def _set_qp_teams(values: list[str]) -> None:
 def _sets_equal(a, b) -> bool:
     return set(a) == set(b)
 teams = grouped_team_options(df)
-default_teams = [teams[0]] if teams else []
+default_team = _first_valid_team(
+    st.session_state.get("selected_team"),
+    teams,
+)
+default_teams = [default_team] if default_team else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
     st.session_state.teams_sel = saved or default_teams
+else:
+    st.session_state.teams_sel = [
+        t for t in st.session_state.teams_sel
+        if t in teams
+    ] or default_teams
 has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date_raw = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
@@ -1857,6 +1924,12 @@ if has_dates and min_date and max_date_raw:
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
+if selected_teams:
+    st.session_state.selected_team = selected_teams[0]
+    st.session_state.selected_team_subgroup = _first_valid_subgroup(
+        st.session_state.get("selected_team_subgroup", "All"),
+        selected_teams[0],
+    )
 current_qp = _get_qp_teams()
 if not _sets_equal(st.session_state.teams_sel, current_qp):
     _set_qp_teams(sorted(st.session_state.teams_sel))
