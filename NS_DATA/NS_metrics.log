@@ -638,3 +638,193 @@
 2026-05-14 11:54:03,205 | INFO | [ALL] drop period_date == 2023-11-06: 428 -> 428
 2026-05-14 11:54:03,205 | INFO | [ALL] drop period_date == 2026-09-07: 428 -> 428
 2026-05-14 11:54:03,233 | INFO | Wrote 428 rows to NS_DATA\NS_metrics.csv
+2026-05-14 13:37:00,620 | INFO | === NS Metrics Run START ===
+2026-05-14 13:37:00,622 | INFO | Selected team: all
+2026-05-14 13:37:00,630 | INFO | [TDD COS 1] START
+2026-05-14 13:37:25,627 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 10 | kept=7 | refreshed=3 | final=10
+2026-05-14 13:37:25,627 | INFO | [TDD COS 1] DONE | rows=10 | elapsed=0:00:24.997545
+2026-05-14 13:37:25,628 | INFO | [Spine] START
+2026-05-14 13:38:11,237 | INFO | [Spine] loaded cached rows from NS_metrics: 18 | kept=16 | refreshed=2 | final=18 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-14 13:38:11,239 | INFO | [Spine] DONE | rows=18 | elapsed=0:00:45.610740
+2026-05-14 13:38:11,239 | INFO | [PH] START
+2026-05-14 13:39:37,827 | INFO | [PH] loaded cached PH rows from NS_metrics: 19 | kept=16 | refreshed=4 | final=19
+2026-05-14 13:39:37,828 | INFO | [PH] DONE | rows=19 | elapsed=0:01:26.588962
+2026-05-14 13:39:37,829 | INFO | [PH Cell 17] START
+2026-05-14 13:40:01,009 | INFO | [PH Cell 17] DONE | rows=7 | elapsed=0:00:23.180125
+2026-05-14 13:40:01,010 | INFO | [SCS Cell 1] START
+2026-05-14 13:40:30,198 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 18 | kept=15 | refreshed=7 | final=18 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-14 13:40:30,199 | INFO | [SCS Cell 1] DONE | rows=18 | elapsed=0:00:29.188826
+2026-05-14 13:40:30,199 | INFO | [MEIC PH] START
+2026-05-14 13:40:41,667 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 19 | kept=16 | refreshed=3 | final=19
+2026-05-14 13:40:41,669 | INFO | [MEIC PH] DONE | rows=19 | elapsed=0:00:11.469764
+2026-05-14 13:40:41,670 | INFO | [DBS C13] START
+2026-05-14 13:41:33,020 | INFO | [DBS C13] DONE | rows=8 | elapsed=0:00:51.349968
+2026-05-14 13:41:33,020 | INFO | [DBS C13] filter >= 2025-07-07: 8 -> 8
+2026-05-14 13:41:33,021 | INFO | [DBS C14] START
+2026-05-14 13:42:20,491 | INFO | [DBS C14] DONE | rows=8 | elapsed=0:00:47.469914
+2026-05-14 13:42:20,492 | INFO | [DBS C14] filter >= 2025-07-07: 8 -> 8
+2026-05-14 13:42:20,493 | INFO | [NV] START
+2026-05-14 13:42:54,527 | ERROR | [NV] FAIL | elapsed=0:00:34.034005 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:42:54,534 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4022, in <lambda>
+    lambda: load_nv_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 635, in load_nv_from_existing_metrics_and_refresh_3_weeks
+    refreshed_nv_rows = scrape_dbs_previous_weeks_xlsm(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1896, in scrape_dbs_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")  # new isolated Excel instance
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:42:54,535 | INFO | [Nav] START
+2026-05-14 13:43:24,757 | ERROR | [Nav] FAIL | elapsed=0:00:30.221570 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:43:24,759 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4033, in <lambda>
+    lambda: load_nav_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 594, in load_nav_from_existing_metrics_and_refresh_3_weeks
+    refreshed_nav_rows = scrape_nav_previous_weeks_xlsm(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2061, in scrape_nav_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")  # isolated Excel instance
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:43:24,759 | INFO | [AE MEIC] START
+2026-05-14 13:43:54,886 | ERROR | [AE MEIC] FAIL | elapsed=0:00:30.127018 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:43:54,887 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4044, in <lambda>
+    lambda: load_ae_meic_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 561, in load_ae_meic_from_existing_metrics_and_refresh_3_weeks
+    refreshed_ae_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2238, in scrape_meic_ae_oarm_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:43:54,888 | INFO | [O-Arm MEIC] START
+2026-05-14 13:44:25,015 | ERROR | [O-Arm MEIC] FAIL | elapsed=0:00:30.127967 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:44:25,017 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4055, in <lambda>
+    lambda: load_oarm_meic_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 528, in load_oarm_meic_from_existing_metrics_and_refresh_3_weeks
+    refreshed_oarm_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2238, in scrape_meic_ae_oarm_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:44:25,019 | INFO | [Mazor] START
+2026-05-14 13:44:55,183 | ERROR | [Mazor] FAIL | elapsed=0:00:30.165551 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:44:55,184 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4066, in <lambda>
+    lambda: load_mazor_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 443, in load_mazor_from_existing_metrics_and_refresh_3_weeks
+    refreshed_mazor_rows = scrape_meic_ae_oarm_previous_weeks_xlsm(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2238, in scrape_meic_ae_oarm_previous_weeks_xlsm
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:44:55,184 | INFO | [CSF] START
+2026-05-14 13:45:25,305 | ERROR | [CSF] FAIL | elapsed=0:00:30.120505 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:45:25,306 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4077, in <lambda>
+    lambda: load_csf_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 475, in load_csf_from_existing_metrics_and_refresh_3_weeks
+    refreshed_csf_rows = scrape_csf_previous_weeks_with_config(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1181, in scrape_csf_previous_weeks_with_config
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:45:25,306 | INFO | [PSS US] START
+2026-05-14 13:45:55,416 | ERROR | [PSS US] FAIL | elapsed=0:00:30.110417 | error=(-2146959355, 'Server execution failed', None, None)
+2026-05-14 13:45:55,417 | ERROR | Traceback (most recent call last):
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 1011, in run_team
+    rows = fn()
+           ^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 4089, in <lambda>
+    lambda: load_pss_us_from_existing_metrics_and_refresh_3_weeks(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 302, in load_pss_us_from_existing_metrics_and_refresh_3_weeks
+    refreshed_pss_us_rows = scrape_previous_weeks_xlsm_with_filters(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\heijunka-dev\Scrape_wip_ns.py", line 2625, in scrape_previous_weeks_xlsm_with_filters
+    excel = win32com.client.DispatchEx("Excel.Application")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wadec8\AppData\Local\Programs\Python\Python3\Lib\site-packages\win32com\client\__init__.py", line 146, in DispatchEx
+    dispatch = pythoncom.CoCreateInstanceEx(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
+
+2026-05-14 13:45:55,418 | INFO | [PSS MEIC] START
+2026-05-14 13:46:36,707 | INFO | [PSS MEIC] loaded cached rows from NS_metrics: 18 | kept=16 | refreshed=2 | final=18 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-14 13:46:36,710 | INFO | [PSS MEIC] DONE | rows=18 | elapsed=0:00:41.290542
+2026-05-14 13:46:36,710 | INFO | [PSS MEIC Intern] START
+2026-05-14 13:46:58,735 | INFO | [PSS MEIC Intern] loaded cached rows from NS_metrics: 8 | kept=6 | refreshed=3 | final=9 | weeks_to_refresh=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-14 13:46:58,737 | INFO | [PSS MEIC Intern] DONE | rows=9 | elapsed=0:00:22.027836
+2026-05-14 13:46:58,832 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-05-14 13:46:58,833 | INFO | [ENT] START
+2026-05-14 13:46:59,068 | INFO | [ENT] DONE | rows=47 | elapsed=0:00:00.234584
+2026-05-14 13:46:59,069 | INFO | [DBS MEIC] START
+2026-05-14 13:46:59,097 | INFO | [DBS MEIC] DONE | rows=40 | elapsed=0:00:00.028277
+2026-05-14 13:46:59,097 | INFO | [SCS MEIC] START
+2026-05-14 13:46:59,139 | INFO | [SCS MEIC] DONE | rows=40 | elapsed=0:00:00.041516
+2026-05-14 13:46:59,140 | INFO | [Other MEIC] START
+2026-05-14 13:46:59,301 | INFO | [Other MEIC] DONE | rows=72 | elapsed=0:00:00.160530
+2026-05-14 13:46:59,301 | INFO | [SCS Super Cell] START
+2026-05-14 14:00:19,560 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 18 | kept=15 | refreshed=5 | final=18 | old_weeks=[] | new_weeks=['2026-04-27', '2026-05-04', '2026-05-11']
+2026-05-14 14:00:19,563 | INFO | [SCS Super Cell] DONE | rows=18 | elapsed=0:13:20.261708
+2026-05-14 14:00:19,564 | INFO | [PH Cell 17] rows before TAA filter = 7
+2026-05-14 14:00:19,565 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 351 -> 324
+2026-05-14 14:00:19,565 | INFO | [PH Cell 17] rows after TAA filter = 7
+2026-05-14 14:00:19,566 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 351 -> 324
+2026-05-14 14:00:19,566 | INFO | [ALL] drop period_date == 2023-11-06: 324 -> 324
+2026-05-14 14:00:19,567 | INFO | [ALL] drop period_date == 2026-09-07: 324 -> 324
+2026-05-14 14:00:19,621 | INFO | Wrote 324 rows to NS_DATA\NS_metrics.csv
