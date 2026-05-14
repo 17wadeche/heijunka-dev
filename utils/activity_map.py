@@ -411,6 +411,8 @@ ACTIVITY_MAP = {
     "files review meeting":"Meeting",
     "training files meeting": "Training/Mentoring",
     "ifu/email":"Email & IM",
+    "other, detail":"Other",
+    "other quality":"Other",
     "effective presentation skills workshop": "Training/Mentoring",
     "onboarding training": "Training/Mentoring",
     "completed 33 tasks (closures-inv)":"WIP/Event Review",
