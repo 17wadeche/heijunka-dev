@@ -652,7 +652,6 @@ def parse_person_hours_json(cell) -> dict:
         return obj if isinstance(obj, dict) else {}
     except Exception:
         return {}
-NV_LAYOUT_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
 def extract_wip_workers_from_row(row: pd.Series, person_hours_col: str = "Person Hours") -> List[str]:
     blob = parse_person_hours_json(row.get(person_hours_col))
     workers: List[str] = []
@@ -664,17 +663,6 @@ def extract_wip_workers_from_row(row: pd.Series, person_hours_col: str = "Person
         if pd.notna(actual) and actual > 0:
             workers.append(name)
     return sorted(set(workers))
-def extract_wip_workers_from_row_with_extra(
-    row: pd.Series,
-    extra_by_person: Optional[Dict[str, float]] = None,
-    person_hours_col: str = "Person Hours",
-) -> List[str]:
-    workers = set(extract_wip_workers_from_row(row, person_hours_col=person_hours_col))
-    for raw_name, raw_hours in (extra_by_person or {}).items():
-        name = norm_name(raw_name)
-        if is_real_person(name) and safe_float0(raw_hours) > 0:
-            workers.add(name)
-    return sorted(workers)
 def read_people_block(
     ws: pd.DataFrame,
     start_row_i: int,
@@ -1793,103 +1781,60 @@ def week_from_nv_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp
         return dt.normalize()
     return None
 def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
-    week_norm = (
-        pd.Timestamp(week).normalize()
-        if week is not None and not pd.isna(week)
-        else None
-    )
-    use_new_layout = week_norm is not None and week_norm >= NV_LAYOUT_CHANGE_DATE
     PEOPLE_START = 1
-    PEOPLE_END = 13 if use_new_layout else 12
+    PEOPLE_END   = 12
     COL_EXPECTED = _col_letter_to_idx("B")
-    COL_EXTRA_WIP = _col_letter_to_idx("C")
-    COL_OOO = _col_letter_to_idx("X") if use_new_layout else _col_letter_to_idx("Y")
-    COL_NONWIP = None if use_new_layout else _col_letter_to_idx("Z")
+    COL_OOO      = _col_letter_to_idx("Y")
+    COL_NONWIP   = _col_letter_to_idx("Z")
     ACT_HEADER_ROW = 0
-    ACT_START_COL = _col_letter_to_idx("D") if use_new_layout else _col_letter_to_idx("C")
-    ACT_END_COL = _col_letter_to_idx("W") if use_new_layout else _col_letter_to_idx("X")
+    ACT_START_COL  = _col_letter_to_idx("C")
+    ACT_END_COL    = _col_letter_to_idx("X")
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
         if not name or not is_real_person(name):
             continue
-        expected = safe_float0(
-            ws.iat[i, COL_EXPECTED]
-            if ws.shape[1] > COL_EXPECTED else 0.0
-        )
-        ooo = safe_float0(
-            ws.iat[i, COL_OOO]
-            if ws.shape[1] > COL_OOO else 0.0
-        )
-        extra_wip = safe_float0(
-            ws.iat[i, COL_EXTRA_WIP]
-            if use_new_layout and ws.shape[1] > COL_EXTRA_WIP else 0.0
-        )
-        old_nonwip = safe_float0(
-            ws.iat[i, COL_NONWIP]
-            if (not use_new_layout and COL_NONWIP is not None and ws.shape[1] > COL_NONWIP)
-            else 0.0
-        )
+        expected = safe_float0(ws.iat[i, COL_EXPECTED] if ws.shape[1] > COL_EXPECTED else 0.0)
+        ooo      = safe_float0(ws.iat[i, COL_OOO]      if ws.shape[1] > COL_OOO      else 0.0)
+        nonwip   = safe_float0(ws.iat[i, COL_NONWIP]   if ws.shape[1] > COL_NONWIP   else 0.0)
         people_rows.append({
             "row_i": i,
             "name": name,
             "B": float(expected),
-            "C": float(extra_wip),
             "OOO": float(ooo),
-            "NONWIP": float(old_nonwip),
+            "NONWIP": float(nonwip),
         })
-    activities: List[dict] = []
+    people_count = len(set(r["name"] for r in people_rows))
+    ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
+    total_nonwip_hours = float(round(sum(r["NONWIP"] for r in people_rows), 2))
     nonwip_by_person: Dict[str, float] = {}
-    ooo_map: Dict[str, float] = {}
-    wip_extra_by_person: Dict[str, float] = {}
-    max_act_col = min(ACT_END_COL, ws.shape[1] - 1)
+    for r in people_rows:
+        v = float(round(float(r["NONWIP"]), 2))
+        if v != 0.0:
+            nonwip_by_person[r["name"]] = v
+    activities: List[dict] = []
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
-        person_nonwip_total = 0.0
-        for c in range(ACT_START_COL, max_act_col + 1):
-            label = norm_name(
-                ws.iat[ACT_HEADER_ROW, c]
-                if ws.shape[0] > ACT_HEADER_ROW and ws.shape[1] > c
-                else ""
-            )
+        for c in range(ACT_START_COL, min(ACT_END_COL, ws.shape[1] - 1) + 1):
+            label = norm_name(ws.iat[ACT_HEADER_ROW, c] if ws.shape[0] > ACT_HEADER_ROW and ws.shape[1] > c else "")
             if not label:
                 continue
-            hrs = safe_float(
-                ws.iat[i, c]
-                if ws.shape[0] > i and ws.shape[1] > c
-                else np.nan
-            )
+            hrs = safe_float(ws.iat[i, c] if ws.shape[0] > i and ws.shape[1] > c else np.nan)
             if pd.isna(hrs) or hrs <= 0:
                 continue
-            hrs = float(round(float(hrs), 2))
             activities.append({
                 "name": name,
                 "activity": label,
-                "hours": hrs,
+                "hours": float(round(float(hrs), 2))
             })
-            person_nonwip_total += hrs
-        nonwip_value = (
-            float(round(person_nonwip_total, 2))
-            if use_new_layout
-            else float(round(pr["NONWIP"], 2))
-        )
-        if nonwip_value != 0.0:
-            nonwip_by_person[name] = nonwip_value
         ooo = float(round(pr["OOO"], 2))
-        ooo_map[name] = ooo
         if ooo > 0:
             activities.append({
                 "name": name,
                 "activity": "OOO",
                 "hours": ooo,
             })
-        extra_wip = float(round(pr.get("C", 0.0), 2))
-        if use_new_layout and extra_wip > 0:
-            wip_extra_by_person[name] = extra_wip
-    people_count = len({r["name"] for r in people_rows})
-    ooo_hours = float(round(sum(ooo_map.values()), 2))
-    total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
     return {
         "people_rows": people_rows,
         "people_count": people_count,
@@ -1897,9 +1842,7 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         "total_nonwip_hours": total_nonwip_hours,
         "nonwip_by_person": nonwip_by_person,
         "nonwip_activities": activities,
-        "ooo_map": ooo_map,
-        "wip_extra_by_person": wip_extra_by_person,
-        "wip_extra_hours": float(round(sum(wip_extra_by_person.values()), 2)),
+        "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
 def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
@@ -3399,11 +3342,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
             nonwip_by_person = built["nonwip_by_person"]
             nonwip_activities = built["nonwip_activities"]
             ooo_map = built["ooo_map"]
-            wip_extra_by_person = built.get("wip_extra_by_person", {})
-            wip_extra_total = float(round(
-                sum(safe_float0(v) for v in wip_extra_by_person.values()),
-                2
-            ))
         else:
             cfg = team_src.layout
             if cfg is None:
@@ -3470,8 +3408,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
                 end_col_i=cfg.activity_end_col,
             )
             ooo_map = {r["name"]: float(r.get("C", 0.0)) for r in people_rows}
-            wip_extra_by_person = {}
-            wip_extra_total = 0.0
         if team_src.completed_hours_from == "NS_metrics":
             completed_src_df = metrics_df
         else:
@@ -3484,12 +3420,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
             pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
             if not completed_match.empty else np.nan
         )
-        if wip_extra_total > 0:
-            completed_hours = (
-                float(completed_hours)
-                if pd.notna(completed_hours)
-                else 0.0
-            ) + wip_extra_total
         pct_in_wip = np.nan
         if pd.notna(completed_hours) and pd.notna(total_nonwip_hours):
             denom = float(completed_hours) + float(total_nonwip_hours)
