@@ -419,7 +419,7 @@ ACTIVITY_MAP = {
     "cornerstone 180":"Cornerstone",
     "training in lab/tier 2": "Training/Mentoring",
     "scrum / collaboration / meeting / reg inquirie":"RI",
-    "ooo medical":"OOO",
+    "ooo medical":"",
     "harmony training": "Training/Mentoring",
     "power was out reading info on heli-fx": "IT Issue/Update",
     "pmpa/r&d review":"PMPA",
