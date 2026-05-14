@@ -2123,7 +2123,7 @@ def _get_export_lookup_bundle(
         factor_out_ooo=factor_out_ooo,
         cache_key=cache_key,
     )
-EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
+EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "Nan", "", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 if page == "Overview":
