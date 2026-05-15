@@ -420,6 +420,8 @@ ACTIVITY_MAP = {
     "scrum, 360ide hypercare, collaboration":"Scrum & Action",
     "prism 2 reverse shadowing event": "Training/Mentoring",
     "complex event collaboration":"WIP/Event Review",
+    "escalated call & prep":"Meeting",
+    "escalated call; change order":"Meeting",
     "effective presentation skills workshop": "Training/Mentoring",
     "onboarding training": "Training/Mentoring",
     "completed 33 tasks (closures-inv)":"WIP/Event Review",
