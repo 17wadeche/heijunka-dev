@@ -423,6 +423,7 @@ ACTIVITY_MAP = {
     "escalated call & prep":"Meeting",
     "escalated call; change order":"Meeting",
     "effective presentation skills workshop": "Training/Mentoring",
+    "training 2b": "Training/Mentoring",
     "onboarding training": "Training/Mentoring",
     "completed 33 tasks (closures-inv)":"WIP/Event Review",
     "audit prework":"Audit",
