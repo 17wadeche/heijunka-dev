@@ -819,15 +819,12 @@ def build_person_weekly_accounting(
         .combine_first(person_override_expected)
         .combine_first(base_expected)
     )
-    peter_cds_mask = (
-        (team_key == "CDS")
-        & out["person_key"].eq("peter mchugh")
-    )
-    peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
-    out.loc[
-        peter_cds_mask & peter_available.gt(0),
-        "Expected Hours"
-    ] = peter_available
+    if team_key in {"CDS", "NI"}:
+        peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
+        out.loc[
+            out["person_key"].eq("peter mchugh") & peter_available.gt(0),
+            "Expected Hours"
+        ] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)

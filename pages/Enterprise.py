@@ -778,7 +778,7 @@ def build_person_weekly_accounting(
         39.0,
         float(week_hours),
     )
-    if str(team).strip().upper() == "CDS" and "Available Hours" in out.columns:
+    if str(team).strip().upper() in {"CDS", "NI"} and "Available Hours" in out.columns:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
         peter_cds_mask = (
             out["person_key"].eq("peter mchugh")
@@ -1562,30 +1562,23 @@ def _weekly_team_export_df(
                 + (cpt_37_5_count * 37.5)
                 + (remaining_count * 37.75)
             )
-        elif team == "CDS":
+        elif team in {"CDS", "NI"}:
             peter_available = _person_available_hours_for_week(
                 person_hours=person_hours,
                 team=team,
                 week=wk,
                 person_key="peter mchugh",
             )
+            peter_fallback_capacity = 10.0 if team == "CDS" else 27.75
             peter_capacity = (
                 float(peter_available)
                 if pd.notna(peter_available) and float(peter_available) > 0
-                else 10.0
+                else peter_fallback_capacity
             )
             assigned_count = 1 if float(people_count) > 0 else 0
             remaining_count = max(float(people_count) - assigned_count, 0)
             capacity_hours = (
                 (assigned_count * peter_capacity)
-                + (remaining_count * 37.75)
-            )
-        elif team == "NI":
-            ni_27_75_count = 1
-            assigned_count = ni_27_75_count
-            remaining_count = max(float(people_count) - assigned_count, 0)
-            capacity_hours = (
-                (ni_27_75_count * 27.75)
                 + (remaining_count * 37.75)
             )
         elif team == "ENT":

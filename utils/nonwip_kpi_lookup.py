@@ -208,7 +208,7 @@ def enterprise_nonwip_kpi_lookup(
             + (cpt_37_5_count * 37.5)
             + (remaining_count * 37.75)
         )
-    elif team_name == "CDS":
+    elif team_name in {"CDS", "NI"}:
         if peter_available_hours is None or pd.isna(peter_available_hours):
             peter_available_hours = _person_available_hours_for_week(
                 person_hours=person_hours,
@@ -216,20 +216,17 @@ def enterprise_nonwip_kpi_lookup(
                 week=week,
                 person_key="peter mchugh",
             )
+        peter_fallback_capacity = 10.0 if team_name == "CDS" else 27.75
         peter_capacity = (
             float(peter_available_hours)
             if peter_available_hours is not None
             and pd.notna(peter_available_hours)
             and float(peter_available_hours) > 0
-            else 10.0
+            else peter_fallback_capacity
         )
         assigned_count = 1 if count > 0 else 0
         remaining_count = max(count - assigned_count, 0.0)
         capacity_hours = (assigned_count * peter_capacity) + (remaining_count * 37.75)
-    elif team_name == "NI":
-        assigned_count = 1
-        remaining_count = max(count - assigned_count, 0.0)
-        capacity_hours = (assigned_count * 27.75) + (remaining_count * 37.75)
     elif team_name == "ENT" and ent_capacity_callback is not None:
         try:
             capacity_hours = float(ent_capacity_callback(**(ent_capacity_kwargs or {})))
