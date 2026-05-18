@@ -2528,7 +2528,7 @@ if page == "Overview":
                                 .interactive()
                             )
 
-                            st.altair_chart(trend_chart, use_container_width=True)
+                            st.altair_chart(trend_chart, width="stretch")
 elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
     activity_keys = [
@@ -3183,7 +3183,7 @@ elif page == "Export":
                 )
                 edited_tree = st.data_editor(
                     styled_display_tree_df,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                     num_rows="fixed",
                     disabled=[
@@ -3334,7 +3334,7 @@ elif page == "Export":
             else:
                 st.dataframe(
                     missing_teams_display,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             if st.button("Prepare Excel export", key="prepare_enterprise_excel_export"):

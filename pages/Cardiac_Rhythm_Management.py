@@ -1429,7 +1429,7 @@ if nonwip_mode:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
-            st.dataframe(display_tbl, use_container_width=True, hide_index=True)
+            st.dataframe(display_tbl, width="stretch", hide_index=True)
     TEAM_WEEKLY_HOURS = {
         "CPT": 37.75,
         "CDS": 37.75,
@@ -1565,7 +1565,7 @@ if nonwip_mode:
             ) \
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
         st.markdown("#### Non-WIP Activities")
         if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
             act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
@@ -1605,7 +1605,7 @@ if nonwip_mode:
                             padding={"left": 8, "right": 12, "top": 16, "bottom": 80},
                         )
                     )
-                    st.altair_chart(act_chart, use_container_width=True)
+                    st.altair_chart(act_chart, width="stretch")
     st.markdown("#### Team Trends")
     team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
     if not team_hist.empty:
@@ -1624,7 +1624,7 @@ if nonwip_mode:
                 )
                 .properties(height=240, title="Total Non-WIP Hours")
             )
-            st.altair_chart(ch1, use_container_width=True)
+            st.altair_chart(ch1, width="stretch")
         with t2:
             ch2 = (
                 alt.Chart(team_hist)
@@ -1639,7 +1639,7 @@ if nonwip_mode:
                 )
                 .properties(height=240, title="% Non-WIP")
             )
-            st.altair_chart(ch2, use_container_width=True)
+            st.altair_chart(ch2, width="stretch")
     st.stop()
 with st.expander("Glossary", expanded=False):
     st.markdown("""
@@ -2035,7 +2035,7 @@ with left:
         chart_ph = st.empty()
         chart_ph.altair_chart(
             alt.layer(line, pts).properties(height=280).add_params(team_sel),
-            use_container_width=True
+            width="stretch"
         )
         team_name = teams_in_view[0] if len(teams_in_view) == 1 else None
         if team_name is None:
@@ -2072,7 +2072,7 @@ with left:
                     layers.append(rule)
                 chart_ph.altair_chart(
                     alt.layer(*layers).properties(height=280).add_params(team_sel),
-                    use_container_width=True
+                    width="stretch"
                 )
                 if hours_by == "Person":
                     if 'ppl_hours' not in locals() or ppl_hours.empty:
@@ -2128,7 +2128,7 @@ with left:
                                         color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                                     )
                                 )
-                                st.altair_chart(bars + labels, use_container_width=True)
+                                st.altair_chart(bars + labels, width="stretch")
                                 people_in_week = (
                                     wk2["person"].dropna().astype(str).str.strip().drop_duplicates().tolist()
                                     if "person" in wk2.columns and not wk2.empty else []
@@ -2165,7 +2165,7 @@ with left:
 
                                         st.altair_chart(
                                             (lines + pts).properties(height=280),
-                                            use_container_width=True,
+                                            width="stretch",
                                         )
                     pass
                 else:
@@ -2216,7 +2216,7 @@ with left:
                                     x="cell_station:N",
                                     y="Actual:Q",
                                 )
-                                st.altair_chart(bars + labels, use_container_width=True)
+                                st.altair_chart(bars + labels, width="stretch")
                             stations_in_week = (
                                 wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
                                 if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
@@ -2264,7 +2264,7 @@ with left:
                                                 height=280,
                                                 title=f"{picked_station_hours} • Hours over time (station total)",
                                             ),
-                                            use_container_width=True,
+                                            width="stretch",
                                         )
                                 else:
                                     ht_sum = (
@@ -2288,7 +2288,7 @@ with left:
 
                                     st.altair_chart(
                                         (lines + pts).properties(height=280),
-                                        use_container_width=True,
+                                        width="stretch",
                                     )
 with mid:
     st.subheader("Opened vs Closed")
@@ -2335,7 +2335,7 @@ with mid:
         )
         st.altair_chart(
             (line + pts).properties(height=280).add_params(team_sel),
-            use_container_width=True,
+            width="stretch",
         )
     if len(teams_in_view) != 1:
         st.caption("Select exactly one team to enable week drilldown.")
@@ -2426,7 +2426,7 @@ with mid:
                                 color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
                             )
                         )
-                        st.altair_chart(bars + labels, use_container_width=True)
+                        st.altair_chart(bars + labels, width="stretch")
                         if by_choice == "Cell/Station":
                             stations_in_week = wk2["cell_station"].dropna().unique().tolist()
                             if stations_in_week:
@@ -2469,7 +2469,7 @@ with mid:
                                             (line_a + line_t).properties(
                                                 height=280,
                                             ),
-                                            use_container_width=True
+                                            width="stretch"
                                         )
                                 else:
                                     ot_sum = (
@@ -2528,7 +2528,7 @@ with mid:
                                     )
                                     st.altair_chart(
                                         (lines + pts).properties(height=280),
-                                        use_container_width=True
+                                        width="stretch"
                                     )
                         elif by_choice == "Person":
                             people_in_week = wk2["person"].dropna().unique().tolist()
@@ -2599,7 +2599,7 @@ with mid:
                                     )
                                     st.altair_chart(
                                         (lines + pts).properties(height=280),
-                                        use_container_width=True
+                                        width="stretch"
                                     )
 with right:
     st.subheader("Productivity vs Efficiency")
@@ -2718,7 +2718,7 @@ with right:
     team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
     if not multi_team and team_for_drill is not None:
         top_ph = st.empty()
-        top_ph.altair_chart(top, use_container_width=True)
+        top_ph.altair_chart(top, width="stretch")
         by_choice = st.selectbox(
             "UPLH by:",
             options=["Person", "Cell/Station"],
@@ -2742,7 +2742,7 @@ with right:
             rule_week = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
             top_ph.altair_chart(
                 alt.layer(line, pts, rule_week).properties(height=280).add_params(team_sel),
-                use_container_width=True
+                width="stretch"
             )
         else:
             picked_week = None
@@ -2997,11 +2997,11 @@ with right:
                                     height=280,
                                 )
         if lower is not None:
-            lower_area.altair_chart(lower, use_container_width=True)
+            lower_area.altair_chart(lower, width="stretch")
         else:
-            lower_area.altair_chart(top, use_container_width=True)
+            lower_area.altair_chart(top, width="stretch")
         if drill is not None:
-            drill_area.altair_chart(drill, use_container_width=True)
+            drill_area.altair_chart(drill, width="stretch")
 st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
@@ -3016,7 +3016,7 @@ with left2:
         )
         st.altair_chart(
             base_hc.mark_line(point=True).properties(height=280),
-            use_container_width=True
+            width="stretch"
         )
     else:
         st.info("No 'HC in WIP' data available in the selected range.")
@@ -3032,7 +3032,7 @@ with mid2:
         )
         st.altair_chart(
             base_ahu.mark_line(point=True).properties(height=280),
-            use_container_width=True
+            width="stretch"
         )
         if len(teams_in_view) == 1:
             team_name = teams_in_view[0]
@@ -3121,7 +3121,7 @@ with mid2:
                             )
                         )
                         ref = alt.Chart(pd.DataFrame({"y": [6]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
-                        st.altair_chart(bars + labels + ref, use_container_width=True)
+                        st.altair_chart(bars + labels + ref, width="stretch")
         else:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
@@ -3442,7 +3442,7 @@ with right2:
                 )
             )
             top_chart = (bars + labels + overflow_layer).properties(height=420)
-            st.altair_chart(top_chart, use_container_width=True)
+            st.altair_chart(top_chart, width="stretch")
             st.markdown("##### Drill-down over time")
             people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
             picked_person_mix = st.selectbox(
@@ -3707,4 +3707,4 @@ with right2:
                         height=280,
                         width=drill_width,
                     )
-                    st.altair_chart(drill, use_container_width=True)
+                    st.altair_chart(drill, width="stretch")
