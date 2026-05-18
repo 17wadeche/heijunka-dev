@@ -1870,3 +1870,12 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-05-18 17:26:55,330 | INFO | [ALL] drop period_date == 2023-11-06: 326 -> 326
 2026-05-18 17:26:55,330 | INFO | [ALL] drop period_date == 2026-09-07: 326 -> 326
 2026-05-18 17:26:55,367 | INFO | Wrote 326 rows to NS_DATA\NS_metrics.csv
+2026-05-18 17:54:02,802 | INFO | === NS Metrics Run START ===
+2026-05-18 17:54:02,802 | INFO | Selected team: all
+2026-05-18 17:54:02,806 | INFO | [TDD COS 1] START
+2026-05-18 17:54:33,958 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 11 | kept=8 | refreshed=3 | final=11
+2026-05-18 17:54:33,958 | INFO | [TDD COS 1] DONE | rows=11 | elapsed=0:00:31.152362
+2026-05-18 17:54:33,958 | INFO | [Spine] START
+2026-05-18 17:54:59,230 | INFO | [Spine] loaded cached rows from NS_metrics: 19 | kept=17 | refreshed=2 | final=19 | old_weeks=[] | new_weeks=['2026-05-04', '2026-05-11', '2026-05-18']
+2026-05-18 17:54:59,232 | INFO | [Spine] DONE | rows=19 | elapsed=0:00:25.273149
+2026-05-18 17:54:59,232 | INFO | [PH] START
