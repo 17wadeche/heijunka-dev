@@ -527,6 +527,7 @@ ACTIVITY_MAP = {
     "2b training": "Training/Mentoring",
     "rmails/querie":"Email & IM",
     "parker complaint meeting":"Meeting",
+    "ko":"WIP/Event Review",
     "meeting with olivia":"Meeting",
     "gpt prompts update meeting":"Meeting",
     "fywt/assigning partner" : "Metrics & Schedule",
