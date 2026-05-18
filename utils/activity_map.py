@@ -526,7 +526,7 @@ ACTIVITY_MAP = {
     "parker complaint meeting":"Meeting",
     "meeting with olivia":"Meeting",
     "gpt prompts update meeting":"Meeting",
-    "fywt/assigning partner" : "Schedule & Metrics",
+    "fywt/assigning partner" : "Metrics & Schedule",
     "emaile/query":"Email & IM",
     "training doc": "Training/Mentoring",
     "verso tmv prep":"Admin",
