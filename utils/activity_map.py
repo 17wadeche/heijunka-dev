@@ -504,7 +504,7 @@ ACTIVITY_MAP = {
     "boxi report":"Data Request/Review",
     "ops report scrum":"Data Request/Review",
     "focus meeting":"Meeting",
-    "scrum ":"Meeting",
+    "scrum t":"Meeting",
     "rpa minute":"RPA Meeting/Action",
     "bsi mir testing":"Project Work",
     "next gen comment":"Next Gen",
