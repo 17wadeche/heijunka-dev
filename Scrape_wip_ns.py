@@ -899,6 +899,69 @@ def load_pss_meic_intern_from_existing_metrics_and_refresh_3_weeks(
             f"weeks_to_refresh={sorted(weeks_to_refresh)}"
         )
     return merged_pss_intern_rows
+def load_pss_from_existing_metrics_and_refresh_3_weeks(
+    ns_metrics_path: str,
+    pss_source_file: str,
+    pss_cfg: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> list[dict]:
+    cutoff = safe_str(pss_cfg.get("min_period_date")) or "2026-05-11"
+    legacy_teams = {"PSS US", "PSS MEIC", "PSS MEIC Intern"}
+    existing_rows = read_existing_metrics_rows(ns_metrics_path)
+    weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
+    weeks_set = set(weeks_to_refresh)
+    new_weeks = [w for w in weeks_to_refresh if w >= cutoff]
+    frozen_legacy_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) in legacy_teams
+        and safe_str(r.get("period_date")) < cutoff
+        and safe_str(r.get("period_date")) >= "2025-06-02"
+    ]
+    existing_pss_rows = [
+        r for r in existing_rows
+        if safe_str(r.get("team")) == "PSS"
+        and safe_str(r.get("period_date")) >= cutoff
+    ]
+    frozen_pss_rows = [
+        r for r in existing_pss_rows
+        if safe_str(r.get("period_date")) not in weeks_set
+    ]
+    refreshed_pss_rows: list[dict] = []
+    if new_weeks:
+        cfg = dict(pss_cfg)
+        cfg["min_period_date"] = min(new_weeks)
+        cfg["max_period_date"] = max(new_weeks)
+        refreshed_pss_rows = scrape_previous_weeks_xlsm_with_filters(
+            pss_source_file,
+            "PSS",
+            cfg,
+            dropdown_override=new_weeks,
+        )
+        refreshed_pss_rows = [
+            r for r in refreshed_pss_rows
+            if safe_str(r.get("period_date")) in set(new_weeks)
+        ]
+    if new_weeks and not refreshed_pss_rows:
+        if logger:
+            logger.warning(
+                f"[PSS] refresh returned 0 rows from combined PSS workbook; "
+                f"keeping cached PSS rows only | existing={len(existing_pss_rows)} | "
+                f"weeks_to_refresh={new_weeks} | source={pss_source_file}"
+            )
+        merged_pss_rows = merge_rows_by_team_period(existing_pss_rows)
+    else:
+        merged_pss_rows = merge_rows_by_team_period(frozen_pss_rows + refreshed_pss_rows)
+    out = frozen_legacy_rows + merged_pss_rows
+    out = merge_rows_by_team_period(out)
+    if logger:
+        logger.info(
+            f"[PSS] combined workbook active from {cutoff} | "
+            f"legacy_kept_before_cutoff={len(frozen_legacy_rows)} | "
+            f"cached_combined={len(existing_pss_rows)} | "
+            f"refreshed_combined={len(refreshed_pss_rows)} | "
+            f"final={len(out)} | weeks_to_refresh={weeks_to_refresh} | new_weeks={new_weeks}"
+        )
+    return out
 def load_spine_from_existing_metrics_and_refresh_3_weeks(
     ns_metrics_path: str,
     spine_source_file: str,
@@ -2674,6 +2737,8 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 CorruptLoad=0,
             )
         )
+    def _cfg_float(ws, key: str) -> float:
+        return safe_float(_com_call(lambda: ws.Range(cfg["cells"][key]).Value))
     try:
         wb = _open_via_temp_copy(source_file)
         ws = _com_call(lambda: wb.Worksheets("Previous Weeks"))
@@ -2683,39 +2748,51 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
         dropdown_values = [v for v in dropdown_values if not (safe_str(v) in seen or seen.add(safe_str(v)))]
         cols = _excel_col_range(cfg["person_cols"][0], cfg["person_cols"][1])
         today_iso = date.today().isoformat()
+        min_pd = safe_str(cfg.get("min_period_date")) or "2025-06-02"
+        max_pd = safe_str(cfg.get("max_period_date")) or today_iso
         for choice in dropdown_values:
             _com_call(lambda: setattr(dd, "Value", choice))
-            _com_call(lambda: excel.Calculate())
+            try:
+                _com_call(lambda: wb.RefreshAll())
+            except Exception:
+                pass
+            try:
+                _com_call(lambda: excel.CalculateFullRebuild())
+            except Exception:
+                _com_call(lambda: excel.Calculate())
+            time.sleep(0.5)
             period_date = _as_iso_date(_com_call(lambda: dd.Value))
             if not period_date:
                 continue
-            if period_date < "2025-06-02":
+            if period_date < min_pd:
                 continue
-            if period_date > today_iso:
+            if period_date > max_pd:
                 continue
-            total_available_hours = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["total_available_hours"]).Value))
-            completed_hours = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["completed_hours"]).Value))
-            wp1_tgt = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_target"]).Value))
-            wp2_tgt = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_target"]).Value))
-            wp1_out = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_output"]).Value))
-            wp2_out = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_output"]).Value))
+            total_available_hours = _cfg_float(ws, "total_available_hours")
+            completed_hours = _cfg_float(ws, "completed_hours")
+            wp1_tgt = _cfg_float(ws, "wp1_target")
+            wp2_tgt = _cfg_float(ws, "wp2_target")
+            wp1_out = _cfg_float(ws, "wp1_output")
+            wp2_out = _cfg_float(ws, "wp2_output")
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
             if target_output < 0:
                 continue
             target_uplh = safe_div(target_output, completed_hours)
             actual_uplh = safe_div(actual_output, completed_hours)
-            uplh_wp1 = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["uplh_wp1"]).Value))
-            uplh_wp2 = safe_float(_com_call(lambda: ws.Range(cfg["cells"]["uplh_wp2"]).Value))
+            uplh_wp1 = _cfg_float(ws, "uplh_wp1")
+            uplh_wp2 = _cfg_float(ws, "uplh_wp2")
+            rows_cfg = cfg["rows"]
+            hc_row = rows_cfg.get("hc_row", rows_cfg.get("person_target_row_for_outputs_by_person", 28))
             hc_in_wip = 0
             for c in cols:
-                if safe_float(_com_call(lambda c=c: ws.Cells(28, c).Value)) != 0.0:
+                if safe_float(_com_call(lambda c=c: ws.Cells(hc_row, c).Value)) != 0.0:
                     hc_in_wip += 1
             actual_hc_used = safe_div(completed_hours, 32.5)
             person_hours: Dict[str, Dict[str, float]] = {}
-            name_row_ph = cfg["rows"]["person_name_row_for_person_hours"]
-            actual_row_ph = cfg["rows"]["person_actual_row_for_person_hours"]
-            avail_row_ph = cfg["rows"]["person_available_row_for_person_hours"]
+            name_row_ph = rows_cfg["person_name_row_for_person_hours"]
+            actual_row_ph = rows_cfg["person_actual_row_for_person_hours"]
+            avail_row_ph = rows_cfg["person_available_row_for_person_hours"]
             for c in cols:
                 name = safe_str(_com_call(lambda c=c: ws.Cells(name_row_ph, c).Value))
                 if not name:
@@ -2724,16 +2801,25 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 available = safe_float(_com_call(lambda c=c: ws.Cells(avail_row_ph, c).Value))
                 person_hours[name] = {"actual": actual, "available": available}
             outputs_by_person: Dict[str, Dict[str, float]] = {}
-            name_row_op = cfg["rows"]["person_name_row_for_outputs_by_person"]
-            target_row_op = cfg["rows"]["person_target_row_for_outputs_by_person"]
+            name_row_op = rows_cfg["person_name_row_for_outputs_by_person"]
+            target_row_op = rows_cfg["person_target_row_for_outputs_by_person"]
+            output_spec = cfg.get("outputs_by_person_output")
             for c in cols:
                 name = safe_str(_com_call(lambda c=c: ws.Cells(name_row_op, c).Value))
                 if not name:
                     continue
-                out_val = sum(
-                    safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value))
-                    for r in range(14, 28)  # 14..27
-                )
+                if isinstance(output_spec, dict) and output_spec.get("type") == "sum_rows":
+                    out_val = sum(
+                        safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value))
+                        for r in output_spec.get("rows", [])
+                    )
+                elif isinstance(output_spec, dict) and output_spec.get("type") == "row":
+                    out_val = safe_float(_com_call(lambda c=c: ws.Cells(output_spec["row"], c).Value))
+                else:
+                    out_val = sum(
+                        safe_float(_com_call(lambda r=r, c=c: ws.Cells(r, c).Value))
+                        for r in range(14, 28)  # legacy PSS layout
+                    )
                 tgt_val = safe_float(_com_call(lambda c=c: ws.Cells(target_row_op, c).Value))
                 if out_val != 0.0 or tgt_val != 0.0:
                     outputs_by_person[name] = {"output": out_val, "target": tgt_val}
@@ -2742,13 +2828,13 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 "WP2": {"output": wp2_out, "target": wp2_tgt},
             }
             cell_station_hours = {
-                "WP1": safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp1_hours"]).Value)),
-                "WP2": safe_float(_com_call(lambda: ws.Range(cfg["cells"]["wp2_hours"]).Value)),
+                "WP1": _cfg_float(ws, "wp1_hours"),
+                "WP2": _cfg_float(ws, "wp2_hours"),
             }
             hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
-            name_row_hc = cfg["rows"]["person_name_row_for_hours_by_cell_by_person"]
-            wp1_hour_rows = cfg["rows"]["wp1_hour_rows"]
-            wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
+            name_row_hc = rows_cfg["person_name_row_for_hours_by_cell_by_person"]
+            wp1_hour_rows = rows_cfg["wp1_hour_rows"]
+            wp2_hour_rows = rows_cfg["wp2_hour_rows"]
             for c in cols:
                 name = safe_str(_com_call(lambda c=c: ws.Cells(name_row_hc, c).Value))
                 if not name:
@@ -2760,9 +2846,9 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 if wp2_hrs != 0.0:
                     hours_by_cell_by_person["WP2"][name] = wp2_hrs
             output_by_cell_by_person = {"WP1": {}, "WP2": {}}
-            name_row_oc = cfg["rows"]["person_name_row_for_output_by_cell_by_person"]
-            wp1_out_rows = cfg["rows"]["wp1_output_rows_by_person"]
-            wp2_out_rows = cfg["rows"]["wp2_output_rows_by_person"]
+            name_row_oc = rows_cfg["person_name_row_for_output_by_cell_by_person"]
+            wp1_out_rows = rows_cfg["wp1_output_rows_by_person"]
+            wp2_out_rows = rows_cfg["wp2_output_rows_by_person"]
             for c in cols:
                 name = safe_str(_com_call(lambda c=c: ws.Cells(name_row_oc, c).Value))
                 if not name:
@@ -2778,7 +2864,6 @@ def scrape_previous_weeks_xlsm_with_filters(source_file: str, team: str, cfg: Di
                 for person, out_val in output_by_cell_by_person[wp].items():
                     hrs = safe_float(hours_by_cell_by_person[wp].get(person, 0.0))
                     uplh_by_cell_by_person[wp][person] = safe_div(out_val, hrs)
-            key = (team, period_date)
             rows_out.append(
                 {
                     "team": team,
@@ -3435,9 +3520,7 @@ def main():
     oarm_meic_source_file = r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - MEIC AE + OARM\OARM_MEIC_Heijunka.xlsm"
     mazor_source_file = r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Caesarea Team\CAE - Heijunka_v2.xlsm"
     csf_source_file   = r"C:\Users\wadec8\Medtronic PLC\CQ CSF Management - Documents\CSF_Heijunka.xlsm"
-    pss_us_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS US Folders\Archive\PSS_US_Heijunka.xlsm"
-    pss_meic_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC Folders\Archive\PSS MEIC_Heijunka.xlsm"
-    pss_intern_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS MEIC Folders\Archive\PSS MEIC_Interns Heijunka.xlsm"
+    pss_source_file   = r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
     ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
@@ -3574,89 +3657,37 @@ def main():
             "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
         },
     }
-    PSS_US_CFG = {
-        "person_cols": ("B", "F"),
+    PSS_CFG = {
+        "team": "PSS",
+        "min_period_date": "2026-05-11",
+        "person_cols": ("B", "BF"),
         "cells": {
-            "total_available_hours": "R64",
-            "completed_hours": "R54",
-            "wp1_target": "AD10",
-            "wp2_target": "AF10",
-            "wp1_output": "AD5",
-            "wp2_output": "AF5",
-            "uplh_wp1": "AD8",
-            "uplh_wp2": "AF8",
-            "wp1_hours": "AD7",
-            "wp2_hours": "AF7",
+            "total_available_hours": "BG64",
+            "completed_hours": "BG54",
+            "wp1_target": "BN10",
+            "wp2_target": "BP10",
+            "wp1_output": "BN5",
+            "wp2_output": "BP5",
+            "uplh_wp1": "BN8",
+            "uplh_wp2": "BP8",
+            "wp1_hours": "BN7",
+            "wp2_hours": "BP7",
         },
         "rows": {
+            "hc_row": 28,
             "person_name_row_for_person_hours": 33,
             "person_actual_row_for_person_hours": 54,
             "person_available_row_for_person_hours": 64,
-            "person_name_row_for_outputs_by_person": 13,
+            "person_name_row_for_outputs_by_person": 66,
             "person_target_row_for_outputs_by_person": 28,
             "person_name_row_for_hours_by_cell_by_person": 33,
             "wp1_hour_rows": [34, 38, 42, 46, 50],
             "wp2_hour_rows": [35, 39, 43, 47, 51],
-            "person_name_row_for_output_by_cell_by_person": 13,
-            "wp1_output_rows_by_person": [14, 17, 20, 23, 26],
-            "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
+            "person_name_row_for_output_by_cell_by_person": 66,
+            "wp1_output_rows_by_person": [67, 69, 71, 73, 75],
+            "wp2_output_rows_by_person": [68, 70, 72, 74, 76],
         },
-    }
-    PSS__MEIC_CFG = {
-        "person_cols": ("B", "T"),
-        "cells": {
-            "total_available_hours": "W64",
-            "completed_hours": "W54",
-            "wp1_target": "AD10",
-            "wp2_target": "AF10",
-            "wp1_output": "AD5",
-            "wp2_output": "AF5",
-            "uplh_wp1": "AD8",
-            "uplh_wp2": "AF8",
-            "wp1_hours": "AD7",
-            "wp2_hours": "AF7",
-        },
-        "rows": {
-            "person_name_row_for_person_hours": 33,
-            "person_actual_row_for_person_hours": 54,
-            "person_available_row_for_person_hours": 64,
-            "person_name_row_for_outputs_by_person": 13,
-            "person_target_row_for_outputs_by_person": 28,
-            "person_name_row_for_hours_by_cell_by_person": 33,
-            "wp1_hour_rows": [34, 38, 42, 46, 50],
-            "wp2_hour_rows": [35, 39, 43, 47, 51],
-            "person_name_row_for_output_by_cell_by_person": 13,
-            "wp1_output_rows_by_person": [14, 17, 20, 23, 26],
-            "wp2_output_rows_by_person": [15, 18, 21, 24, 27],
-        },
-    }
-    PSS_MEIC_Intern_CFG = {
-        "person_cols": ("B", "Y"),
-        "cells": {
-            "total_available_hours": "AG64",
-            "completed_hours": "AG54",
-            "wp1_target": "AD10",
-            "wp2_target": "AF10",
-            "wp1_output": "AD5",
-            "wp2_output": "AF5",
-            "uplh_wp1": "AD8",
-            "uplh_wp2": "AF8",
-            "wp1_hours": "AD7",
-            "wp2_hours": "AF7",
-        },
-        "rows": {
-            "person_name_row_for_person_hours": 33,
-            "person_actual_row_for_person_hours": 54,
-            "person_available_row_for_person_hours": 64,
-            "person_name_row_for_outputs_by_person": 13,
-            "person_target_row_for_outputs_by_person": 28,
-            "person_name_row_for_hours_by_cell_by_person": 33,
-            "wp1_hour_rows": [34, 38, 42, 46, 50],
-            "wp2_hour_rows": [35, 39, 43, 47, 51],
-            "person_name_row_for_output_by_cell_by_person": 13,
-            "wp1_output_rows_by_person": [67, 72, 77, 82, 87],
-            "wp2_output_rows_by_person": [68, 73, 78, 83, 88],
-        },
+        "outputs_by_person_output": {"type": "sum_rows", "rows": list(range(67, 77))},
     }
     PH_NEW_CFG = {
         "team": "PH",
@@ -3945,6 +3976,8 @@ def main():
     selected_team = safe_str(args.team).lower()
     def should_run(team_name: str) -> bool:
         return selected_team in ("all", "", team_name.lower())
+    def should_run_pss() -> bool:
+        return selected_team in ("all", "", "pss", "pss us", "pss meic", "pss meic intern")
     def extend_team(team_name: str, fn):
         out = run_team(logger, team_name, fn)   # logs START/DONE/FAIL + rows + elapsed
         rows.extend(out)
@@ -4119,42 +4152,18 @@ def main():
             )
         )
         rows.extend(csf_rows)
-    if should_run("PSS US"):
-        pss_us_rows = run_team(
+    if should_run_pss():
+        pss_rows = run_team(
             logger,
-            "PSS US",
-            lambda: load_pss_us_from_existing_metrics_and_refresh_3_weeks(
+            "PSS",
+            lambda: load_pss_from_existing_metrics_and_refresh_3_weeks(
                 out_file,
-                pss_us_source_file,
-                PSS_US_CFG,
+                pss_source_file,
+                PSS_CFG,
                 logger=logger,
             )
         )
-        rows.extend(pss_us_rows)
-    if should_run("PSS MEIC"):
-        pss_meic_rows = run_team(
-            logger,
-            "PSS MEIC",
-            lambda: load_pss_meic_from_existing_metrics_and_refresh_3_weeks(
-                out_file,
-                pss_meic_source_file,
-                PSS__MEIC_CFG,
-                logger=logger,
-            )
-        )
-        rows.extend(pss_meic_rows)
-    if should_run("PSS MEIC Intern"):
-        pss_meic_intern_rows = run_team(
-            logger,
-            "PSS MEIC Intern",
-            lambda: load_pss_meic_intern_from_existing_metrics_and_refresh_3_weeks(
-                out_file,
-                pss_intern_source_file,
-                PSS_MEIC_Intern_CFG,
-                logger=logger,
-            )
-        )
-        rows.extend(pss_meic_intern_rows)
+        rows.extend(pss_rows)
     if should_run("ENT"):
         try:
             ent_name_note = apply_ent_name_replacements_to_sheet(
