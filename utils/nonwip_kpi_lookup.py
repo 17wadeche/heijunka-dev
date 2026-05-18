@@ -28,6 +28,11 @@ def _sum_col(df: pd.DataFrame | None, col: str) -> float:
     return float(pd.to_numeric(df[col], errors="coerce").fillna(0.0).sum())
 def _normalize_person_name(name: Any) -> str:
     return " ".join(str(name or "").strip().split())
+def _person_key(name: Any) -> str:
+    s = _normalize_person_name(name)
+    s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
+    s = re.sub(r"\s+", " ", s).strip()
+    return s.casefold()
 def _coerce_week(value) -> pd.Timestamp | None:
     wk = pd.to_datetime(value, errors="coerce")
     if pd.isna(wk):
@@ -136,17 +141,16 @@ def _person_available_hours_for_week(
         return np.nan
     ph = person_hours.copy()
     ph["period_date"] = pd.to_datetime(ph["period_date"], errors="coerce").dt.normalize()
+    mask = (
+        ph["team"].astype(str).str.strip().str.upper().eq(str(team).strip().upper())
+        & ph["period_date"].eq(pd.Timestamp(wk).normalize())
+        & ph["person"].map(_person_key).eq(_person_key(person_key))
+    )
     vals = pd.to_numeric(
-        ph.loc[
-            ph["team"].astype(str).str.strip().str.upper().eq(str(team).strip().upper())
-            & ph["period_date"].eq(pd.Timestamp(wk).normalize())
-            & ph["person"].astype(str).str.strip().str.lower().eq(person_key),
-            "Available Hours",
-        ],
+        ph.loc[mask, "Available Hours"],
         errors="coerce",
     ).dropna()
     vals = vals[vals > 0]
-    return float(vals.sum()) if not vals.empty else np.nan
 def enterprise_nonwip_kpi_lookup(
     *,
     team: str,
