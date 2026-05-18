@@ -1742,3 +1742,24 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-05-18 14:01:05,608 | INFO | [ALL] drop period_date == 2023-11-06: 271 -> 271
 2026-05-18 14:01:05,609 | INFO | [ALL] drop period_date == 2026-09-07: 271 -> 271
 2026-05-18 14:01:05,684 | INFO | Wrote 271 rows to NS_DATA\NS_metrics.csv
+2026-05-18 14:02:26,875 | INFO | [PH] still running...
+2026-05-18 14:02:40,023 | INFO | [PH] loaded cached PH rows from NS_metrics: 20 | kept=17 | refreshed=4 | final=20
+2026-05-18 14:02:40,025 | INFO | [PH] DONE | rows=20 | elapsed=0:03:13.164439
+2026-05-18 14:02:40,026 | INFO | [PH Cell 17] START
+2026-05-18 14:03:09,292 | INFO | [PH Cell 17] DONE | rows=7 | elapsed=0:00:29.265501
+2026-05-18 14:03:09,293 | INFO | [SCS Cell 1] START
+2026-05-18 14:03:33,974 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 19 | kept=16 | refreshed=5 | final=19 | old_weeks=[] | new_weeks=['2026-05-04', '2026-05-11', '2026-05-18']
+2026-05-18 14:03:33,976 | INFO | [SCS Cell 1] DONE | rows=19 | elapsed=0:00:24.682151
+2026-05-18 14:03:33,976 | INFO | [MEIC PH] START
+2026-05-18 14:03:50,283 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 20 | kept=17 | refreshed=3 | final=20
+2026-05-18 14:03:50,286 | INFO | [MEIC PH] DONE | rows=20 | elapsed=0:00:16.309929
+2026-05-18 14:03:50,286 | INFO | [DBS C13] START
+2026-05-18 14:05:02,600 | INFO | [DBS C13] DONE | rows=9 | elapsed=0:01:12.313705
+2026-05-18 14:05:02,601 | INFO | [DBS C13] filter >= 2025-07-07: 9 -> 9
+2026-05-18 14:05:02,601 | INFO | [DBS C14] START
+2026-05-18 14:06:15,249 | INFO | [DBS C14] DONE | rows=9 | elapsed=0:01:12.647429
+2026-05-18 14:06:15,250 | INFO | [DBS C14] filter >= 2025-07-07: 9 -> 9
+2026-05-18 14:06:15,250 | INFO | [NV] START
+2026-05-18 14:07:18,081 | INFO | [NV] loaded cached rows from NS_metrics: 0 | kept=0 | refreshed=3 | final=3
+2026-05-18 14:07:18,083 | INFO | [NV] DONE | rows=3 | elapsed=0:01:02.833742
+2026-05-18 14:07:18,085 | INFO | [Nav] START
