@@ -504,7 +504,7 @@ ACTIVITY_MAP = {
     "boxi report":"Data Request/Review",
     "ops report scrum":"Data Request/Review",
     "workshop, event review, collaboration":"Next Gen",
-    "scrum, training prep, rraining":"Scrum & Action",
+    "scrum, training prep, training":"Scrum & Action",
     "scrum, training meeting, collaboration": "Training/Mentoring",
     "asking questions/collaboration":"Question",
     "focus meeting":"Meeting",
