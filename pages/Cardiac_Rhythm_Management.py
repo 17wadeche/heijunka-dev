@@ -3166,16 +3166,10 @@ with right2:
                 continue
             wk_people = wk_people.copy()
             wk_people["person"] = wk_people["person"].map(canonical_person_label)
-            wk_people["person_key"] = wk_people["person"].astype(str).str.strip().str.lower()
-            wk_people["team_key"] = wk_people["team"].astype(str).str.strip().str.upper()
-            wk_people["Expected Hours"] = wk_people.apply(
-                lambda r: PERSON_TEAM_WEEKLY_HOURS.get(
-                    (r["person_key"], r["team_key"]),
-                    r["Expected Hours"],
-                ),
-                axis=1,
-            )
-            wk_people["Expected Hours"] = pd.to_numeric(wk_people["Expected Hours"], errors="coerce").fillna(0.0)
+            wk_people["Expected Hours"] = pd.to_numeric(
+                wk_people["Expected Hours"],
+                errors="coerce"
+            ).fillna(0.0)
             wk_people["Completed Hours"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
             wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
@@ -3632,29 +3626,29 @@ with right2:
                     else:
                         drill_expected_hrs = PERSON_WEEKLY_HOURS.get(person_key, default_drill_expected)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
-                    if person_key == "peter mchugh" and "CDS" in teams_for_drill:
-                        peter_cds_avail = (
+                    if person_key == "peter mchugh" and ({"CDS", "NI"} & teams_for_drill):
+                        peter_avail = (
                             explode_person_hours(df)
                             .loc[
                                 lambda d: (
-                                    d["team"].astype(str).str.strip().str.upper().eq("CDS")
+                                    d["team"].astype(str).str.strip().str.upper().isin({"CDS", "NI"} & teams_for_drill)
                                     & d["person"].astype(str).str.strip().str.lower().eq("peter mchugh")
                                 ),
                                 ["period_date", "Available Hours"]
                             ]
                             .copy()
                         )
-                        if not peter_cds_avail.empty:
-                            peter_cds_avail["period_date"] = pd.to_datetime(
-                                peter_cds_avail["period_date"],
+                        if not peter_avail.empty:
+                            peter_avail["period_date"] = pd.to_datetime(
+                                peter_avail["period_date"],
                                 errors="coerce"
                             ).dt.normalize()
-                            peter_cds_avail["Available Hours"] = pd.to_numeric(
-                                peter_cds_avail["Available Hours"],
+                            peter_avail["Available Hours"] = pd.to_numeric(
+                                peter_avail["Available Hours"],
                                 errors="coerce"
                             )
-                            peter_cds_avail = (
-                                peter_cds_avail
+                            peter_avail = (
+                                peter_avail
                                 .dropna(subset=["period_date"])
                                 .groupby("period_date", as_index=False)["Available Hours"]
                                 .sum()
@@ -3664,13 +3658,13 @@ with right2:
                                 errors="coerce"
                             ).dt.normalize()
                             drill_totals = drill_totals.merge(
-                                peter_cds_avail.rename(columns={"Available Hours": "PeterCDSAvailableHours"}),
+                                peter_avail.rename(columns={"Available Hours": "PeterAvailableHours"}),
                                 on="period_date",
                                 how="left",
                             )
                             drill_totals["ExpectedHours"] = np.where(
-                                drill_totals["PeterCDSAvailableHours"].gt(0),
-                                drill_totals["ExpectedHours"] - TEAM_WEEKLY_HOURS.get("CDS", 37.75) + drill_totals["PeterCDSAvailableHours"],
+                                drill_totals["PeterAvailableHours"].gt(0),
+                                drill_totals["ExpectedHours"] - TEAM_WEEKLY_HOURS.get("CDS", 37.75) + drill_totals["PeterAvailableHours"],
                                 drill_totals["ExpectedHours"],
                             )
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
