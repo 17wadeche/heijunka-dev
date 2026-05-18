@@ -522,6 +522,7 @@ ACTIVITY_MAP = {
     "autolog investigation training": "Training/Mentoring",
     "capital eq pmpa meeting":"PMPA",
     "oxy investigation training": "Training/Mentoring",
+    "2b training": "Training/Mentoring",
     "rmails/querie":"Email & IM",
     "parker complaint meeting":"Meeting",
     "meeting with olivia":"Meeting",
