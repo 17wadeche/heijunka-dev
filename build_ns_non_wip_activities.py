@@ -17,7 +17,12 @@ from pathlib import Path
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
-PSS_INTERN_USER_DATA_START = pd.Timestamp("2026-05-04").normalize()
+PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
+PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
+PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
+PSS_COMBINED_SOURCE_FILE = Path(
+    r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
+)
 TDD_NEW_TOTALS_ROW = 21
 warnings.filterwarnings(
     "ignore",
@@ -1150,9 +1155,116 @@ def build_selector_rows_from_capacity_workbook(
                 shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception:
             pass
-PSS_INTERN_USER_DATA_SHEET = "User Data"
 PSS_USER_DATA_SHEET = "User Data"
-PSS_MEIC_USER_DATA_START = pd.Timestamp("2026-04-06").normalize()
+PSS_USER_DATA_WEEK_COL = "A"      # FY Week / Monday week start
+PSS_USER_DATA_NAME_COL = "F"      # User
+PSS_USER_DATA_ACTIVITY_START_COL = "S"
+PSS_USER_DATA_ACTIVITY_END_COL = "AL"
+PSS_USER_DATA_OOO_COL = "AM"
+def _pss_team_aliases(team_name: str) -> list[str]:
+    key = norm_name(team_name).casefold()
+    if key in {"pss intern", "pss meic intern"}:
+        return ["PSS Intern", "PSS MEIC Intern"]
+    if key == "pss meic":
+        return ["PSS MEIC"]
+    return [norm_name(team_name)]
+def _pss_prepare_period_df(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+    out = df.copy()
+    if "team" in out.columns:
+        out["team"] = out["team"].astype(str).str.strip()
+    if "period_date" in out.columns:
+        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    return out
+def _pss_rows_for_week(df: pd.DataFrame, team_names: list[str], week: pd.Timestamp) -> pd.DataFrame:
+    if df is None or df.empty or "team" not in df.columns or "period_date" not in df.columns:
+        return pd.DataFrame()
+    week = pd.Timestamp(week).normalize()
+    aliases = {norm_name(t).casefold() for t in team_names if norm_name(t)}
+    if not aliases:
+        return pd.DataFrame()
+    return df[
+        df["team"].astype(str).str.strip().str.casefold().isin(aliases)
+        & (df["period_date"] == week)
+    ].copy()
+def _pss_names_from_json_cell(cell) -> set[str]:
+    if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+        return set()
+    obj = cell
+    if isinstance(cell, str):
+        s = cell.strip()
+        if not s:
+            return set()
+        try:
+            obj = json.loads(s)
+        except Exception:
+            return set()
+    names: set[str] = set()
+    if isinstance(obj, dict):
+        for k in obj.keys():
+            name = norm_name(k)
+            if is_real_person(name):
+                names.add(name)
+    elif isinstance(obj, list):
+        for item in obj:
+            if isinstance(item, dict):
+                name = norm_name(item.get("name") or item.get("user") or item.get("User"))
+                if is_real_person(name):
+                    names.add(name)
+            else:
+                name = norm_name(item)
+                if is_real_person(name):
+                    names.add(name)
+    return names
+def _pss_known_names_for_week(
+    team_name: str,
+    week: pd.Timestamp,
+    wip_df: pd.DataFrame,
+    metrics_df: pd.DataFrame,
+) -> set[str]:
+    aliases = _pss_team_aliases(team_name)
+    names: set[str] = set()
+    for src_df in (metrics_df, wip_df):
+        rows = _pss_rows_for_week(src_df, aliases, week)
+        if rows.empty:
+            continue
+        for _, row in rows.iterrows():
+            for col in [
+                "team_member_names",
+                "Person Hours",
+                "Outputs by Person",
+                "non_wip_by_person",
+                "wip_workers",
+            ]:
+                if col in row.index:
+                    names.update(_pss_names_from_json_cell(row.get(col)))
+    return {norm_name(n).casefold() for n in names if is_real_person(norm_name(n))}
+def _pss_completed_rows_for_week(
+    team_name: str,
+    week: pd.Timestamp,
+    metrics_df: pd.DataFrame,
+) -> pd.DataFrame:
+    rows = _pss_rows_for_week(metrics_df, _pss_team_aliases(team_name), week)
+    if rows.empty and norm_name(team_name).casefold() in {"pss meic", "pss intern", "pss meic intern"}:
+        rows = _pss_rows_for_week(metrics_df, ["PSS"], week)
+    return rows
+def _pss_people_count_for_week(
+    team_name: str,
+    week: pd.Timestamp,
+    wip_df: pd.DataFrame,
+    fallback: int,
+) -> int:
+    for alias in _pss_team_aliases(team_name):
+        cnt = get_people_count_from_wip(
+            wip_df=wip_df,
+            team=alias,
+            week=week,
+            fallback=None,
+        )
+        if cnt:
+            return int(cnt)
+    return int(fallback or 0)
 def build_pss_from_user_data(
     xlsx_path: Path,
     wip_df: pd.DataFrame,
@@ -1162,8 +1274,8 @@ def build_pss_from_user_data(
     min_week: Optional[pd.Timestamp] = None,
 ) -> pd.DataFrame:
     if not xlsx_path.exists():
+        print(f"[WARN][{team_name}] PSS User Data workbook not found: {xlsx_path}", flush=True)
         return pd.DataFrame()
-
     try:
         ws = pd.read_excel(
             xlsx_path,
@@ -1174,78 +1286,71 @@ def build_pss_from_user_data(
     except Exception as e:
         print(f"[WARN][{team_name}] Could not read User Data sheet: {e}", flush=True)
         return pd.DataFrame()
-
-    # User Data layout:
-    # A  = Date
-    # F  = User / name
-    # S:AM = Non-WIP activity hours
-    # AN = OOO
-    DATE_IDX = _col_letter_to_idx("A")
-    NAME_IDX = _col_letter_to_idx("F")
-    ACTIVITY_START_IDX = _col_letter_to_idx("S")
-    ACTIVITY_END_IDX = _col_letter_to_idx("AM")
-    OOO_IDX = _col_letter_to_idx("AN")
-
+    DATE_IDX = _col_letter_to_idx(PSS_USER_DATA_WEEK_COL)
+    NAME_IDX = _col_letter_to_idx(PSS_USER_DATA_NAME_COL)
+    ACTIVITY_START_IDX = _col_letter_to_idx(PSS_USER_DATA_ACTIVITY_START_COL)
+    ACTIVITY_END_IDX = _col_letter_to_idx(PSS_USER_DATA_ACTIVITY_END_COL)
+    OOO_IDX = _col_letter_to_idx(PSS_USER_DATA_OOO_COL)
     required_max_idx = max(DATE_IDX, NAME_IDX, ACTIVITY_END_IDX, OOO_IDX)
     if ws.shape[1] <= required_max_idx:
         print(
             f"[WARN][{team_name}] User Data sheet does not have enough columns. "
-            f"Expected through AN, found {ws.shape[1]} columns.",
+            f"Expected through {PSS_USER_DATA_OOO_COL}, found {ws.shape[1]} columns.",
             flush=True,
         )
         return pd.DataFrame()
-
     DATE_COL = ws.columns[DATE_IDX]
     NAME_COL = ws.columns[NAME_IDX]
     OOO_COL = ws.columns[OOO_IDX]
     activity_col_names = list(ws.columns[ACTIVITY_START_IDX:ACTIVITY_END_IDX + 1])
-
     ws["_period_date"] = _week_start_monday(ws[DATE_COL])
     ws[NAME_COL] = ws[NAME_COL].map(norm_name)
-
     ws = ws[ws["_period_date"].notna()].copy()
     ws = ws[ws[NAME_COL].map(is_real_person)].copy()
-
     if min_week is not None:
         min_week = pd.Timestamp(min_week).normalize()
         ws = ws[ws["_period_date"] >= min_week].copy()
-
     today_cutoff = pd.Timestamp.today().normalize()
     ws = ws[ws["_period_date"] <= today_cutoff].copy()
-
     if ws.empty:
         return pd.DataFrame()
-
     for col in activity_col_names:
         ws[col] = pd.to_numeric(ws[col], errors="coerce").fillna(0.0)
-
     ws[OOO_COL] = pd.to_numeric(ws[OOO_COL], errors="coerce").fillna(0.0)
-
-    metrics_tmp = metrics_df.copy()
-    if "period_date" in metrics_tmp.columns:
-        metrics_tmp["period_date"] = pd.to_datetime(
-            metrics_tmp["period_date"], errors="coerce"
-        ).dt.normalize()
-
+    metrics_tmp = _pss_prepare_period_df(metrics_df)
+    wip_tmp = _pss_prepare_period_df(wip_df)
     out_rows = []
-
-    for week, grp in ws.groupby("_period_date", dropna=False):
+    team_key = norm_name(team_name).casefold()
+    for week, grp_all in ws.groupby("_period_date", dropna=False):
         week = pd.Timestamp(week).normalize()
-
+        meic_names = _pss_known_names_for_week("PSS MEIC", week, wip_tmp, metrics_tmp)
+        intern_names = _pss_known_names_for_week("PSS Intern", week, wip_tmp, metrics_tmp)
+        grp = grp_all.copy()
+        if team_key in {"pss intern", "pss meic intern"}:
+            if not intern_names:
+                continue
+            grp = grp[grp[NAME_COL].map(lambda n: norm_name(n).casefold() in intern_names)].copy()
+        elif team_key == "pss meic":
+            if intern_names:
+                grp = grp[~grp[NAME_COL].map(lambda n: norm_name(n).casefold() in intern_names)].copy()
+            elif meic_names:
+                grp = grp[grp[NAME_COL].map(lambda n: norm_name(n).casefold() in meic_names)].copy()
+        else:
+            team_names = _pss_known_names_for_week(team_name, week, wip_tmp, metrics_tmp)
+            if team_names:
+                grp = grp[grp[NAME_COL].map(lambda n: norm_name(n).casefold() in team_names)].copy()
+        if grp.empty:
+            continue
         people_names = sorted(grp[NAME_COL].dropna().unique().tolist())
         people_count = len(people_names)
-
         nonwip_by_person: Dict[str, float] = {}
         ooo_map: Dict[str, float] = {}
         activities: List[dict] = []
-
         for name, person_grp in grp.groupby(NAME_COL, dropna=False):
             name = norm_name(name)
             if not is_real_person(name):
                 continue
-
             person_nonwip = 0.0
-
             for col in activity_col_names:
                 hrs = float(round(person_grp[col].sum(), 2))
                 if hrs > 0:
@@ -1255,57 +1360,43 @@ def build_pss_from_user_data(
                         "hours": hrs,
                     })
                     person_nonwip += hrs
-
             person_nonwip = float(round(person_nonwip, 2))
             if person_nonwip > 0:
                 nonwip_by_person[name] = person_nonwip
-
             ooo = float(round(person_grp[OOO_COL].sum(), 2))
             ooo_map[name] = ooo
-
             if ooo > 0:
                 activities.append({
                     "name": name,
                     "activity": "OOO",
                     "hours": ooo,
                 })
-
         total_nonwip_hours = float(round(sum(nonwip_by_person.values()), 2))
         ooo_hours = float(round(sum(ooo_map.values()), 2))
-
-        completed_match = metrics_tmp[
-            (metrics_tmp.get("team") == team_name) &
-            (metrics_tmp["period_date"] == week)
-        ]
-
+        completed_match = _pss_completed_rows_for_week(team_name, week, metrics_tmp)
         completed_hours = (
             pd.to_numeric(completed_match.iloc[0].get("Completed Hours"), errors="coerce")
             if not completed_match.empty else np.nan
         )
-
         pct_in_wip = np.nan
         if pd.notna(completed_hours):
             denom = float(completed_hours) + float(total_nonwip_hours)
             pct_in_wip = float(completed_hours) / denom if denom != 0 else np.nan
-
-        wip_workers = (
-            extract_wip_workers_from_row(completed_match.iloc[0])
-            if not completed_match.empty
-            else []
-        )
-
+        wip_workers_set: set[str] = set()
+        if not completed_match.empty:
+            for _, row in completed_match.iterrows():
+                wip_workers_set.update(extract_wip_workers_from_row(row))
+        wip_workers = sorted(wip_workers_set)
         wip_workers_ooo_hours = float(round(
             sum(safe_float0(ooo_map.get(n, 0.0)) for n in wip_workers),
             2,
         ))
-
-        people_count_final = get_people_count_from_wip(
-            wip_df=wip_df,
-            team=team_name,
+        people_count_final = _pss_people_count_for_week(
+            team_name=team_name,
             week=week,
+            wip_df=wip_tmp,
             fallback=people_count,
         )
-
         out_rows.append({
             "team": team_name,
             "period_date": week.date().isoformat(),
@@ -1473,7 +1564,7 @@ def build_pss_meic_dated_row(team: str, ws: pd.DataFrame, week: Optional[pd.Time
         "nonwip_activities": activities,
         "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
     }
-PSS_MEIC_NEW_NONWIP_START = pd.Timestamp("2026-04-06").normalize()
+PSS_MEIC_NEW_NONWIP_START = PSS_COMBINED_NONWIP_START
 def build_pss_meic_row(
     team: str,
     ws: pd.DataFrame,
@@ -1639,7 +1730,12 @@ def get_people_count_from_wip(
     base = wip_df[wip_df["period_date"] == week].copy()
     if base.empty:
         return int(fallback or 0)
-    direct = base[base.get("team") == team]
+    alias_lookup = {
+        "pss intern": {"PSS Intern", "PSS MEIC Intern"},
+        "pss meic intern": {"PSS Intern", "PSS MEIC Intern"},
+    }
+    direct_team_names = alias_lookup.get(team_key, {team})
+    direct = base[base.get("team").isin(direct_team_names)]
     if not direct.empty:
         for col in ["HC in WIP", "HC_in_WIP", "hc in wip", "hc_in_wip"]:
             if col in direct.columns:
@@ -3456,7 +3552,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 old_rows["period_date"] < PSS_MEIC_USER_DATA_START
             ].copy()
         new_rows = build_pss_meic_from_user_data(
-            team_src.xlsx,
+            PSS_COMBINED_SOURCE_FILE,
             wip_df=wip_df,
             metrics_df=metrics_df,
         )
@@ -3482,7 +3578,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
                 old_rows["period_date"] < PSS_INTERN_USER_DATA_START
             ].copy()
         new_rows = build_pss_intern_from_user_data(
-            team_src.xlsx,
+            PSS_COMBINED_SOURCE_FILE,
             wip_df=wip_df,
             metrics_df=metrics_df,
         )
