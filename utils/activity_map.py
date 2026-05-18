@@ -517,6 +517,8 @@ ACTIVITY_MAP = {
     "s: drive file clean up/ archiving": "IT Issue/Update",
     "tmv concerto versa prep":"Admin",
     "next gen gch document review":"Next Gen",
+    "scrum / reg inquirie":"RI",
+    "cross-function meeting":"Meeting",
     "mdt academy training": "Training/Mentoring",
     "/ investigation process training session": "Training/Mentoring",
     "autolog investigation training": "Training/Mentoring",
