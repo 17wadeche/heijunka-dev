@@ -1583,7 +1583,7 @@ def _weekly_team_export_df(
                 person_hours=person_hours,
                 team=team,
                 week=wk,
-                person_key="peter mchugh",
+                person_key_value="peter mchugh",
             )
             peter_fallback_capacity = 10.0 if team == "CDS" else 27.75
             peter_capacity = (
