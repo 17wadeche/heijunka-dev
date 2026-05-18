@@ -77,11 +77,6 @@ def normalize_person_name(name: str) -> str:
     s = " ".join(s.split())
     key = s.lower()
     return NAME_ALIASES.get(key, s)
-def person_key(name: Any) -> str:
-    s = normalize_person_name(str(name or ""))
-    s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
-    s = re.sub(r"\s+", " ", s).strip()
-    return s.casefold()
 FY27_START = pd.Timestamp("2026-04-27").normalize()
 FY27_END = pd.Timestamp("2027-04-25").normalize()
 FY27_FISCAL_MONTHS = {
@@ -776,39 +771,20 @@ def build_person_weekly_accounting(
         if c not in out.columns:
             out[c] = 0.0
         out[c] = pd.to_numeric(out[c], errors="coerce").fillna(0.0)
-    out["person_key"] = out["person"].map(person_key)
-    irl_people_norm = {person_key(x) for x in (irl_people or set())}
-    team_key = str(team).strip().upper()
-    TEAM_WEEKLY_HOURS = {
-        "CPT": 37.75,
-        "CDS": 37.75,
-        "NI": 37.75,
-        "DS": 37.5,
-        "LIT & LETTERS": 37.5,
-    }
-    PERSON_TEAM_WEEKLY_HOURS = {
-        ("peter mchugh", "CDS"): 10.0,
-        ("peter mchugh", "NI"): 27.75,
-    }
-    base_expected = pd.Series(
-        np.where(
-            out["person_key"].isin(irl_people_norm),
-            39.0,
-            TEAM_WEEKLY_HOURS.get(team_key, float(week_hours)),
-        ),
-        index=out.index,
-        dtype="float64",
+    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    out["Expected Hours"] = np.where(
+        out["person_key"].isin(irl_people_norm),
+        39.0,
+        float(week_hours),
     )
-    team_override_expected = out["person_key"].map(
-        lambda p: PERSON_TEAM_WEEKLY_HOURS.get((p, team_key), np.nan)
-    ).astype("float64")
-    out["Expected Hours"] = team_override_expected.combine_first(base_expected)
-    if team_key in {"CDS", "NI"} and "Available Hours" in out.columns:
+    if str(team).strip().upper() in {"CDS", "NI"} and "Available Hours" in out.columns:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
-        out.loc[
-            out["person_key"].eq("peter mchugh") & peter_available.gt(0),
-            "Expected Hours",
-        ] = peter_available
+        peter_cds_mask = (
+            out["person_key"].eq("peter mchugh")
+            & peter_available.gt(0)
+        )
+        out.loc[peter_cds_mask, "Expected Hours"] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
     out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
@@ -1432,10 +1408,10 @@ def ent_capacity_hours_for_week(
     non_irl_count = max(people_count - irl_count, 0)
     return float((irl_count * 39.0) + (non_irl_count * 40.0))
 def _person_available_hours_for_week(
-    person_hours: pd.DataFrame | None,
+    person_hours: pd.DataFrame,
     team: str,
     week,
-    person_key_value: str,
+    person_key: str,
 ) -> float:
     if person_hours is None or person_hours.empty:
         return np.nan
@@ -1445,18 +1421,23 @@ def _person_available_hours_for_week(
     wk = pd.to_datetime(week, errors="coerce")
     if pd.isna(wk):
         return np.nan
+    wk = pd.Timestamp(wk).normalize()
     ph = person_hours.copy()
     ph["period_date"] = pd.to_datetime(
         ph["period_date"],
-        errors="coerce",
+        errors="coerce"
     ).dt.normalize()
-    mask = (
-        ph["team"].astype(str).str.strip().str.upper().eq(str(team).strip().upper())
-        & ph["period_date"].eq(pd.Timestamp(wk).normalize())
-        & ph["person"].map(person_key).eq(person_key(person_key_value))
+    ph_team = ph["team"].astype(str).str.strip().str.upper()
+    ph_person = ph["person"].astype(str).map(
+        lambda x: normalize_person_name(x).strip().lower()
     )
     vals = pd.to_numeric(
-        ph.loc[mask, "Available Hours"],
+        ph.loc[
+            ph_team.eq(str(team).strip().upper())
+            & ph["period_date"].eq(wk)
+            & ph_person.eq(person_key),
+            "Available Hours",
+        ],
         errors="coerce",
     ).dropna()
     vals = vals[vals > 0]
