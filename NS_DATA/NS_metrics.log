@@ -1183,3 +1183,6 @@ pywintypes.com_error: (-2146959355, 'Server execution failed', None, None)
 2026-05-18 08:22:59,462 | INFO | [ALL] drop period_date == 2023-11-06: 349 -> 349
 2026-05-18 08:22:59,462 | INFO | [ALL] drop period_date == 2026-09-07: 349 -> 349
 2026-05-18 08:22:59,550 | INFO | Wrote 349 rows to NS_DATA\NS_metrics.csv
+2026-05-18 08:39:56,565 | INFO | === NS Metrics Run START ===
+2026-05-18 08:39:56,565 | INFO | Selected team: all
+2026-05-18 08:39:56,565 | INFO | [TDD COS 1] START

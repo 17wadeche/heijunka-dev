@@ -369,7 +369,18 @@ def ensure_fieldnames(existing_fieldnames: list[str], required_fieldnames: list[
             final.append(col)
     return final
 def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
+    watch_dates = {"2026-05-11", "2026-05-18"}
+    print("PRE date_floor:", [
+        (r.get("period_date"), r.get("source_file"), r.get("error"))
+        for r in rows
+        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
+    ])
     rows = filter_period_rows(rows)
+    print("POST date_floor:", [
+        (r.get("period_date"), r.get("source_file"), r.get("error"))
+        for r in rows
+        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
+    ])
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -385,9 +396,20 @@ def main() -> None:
         raise FileNotFoundError(f"No matching files found in: {searched}")
     closures_lookup = load_closures_lookup(CLOSURES_CSV)
     rows: list[dict[str, Any]] = []
+    watch_dates = {"2026-05-11", "2026-05-18"}
     for path in files:
+        parsed = parse_date_from_filename(path)
+        if parsed and parsed.isoformat() in watch_dates:
+            print(f"FOUND WATCH FILE: filename_date={parsed} path={path}")
         try:
             row = process_workbook(path, closures_lookup)
+            if any(d in str(path) for d in ["11 May 2026", "18 May 2026"]):
+                print(
+                    "PROCESSED WATCH FILE:",
+                    "path=", path,
+                    "period_date=", row.get("period_date"),
+                    "error=", row.get("error"),
+                )
             period = row.get("period_date")
             if period:
                 period_date = datetime.strptime(period, "%Y-%m-%d").date()
@@ -395,6 +417,7 @@ def main() -> None:
                     continue
             rows.append(row)
         except Exception as exc:
+            print(f"ERROR WATCH? path={path} exc={exc}")
             parsed = parse_date_from_filename(path)
             rows.append(
                 {
@@ -405,6 +428,11 @@ def main() -> None:
                     "error": str(exc),
                 }
             )
+    print("BEFORE filter_period_rows:", [
+        (r.get("period_date"), r.get("source_file"), r.get("error"))
+        for r in rows
+        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
+    ])
     rows = sort_rows_by_date(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
 if __name__ == "__main__":
