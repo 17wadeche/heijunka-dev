@@ -924,6 +924,7 @@ ACTIVITY_MAP = {
     "scrum, collaboration, one on one":"Scrum & Action",
     "collaboration with rpa on inbox tasks & letter": "RPA Meeting/Action",
     "pmq cr meeting call":"PMQ Meeting",
+    "wizard review":"Project Work",
     "matrix redline review":"Admin",
     "ops/sales report job aid review":"Data Request/Review",
     "qa support / corrections (enterprise)":"QA",
