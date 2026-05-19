@@ -3039,10 +3039,9 @@ def scrape_csv_team_fixed_availability(
             if not d_parsed:
                 continue
             period_date = week_monday_iso(d_parsed)
-            wp1_out = safe_float(row[2])
-            wp2_out = safe_float(row[3])
-            wp1_hrs = safe_float(row[4])
-            wp2_hrs = safe_float(row[5])
+            wp1_out = 0
+            wp2_out = 0
+            hrs = safe_float(row[2])
             rec = weekly.setdefault(period_date, {
                 "wp1_out": 0.0, "wp2_out": 0.0,
                 "wp1_hrs": 0.0, "wp2_hrs": 0.0,
@@ -3050,20 +3049,18 @@ def scrape_csv_team_fixed_availability(
             })
             rec["wp1_out"] += wp1_out
             rec["wp2_out"] += wp2_out
-            rec["wp1_hrs"] += wp1_hrs
-            rec["wp2_hrs"] += wp2_hrs
+            rec["hrs"] += hrs
             if name:
                 p = rec["by_person"].setdefault(
-                    name, {"wp1_out": 0.0, "wp2_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0}
+                    name, {"wp1_out": 0.0, "wp2_out": 0.0, "hrs": 0.0}
                 )
                 p["wp1_out"] += wp1_out
                 p["wp2_out"] += wp2_out
-                p["wp1_hrs"] += wp1_hrs
-                p["wp2_hrs"] += wp2_hrs
+                p["hrs"] += hrs
     rows_out: list[dict] = []
     for period_date in sorted(weekly.keys()):
         agg = weekly[period_date]
-        completed_hours = agg["wp1_hrs"] + agg["wp2_hrs"]
+        completed_hours = agg["hrs"]
         actual_output = agg["wp1_out"] + agg["wp2_out"]
         active_people = []
         for nm, pdata in (agg["by_person"] or {}).items():
@@ -3072,13 +3069,13 @@ def scrape_csv_team_fixed_availability(
         hc_in_wip = len(set(active_people))
         total_available_hours = hc_in_wip * float(hours_per_person)
         actual_uplh = safe_div(actual_output, completed_hours)
-        uplh_wp1 = safe_div(agg["wp1_out"], agg["wp1_hrs"])
-        uplh_wp2 = safe_div(agg["wp2_out"], agg["wp2_hrs"])
+        uplh_wp1 = safe_div(agg["wp1_out"], agg["hrs"])
+        uplh_wp2 = safe_div(agg["wp2_out"], agg["hrs"])
         actual_hc_used = safe_div(completed_hours, 32.5)
         person_hours: Dict[str, Dict[str, float]] = {}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
-            actual_person = pdata["wp1_hrs"] + pdata["wp2_hrs"]
+            actual_person = pdata["hrs"]
             person_hours[nm] = {"actual": actual_person, "available": float(hours_per_person)}
         outputs_by_person: Dict[str, Dict[str, float]] = {}
         for nm in set(active_people):
@@ -3089,12 +3086,11 @@ def scrape_csv_team_fixed_availability(
             "WP1": {"output": agg["wp1_out"], "target": 0.0},
             "WP2": {"output": agg["wp2_out"], "target": 0.0},
         }
-        cell_station_hours = {"WP1": agg["wp1_hrs"], "WP2": agg["wp2_hrs"]}
-        hours_by_cell_by_person = {"WP1": {}, "WP2": {}}
+        cell_station_hours = {"WP1": agg["hrs"]}
+        hours_by_cell_by_person = {"WP1": {}}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
-            hours_by_cell_by_person["WP1"][nm] = pdata["wp1_hrs"]
-            hours_by_cell_by_person["WP2"][nm] = pdata["wp2_hrs"]
+            hours_by_cell_by_person["WP1"][nm] = pdata["hrs"]
         output_by_cell_by_person = {"WP1": {}, "WP2": {}}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
@@ -4179,8 +4175,6 @@ def main():
         extend_team("ENT", lambda: scrape_ent_from_csv(ent_data_csv, ent_mapping_xlsx, team="ENT"))
     if should_run("DBS MEIC"):
         extend_team("DBS MEIC", lambda: scrape_csv_team_fixed_availability(dbs_meic_csv, team="DBS MEIC", hours_per_person=20.0))
-    if should_run("SCS MEIC"):
-        extend_team("SCS MEIC", lambda: scrape_csv_team_fixed_availability(scs_meic_csv, team="SCS MEIC", hours_per_person=20.0))
     if should_run("Other MEIC"):
         extend_team("Other MEIC", lambda: scrape_csv_team_fixed_availability(other_meic_csv, team="Other MEIC", hours_per_person=20.0))
     if should_run("SCS Super Cell"):
