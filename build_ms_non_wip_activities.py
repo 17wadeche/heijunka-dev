@@ -544,7 +544,6 @@ def main() -> int:
         for row in granular_rows:
             writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
     print(f"Wrote {len(granular_rows)} row(s) to {args.metrics_out}")
-
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
