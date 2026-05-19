@@ -931,6 +931,7 @@ ACTIVITY_MAP = {
     "x cornerstone":"Cornerstone",
     "t5f meeting":"Meeting",
     "support from tm":"Collaboration",
+    "meeting / collaboration / metrics / scrum / reg inquirie":"Meeting",
     "tm support/meeting":"Collaboration",
     "late mdrs/escalations/rr tts":"RRTT",
     "1:1s (including ad-hoc)" : "Meeting",
