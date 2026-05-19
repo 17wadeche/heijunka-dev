@@ -698,6 +698,7 @@ ACTIVITY_MAP = {
     "wip pulls/ assignment/ anomaly check":"Metrics & Schedule",
     "pab":"Metrics & Schedule",
     "standard breaks (i.e. two 15 min per day)":"Break",
+    "standard breaks (two 15 min per day)":"Break",
     "2 15 min break":"Break",
     "fwt, it issues, training": "IT Issue/Update",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
