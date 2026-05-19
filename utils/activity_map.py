@@ -31,6 +31,8 @@ ACTIVITY_MAP = {
     "live video":"Reviewing Documents & Case Video",
     "lookig at past analysis for heli-fx & manual":"WIP/Event Review",
     "laptop restart":"IT Issue/Update",
+    "software/export":"IT Issue/Update",
+    "collaboration and communication with other groups (i.e. s&r, regions, pats)":"Collaboration",
     "fu q's meeting & action":"Question",
     "training, meetings, event reviews, collaboration, email/admin":"Training/Mentoring",
     "scrum, rpa collaboration, event remediations, event reprocess from mitg, collaboration":"Scrum & Action",
