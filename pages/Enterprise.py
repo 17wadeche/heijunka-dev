@@ -2359,9 +2359,15 @@ if page == "Overview":
                         history_df["week_start"],
                         errors="coerce",
                     ).dt.normalize()
+                    history_df["week_start"] = pd.to_datetime(
+                        history_df["week_start"],
+                        errors="coerce",
+                    ).dt.normalize()
+                    overview_trend_start = pd.Timestamp("2026-01-01").normalize()
                     history_df = (
                         history_df
                         .dropna(subset=["week_start"])
+                        .loc[lambda d: d["week_start"] >= overview_trend_start]
                         .sort_values("week_start")
                     )
                     unaccounted_val = _metric_from_df(
