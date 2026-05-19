@@ -2217,3 +2217,6 @@ KeyError: 'wp3_out'
 KeyError: 'wp3_out'
 
 2026-05-19 11:18:00,713 | INFO | [SCS Super Cell] START
+2026-05-19 11:21:52,707 | INFO | === NS Metrics Run START ===
+2026-05-19 11:21:52,707 | INFO | Selected team: all
+2026-05-19 11:21:52,714 | INFO | [TDD COS 1] START
