@@ -1720,8 +1720,8 @@ def get_people_count_from_wip(
         print(f"[PEOPLE COUNT HARDCODE HIT] PSS MEIC week={week_txt} returning=19", flush=True)
         return 19
     if team_key == "dbs":
-        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=12", flush=True)
-        return 12
+        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=10", flush=True)
+        return 10
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
         print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=32", flush=True)
         return 32
@@ -2086,9 +2086,9 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             if parent_team == "PH":
                 people_count_final = 18
             elif parent_team == "DBS":
-                people_count_final = 12
+                people_count_final = 10
                 print(
-                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning=12",
+                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning=10",
                     flush=True,
                 )
             elif parent_team == "SCS":
@@ -3712,7 +3712,7 @@ def main():
     log_weekly_ph_summary(final_combined, "POST-ROLLUP")
     if not final_combined.empty and "team" in final_combined.columns and "people_count" in final_combined.columns:
         final_combined["_team_key"] = final_combined["team"].astype(str).str.strip().str.casefold()
-        final_combined.loc[final_combined["_team_key"] == "dbs", "people_count"] = 12
+        final_combined.loc[final_combined["_team_key"] == "dbs", "people_count"] = 10
         final_combined.loc[
             final_combined["_team_key"].isin({
                 "enabling tech",
