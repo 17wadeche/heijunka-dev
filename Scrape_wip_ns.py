@@ -124,7 +124,7 @@ def build_ns_wip_rows(all_rows: list[dict]) -> list[dict]:
     et_combine_teams = {"O-Arm MEIC", "Nav", "Mazor", "AE MEIC", "CSF"}
     et_label = "Enabling Technologies"
     rollups = [
-        ({"MEIC PH", "SCS MEIC", "DBS MEIC", "Other MEIC"}, "PH-NM MEIC"),
+        ({"MEIC PH", "DBS MEIC", "Other MEIC"}, "PH-NM MEIC"),
         ({"DBS C13", "DBS C14"}, "DBS"),
         ({"PH", "PH Cell 17"}, "PH"),
         ({"SCS Cell 1", "SCS Super Cell"}, "SCS"),
@@ -3039,67 +3039,83 @@ def scrape_csv_team_fixed_availability(
             if not d_parsed:
                 continue
             period_date = week_monday_iso(d_parsed)
-            wp1_out = 0
-            wp2_out = 0
-            hrs = safe_float(row[2])
+            wp1_out = safe_float(row[2])
+            wp2_out = safe_float(row[3])
+            wp3_out = safe_float(row[4])
+            wp1_hrs = safe_float(row[5])
+            wp2_hrs = safe_float(row[6])
+            wp3_hrs = safe_float(row[7])
             rec = weekly.setdefault(period_date, {
                 "wp1_out": 0.0, "wp2_out": 0.0,
                 "wp1_hrs": 0.0, "wp2_hrs": 0.0,
+                "wp3_hrs": 0.0, "wp3_hrs": 0.0,
                 "by_person": {},  # name -> accumulators
             })
             rec["wp1_out"] += wp1_out
             rec["wp2_out"] += wp2_out
-            rec["hrs"] += hrs
+            rec["wp3_out"] += wp3_out
+            rec["wp1_hrs"] += wp1_hrs
+            rec["wp2_hrs"] += wp2_hrs
+            rec["wp3_hrs"] += wp3_hrs
             if name:
                 p = rec["by_person"].setdefault(
-                    name, {"wp1_out": 0.0, "wp2_out": 0.0, "hrs": 0.0}
+                    name, {"wp1_out": 0.0, "wp2_out": 0.0, "wp3_out": 0.0, "wp1_hrs": 0.0, "wp2_hrs": 0.0,"wp3_hrs": 0.0}
                 )
                 p["wp1_out"] += wp1_out
                 p["wp2_out"] += wp2_out
-                p["hrs"] += hrs
+                p["wp3_out"] += wp3_out
+                p["wp1_hrs"] += wp1_hrs
+                p["wp2_hrs"] += wp2_hrs
+                p["wp3_hrs"] += wp3_hrs
     rows_out: list[dict] = []
     for period_date in sorted(weekly.keys()):
         agg = weekly[period_date]
-        completed_hours = agg["hrs"]
-        actual_output = agg["wp1_out"] + agg["wp2_out"]
+        completed_hours = agg["wp1_hrs"] + agg["wp2_hrs"] + agg["wp3_hrs"]
+        actual_output = agg["wp1_out"] + agg["wp2_out"]+ agg["wp3_out"]
         active_people = []
         for nm, pdata in (agg["by_person"] or {}).items():
-            if (pdata["wp1_out"] + pdata["wp2_out"]) > 0:
+            if (pdata["wp1_out"] + pdata["wp2_out"] + pdata["wp3_out"]) > 0:
                 active_people.append(nm)
         hc_in_wip = len(set(active_people))
         total_available_hours = hc_in_wip * float(hours_per_person)
         actual_uplh = safe_div(actual_output, completed_hours)
-        uplh_wp1 = safe_div(agg["wp1_out"], agg["hrs"])
-        uplh_wp2 = safe_div(agg["wp2_out"], agg["hrs"])
+        uplh_wp1 = safe_div(agg["wp1_out"], agg["wp1_hrs"])
+        uplh_wp2 = safe_div(agg["wp2_out"], agg["wp2_hrs"])
+        uplh_wp3 = safe_div(agg["wp3_out"], agg["wp3_hrs"])
         actual_hc_used = safe_div(completed_hours, 32.5)
         person_hours: Dict[str, Dict[str, float]] = {}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
-            actual_person = pdata["hrs"]
+            actual_person = pdata["wp1_hrs"] + pdata["wp2_hrs"] + pdata["wp3_hrs"]
             person_hours[nm] = {"actual": actual_person, "available": float(hours_per_person)}
         outputs_by_person: Dict[str, Dict[str, float]] = {}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
-            out_person = pdata["wp1_out"] + pdata["wp2_out"]
+            out_person = pdata["wp1_out"] + pdata["wp2_out"] + pdata["wp3_out"]
             outputs_by_person[nm] = {"output": out_person, "target": 0.0}
         outputs_by_cell = {
             "WP1": {"output": agg["wp1_out"], "target": 0.0},
             "WP2": {"output": agg["wp2_out"], "target": 0.0},
+            "WP3": {"output": agg["wp3_out"], "target": 0.0},
         }
-        cell_station_hours = {"WP1": agg["hrs"]}
-        hours_by_cell_by_person = {"WP1": {}}
+        cell_station_hours = {"WP1": agg["wp1_hrs"], "WP2": agg["wp2_hrs"],  "WP3": agg["wp3_hrs"]}
+        hours_by_cell_by_person = {"WP1": {}, "WP2": {}, "WP3": {}}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
-            hours_by_cell_by_person["WP1"][nm] = pdata["hrs"]
-        output_by_cell_by_person = {"WP1": {}, "WP2": {}}
+            hours_by_cell_by_person["WP1"][nm] = pdata["wp1_hrs"]
+            hours_by_cell_by_person["WP2"][nm] = pdata["wp2_hrs"]
+            hours_by_cell_by_person["WP3"][nm] = pdata["wp3_hrs"]
+        output_by_cell_by_person = {"WP1": {}, "WP2": {}, "WP3": {}}
         for nm in set(active_people):
             pdata = agg["by_person"][nm]
             output_by_cell_by_person["WP1"][nm] = pdata["wp1_out"]
             output_by_cell_by_person["WP2"][nm] = pdata["wp2_out"]
-        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}}
+            output_by_cell_by_person["WP3"][nm] = pdata["wp3_out"]
+        uplh_by_cell_by_person: Dict[str, Dict[str, Optional[float]]] = {"WP1": {}, "WP2": {}, "WP3":{}}
         for nm in set(active_people):
             uplh_by_cell_by_person["WP1"][nm] = safe_div(output_by_cell_by_person["WP1"][nm], hours_by_cell_by_person["WP1"][nm])
             uplh_by_cell_by_person["WP2"][nm] = safe_div(output_by_cell_by_person["WP2"][nm], hours_by_cell_by_person["WP2"][nm])
+            uplh_by_cell_by_person["WP3"][nm] = safe_div(output_by_cell_by_person["WP3"][nm], hours_by_cell_by_person["WP3"][nm])
         rows_out.append({
             "team": team,
             "period_date": period_date,
