@@ -2418,7 +2418,6 @@ if page == "Overview":
                         _safe_metric(_metric_from_df(metric_df, "non_wip_pct"), pct=True),
                     )
                     st.divider()
-
                     _, _, c3, c4, c5, _, _ = st.columns(
                         [.8, .8, 1.2, 1.2, 1.2, 1.0, 0.5]
                     )
@@ -2543,7 +2542,6 @@ if page == "Overview":
                                 .properties(height=360)
                                 .interactive()
                             )
-
                             st.altair_chart(trend_chart, width="stretch")
 elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
