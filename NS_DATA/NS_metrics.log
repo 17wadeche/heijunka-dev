@@ -2136,3 +2136,6 @@ pywintypes.com_error: (-2147024891, 'Access is denied.', None, None)
 2026-05-19 09:10:13,561 | INFO | [ALL] drop period_date == 2023-11-06: 448 -> 448
 2026-05-19 09:10:13,562 | INFO | [ALL] drop period_date == 2026-09-07: 448 -> 448
 2026-05-19 09:10:13,619 | INFO | Wrote 448 rows to NS_DATA\NS_metrics.csv
+2026-05-19 10:42:56,807 | INFO | === NS Metrics Run START ===
+2026-05-19 10:42:56,807 | INFO | Selected team: all
+2026-05-19 10:42:56,825 | INFO | [TDD COS 1] START
