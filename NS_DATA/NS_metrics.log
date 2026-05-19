@@ -2343,3 +2343,6 @@ KeyError: 'wp3_out'
 2026-05-19 13:08:06,883 | INFO | [ALL] drop period_date == 2023-11-06: 433 -> 433
 2026-05-19 13:08:06,883 | INFO | [ALL] drop period_date == 2026-09-07: 433 -> 433
 2026-05-19 13:08:06,926 | INFO | Wrote 433 rows to NS_DATA\NS_metrics.csv
+2026-05-19 14:22:56,406 | INFO | === NS Metrics Run START ===
+2026-05-19 14:22:56,406 | INFO | Selected team: all
+2026-05-19 14:22:56,422 | INFO | [TDD COS 1] START
