@@ -3032,7 +3032,7 @@ def scrape_csv_team_fixed_availability(
         reader = csv.reader(f)
         _ = next(reader, None)  # header
         for row in reader:
-            if not row or len(row) < 6:
+            if not row or len(row) < 8:
                 continue
             name = safe_str(row[0])
             d_parsed = _parse_any_date_to_date(row[1])
@@ -3046,10 +3046,13 @@ def scrape_csv_team_fixed_availability(
             wp2_hrs = safe_float(row[6])
             wp3_hrs = safe_float(row[7])
             rec = weekly.setdefault(period_date, {
-                "wp1_out": 0.0, "wp2_out": 0.0,
-                "wp1_hrs": 0.0, "wp2_hrs": 0.0,
-                "wp3_hrs": 0.0, "wp3_hrs": 0.0,
-                "by_person": {},  # name -> accumulators
+                "wp1_out": 0.0,
+                "wp2_out": 0.0,
+                "wp3_out": 0.0,
+                "wp1_hrs": 0.0,
+                "wp2_hrs": 0.0,
+                "wp3_hrs": 0.0,
+                "by_person": {},
             })
             rec["wp1_out"] += wp1_out
             rec["wp2_out"] += wp2_out
