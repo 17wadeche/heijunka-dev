@@ -2525,15 +2525,11 @@ if page == "Overview":
                                     alt.Tooltip("wip_pct:Q", title="WIP %", format=".1%"),
                                 ],
                             )
-                            latest_text = alt.Chart(latest_df).mark_text(
-                                align="left",
-                                dx=8,
-                                dy=-8,
-                                fontSize=12,
-                                fontWeight="bold",
+                            data_labels = base.mark_text(
+                                align="center",
+                                dy=-12,
+                                fontSize=11,
                             ).encode(
-                                x="week_start:T",
-                                y="wip_pct:Q",
                                 text="wip_label:N",
                             )
                             rule = alt.Chart(
@@ -2544,7 +2540,7 @@ if page == "Overview":
                                 y="y:Q"
                             )
                             trend_chart = (
-                                alt.layer(rule, line, points, latest_point, latest_text)
+                                alt.layer(rule, line, points, latest_point, data_labels)
                                 .properties(height=360)
                                 .interactive()
                             )
