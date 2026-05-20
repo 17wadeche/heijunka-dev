@@ -2455,6 +2455,7 @@ ACTIVITY_MAP = {
     "gemba&prep": "Gemba",
     "one to one": "Meeting",
     "inv summ review": "Project Work",
+    "is tool review": "Project Work",
     "scrum, cornerstone":"Scrum & Action",
     "actions from scrum/minute":"Scrum & Action",
     "scrum, emails, meeting":"Scrum & Action",
