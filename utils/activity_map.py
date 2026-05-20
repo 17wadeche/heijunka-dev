@@ -25,6 +25,8 @@ ACTIVITY_MAP = {
     "procesing question":"Question",
     "spyral capa testing - pho unit":"CAPA",
     "sorting shipping":"Shipment",
+    "cognizantactivity":"Cognizant Activity",
+    "no subarea":"",
     "spyral capa meeting":"CAPA",
     "reviewing procedure updates / redlines":"Redline",
     "ohs group":"Engagement",
