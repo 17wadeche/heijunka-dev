@@ -959,6 +959,8 @@ ACTIVITY_MAP = {
     "next gen support/prep":"Next Gen",
     "run wr in am":"Metrics & Schedule",
     "ri mtg":"RI",
+    "focus time (\"power hour\")":"WIP/Event Review",
+    "d2d focus time (\"power hour\")":"WIP/Event Review",
     "pulling ae'":"WIP/Event Review",
     "meeting prep / meeting / reg inquirie":"RI",
     "x cornerstone":"Cornerstone",
