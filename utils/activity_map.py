@@ -2173,6 +2173,7 @@ ACTIVITY_MAP = {
     "fda report":"FDA Meeting & Action",
     "fda query call":"FDA Meeting & Action",
     "it issues over im and phone": "IT Issue/Update",
+    "tracking gap reports":"Gap Report",
     "windows update": "IT Issue/Update",
     "wip review/gemba prep":"Gemba",
     "wip review":"WIP/Event Review",
