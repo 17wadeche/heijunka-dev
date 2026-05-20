@@ -700,6 +700,8 @@ ACTIVITY_MAP = {
     "standard breaks (i.e. two 15 min per day)":"Break",
     "standard breaks (two 15 min per day)":"Break",
     "2 15 min break":"Break",
+    "t":"Meeting",
+    "pmq cr pre-meeting q review":"PMQ Meeting",
     "fwt, it issues, training": "IT Issue/Update",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
     "development":"Career Development",
