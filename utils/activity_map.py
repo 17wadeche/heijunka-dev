@@ -1323,6 +1323,7 @@ ACTIVITY_MAP = {
     "scrum 30": "Scrum & Action",
     "scrum/meeting": "Scrum & Action",
     "training (on-boarding, product training, etc)":"Training/Mentoring",
+    "training (on-boarding, product training, enterprise training, etc)":"Training/Mentoring",
     "blockers (it issues, gch issues, computer updates)": "IT Issue/Update",
     "scum": "Scrum & Action",
     "it update": "IT Issue/Update",
