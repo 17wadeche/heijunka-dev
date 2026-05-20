@@ -930,6 +930,7 @@ ACTIVITY_MAP = {
     "rs nav inbox support":"RS Inbox",
     "mazor inbox":"RS Inbox",
     "shared / late mdr inbox":"RS Inbox",
+    "maintenance of cq tools (coding, odc, inv)":"Project Work",
     "software request": "IT Issue/Update",
     "cst tier 2" : "Meeting",
     "aging review":"WIP/Event Review",
