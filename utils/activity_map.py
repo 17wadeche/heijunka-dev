@@ -705,6 +705,7 @@ ACTIVITY_MAP = {
     "scrum, collaboration, practice event":"Scrum & Action",
     "fwt, it issues, training": "IT Issue/Update",
     "gch down/it": "IT Issue/Update",
+    "email; training; meeting": "Training/Mentoring",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
     "development":"Career Development",
     "shipments, devices returned in error": "Shipment",
