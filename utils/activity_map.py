@@ -3017,7 +3017,7 @@ ACTIVITY_MAP = {
     "agile qch/reportability matrix":"Reportability Matrix",
     "precedent event/rd conflict":"Reportability Matrix",
     "rd conflict":"Reportability Matrix",
-    "rd  guidance":"Reportability Matrix",
+    "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
     "gpt rd training": "Training/Mentoring",
     "mdtgpt": "MDTGPT Review",
