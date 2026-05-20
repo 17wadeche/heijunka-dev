@@ -953,6 +953,7 @@ ACTIVITY_MAP = {
     "medsafety ask":"Question",
     "event review/question":"Question",
     "collaboration, scrum":"Collaboration",
+    "coding data review project":"Project Work",
     "ri mtg":"RI",
     "pulling ae'":"WIP/Event Review",
     "x cornerstone":"Cornerstone",
