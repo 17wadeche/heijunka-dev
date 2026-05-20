@@ -3014,6 +3014,7 @@ ACTIVITY_MAP = {
     "aortic matrix":"Reportability Matrix",
     "pvh matrix":"Reportability Matrix",
     "reportability matrix":"Reportability Matrix",
+    "unaccounted for":"",
     "agile qch/reportability matrix":"Reportability Matrix",
     "precedent event/rd conflict":"Reportability Matrix",
     "rd conflict":"Reportability Matrix",
