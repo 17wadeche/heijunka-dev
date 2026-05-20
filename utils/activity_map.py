@@ -932,6 +932,8 @@ ACTIVITY_MAP = {
     "shared / late mdr inbox":"RS Inbox",
     "maintenance of cq tools (coding, odc, inv)":"Project Work",
     "software request": "IT Issue/Update",
+    "asks from management":"Management Request",
+    "mainenance of cq tools (coding, odc, inv, onenote)":"Project Work",
     "cst tier 2" : "Meeting",
     "aging review":"WIP/Event Review",
     "tier 1 / round table" : "Meeting",
