@@ -967,6 +967,7 @@ ACTIVITY_MAP = {
     "corner-stone":"Cornerstone",
     "admin (non-file related emails, etc)":"Admin",
     "admin (non-file related emails)":"Admin",
+    "admin (non-file related emails, open docs, etc)":"Admin",
     "next gen support/prep":"Next Gen",
     "run wr in am":"Metrics & Schedule",
     "ri mtg":"RI",
