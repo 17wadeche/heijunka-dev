@@ -936,6 +936,8 @@ ACTIVITY_MAP = {
     "mainenance of cq tools (coding, odc, inv, onenote)":"Project Work",
     "ous/rep/aging escalations":"Escalation",
     "run & post gap report (gap owners)":"Gap Report",
+    "run & post gap report (gap owners), precedent review":"Gap Report",
+    
     "tier- mon or tue": "Meeting",
     "tier- thur": "Meeting",
     "cst tier 2" : "Meeting",
@@ -964,6 +966,7 @@ ACTIVITY_MAP = {
     "coding data review project":"Project Work",
     "corner-stone":"Cornerstone",
     "admin (non-file related emails, etc)":"Admin",
+    "admin (non-file related emails)":"Admin",
     "next gen support/prep":"Next Gen",
     "run wr in am":"Metrics & Schedule",
     "ri mtg":"RI",
