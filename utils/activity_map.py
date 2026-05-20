@@ -929,6 +929,7 @@ ACTIVITY_MAP = {
     "late mdr/enterprise qa":"QA",
     "rs nav inbox support":"RS Inbox",
     "mazor inbox":"RS Inbox",
+    "shared / late mdr inbox":"RS Inbox",
     "software request": "IT Issue/Update",
     "cst tier 2" : "Meeting",
     "aging review":"WIP/Event Review",
