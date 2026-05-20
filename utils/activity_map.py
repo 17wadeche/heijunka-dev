@@ -2195,6 +2195,7 @@ ACTIVITY_MAP = {
     "re-doing shipping job aid":"Admin",
     "precedent event monthly review & weekly list":"Precedent Event",
     "adjusting file per team leader request":"WIP/Event Review",
+    "adjusting file":"WIP/Event Review",
     "precedent event monthly review":"Precedent Event",
     "imdrf code call": "Meeting",
     "escalations on external dependencies":"Escalations",
