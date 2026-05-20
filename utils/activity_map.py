@@ -26,6 +26,7 @@ ACTIVITY_MAP = {
     "spyral capa testing - pho unit":"CAPA",
     "sorting shipping":"Shipment",
     "spyral capa meeting":"CAPA",
+    "reviewing procedure updates / redlines":"Redline",
     "sh mfg tip guide review":"Admin",
     "meeting - rdn manufacturing test discussion & demo":"Meeting",
     "live video":"Reviewing Documents & Case Video",
