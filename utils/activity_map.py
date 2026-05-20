@@ -704,6 +704,7 @@ ACTIVITY_MAP = {
     "pmq cr pre-meeting q review":"PMQ Meeting",
     "scrum, collaboration, practice event":"Scrum & Action",
     "fwt, it issues, training": "IT Issue/Update",
+    "gch down/it": "IT Issue/Update",
     "rch review, updating a fourmies wi, emails, fw, career development plan":"Career Development",
     "development":"Career Development",
     "shipments, devices returned in error": "Shipment",
