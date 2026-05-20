@@ -2526,3 +2526,12 @@ KeyError: 'wp3_out'
 2026-05-20 13:40:28,307 | INFO | [Other MEIC] START
 2026-05-20 13:40:28,416 | INFO | [Other MEIC] DONE | rows=73 | elapsed=0:00:00.109155
 2026-05-20 13:40:28,417 | INFO | [SCS Super Cell] START
+2026-05-20 13:41:14,179 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 19 | kept=16 | refreshed=3 | final=19 | old_weeks=[] | new_weeks=['2026-05-04', '2026-05-11', '2026-05-18']
+2026-05-20 13:41:14,179 | INFO | [SCS Super Cell] DONE | rows=19 | elapsed=0:00:45.762351
+2026-05-20 13:41:14,179 | INFO | [PH Cell 17] rows before TAA filter = 8
+2026-05-20 13:41:14,179 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 436 -> 433
+2026-05-20 13:41:14,179 | INFO | [PH Cell 17] rows after TAA filter = 8
+2026-05-20 13:41:14,179 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 436 -> 433
+2026-05-20 13:41:14,196 | INFO | [ALL] drop period_date == 2023-11-06: 433 -> 433
+2026-05-20 13:41:14,198 | INFO | [ALL] drop period_date == 2026-09-07: 433 -> 433
+2026-05-20 13:41:14,242 | INFO | Wrote 433 rows to NS_DATA\NS_metrics.csv
