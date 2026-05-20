@@ -956,6 +956,7 @@ ACTIVITY_MAP = {
     "coding data review project":"Project Work",
     "ri mtg":"RI",
     "pulling ae'":"WIP/Event Review",
+    "meeting prep / meeting / reg inquirie":"RI",
     "x cornerstone":"Cornerstone",
     "t5f meeting":"Meeting",
     "support from tm":"Collaboration",
