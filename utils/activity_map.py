@@ -27,6 +27,7 @@ ACTIVITY_MAP = {
     "sorting shipping":"Shipment",
     "spyral capa meeting":"CAPA",
     "reviewing procedure updates / redlines":"Redline",
+    "ohs group":"Engagement",
     "sh mfg tip guide review":"Admin",
     "meeting - rdn manufacturing test discussion & demo":"Meeting",
     "live video":"Reviewing Documents & Case Video",
