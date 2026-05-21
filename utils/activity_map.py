@@ -2257,7 +2257,7 @@ ACTIVITY_MAP = {
     "team meetings aems team building":"Meeting",
     "file escalations/ corrections (gap findings, fer escalations)":"WIP/Event Review",
     "late review":"WIP/Event Review",
-    
+    "coding meeting email & im":"Coding/Code Gov",
     "collaboration (i.e. file discussion)": "Collaboration",
     "fill out capacity management tools (heijunka, non-wip)": "Metrics & Schedule",
     "fill out capacity management tools (heijunka, non-wip chart)": "Metrics & Schedule",
