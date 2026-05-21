@@ -2280,6 +2280,7 @@ ACTIVITY_MAP = {
     "issues with laptop": "IT Issue/Update",
     "meeting on file":"Meeting",
     "tm meeting":"Meeting",
+    "exception meeting with tl":"Meeting",
     "gch crashing": "IT Issue/Update",
     "software update": "IT Issue/Update",
     "gch crashe": "IT Issue/Update",
