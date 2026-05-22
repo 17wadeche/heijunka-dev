@@ -2397,6 +2397,7 @@ ACTIVITY_MAP = {
     "pre market sqe presentation": "Project Work",
     "tax id search":"Admin",
     "sqe ditl":"Admin",
+    "oasi":"Admin",
     "sqe presentation":"Admin",
     "training documentation": "Training/Mentoring",
     "cormerstone":"Cornerstone",
