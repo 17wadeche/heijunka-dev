@@ -2368,6 +2368,7 @@ ACTIVITY_MAP = {
     "scrum, questions, email":"Scrum & Action",
     "colloboration, emails, question":"Collaboration",
     "lab discussion":"Collaboration",
+    "ng, testing, coding, meetings, event review/collaboration, email/admin":"Next Gen",
     "eail & im": "Email & IM",
     "/ email": "Email & IM",
     "aortic meeting" :"Meeting",
