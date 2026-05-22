@@ -2362,6 +2362,7 @@ ACTIVITY_MAP = {
     "2b note":"Admin",
     "2b notes review":"Admin",
     "emails / collaboration / reg inquirie":"RI",
+    "fu call":"Meeting",
     "emails admin qa scrumb":"QA",
     "reportability guidance question/redline proposal":"Reportability Matrix",
     "scrum, questions, email":"Scrum & Action",
