@@ -2383,7 +2383,7 @@ ACTIVITY_MAP = {
     "uploaded photos and analysis. started working on an a3":"Problem Solving",
     "1:1 (30) qch (30)":"Meeting",
     "cornerstoner":"Cornerstone",
-    "shipping incorrectly delivered device":"Shipment"
+    "shipping incorrectly delivered device":"Shipment",
     "fw/emails/op10.005":"Email & IM",
     "lab shadowing deco": "Training/Mentoring",
     "dt investigation inquiry":"Question",
