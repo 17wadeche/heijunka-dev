@@ -2352,6 +2352,7 @@ ACTIVITY_MAP = {
     "std fu q's meeting":"Question",
     "ng, collaboration, training updating/scheduling,":"Next Gen",
     "scrum, meetings, yellow belt project work":"Scrum & Action",
+    "scrum 30l call":"Scrum & Action",
     "scrum, questions, email":"Scrum & Action",
     "colloboration, emails, question":"Collaboration",
     "eail & im": "Email & IM",
