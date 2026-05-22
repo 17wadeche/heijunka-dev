@@ -2384,6 +2384,8 @@ ACTIVITY_MAP = {
     "1:1 (30) qch (30)":"Meeting",
     "cornerstoner":"Cornerstone",
     "shipping incorrectly delivered device":"Shipment",
+    "scrum / meeting / workday feedback request / reg inquirie":"Scrum & Action",
+    "emails /admin":"Email & IM",
     "fw/emails/op10.005":"Email & IM",
     "lab shadowing deco": "Training/Mentoring",
     "meeting crdn pst-market re launcher curve":"Meeting",
