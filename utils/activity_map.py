@@ -2359,6 +2359,8 @@ ACTIVITY_MAP = {
     "capa 605686 - eu vigilance remediation (netherlands)":"CAPA",
     "ide hypercare":"Project Work",
     "scrum 30l call":"Scrum & Action",
+    "2b note":"Admin",
+    "2b notes review":"Admin",
     "scrum, questions, email":"Scrum & Action",
     "colloboration, emails, question":"Collaboration",
     "lab discussion":"Collaboration",
