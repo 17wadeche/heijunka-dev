@@ -2656,6 +2656,8 @@ ACTIVITY_MAP = {
     "sales rep training": "Training/Mentoring",
     "training event": "Training/Mentoring",
     "mir training": "Training/Mentoring",
+    "review zoya's assessment file": "Training/Mentoring",
+    "iris meeting":"Project Work",
     "catching up on email from being ooo for":"Email & IM",
     "rs pxm sh inbox":"RS Inbox",
     "rs sh inbox":"RS Inbox",
