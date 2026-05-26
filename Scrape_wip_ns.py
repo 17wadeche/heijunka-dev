@@ -3539,7 +3539,6 @@ def main():
     ent_mapping_xlsx = r"C:\Users\wadec8\Medtronic PLC\ENT GEMBA Board - Heijunka 2.0 Files\Team & Tenure Mapping.xlsx"
     ent_data_csv     = r"C:\Users\wadec8\OneDrive - Medtronic PLC\ENT\ENT_Data.csv"
     dbs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\DBS\DBS_Data.csv"
-    scs_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\SCS\SCS_Data.csv"
     other_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\Other MEIC\Other_MEIC_Data.csv"
     ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 New Heijunka.xlsx"
     out_file = "NS_DATA\\NS_metrics.csv"
