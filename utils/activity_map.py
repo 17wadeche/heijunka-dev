@@ -2482,6 +2482,7 @@ ACTIVITY_MAP = {
     "self paced training": "Training/Mentoring",
     "meeting with marie" :"Meeting",
     "mdt academy": "Training/Mentoring",
+    "deep dive and clarification emails for pe'": "Email & IM",
     "emails/travel doc": "Email & IM",
     "fywt/assigning partners ids": "Metrics & Schedule",
     "emails & querie": "Email & IM",
