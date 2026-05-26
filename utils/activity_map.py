@@ -2497,6 +2497,7 @@ ACTIVITY_MAP = {
     "it support": "IT Issue/Update",
     "issues from deco + shipment":"Shipment",
     "it sorting issue": "IT Issue/Update",
+    "review zoya attempts request syetem access": "IT Issue/Update",
     "rrtt report update": "RRTT",
     "rrtt report": "RRTT",
     "pmpa questions/updat":"PMPA",
