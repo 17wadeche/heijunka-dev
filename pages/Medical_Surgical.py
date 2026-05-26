@@ -210,7 +210,12 @@ def grouped_team_options(frame: pd.DataFrame) -> list[str]:
     return groups
 def subgroup_options_for_team(team_group: str) -> list[str]:
     return TEAM_BREAKDOWN_RULES.get(team_group, ["All"])
-def filter_team_view(frame: pd.DataFrame, team_group: str, subgroup: str = "All") -> pd.DataFrame:
+def filter_team_view(
+    frame: pd.DataFrame,
+    team_group: str,
+    subgroup: str = "All",
+    fallback_to_all: bool = True,
+) -> pd.DataFrame:
     if frame is None or frame.empty:
         return frame.copy()
     if "team_group" not in frame.columns:
@@ -218,7 +223,7 @@ def filter_team_view(frame: pd.DataFrame, team_group: str, subgroup: str = "All"
     sub = frame[frame["team_group"] == team_group].copy()
     if subgroup != "All":
         exact = sub[sub["team_subgroup"] == subgroup]
-        if exact.empty:
+        if exact.empty and fallback_to_all:
             sub = sub[sub["team_subgroup"] == "All"].copy()
         else:
             sub = exact
@@ -1466,7 +1471,7 @@ if nonwip_mode:
     if subgroup_nw == "All":
         wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
     else:
-        wip_match = filter_team_view(wip_group_df, team_nw, subgroup_nw)
+        wip_match = filter_team_view(wip_group_df, team_nw, subgroup_nw, fallback_to_all=False)
         wip_match = wip_match[wip_match["period_date"] == week_nw]
     wip_hours_val = (
         float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
@@ -1476,7 +1481,7 @@ if nonwip_mode:
     if subgroup_nw == "All":
         metrics_frame_for_accounting = df
     else:
-        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw).copy()
+        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw, fallback_to_all=False).copy()
         metrics_frame_for_accounting = wip_group_filtered
         metrics_frame_for_accounting["team"] = team_nw
     if subgroup_nw == "All":
