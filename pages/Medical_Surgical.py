@@ -168,10 +168,10 @@ def split_team_group(team_name: str) -> tuple[str, str]:
         "cts-sibo": ("Surgical AST-GST", "CTS"),
         "cts-sinh": ("Surgical AST-GST", "CTS"),
         "cts-vents": ("VSS", "CTS"),
-        "acm": ("ACM", "All"),
-        "vss": ("VSS", "All"),
-        "surgical ast-gst": ("Surgical AST-GST", "All"),
-        "surgical robotics": ("Surgical Robotics", "All"),
+        "acm": ("ACM", "US"),
+        "vss": ("VSS", "US"),
+        "surgical ast-gst": ("Surgical AST-GST", "US"),
+        "surgical robotics": ("Surgical Robotics", "US"),
     }
     if raw_lower in explicit_map:
         return explicit_map[raw_lower]
