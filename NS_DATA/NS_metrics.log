@@ -1,3 +1,6 @@
 2026-05-26 10:51:15,497 | INFO | === NS Metrics Run START ===
 2026-05-26 10:51:15,502 | INFO | Selected team: all
 2026-05-26 10:51:15,513 | INFO | [TDD COS 1] START
+2026-05-26 10:51:50,405 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 11 | kept=9 | refreshed=2 | final=11
+2026-05-26 10:51:50,407 | INFO | [TDD COS 1] DONE | rows=11 | elapsed=0:00:34.893981
+2026-05-26 10:51:50,407 | INFO | [Spine] START
