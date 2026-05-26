@@ -4,6 +4,7 @@ import csv
 import datetime as _dt
 import json
 import os
+import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
@@ -92,6 +93,9 @@ CSV_COLUMNS = [
     "wip_workers_ooo_hours",
 ]
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
+def log_timing(message: str) -> None:
+    now = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}] {message}")
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def team_for_source(path: str) -> str:
@@ -464,8 +468,14 @@ def blank_row_for_missing_file(path: str) -> Dict[str, Any]:
     }
 def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]]) -> List[Dict[str, Any]]:
     team = team_for_source(path)
+    workbook_start = time.perf_counter()
+    display_team = team or os.path.basename(path)
+    log_timing(f"Starting non-WIP scrape for team: {display_team}")
+    load_start = time.perf_counter()
     wb = load_workbook(path, data_only=True)
+    log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     if AVAILABILITY_SHEET not in wb.sheetnames:
+        log_timing(f"{display_team}: missing sheet {AVAILABILITY_SHEET}")
         return [{
             "team": team,
             "period_date": "",
@@ -479,7 +489,9 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
             "wip_workers_count": "",
             "wip_workers_ooo_hours": "",
         }]
+    parse_start = time.perf_counter()
     available_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
+    log_timing(f"{display_team}: availability parse took {time.perf_counter() - parse_start:.2f}s")
     rows: List[Dict[str, Any]] = []
     for period in sorted(available_by_week.keys()):
         av = available_by_week[period]
@@ -512,6 +524,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
             "wip_workers_ooo_hours": wip_workers_ooo_hours,
         }
         rows.append(row)
+    log_timing(f"Completed non-WIP scrape for team: {display_team} in {time.perf_counter() - workbook_start:.2f}s ({len(rows)} period row(s))")
     return rows
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -522,14 +535,21 @@ def main() -> int:
     wip_csv = find_wip_csv()
     wip_lut: Dict[Tuple[str, str], Dict[str, Any]] = {}
     if wip_csv:
+        lut_start = time.perf_counter()
         wip_lut = load_wip_lookup(wip_csv)
+        log_timing(f"WIP lookup load took {time.perf_counter() - lut_start:.2f}s from {wip_csv}")
     files = args.files or DEFAULT_FILES
     all_rows: List[Dict[str, Any]] = []
+    overall_start = time.perf_counter()
     for path in files:
         if not os.path.exists(path):
+            log_timing(f"Skipping missing workbook: {path}")
             all_rows.append(blank_row_for_missing_file(path))
             continue
+        team = team_for_source(path) or os.path.basename(path)
+        team_start = time.perf_counter()
         all_rows.extend(scrape_one_workbook(path, wip_lut))
+        log_timing(f"Team {team} total non-WIP processing time: {time.perf_counter() - team_start:.2f}s")
     final_rows = rollup_non_wip_rows(all_rows)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
         writer = csv.DictWriter(fp, fieldnames=CSV_COLUMNS)
@@ -544,6 +564,7 @@ def main() -> int:
         for row in granular_rows:
             writer.writerow({k: row.get(k, "") for k in CSV_COLUMNS})
     print(f"Wrote {len(granular_rows)} row(s) to {args.metrics_out}")
+    log_timing(f"Total non-WIP runtime: {time.perf_counter() - overall_start:.2f}s")
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
