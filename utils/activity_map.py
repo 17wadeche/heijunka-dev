@@ -2488,6 +2488,8 @@ ACTIVITY_MAP = {
     "emails & querie": "Email & IM",
     "lab weekly call" :"Meeting",
     "meeting with jyn" :"Meeting",
+    "deco shadowing, investigation training write up": "Training/Mentoring",
+    "emails, occ health appointment, started investigation": "Email & IM",
     "pmpa":"PMPA",
     "pmq querie": "PMQ Meeting",
     "pmq": "PMQ Meeting",
