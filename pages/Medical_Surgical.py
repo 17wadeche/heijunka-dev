@@ -1559,13 +1559,13 @@ if nonwip_mode:
         factor_out_ooo=not include_ooo_in_kpi_pct,
         person_hours=locals().get("_ppl_hours_kpi"),
         people_in_wip=locals().get("_ppl_in_wip_kpi"),
-        nw_frame=nw,
-        metrics_frame=df,
+        nw_frame=nw_view_for_accounting,
+        metrics_frame=metrics_frame_for_accounting,
         ent_capacity_callback=globals().get("ent_capacity_hours_for_week"),
         ent_capacity_kwargs={
             "team": team_nw,
             "week": week_nw,
-            "nw_frame": nw,
+            "nw_frame": nw_view_for_accounting,
             "irl_people": locals().get("team_irl_people", set()),
         },
     )
