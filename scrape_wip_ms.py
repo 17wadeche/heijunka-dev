@@ -4,6 +4,7 @@ import csv
 import datetime as _dt
 import json
 import os
+import time
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
@@ -132,7 +133,6 @@ METRICS_CSV_COLUMNS = [
     "Closures",
     "Opened",
 ]
-
 EXCLUDED_STATIONS = {"ooo", "non wip", ""}
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
@@ -145,6 +145,9 @@ EXCLUDED_NAMES = {
     "tm10","tm9","tm8","tm7","tm6","tm5",
     "tm4","tm3","tm2","tm1",
 }
+def log_timing(message: str) -> None:
+    now = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}] {message}")
 def json_load_safe(v: Any) -> Any:
     if v is None:
         return {}
@@ -599,21 +602,30 @@ def blank_row_for_missing_file(path: str) -> Dict[str, Any]:
     }
 def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
+    workbook_start = time.perf_counter()
+    display_team = team or os.path.basename(path)
+    log_timing(f"Starting scrape for team: {display_team}")
     rows: List[Dict[str, Any]] = []
     err_msgs: List[str] = []
+    load_start = time.perf_counter()
     wb = load_workbook(path, data_only=True)
+    log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     available_by_week: Dict[_dt.date, Dict[str, float]] = {}
     production_by_week: Dict[_dt.date, Dict[str, Any]] = {}
     if AVAILABILITY_SHEET in wb.sheetnames:
         try:
+            availability_start = time.perf_counter()
             available_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
+            log_timing(f"{display_team}: availability parse took {time.perf_counter() - availability_start:.2f}s")
         except Exception as e:
             err_msgs.append(f"availability_parse_error: {e!r}")
     else:
         err_msgs.append(f"missing_sheet: {AVAILABILITY_SHEET}")
     if PRODUCTION_SHEET in wb.sheetnames:
         try:
+            production_start = time.perf_counter()
             production_by_week = parse_production_sheet(wb[PRODUCTION_SHEET])
+            log_timing(f"{display_team}: production parse took {time.perf_counter() - production_start:.2f}s")
         except Exception as e:
             err_msgs.append(f"production_parse_error: {e!r}")
     else:
@@ -668,6 +680,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             "Opened": "",
         }
         rows.append(row)
+    log_timing(f"Completed scrape for team: {display_team} in {time.perf_counter() - workbook_start:.2f}s ({len(rows)} period row(s))")
     if not rows:
         rows.append({
             "team": team,
@@ -727,11 +740,16 @@ def main() -> int:
     args = ap.parse_args()
     files = args.files or DEFAULT_FILES
     all_rows: List[Dict[str, Any]] = []
+    overall_start = time.perf_counter()
     for path in files:
         if not os.path.exists(path):
+            log_timing(f"Skipping missing workbook: {path}")
             all_rows.append(blank_row_for_missing_file(path))
             continue
+        team = team_for_source(path) or os.path.basename(path)
+        team_start = time.perf_counter()
         all_rows.extend(scrape_one_workbook(path))
+        log_timing(f"Team {team} total processing time: {time.perf_counter() - team_start:.2f}s")
     base_dir = script_dir()
     timeliness_csv = os.path.join(base_dir, "timeliness.csv")
     closures_csv = os.path.join(base_dir, "closures.csv")
@@ -744,6 +762,7 @@ def main() -> int:
     write_csv_rows(args.metrics_out, metrics_rows, METRICS_CSV_COLUMNS)
     print(f"Wrote {len(final_rows)} row(s) to {args.out}")
     print(f"Wrote {len(metrics_rows)} row(s) to {args.metrics_out}")
+    log_timing(f"Total runtime: {time.perf_counter() - overall_start:.2f}s")
     return 0
 if __name__ == "__main__":
     raise SystemExit(main())
