@@ -2394,6 +2394,8 @@ ACTIVITY_MAP = {
     "device document reading":"Reviewing Documents & Case Video",
     "finding argon files related to cc numbers that need letter":"WIP/Event Review",
     "lab shadowing deco": "Training/Mentoring",
+    "dcb set up":"Set Up",
+    "mfg compaints review":"WIP/Event Review",
     "meeting crdn pst-market re launcher curve":"Meeting",
     "issues with shipments/dt shipment":"Shipment",
     "shipments + pick-up issue":"Shipment",
