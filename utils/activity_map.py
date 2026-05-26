@@ -2489,6 +2489,7 @@ ACTIVITY_MAP = {
     "lab weekly call" :"Meeting",
     "meeting with jyn" :"Meeting",
     "deco shadowing, investigation training write up": "Training/Mentoring",
+    "pat training": "Training/Mentoring",
     "training and writing up files with tl": "Training/Mentoring",
     "emails, additional testing results to stella": "Email & IM",
     "uni placement report":"Admin",
