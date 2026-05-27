@@ -2695,6 +2695,7 @@ ACTIVITY_MAP = {
     "scrum/1:1 meeting": "Meeting",
     "scrum + training":"Training/Mentoring",
     "scrum/training":"Training/Mentoring",
+    "kerkrade: training":"Training/Mentoring",
     "scrum/cornerstone":"Scrum & Action",
     "team scrum":"Scrum & Action",
     "pmpa discussion/canada discussion":"PMPA",
