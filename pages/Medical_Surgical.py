@@ -1344,6 +1344,7 @@ SURGICAL_ROLLUPS = {
         ("Surgical Legal", "All"),
         ("Surgical Robotics", "US"),
         ("Surgical AST-GST", "US"),
+        ("Surgical AST-GST", "CTS"),
     ],
     "Surgical MEIC": [
         ("MEIC MIR", "All"),
@@ -1354,14 +1355,14 @@ SURGICAL_ROLLUPS = {
 def _build_rollup_kpi(
     rollup_parts: list[tuple[str, str]],
     week: pd.Timestamp,
-    nw_base_frame: pd.DataFrame,
+    nw_group_frame: pd.DataFrame,
     wip_group_frame: pd.DataFrame,
     include_ooo_in_kpi_pct: bool,
 ) -> dict:
     nw_rows = []
     wip_rows = []
     for team_group, subgroup in rollup_parts:
-        nw_rows.append(filter_team_view(nw_base_frame, team_group, subgroup, fallback_to_all=False))
+        nw_rows.append(filter_team_view(nw_group_frame, team_group, subgroup, fallback_to_all=False))
         wip_rows.append(filter_team_view(wip_group_frame, team_group, subgroup, fallback_to_all=False))
     nw_all = pd.concat(nw_rows, ignore_index=True) if nw_rows else pd.DataFrame()
     wip_all = pd.concat(wip_rows, ignore_index=True) if wip_rows else pd.DataFrame()
@@ -1715,7 +1716,7 @@ if nonwip_mode:
                 rollup_kpi = _build_rollup_kpi(
                     rollup_parts=rollup_parts,
                     week=week_nw,
-                    nw_base_frame=nw_base,
+                    nw_group_frame=nonwip_group_df,
                     wip_group_frame=wip_group_df,
                     include_ooo_in_kpi_pct=include_ooo_in_kpi_pct,
                 )
