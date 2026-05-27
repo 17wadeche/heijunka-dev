@@ -2875,6 +2875,8 @@ ACTIVITY_MAP = {
     "meetings, ng/coding": "Next Gen",
     "is tool meeting":"Project Work",
     "project meeting and work":"Project Work",
+    "email; meeting; lit training": "Training/Mentoring",
+    "im/email":"Email & IM",
     "protege training with setcheckinterval(interval)": "Training/Mentoring",
     "protege training with siva": "Training/Mentoring",
     "microscope demo": "Training/Mentoring",
