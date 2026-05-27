@@ -1929,37 +1929,18 @@ if has_dates and min_date and max_date_raw:
 col1, col2, col3 = st.columns([2, 2, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
-selected_subgroup_wip = "All"
 if selected_teams:
     st.session_state.selected_team = selected_teams[0]
     st.session_state.selected_team_subgroup = _first_valid_subgroup(
         st.session_state.get("selected_team_subgroup", "All"),
         selected_teams[0],
     )
-    subgroup_opts_wip = subgroup_options_for_team(selected_teams[0])
-    if len(subgroup_opts_wip) > 1:
-        st.session_state["wip_team_subgroup"] = _first_valid_subgroup(
-            st.session_state.get("wip_team_subgroup", st.session_state.get("selected_team_subgroup", "All")),
-            selected_teams[0],
-        )
-        with col2:
-            selected_subgroup_wip = st.selectbox(
-                "Group",
-                options=subgroup_opts_wip,
-                key="wip_team_subgroup",
-            )
-        st.session_state.selected_team_subgroup = selected_subgroup_wip
-    else:
-        st.session_state["wip_team_subgroup"] = "All"
-        st.session_state.selected_team_subgroup = "All"
 current_qp = _get_qp_teams()
 if not _sets_equal(st.session_state.teams_sel, current_qp):
     _set_qp_teams(sorted(st.session_state.teams_sel))
 f = df.copy()
 if st.session_state.teams_sel:
     f = f[f["team"].isin(st.session_state.teams_sel)]
-if selected_teams and selected_subgroup_wip != "All":
-    f = filter_team_view(f, selected_teams[0], selected_subgroup_wip, fallback_to_all=False)
 if start and end:
     f = f[(f["period_date"] >= pd.to_datetime(start)) & (f["period_date"] <= pd.to_datetime(end))]
 if f.empty:
