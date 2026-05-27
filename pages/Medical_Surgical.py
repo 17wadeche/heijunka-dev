@@ -1397,8 +1397,9 @@ def _build_rollup_kpi(
     rolled_ooo_hours = float(pd.to_numeric(nw_week.get("OOO Hours"), errors="coerce").fillna(0.0).sum())
     rolled_people_count = float(pd.to_numeric(nw_week.get("people_count"), errors="coerce").fillna(0.0).sum())
     fallback_cfg = SURGICAL_ROLLUP_FALLBACKS.get(rollup_name, {})
-    if rolled_people_count <= 0 and fallback_cfg:
-        rolled_people_count = float(fallback_cfg.get("people_count", rolled_people_count))
+    fallback_people_count = float(fallback_cfg.get("people_count", 0.0)) if fallback_cfg else 0.0
+    if fallback_people_count > 0 and rolled_people_count < fallback_people_count:
+        rolled_people_count = fallback_people_count
     rolled_wip_hours = float(pd.to_numeric(wip_week.get("Completed Hours"), errors="coerce").fillna(0.0).sum())
     kpi = enterprise_nonwip_kpi_lookup(
         team="Surgical Rollup",
@@ -1413,9 +1414,11 @@ def _build_rollup_kpi(
         metrics_frame=wip_week,
     )
     capacity_hours = kpi.get("capacity_hours", np.nan)
-    if fallback_cfg and (pd.isna(capacity_hours) or float(capacity_hours) <= 0):
-        capacity_hours = float(fallback_cfg.get("capacity_hours", capacity_hours))
-        kpi["capacity_hours"] = capacity_hours
+    fallback_capacity_hours = float(fallback_cfg.get("capacity_hours", 0.0)) if fallback_cfg else 0.0
+    if fallback_capacity_hours > 0:
+        if pd.isna(capacity_hours) or float(capacity_hours) < fallback_capacity_hours:
+            capacity_hours = fallback_capacity_hours
+            kpi["capacity_hours"] = capacity_hours
     pct_denom = capacity_hours
     if not include_ooo_in_kpi_pct and pd.notna(capacity_hours):
         pct_denom = max(float(capacity_hours) - float(rolled_ooo_hours), 0.0)
