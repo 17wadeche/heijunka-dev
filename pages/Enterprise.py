@@ -972,6 +972,8 @@ def _safe_to_datetime(df: pd.DataFrame, col: str) -> pd.Series:
 def _weekly_start(s: pd.Series) -> pd.Series:
     dt = pd.to_datetime(s, errors="coerce")
     return (dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")).dt.normalize()
+def _to_monday(series: pd.Series) -> pd.Series:
+    return _weekly_start(series)
 def _loads_json_maybe(v: Any) -> Any:
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return None
@@ -1386,11 +1388,11 @@ def _prepare_weekly_accounting_inputs(
     person_hours = explode_person_hours(metrics_frame)
     people_in_wip = explode_people_in_wip(metrics_frame)
     if not long_nw.empty:
-        long_nw["period_date"] = pd.to_datetime(long_nw["period_date"], errors="coerce").dt.normalize()
+        long_nw["period_date"] = _to_monday(long_nw["period_date"])
     if not person_hours.empty:
-        person_hours["period_date"] = pd.to_datetime(person_hours["period_date"], errors="coerce").dt.normalize()
+        person_hours["period_date"] = _to_monday(person_hours["period_date"])
     if not people_in_wip.empty:
-        people_in_wip["period_date"] = pd.to_datetime(people_in_wip["period_date"], errors="coerce").dt.normalize()
+        people_in_wip["period_date"] = _to_monday(people_in_wip["period_date"])
     return {
         "long_nw": long_nw,
         "person_hours": person_hours,
@@ -1407,7 +1409,7 @@ def ent_capacity_hours_for_week(
     if nw_frame is None or nw_frame.empty:
         return 0.0
     raw_nw = nw_frame.copy()
-    raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+    raw_nw["period_date"] = _to_monday(raw_nw["period_date"])
     row = raw_nw.loc[
         (raw_nw["team"] == team) & (raw_nw["period_date"] == wk)
     ]
@@ -1447,7 +1449,7 @@ def _person_available_hours_for_week(
     if pd.isna(wk):
         return np.nan
     ph = person_hours.copy()
-    ph["period_date"] = pd.to_datetime(ph["period_date"], errors="coerce").dt.normalize()
+    ph["period_date"] = _to_monday(ph["period_date"])
     mask = (
         ph["team"].astype(str).str.strip().str.upper().eq(str(team).strip().upper())
         & ph["period_date"].eq(pd.Timestamp(wk).normalize())
@@ -1474,9 +1476,9 @@ def _weekly_team_export_df(
         dc = _get_date_col(nw)
         if dc is None:
             return pd.DataFrame()
-        nw["period_date"] = pd.to_datetime(nw[dc], errors="coerce").dt.normalize()
+        nw["period_date"] = _to_monday(nw[dc])
     else:
-        nw["period_date"] = pd.to_datetime(nw["period_date"], errors="coerce").dt.normalize()
+        nw["period_date"] = _to_monday(nw["period_date"])
     if "team" not in nw.columns:
         tc = _get_team_col(nw)
         if tc is None:
@@ -1499,9 +1501,9 @@ def _weekly_team_export_df(
         if "period_date" not in metrics_frame.columns:
             dc = _get_date_col(metrics_frame)
             if dc is not None:
-                metrics_frame["period_date"] = pd.to_datetime(metrics_frame[dc], errors="coerce").dt.normalize()
+                metrics_frame["period_date"] = _to_monday(metrics_frame[dc])
         else:
-            metrics_frame["period_date"] = pd.to_datetime(metrics_frame["period_date"], errors="coerce").dt.normalize()
+            metrics_frame["period_date"] = _to_monday(metrics_frame["period_date"])
         if "team" not in metrics_frame.columns:
             tc = _get_team_col(metrics_frame)
             if tc is not None:
