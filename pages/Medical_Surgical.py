@@ -1388,18 +1388,44 @@ def _build_rollup_kpi(
         week_hours=40.0,
         irl_people=rollup_irl_people,
     )
-    return enterprise_nonwip_kpi_lookup(
+    rolled_non_wip_hours = float(pd.to_numeric(nw_week.get("total_non_wip_hours"), errors="coerce").fillna(0.0).sum())
+    rolled_ooo_hours = float(pd.to_numeric(nw_week.get("OOO Hours"), errors="coerce").fillna(0.0).sum())
+    rolled_people_count = float(pd.to_numeric(nw_week.get("people_count"), errors="coerce").fillna(0.0).sum())
+    rolled_wip_hours = float(pd.to_numeric(wip_week.get("Completed Hours"), errors="coerce").fillna(0.0).sum())
+    kpi = enterprise_nonwip_kpi_lookup(
         team="Surgical Rollup",
         week=week,
         nw_row=row,
         wk_people=wk_people,
-        people_count=float(row.get("people_count", np.nan)),
-        completed_hours=float(pd.to_numeric(wip_week.get("Completed Hours"), errors="coerce").fillna(0.0).sum()),
-        total_non_wip_hours=float(row.get("total_non_wip_hours", np.nan)),
+        people_count=rolled_people_count,
+        completed_hours=rolled_wip_hours,
+        total_non_wip_hours=rolled_non_wip_hours,
         factor_out_ooo=not include_ooo_in_kpi_pct,
         nw_frame=nw_week,
         metrics_frame=wip_week,
     )
+    capacity_hours = kpi.get("capacity_hours", np.nan)
+    pct_denom = capacity_hours
+    if not include_ooo_in_kpi_pct and pd.notna(capacity_hours):
+        pct_denom = max(float(capacity_hours) - float(rolled_ooo_hours), 0.0)
+    unaccounted_hours = (
+        max(float(capacity_hours) - (rolled_wip_hours + rolled_non_wip_hours + rolled_ooo_hours), 0.0)
+        if pd.notna(capacity_hours)
+        else np.nan
+    )
+    kpi.update({
+        "people_count": rolled_people_count,
+        "completed_hours": rolled_wip_hours,
+        "non_wip_hours": rolled_non_wip_hours,
+        "ooo_hours": rolled_ooo_hours,
+        "unaccounted_hours": unaccounted_hours,
+        "pct_denom": pct_denom,
+        "wip_pct": (rolled_wip_hours / pct_denom) if pd.notna(pct_denom) and pct_denom > 0 else np.nan,
+        "non_wip_pct": (rolled_non_wip_hours / pct_denom) if pd.notna(pct_denom) and pct_denom > 0 else np.nan,
+        "ooo_pct": ((rolled_ooo_hours / pct_denom) if include_ooo_in_kpi_pct and pd.notna(pct_denom) and pct_denom > 0 else 0.0),
+        "unaccounted_pct": (unaccounted_hours / pct_denom) if pd.notna(unaccounted_hours) and pd.notna(pct_denom) and pct_denom > 0 else np.nan,
+    })
+    return kpi
 st.markdown("<h1 style='text-align: center;'>MS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
