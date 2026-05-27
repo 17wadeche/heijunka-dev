@@ -970,7 +970,8 @@ def _get_date_col(df: pd.DataFrame) -> Optional[str]:
 def _safe_to_datetime(df: pd.DataFrame, col: str) -> pd.Series:
     return pd.to_datetime(df[col], errors="coerce")
 def _weekly_start(s: pd.Series) -> pd.Series:
-    return s.dt.to_period("W-MON").dt.start_time
+    dt = pd.to_datetime(s, errors="coerce")
+    return (dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")).dt.normalize()
 def _loads_json_maybe(v: Any) -> Any:
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return None
