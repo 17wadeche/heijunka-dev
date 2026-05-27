@@ -1351,7 +1351,12 @@ SURGICAL_ROLLUPS = {
         ("Surgical AST-GST", "MEIC"),
     ],
 }
+SURGICAL_ROLLUP_FALLBACKS = {
+    "Surgical US": {"people_count": 19.0, "capacity_hours": 760.0},
+    "Surgical MEIC": {"people_count": 25.0, "capacity_hours": 1000.0},
+}
 def _build_rollup_kpi(
+    rollup_name: str,
     rollup_parts: list[tuple[str, str]],
     week: pd.Timestamp,
     nw_group_frame: pd.DataFrame,
@@ -1391,6 +1396,9 @@ def _build_rollup_kpi(
     rolled_non_wip_hours = float(pd.to_numeric(nw_week.get("total_non_wip_hours"), errors="coerce").fillna(0.0).sum())
     rolled_ooo_hours = float(pd.to_numeric(nw_week.get("OOO Hours"), errors="coerce").fillna(0.0).sum())
     rolled_people_count = float(pd.to_numeric(nw_week.get("people_count"), errors="coerce").fillna(0.0).sum())
+    fallback_cfg = SURGICAL_ROLLUP_FALLBACKS.get(rollup_name, {})
+    if rolled_people_count <= 0 and fallback_cfg:
+        rolled_people_count = float(fallback_cfg.get("people_count", rolled_people_count))
     rolled_wip_hours = float(pd.to_numeric(wip_week.get("Completed Hours"), errors="coerce").fillna(0.0).sum())
     kpi = enterprise_nonwip_kpi_lookup(
         team="Surgical Rollup",
@@ -1405,6 +1413,9 @@ def _build_rollup_kpi(
         metrics_frame=wip_week,
     )
     capacity_hours = kpi.get("capacity_hours", np.nan)
+    if fallback_cfg and (pd.isna(capacity_hours) or float(capacity_hours) <= 0):
+        capacity_hours = float(fallback_cfg.get("capacity_hours", capacity_hours))
+        kpi["capacity_hours"] = capacity_hours
     pct_denom = capacity_hours
     if not include_ooo_in_kpi_pct and pd.notna(capacity_hours):
         pct_denom = max(float(capacity_hours) - float(rolled_ooo_hours), 0.0)
@@ -1713,6 +1724,7 @@ if nonwip_mode:
             st.caption(f"Week: {week_nw.date().isoformat()}")
             for rollup_name, rollup_parts in SURGICAL_ROLLUPS.items():
                 rollup_kpi = _build_rollup_kpi(
+                    rollup_name=rollup_name,
                     rollup_parts=rollup_parts,
                     week=week_nw,
                     nw_group_frame=nonwip_group_df,
