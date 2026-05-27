@@ -2701,6 +2701,7 @@ ACTIVITY_MAP = {
     "discussions/im": "Email & IM",
     "skills lab + consult w/corie":"Nurse Consult",
     "computer updates/rebooting/comp problem": "IT Issue/Update",
+    "pc restart/updates + set up": "IT Issue/Update",
     "weekly cqxm/pmpa meeting":"PMPA",
     "meetings; pe review for pmpa.":"PMPA",
     "ri discussion":"RI",
