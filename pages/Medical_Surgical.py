@@ -1344,7 +1344,6 @@ SURGICAL_ROLLUPS = {
         ("Surgical Legal", "All"),
         ("Surgical Robotics", "US"),
         ("Surgical AST-GST", "US"),
-        ("Surgical AST-GST", "CTS"),
     ],
     "Surgical MEIC": [
         ("MEIC MIR", "All"),
