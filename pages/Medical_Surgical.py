@@ -2117,7 +2117,7 @@ tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.colum
 prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
 productivity = (float(tot_closures) / prod_den) if (pd.notna(tot_closures) and prod_den) else np.nan
 efficiency = (float(tot_closures) / float(tot_chl)) if (pd.notna(tot_closures) and tot_chl) else np.nan
-kpi_cols = st.columns(4)
+kpi_cols = st.columns(2)
 def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
     if pd.isna(value):
         col.metric(label, "—", help=help)
