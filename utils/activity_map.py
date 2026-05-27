@@ -2876,6 +2876,7 @@ ACTIVITY_MAP = {
     "is tool meeting":"Project Work",
     "project meeting and work":"Project Work",
     "protege training with setcheckinterval(interval)": "Training/Mentoring",
+    "protege training with siva": "Training/Mentoring",
     "microscope demo": "Training/Mentoring",
     "it issues (computer update)": "IT Issue/Update",
     "crdn weekly call":"Meeting",
