@@ -212,6 +212,7 @@ ACTIVITY_MAP = {
     "lmr survey discussion":"Admin",
     "duplicate meeting": "Meeting",
     "morning set up":"Set Up",
+    "emails escalated call": "Meeting",
     "admin (30)":"Admin",
     "cornerstone (30)":"Cornerstone",
     "document/previous investigation reading":"Reading File/Document Information",
