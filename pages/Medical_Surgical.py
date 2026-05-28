@@ -484,6 +484,43 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     accounted_other = {k: round(v, 2) for k, v in accounted_other.items()}
     accounted_nonother = {k: round(v, 2) for k, v in accounted_nonother.items()}
     return accounted_other, accounted_nonother
+def _json_payloads_from_series(series: pd.Series) -> list:
+    payloads = []
+    for payload in series.dropna().tolist():
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            continue
+        payloads.append(obj)
+    return payloads
+def _merge_non_wip_by_person_rows(rows: pd.DataFrame) -> str:
+    totals: dict[str, float] = {}
+    if rows is None or rows.empty or "non_wip_by_person" not in rows.columns:
+        return json.dumps(totals)
+    for obj in _json_payloads_from_series(rows["non_wip_by_person"]):
+        if not isinstance(obj, dict):
+            continue
+        for person, hours in obj.items():
+            name = normalize_person_name(str(person).strip())
+            if not name:
+                continue
+            try:
+                hrs = float(hours or 0)
+            except Exception:
+                hrs = 0.0
+            totals[name] = totals.get(name, 0.0) + hrs
+    return json.dumps({name: round(hours, 2) for name, hours in sorted(totals.items())})
+def _merge_non_wip_activity_rows(rows: pd.DataFrame) -> str:
+    activities: list[dict] = []
+    if rows is None or rows.empty or "non_wip_activities" not in rows.columns:
+        return json.dumps(activities)
+    for obj in _json_payloads_from_series(rows["non_wip_activities"]):
+        if not isinstance(obj, list):
+            continue
+        for item in obj:
+            if isinstance(item, dict):
+                activities.append(item)
+    return json.dumps(activities)
 def build_ooo_table_from_row(row) -> pd.DataFrame:
     payload = row.get("non_wip_activities", "[]")
     try:
@@ -1380,6 +1417,8 @@ def _build_rollup_kpi(
     row["people_count"] = pd.to_numeric(nw_week.get("people_count"), errors="coerce").fillna(0.0).sum()
     if "% in WIP" in nw_week.columns:
         row["% in WIP"] = pd.to_numeric(nw_week["% in WIP"], errors="coerce").mean()
+    row["non_wip_by_person"] = _merge_non_wip_by_person_rows(nw_week)
+    row["non_wip_activities"] = _merge_non_wip_activity_rows(nw_week)
     teams_cfg = load_team_config()
     rollup_irl_people = set()
     for team_group, _sub in rollup_parts:
@@ -1544,6 +1583,8 @@ if nonwip_mode:
         if "% Non-WIP" in sel.columns:
             pct_nw_series = pd.to_numeric(sel["% Non-WIP"], errors="coerce")
             agg_row["% Non-WIP"] = pct_nw_series.mean()
+        agg_row["non_wip_by_person"] = _merge_non_wip_by_person_rows(sel)
+        agg_row["non_wip_activities"] = _merge_non_wip_activity_rows(sel)
         agg_row["team"] = team_nw if subgroup_nw == "All" else f"{team_nw} - {subgroup_nw}"
         agg_row["team_group"] = team_nw
         agg_row["team_subgroup"] = subgroup_nw
