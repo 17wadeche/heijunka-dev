@@ -266,6 +266,7 @@ ACTIVITY_MAP = {
     "working on a3 dmaic":"Problem Solving",
     "emails, set up in the lab and cornerstone":"Email & IM",
     "email to cell to notify about a issue":"Email & IM",
+    "occ health appointment":"Admin",
     "admin (emails etc...)":"Admin",
     "scrum & problem solving":"Problem Solving",
     "meeting+deco tidy up": "Meeting",
