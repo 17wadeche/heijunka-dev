@@ -149,6 +149,7 @@ ACTIVITY_MAP = {
     "pulled work tool, yellow belt training": "Metrics & Schedule",
     "yellow belt training":"Yellow Belt",
     "yellow belt work":"Yellow Belt",
+    "update files with mfg/exp dates and create smdr":"WIP/Event Reveiw",
     "weekly schedule & heijunka meeting": "Metrics & Schedule",
     "weekly scheudle & audit resources update": "Metrics & Schedule",
     "team leads meeting & cornerstone": "Meeting",
