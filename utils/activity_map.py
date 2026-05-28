@@ -214,6 +214,8 @@ ACTIVITY_MAP = {
     "morning set up":"Set Up",
     "emails escalated call": "Meeting",
     "admin (30)":"Admin",
+    "emails / a3 meeting / reg inquirie":"Email & IM",
+    "emails, admin: : , scrumb:, collaboration:":"Email & IM",
     "cornerstone (30)":"Cornerstone",
     "document/previous investigation reading":"Reading File/Document Information",
     "cqxm/pmq meeting": "Meeting",
