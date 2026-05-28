@@ -216,6 +216,7 @@ ACTIVITY_MAP = {
     "set u":"Set Up",
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
+    "ri mailbox review":"RI",
     "event reviews, collaboration, lates, meetings, email/admin":"WIP/Event Review",
     "affera training 30": "Training/Mentoring",
     "workday tm review":"Career Development",
