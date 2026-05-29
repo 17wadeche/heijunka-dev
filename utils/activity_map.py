@@ -571,6 +571,7 @@ ACTIVITY_MAP = {
     "scrum / reg inquirie":"RI",
     "cross-function meeting":"Meeting",
     "mdt academy training": "Training/Mentoring",
+    "italian mir training": "Training/Mentoring",
     "/ investigation process training session": "Training/Mentoring",
     "autolog investigation training": "Training/Mentoring",
     "capital eq pmpa meeting":"PMPA",
