@@ -560,6 +560,7 @@ ACTIVITY_MAP = {
     "focus meeting":"Meeting",
     "scrum t":"Meeting",
     "rpa minute":"RPA Meeting/Action",
+    "+ people between our team rpa ms and marketing":"RPA Meeting/Action",
     "bsi mir testing":"Project Work",
     "next gen comment":"Next Gen",
     "qa assessment review":"QA",
