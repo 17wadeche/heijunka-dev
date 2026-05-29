@@ -281,7 +281,7 @@ ACTIVITY_MAP = {
     "meetings - crdn tier 2 & sh r&d": "Meeting",
     "crdn tier 2 meeting": "Meeting",
     "training, event reviews, data gathering, collaboration, meetings, smart tree information review, emails/admin": "Training/Mentoring",
-    "event reviews, team collaboration, root cause analysis, uat meeting, coding, email/admin":"Collaboration",
+    "event reviews, team collaboration, root cause analysis, uat, meetings, coding, email/admin":"Collaboration",
     "mir meeting": "Training/Mentoring",
     "italy mir training": "Training/Mentoring",
     "italy mir meeting": "Training/Mentoring",
