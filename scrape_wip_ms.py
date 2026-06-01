@@ -29,9 +29,8 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (ACM-PM).xlsm":"CTS-ACM-PM",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (ACM-RI).xlsm":"CTS-ACM-RI",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (GIS).xlsm":"CTS-GIS",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (RR).xlsm":"CTS-RR",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SIBO).xlsm":"CTS-SIBO",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SINH).xlsm":"CTS-SINH",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SIBO-AAS).xlsm":"CTS-SIBO",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SINH-ILS).xlsm":"CTS-SINH",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (Vents).xlsm":"CTS-Vents",
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
@@ -51,9 +50,8 @@ TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Cognizant (ACM-PM).xlsm":"CTS-ACM-PM",
     "Heijunka Cognizant (ACM-RI).xlsm":"CTS-ACM-RI",
     "Heijunka Cognizant (GIS).xlsm":"CTS-GIS",
-    "Heijunka Cognizant (RR).xlsm":"CTS-RR",
-    "Heijunka Cognizant (SIBO).xlsm":"CTS-SIBO",
-    "Heijunka Cognizant (SINH).xlsm":"CTS-SINH",
+    "Heijunka Cognizant (SIBO-AAS).xlsm":"CTS-SIBO",
+    "Heijunka Cognizant (SINH-ILS).xlsm":"CTS-SINH",
     "Heijunka Cognizant (Vents).xlsm":"CTS-Vents",
 }
 DEFAULT_FILES: List[str] = [
@@ -73,9 +71,8 @@ DEFAULT_FILES: List[str] = [
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (ACM-PM).xlsm",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (ACM-RI).xlsm",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (GIS).xlsm",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (RR).xlsm",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SIBO).xlsm",
-    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SINH).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SIBO-AAS).xlsm",
+    r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (SINH-ILS).xlsm",
     r"C:\Users\wadec8\Medtronic PLC\ONEFLOW - Heijunka\Heijunka Cognizant (Vents).xlsm",
 ]
 CSV_COLUMNS = [
