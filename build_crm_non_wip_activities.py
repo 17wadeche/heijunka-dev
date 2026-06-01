@@ -110,6 +110,12 @@ def ni_people_count_for_period(period: _dt.date) -> int:
     if period >= NI_PEOPLE_COUNT_EFFECTIVE_DATE:
         return NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
     return NI_PEOPLE_COUNT
+NI_PERF_WIP_OOO_EFFECTIVE_DATE = _dt.date(2026, 5, 25)
+NI_PERF_WIP_OOO_TOTAL_CELL = "Z12"
+NI_PERF_WIP_OOO_NAME_COL = "A"
+NI_PERF_WIP_OOO_HOURS_COL = "Z"
+NI_PERF_WIP_OOO_START_ROW = 5
+NI_PERF_WIP_OOO_END_ROW = 11
 MEIC_PAB_SHEET = "#2 PAB"
 MEIC_WIP_PLAN_SHEET = "# 1 WIP plan"
 MEIC_PERF_WIP_SHEET = "#5 Performance WIP Time"
@@ -863,19 +869,34 @@ def compute_ooo_by_person_from_wip_plan(ws_wip_plan: Worksheet, name_col: str, h
             continue
         out[person] = out.get(person, 0.0) + float(hours)
     return out
-def compute_team_total_non_wip_hours(ws_pab: Worksheet, non_wip_types: set[str]) -> float:
-    return float(sum(hours for _, _, hours in iter_team_non_wip_rows(ws_pab, non_wip_types)))
-def compute_team_non_wip_by_person(ws_pab: Worksheet, non_wip_types: set[str]) -> Dict[str, float]:
+def compute_ooo_by_person_from_fixed_rows(
+    ws: Worksheet,
+    *,
+    name_col: str,
+    hours_col: str,
+    start_row: int,
+    end_row: int,
+) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for person, _, hours in iter_team_non_wip_rows(ws_pab, non_wip_types):
+    for r in range(start_row, min(ws.max_row, end_row) + 1):
+        person = normalize_person_name(str(ws[f"{name_col}{r}"].value or ""))
+        if not person or is_excluded_person(person):
+            continue
+        hours = _cell_number(ws[f"{hours_col}{r}"].value)
+        if hours is None or hours == 0:
+            continue
         out[person] = out.get(person, 0.0) + float(hours)
-    return {person: float(total) for person, total in out.items() if total != 0}
-def compute_team_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet, non_wip_types: set[str], ooo_name_col: str, ooo_hours_col: str) -> List[Dict[str, Any]]:
+    return out
+def compute_team_non_wip_activities_from_ooo_by_person(
+    ws_pab: Worksheet,
+    non_wip_types: set[str],
+    ooo_by_person: Dict[str, float],
+) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for person, activity, hours in iter_team_non_wip_rows(ws_pab, non_wip_types):
         key = (person, activity)
         agg[key] = agg.get(key, 0.0) + float(hours)
-    for person, hours in compute_ooo_by_person_from_wip_plan(ws_wip_plan, ooo_name_col, ooo_hours_col).items():
+    for person, hours in ooo_by_person.items():
         key = (person, "OOO")
         agg[key] = agg.get(key, 0.0) + float(hours)
     return [
@@ -885,6 +906,44 @@ def compute_team_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet, n
         )
         if hours != 0
     ]
+def _person_match_keys(name: str) -> set[str]:
+    raw = str(name or "")
+    without_trailing_parenthetical = re.sub(r"\s*\([^)]*\)\s*$", "", raw)
+    return {
+        key
+        for key in (
+            normalize_person_key(raw),
+            normalize_person_key(without_trailing_parenthetical),
+        )
+        if key
+    }
+def compute_wip_workers_ooo_hours_from_ooo_by_person(
+    ooo_by_person: Dict[str, float],
+    wip_workers: List[str],
+) -> float:
+    worker_keys: set[str] = set()
+    for worker in wip_workers:
+        worker_keys.update(_person_match_keys(worker))
+    if not worker_keys:
+        return 0.0
+    total = 0.0
+    for person, hours in ooo_by_person.items():
+        if _person_match_keys(person) & worker_keys:
+            total += float(hours)
+    return float(total)
+def compute_team_total_non_wip_hours(ws_pab: Worksheet, non_wip_types: set[str]) -> float:
+    return float(sum(hours for _, _, hours in iter_team_non_wip_rows(ws_pab, non_wip_types)))
+def compute_team_non_wip_by_person(ws_pab: Worksheet, non_wip_types: set[str]) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for person, _, hours in iter_team_non_wip_rows(ws_pab, non_wip_types):
+        out[person] = out.get(person, 0.0) + float(hours)
+    return {person: float(total) for person, total in out.items() if total != 0}
+def compute_team_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet, non_wip_types: set[str], ooo_name_col: str, ooo_hours_col: str) -> List[Dict[str, Any]]:
+    return compute_team_non_wip_activities_from_ooo_by_person(
+        ws_pab,
+        non_wip_types,
+        compute_ooo_by_person_from_wip_plan(ws_wip_plan, ooo_name_col, ooo_hours_col),
+    )
 def compute_team_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[str], name_col: str, hours_col: str) -> float:
     worker_keys = {normalize_person_key(x) for x in wip_workers if x}
     if not worker_keys:
@@ -1015,23 +1074,60 @@ def scrape_one_cds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
         period_date_offset_days=-4,
     )
 def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
-    return scrape_one_mapped_workbook(
-        path,
-        people_in_wip_lookup,
-        team="NI",
-        pab_sheet=NI_PAB_SHEET,
-        wip_plan_sheet=NI_WIP_PLAN_SHEET,
-        perf_metrics_sheet=NI_PERF_METRICS_SHEET,
-        perf_metrics_date_cell="B3",
-        perf_wip_sheet=NI_PERF_WIP_SHEET,
-        pct_in_wip_cell="J2",
-        ooo_total_cell="BR2",
-        ooo_name_col="BI",
-        ooo_hours_col="BR",
-        people_count=ni_people_count_for_period,
-        non_wip_types=NI_NON_WIP_TYPES,
-        period_date_offset_days=-4,
+    team = "NI"
+    wb = load_workbook(path, data_only=True)
+    period: Optional[_dt.date] = None
+    ws_perf_metrics = _get_required_sheet(wb, NI_PERF_METRICS_SHEET)
+    period = parse_period_date_from_perf_metrics_cell(ws_perf_metrics, "B3")
+    if period is not None:
+        period = period + _dt.timedelta(days=-4)
+    if period is None:
+        period = parse_period_date_from_filename(path)
+    if period is None:
+        period = parse_period_date_from_workbook_sheetnames(wb)
+    if period is None:
+        return []
+    period_iso = iso_date(period)
+    ws_pab = _get_required_sheet(wb, NI_PAB_SHEET)
+    ws_wip_plan = _get_required_sheet(wb, NI_WIP_PLAN_SHEET)
+    ws_perf = _get_required_sheet(wb, NI_PERF_WIP_SHEET)
+    total_non_wip_hours = compute_team_total_non_wip_hours(ws_pab, NI_NON_WIP_TYPES)
+    if period >= NI_PERF_WIP_OOO_EFFECTIVE_DATE:
+        ooo_hours = float(_cell_number(ws_perf[NI_PERF_WIP_OOO_TOTAL_CELL].value) or 0.0)
+        ooo_by_person = compute_ooo_by_person_from_fixed_rows(
+            ws_perf,
+            name_col=NI_PERF_WIP_OOO_NAME_COL,
+            hours_col=NI_PERF_WIP_OOO_HOURS_COL,
+            start_row=NI_PERF_WIP_OOO_START_ROW,
+            end_row=NI_PERF_WIP_OOO_END_ROW,
+        )
+    else:
+        ooo_hours = float(_cell_number(ws_wip_plan["BR2"].value) or 0.0)
+        ooo_by_person = compute_ooo_by_person_from_wip_plan(ws_wip_plan, "BI", "BR")
+    pct_in_wip = _cell_number(ws_perf["J2"].value)
+    non_wip_by_person = compute_team_non_wip_by_person(ws_pab, NI_NON_WIP_TYPES)
+    non_wip_activities = compute_team_non_wip_activities_from_ooo_by_person(
+        ws_pab,
+        NI_NON_WIP_TYPES,
+        ooo_by_person,
     )
+    wip_workers = people_in_wip_lookup.get((team, period_iso), [])
+    wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
+    wip_workers_ooo_hours = compute_wip_workers_ooo_hours_from_ooo_by_person(ooo_by_person, wip_workers)
+    row = {
+        "team": team,
+        "period_date": period_iso,
+        "people_count": ni_people_count_for_period(period),
+        "total_non_wip_hours": float(total_non_wip_hours),
+        "OOO Hours": float(ooo_hours),
+        "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
+        "non_wip_by_person": json.dumps(non_wip_by_person, ensure_ascii=False),
+        "non_wip_activities": json.dumps(non_wip_activities, ensure_ascii=False),
+        "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+        "wip_workers_count": int(wip_workers_count),
+        "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+    }
+    return [row]
 def scrape_one_meic_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
     return scrape_one_mapped_workbook(
         path,
