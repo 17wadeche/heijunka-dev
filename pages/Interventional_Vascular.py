@@ -54,6 +54,11 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+TEAM_WEEKLY_HOURS_OVERRIDES = {
+    "CRDN": 39.0,
+}
+def weekly_hours_for_team(team: str, default: float = 40.0) -> float:
+    return float(TEAM_WEEKLY_HOURS_OVERRIDES.get(str(team).strip(), default))
 NON_WIP_EMPTY_COLUMNS = [
     "team", "period_date", "source_file", "people_count",
     "total_non_wip_hours", "% in WIP", "non_wip_by_person",
@@ -753,10 +758,11 @@ def build_person_weekly_accounting(
     )
     out["person_key"] = out["person"].astype(str).str.strip().str.lower()
     irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    default_expected_hours = weekly_hours_for_team(team, week_hours)
     out["Expected Hours"] = np.where(
         out["person_key"].isin(irl_people_norm),
         39.0,
-        float(week_hours),
+        default_expected_hours,
     )
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
     out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
