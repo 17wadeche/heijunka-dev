@@ -2671,7 +2671,7 @@ ACTIVITY_MAP = {
     "email; training": "Email & IM",
     "emails/amin": "Email & IM",
     "email; article reivew for svt": "Email & IM",
-    "email meeting a":"Email & IM",
+    "email meetings a":"Email & IM",
     "ad hoc questions/discussion":"Question",
     "ad hoc questions/event review/discussion":"Question",
     "emails/querie": "Email & IM",
