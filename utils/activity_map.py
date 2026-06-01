@@ -2463,6 +2463,7 @@ ACTIVITY_MAP = {
     "finishing cornerstone training":"Cornerstone",
     "morning setup":"Set Up",
     "device document/case reading":"Reviewing Documents & Case Video",
+    "device document reading/other investigation reading":"Reviewing Documents & Case Video",
     "sh tmv review":"Admin",
     "reading through redline":"Redline",
     "sorting closurefast investigation issues (nellcor and atl memo)":"Admin",
