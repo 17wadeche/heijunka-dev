@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
+from utils.csv_reading import read_csv_resilient
 apply_global_styles()
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\IV_DATA\non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
@@ -53,25 +54,49 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+NON_WIP_EMPTY_COLUMNS = [
+    "team", "period_date", "source_file", "people_count",
+    "total_non_wip_hours", "% in WIP", "non_wip_by_person",
+]
+def _empty_non_wip_df() -> pd.DataFrame:
+    return pd.DataFrame(columns=NON_WIP_EMPTY_COLUMNS)
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(nw_path: str | None = None, nw_url: str | None = NON_WIP_DATA_URL) -> pd.DataFrame:
     if nw_url:
         try:
-            df = pd.read_csv(nw_url, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            df = read_csv_resilient(
+                nw_url,
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8-sig",
+            )
         except Exception:
             import io, requests
-            r = requests.get(nw_url, timeout=20)
-            r.raise_for_status()
-            df = pd.read_csv(io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
-                             dtype=str, keep_default_na=False)
+            try:
+                r = requests.get(nw_url, timeout=20)
+                r.raise_for_status()
+                df = read_csv_resilient(
+                    io.StringIO(r.content.decode("utf-8-sig", errors="replace")),
+                    dtype=str,
+                    keep_default_na=False,
+                )
+            except Exception as e:
+                st.warning(f"Unable to load non-WIP data; continuing without it. {e}")
+                return _empty_non_wip_df()
     else:
         p = Path(nw_path or NON_WIP_DEFAULT_PATH)
         if not p.exists():
-            return pd.DataFrame(columns=[
-                "team","period_date","source_file","people_count",
-                "total_non_wip_hours","% in WIP","non_wip_by_person"
-            ])
-        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+            return _empty_non_wip_df()
+        try:
+            df = read_csv_resilient(
+                p,
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8-sig",
+            )
+        except Exception as e:
+            st.warning(f"Unable to load non-WIP data; continuing without it. {e}")
+            return _empty_non_wip_df()
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
     for c in ["people_count", "total_non_wip_hours", "% in WIP", "OOO Hours"]:
