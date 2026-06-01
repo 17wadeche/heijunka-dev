@@ -11,6 +11,7 @@ import numpy as np
 from datetime import datetime
 import io
 from utils.activity_map import ACTIVITY_MAP
+from utils.csv_reading import read_csv_resilient
 import altair as alt
 from zoneinfo import ZoneInfo
 def get_page_last_updated_label() -> str:
@@ -920,7 +921,7 @@ def _repo_root_from_cfg_path_str(cfg_path_str: Optional[str]) -> Path:
 def _try_read_csv(path: Path) -> Optional[pd.DataFrame]:
     try:
         if path.exists() and path.is_file():
-            return pd.read_csv(path)
+            return read_csv_resilient(path, encoding="utf-8-sig")
     except Exception:
         return None
     return None
