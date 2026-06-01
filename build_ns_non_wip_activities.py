@@ -1723,8 +1723,8 @@ def get_people_count_from_wip(
         print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=10", flush=True)
         return 10
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
-        print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=32", flush=True)
-        return 32
+        print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=33", flush=True)
+        return 33
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
     base = wip_df[wip_df["period_date"] == week].copy()
@@ -3720,7 +3720,7 @@ def main():
                 "enabling technologies",
             }),
             "people_count"
-        ] = 32
+        ] = 33
         print(
             "[FINAL PEOPLE COUNT OVERRIDE CHECK]\n"
             + final_combined.loc[
