@@ -1114,3 +1114,12 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-01 14:41:01,955 | INFO | [ALL] drop period_date == 2023-11-06: 466 -> 466
 2026-06-01 14:41:01,955 | INFO | [ALL] drop period_date == 2026-09-07: 466 -> 466
 2026-06-01 14:41:01,995 | INFO | Wrote 466 rows to NS_DATA\NS_metrics.csv
+2026-06-01 15:17:13,523 | INFO | === NS Metrics Run START ===
+2026-06-01 15:17:13,523 | INFO | Selected team: all
+2026-06-01 15:17:13,532 | INFO | [TDD COS 1] START
+2026-06-01 15:17:41,726 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-01 15:17:41,726 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:28.193901
+2026-06-01 15:17:41,726 | INFO | [Spine] START
+2026-06-01 15:18:07,527 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-01 15:18:07,532 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:25.806442
+2026-06-01 15:18:07,532 | INFO | [PH] START
