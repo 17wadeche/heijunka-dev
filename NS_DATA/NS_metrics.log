@@ -626,3 +626,6 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-05-29 09:08:26,138 | INFO | [ALL] drop period_date == 2023-11-06: 449 -> 449
 2026-05-29 09:08:26,139 | INFO | [ALL] drop period_date == 2026-09-07: 449 -> 449
 2026-05-29 09:08:26,166 | INFO | Wrote 449 rows to NS_DATA\NS_metrics.csv
+2026-06-01 07:46:02,027 | INFO | === NS Metrics Run START ===
+2026-06-01 07:46:02,027 | INFO | Selected team: all
+2026-06-01 07:46:02,030 | INFO | [TDD COS 1] START
