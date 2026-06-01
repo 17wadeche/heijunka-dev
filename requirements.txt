@@ -1,7 +1,5 @@
-streamlit==1.58.0
-pandas==3.0.3
-numpy==2.4.6
-altair==6.1.0
-matplotlib==3.10.9
-openpyxl==3.1.5
-xlsxwriter==3.2.9
+streamlit
+pandas
+matplotlib
+openpyxl
+XlsxWriter
