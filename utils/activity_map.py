@@ -34,6 +34,8 @@ ACTIVITY_MAP = {
     "spyral capa meeting":"CAPA",
     "reviewing procedure updates / redlines":"Redline",
     "ohs group":"Engagement",
+    "integer oem meeting 60":"Meeting",
+    "pulling work tool": "Metrics & Schedule",
     "sh mfg tip guide review":"Admin",
     "meeting - rdn manufacturing test discussion & demo":"Meeting",
     "live video":"Reviewing Documents & Case Video",
