@@ -54,6 +54,12 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+def canonical_activity_key(label: str) -> str:
+    raw = str(label or "").strip()
+    if not raw:
+        return ""
+    mapped = ACTIVITY_MAP.get(raw.lower().strip(), raw)
+    return re.sub(r"[^A-Z0-9]", "", str(mapped).upper())
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(
     nw_path: str | None = None,
@@ -423,13 +429,6 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     team = row.get("team", "")
     wk = row.get("period_date")
     import re
-    def _canon_activity_for_bucket(label: str) -> str:
-        raw = str(label or "").strip()
-        if not raw:
-            return ""
-        lower = raw.lower().strip()
-        mapped = ACTIVITY_MAP.get(lower, raw)
-        return re.sub(r"[^A-Z0-9]", "", str(mapped).upper())
     other_team_key = "OTHERTEAMWIP"
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
@@ -440,7 +439,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
         if is_excluded_from_team_after_date(team, wk, name):
             continue
         raw_act = str(d.get("activity", "")).strip().upper()
-        act_key = _canon_activity_for_bucket(d.get("activity", ""))
+        act_key = canonical_activity_key(d.get("activity", ""))
         if act_key == "OOO" or raw_act in {"OOO", "OUT OF OFFICE", "HOLIDAY"}:
             continue
         try:
@@ -775,7 +774,6 @@ def build_person_weekly_accounting(
     except Exception:
         activities = []
     ooo_by_person: dict[str, float] = {}
-    OOO_LABELS = {"OOO", "OUT OF OFFICE", "HOLIDAY"}
     if isinstance(activities, list):
         for item in activities:
             if not isinstance(item, dict):
@@ -783,14 +781,14 @@ def build_person_weekly_accounting(
             person = normalize_person_name(str(item.get("name", "")).strip())
             if is_excluded_from_team_after_date(team, wk, person):
                 continue
-            activity = str(item.get("activity", "")).strip().upper()
+            activity_key = canonical_activity_key(item.get("activity", ""))
             try:
                 hrs = float(item.get("hours", 0) or 0)
             except Exception:
                 hrs = 0.0
             if not person or hrs <= 0:
                 continue
-            if activity in OOO_LABELS:
+            if activity_key == "OOO":
                 ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
     ooo_df = pd.DataFrame(
         [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
