@@ -2545,15 +2545,15 @@ def build_pss_us_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] =
 def build_oarm_meic_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return build_capacity_fixed_row(
         team, ws,
-        people_start_row=1, people_end_row=8,
+        people_start_row=1, people_end_row=9,
         expected_col_letter="B",
         ooo_col_letter="R",
         deduct_cell="B11",
-        ooo_sum_start_row=1, ooo_sum_end_row=8,
-        total_ooo_end_row=8,
+        ooo_sum_start_row=1, ooo_sum_end_row=9,
+        total_ooo_end_row=9,
         activity_header_row=0,
         activity_start_col_letter="C",
-        activity_end_col_letter="P",
+        activity_end_col_letter="Q",
         week=week,
         total_nonwip_cell="AI20",   
     )
