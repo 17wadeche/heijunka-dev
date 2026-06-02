@@ -2377,6 +2377,8 @@ ACTIVITY_MAP = {
     "voyager fumehood meeting":"Meeting",
     "reviewing images from a complex ile":"Reading File/Document Information",
     "shipping (30) reviewing files for dhr":"Shipment",
+    "new fume hood doc review": "Training/Mentoring",
+    "fumehood meeting":"Meeting",
     "reading the avolut risk analysis sheet":"Reading File/Document Information",
     "ng, gb, coding, collaboration/event review, email/admin":"Next Gen",
     "training (review, couple qs), collab, scrum": "Training/Mentoring",
@@ -2469,6 +2471,7 @@ ACTIVITY_MAP = {
     "1:1 (30) qch (30)":"Meeting",
     "cornerstoner":"Cornerstone",
     "shipping incorrectly delivered device":"Shipment",
+    "shipment clearance problem
     "scrum / meeting / workday feedback request / reg inquirie":"Scrum & Action",
     "emails /admin":"Email & IM",
     "fw/emails/op10.005":"Email & IM",
