@@ -2415,6 +2415,7 @@ ACTIVITY_MAP = {
     "bio console & autolog pmpa training":"PMPA",
     "biotrend pmpa training meeting":"PMPA",
     "bio console & autolog pmpa training meetings scrum":"PMPA",
+    "bio console & autolog pmpa training meeting":"PMPA",
     "meeting with manager" :"Meeting",
     "std fu q's work":"Question",
     "call tl":"Meeting",
