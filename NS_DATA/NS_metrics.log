@@ -1656,3 +1656,26 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-02 13:19:06,056 | INFO | [ALL] drop period_date == 2023-11-06: 468 -> 468
 2026-06-02 13:19:06,057 | INFO | [ALL] drop period_date == 2026-09-07: 468 -> 468
 2026-06-02 13:19:06,112 | INFO | Wrote 468 rows to NS_DATA\NS_metrics.csv
+2026-06-02 13:57:52,444 | INFO | === NS Metrics Run START ===
+2026-06-02 13:57:52,444 | INFO | Selected team: all
+2026-06-02 13:57:52,444 | INFO | [TDD COS 1] START
+2026-06-02 13:58:18,170 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-02 13:58:18,170 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:25.725851
+2026-06-02 13:58:18,170 | INFO | [Spine] START
+2026-06-02 13:59:12,088 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 13:59:12,090 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:53.919662
+2026-06-02 13:59:12,092 | INFO | [PH] START
+2026-06-02 14:01:08,805 | INFO | [PH] loaded cached PH rows from NS_metrics: 22 | kept=19 | refreshed=7 | final=22
+2026-06-02 14:01:08,808 | INFO | [PH] DONE | rows=22 | elapsed=0:01:56.715836
+2026-06-02 14:01:08,808 | INFO | [PH Cell 17] START
+2026-06-02 14:01:46,318 | INFO | [PH Cell 17] DONE | rows=10 | elapsed=0:00:37.509347
+2026-06-02 14:01:46,318 | INFO | [SCS Cell 1] START
+2026-06-02 14:02:02,638 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=4 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 14:02:02,638 | INFO | [SCS Cell 1] DONE | rows=21 | elapsed=0:00:16.319804
+2026-06-02 14:02:02,638 | INFO | [MEIC PH] START
+2026-06-02 14:02:09,464 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 22 | kept=19 | refreshed=3 | final=22
+2026-06-02 14:02:09,464 | INFO | [MEIC PH] DONE | rows=22 | elapsed=0:00:06.825818
+2026-06-02 14:02:09,464 | INFO | [DBS C13] START
+2026-06-02 14:03:00,735 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:00:51.270568
+2026-06-02 14:03:00,735 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
+2026-06-02 14:03:00,736 | INFO | [DBS C14] START
