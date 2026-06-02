@@ -666,13 +666,19 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
-            if (a == 0.0) and (t == 0.0):
+            person_name = normalize_person_name(str(person).strip())
+            team_name = str(r["team"]).strip().upper()
+            keep_zero_capacity_person = (
+                team_name in {"CDS", "NI"}
+                and person_key(person_name) == "peter mchugh"
+            )
+            if (a == 0.0) and (t == 0.0) and not keep_zero_capacity_person:
                 continue
             util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
                 "team": r["team"],
                 "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize() if pd.notna(pd.to_datetime(r["period_date"], errors="coerce")) else pd.NaT,
-                "person": normalize_person_name(str(person).strip()),
+                "person": person_name,
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
@@ -827,7 +833,7 @@ def build_person_weekly_accounting(
     if team_key in {"CDS", "NI"}:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
         out.loc[
-            out["person_key"].eq("peter mchugh") & peter_available.gt(0),
+            out["person_key"].eq("peter mchugh") & peter_available.notna(),
             "Expected Hours"
         ] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
@@ -3677,7 +3683,7 @@ with right2:
                                 for t in active_peter_teams
                             )
                             drill_totals["ExpectedHours"] = np.where(
-                                drill_totals["PeterAvailableHours"].gt(0),
+                                drill_totals["PeterAvailableHours"].notna(),
                                 drill_totals["ExpectedHours"] - peter_fallback_expected + drill_totals["PeterAvailableHours"],
                                 drill_totals["ExpectedHours"],
                             )

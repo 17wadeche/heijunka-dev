@@ -150,7 +150,7 @@ def _person_available_hours_for_week(
         ph.loc[mask, "Available Hours"],
         errors="coerce",
     ).dropna()
-    vals = vals[vals > 0]
+    return float(vals.sum()) if not vals.empty else np.nan
 def enterprise_nonwip_kpi_lookup(
     *,
     team: str,
@@ -225,7 +225,6 @@ def enterprise_nonwip_kpi_lookup(
             float(peter_available_hours)
             if peter_available_hours is not None
             and pd.notna(peter_available_hours)
-            and float(peter_available_hours) > 0
             else peter_fallback_capacity
         )
         assigned_count = 1 if count > 0 else 0

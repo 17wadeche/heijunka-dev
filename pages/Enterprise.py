@@ -492,12 +492,17 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             t = pd.to_numeric(vals.get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
-            if a == 0.0 and t == 0.0:
-                continue
-            util = (a / t) if t not in (0, 0.0) else np.nan
             person_name = normalize_person_name(str(person).strip())
             if not person_name:
                 continue
+            team_name = str(r["team"]).strip().upper()
+            keep_zero_capacity_person = (
+                team_name in {"CDS", "NI"}
+                and person_key(person_name) == "peter mchugh"
+            )
+            if a == 0.0 and t == 0.0 and not keep_zero_capacity_person:
+                continue
+            util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
                 "team": str(r["team"]).strip(),
                 "period_date": wk,
@@ -806,7 +811,7 @@ def build_person_weekly_accounting(
     if team_key in {"CDS", "NI"} and "Available Hours" in out.columns:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
         out.loc[
-            out["person_key"].eq("peter mchugh") & peter_available.gt(0),
+            out["person_key"].eq("peter mchugh") & peter_available.notna(),
             "Expected Hours",
         ] = peter_available
     out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
@@ -1459,7 +1464,6 @@ def _person_available_hours_for_week(
         ph.loc[mask, "Available Hours"],
         errors="coerce",
     ).dropna()
-    vals = vals[vals > 0]
     return float(vals.sum()) if not vals.empty else np.nan
 def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
@@ -1591,7 +1595,7 @@ def _weekly_team_export_df(
             peter_fallback_capacity = 10.0 if team == "CDS" else 27.75
             peter_capacity = (
                 float(peter_available)
-                if pd.notna(peter_available) and float(peter_available) > 0
+                if pd.notna(peter_available)
                 else peter_fallback_capacity
             )
             assigned_count = 1 if float(people_count) > 0 else 0
