@@ -1479,6 +1479,7 @@ ACTIVITY_MAP = {
     "ad hoc question":"Question",
     "pmpa questoins/update":"PMPA",
     "consult event consult":"WIP/Event Review",
+    "customer letter":"WIP/Event Review",
     "geo id added to pe":"WIP/Event Review",
     "project surge oem":"Project Work",
     "email&im":"Email & IM",
