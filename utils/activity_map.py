@@ -39,6 +39,7 @@ ACTIVITY_MAP = {
     "shadowing with conor": "Training/Mentoring",
     "shadowing with vuyo": "Training/Mentoring",
     "reverse shadowing with densie": "Training/Mentoring",
+    "pmpa questions/consult":"PMPA",
     "shadowing sith louise": "Training/Mentoring",
     "shadowing with densie": "Training/Mentoring",
     "2b label":"Labels",
