@@ -1445,3 +1445,25 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-02 09:21:35,499 | INFO | [Mazor] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21
 2026-06-02 09:21:35,503 | INFO | [Mazor] DONE | rows=21 | elapsed=0:00:35.774802
 2026-06-02 09:21:35,503 | INFO | [CSF] START
+2026-06-02 09:22:17,598 | INFO | [CSF] loaded cached rows from NS_metrics: 19 | refreshed=3 | final=20 | weeks_to_refresh=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 09:22:17,601 | INFO | [CSF] DONE | rows=20 | elapsed=0:00:42.097778
+2026-06-02 09:22:17,601 | INFO | [PSS] START
+2026-06-02 09:23:39,931 | INFO | [PSS] combined workbook active from 2026-05-11 | legacy_kept_before_cutoff=28 | cached_combined=3 | refreshed_combined=3 | final=32 | weeks_to_refresh=['2026-05-18', '2026-05-25', '2026-06-01'] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 09:23:39,934 | INFO | [PSS] DONE | rows=32 | elapsed=0:01:22.333130
+2026-06-02 09:23:40,036 | INFO | [ENT] ENT name replacements applied in Team & Tenure Mapping.xlsx (0 changes)
+2026-06-02 09:23:40,037 | INFO | [ENT] START
+2026-06-02 09:23:40,284 | INFO | [ENT] DONE | rows=48 | elapsed=0:00:00.246434
+2026-06-02 09:23:40,284 | INFO | [DBS MEIC] START
+2026-06-02 09:23:40,310 | INFO | [DBS MEIC] DONE | rows=42 | elapsed=0:00:00.025830
+2026-06-02 09:23:40,310 | INFO | [Other MEIC] START
+2026-06-02 09:23:40,389 | INFO | [Other MEIC] DONE | rows=75 | elapsed=0:00:00.079701
+2026-06-02 09:23:40,389 | INFO | [SCS Super Cell] START
+2026-06-02 09:24:26,055 | INFO | [SCS Super Cell] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=3 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 09:24:26,056 | INFO | [SCS Super Cell] DONE | rows=21 | elapsed=0:00:45.666724
+2026-06-02 09:24:26,056 | INFO | [PH Cell 17] rows before TAA filter = 10
+2026-06-02 09:24:26,057 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell, PH Cell 17): 471 -> 468
+2026-06-02 09:24:26,057 | INFO | [PH Cell 17] rows after TAA filter = 10
+2026-06-02 09:24:26,057 | INFO | [ALL] filter TAA!=0 (except SCS Super Cell): 471 -> 468
+2026-06-02 09:24:26,058 | INFO | [ALL] drop period_date == 2023-11-06: 468 -> 468
+2026-06-02 09:24:26,058 | INFO | [ALL] drop period_date == 2026-09-07: 468 -> 468
+2026-06-02 09:24:26,112 | INFO | Wrote 468 rows to NS_DATA\NS_metrics.csv

@@ -2410,6 +2410,7 @@ ACTIVITY_MAP = {
     "reading previous investigation write ups/consulting documentation": "Reading File/Document Information",
     "admin and catheter tracking for nellcor": "Admin",
     "lab monthly meeting" :"Meeting",
+    "meeting with manager" :"Meeting",
     "std fu q's work":"Question",
     "call tl":"Meeting",
     "std fu q's meeting":"Question",
