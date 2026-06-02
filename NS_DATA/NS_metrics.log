@@ -1404,3 +1404,44 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-02 08:54:53,786 | INFO | [NV] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=3 | final=22
 2026-06-02 08:54:53,788 | INFO | [NV] DONE | rows=22 | elapsed=0:00:32.929582
 2026-06-02 08:54:53,790 | INFO | [Nav] START
+2026-06-02 09:12:50,734 | INFO | === NS Metrics Run START ===
+2026-06-02 09:12:50,734 | INFO | Selected team: all
+2026-06-02 09:12:50,734 | INFO | [TDD COS 1] START
+2026-06-02 09:13:14,654 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-02 09:13:14,656 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:23.921598
+2026-06-02 09:13:14,656 | INFO | [Spine] START
+2026-06-02 09:13:41,682 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 09:13:41,683 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:27.026898
+2026-06-02 09:13:41,683 | INFO | [PH] START
+2026-06-02 09:15:28,169 | INFO | [PH] loaded cached PH rows from NS_metrics: 22 | kept=19 | refreshed=7 | final=22
+2026-06-02 09:15:28,169 | INFO | [PH] DONE | rows=22 | elapsed=0:01:46.486422
+2026-06-02 09:15:28,169 | INFO | [PH Cell 17] START
+2026-06-02 09:16:08,463 | INFO | [PH Cell 17] DONE | rows=10 | elapsed=0:00:40.293307
+2026-06-02 09:16:08,463 | INFO | [SCS Cell 1] START
+2026-06-02 09:16:28,034 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=4 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 09:16:28,034 | INFO | [SCS Cell 1] DONE | rows=21 | elapsed=0:00:19.571053
+2026-06-02 09:16:28,034 | INFO | [MEIC PH] START
+2026-06-02 09:16:44,370 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 22 | kept=19 | refreshed=3 | final=22
+2026-06-02 09:16:44,371 | INFO | [MEIC PH] DONE | rows=22 | elapsed=0:00:16.337203
+2026-06-02 09:16:44,371 | INFO | [DBS C13] START
+2026-06-02 09:17:58,992 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:01:14.621238
+2026-06-02 09:17:58,992 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
+2026-06-02 09:17:58,992 | INFO | [DBS C14] START
+2026-06-02 09:18:46,857 | INFO | [DBS C14] DONE | rows=11 | elapsed=0:00:47.864731
+2026-06-02 09:18:46,857 | INFO | [DBS C14] filter >= 2025-07-07: 11 -> 11
+2026-06-02 09:18:46,858 | INFO | [NV] START
+2026-06-02 09:19:17,687 | INFO | [NV] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=3 | final=22
+2026-06-02 09:19:17,687 | INFO | [NV] DONE | rows=22 | elapsed=0:00:30.829061
+2026-06-02 09:19:17,687 | INFO | [Nav] START
+2026-06-02 09:19:48,675 | INFO | [Nav] loaded cached rows from NS_metrics: 20 | kept=18 | refreshed=2 | final=20
+2026-06-02 09:19:48,676 | INFO | [Nav] DONE | rows=20 | elapsed=0:00:30.988744
+2026-06-02 09:19:48,677 | INFO | [AE MEIC] START
+2026-06-02 09:20:22,556 | INFO | [AE MEIC] loaded cached rows from NS_metrics: 20 | kept=18 | refreshed=2 | final=20
+2026-06-02 09:20:22,559 | INFO | [AE MEIC] DONE | rows=20 | elapsed=0:00:33.882305
+2026-06-02 09:20:22,559 | INFO | [O-Arm MEIC] START
+2026-06-02 09:20:59,726 | INFO | [O-Arm MEIC] loaded cached rows from NS_metrics: 19 | kept=17 | refreshed=2 | final=19
+2026-06-02 09:20:59,728 | INFO | [O-Arm MEIC] DONE | rows=19 | elapsed=0:00:37.168949
+2026-06-02 09:20:59,728 | INFO | [Mazor] START
+2026-06-02 09:21:35,499 | INFO | [Mazor] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21
+2026-06-02 09:21:35,503 | INFO | [Mazor] DONE | rows=21 | elapsed=0:00:35.774802
+2026-06-02 09:21:35,503 | INFO | [CSF] START
