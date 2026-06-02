@@ -1398,6 +1398,7 @@ ACTIVITY_MAP = {
     "blockers (it issues, gch issues, computer updates)": "IT Issue/Update",
     "scum": "Scrum & Action",
     "it update": "IT Issue/Update",
+    "cw":"Project Work",
     "documentation reading": "Reading File/Document Information",
     "sha meeting":"Meeting",
     "email to cell": "Email & IM",
