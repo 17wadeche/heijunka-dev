@@ -32,6 +32,7 @@ ACTIVITY_MAP = {
     "cognizantactivity":"Cognizant Activity",
     "no subarea":"",
     "spyral capa meeting":"CAPA",
+    "started working on an a3 for deco at dcb":"Problem Solving",
     "reviewing procedure updates / redlines":"Redline",
     "reverse shadowing with vuyo": "Training/Mentoring",
     "shadowing with denise": "Training/Mentoring",
