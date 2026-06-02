@@ -72,6 +72,25 @@ NAME_ALIASES = {
     "kuche":"Ku Che",
     "goutham kumar, p":"P Goutham Kumar",
 }
+PERSON_WEEKLY_HOURS = {
+    "chelsey": 16.0,
+    "mg": 36.0, 
+    "lindsey": 32.0
+}
+def _capacity_from_count_with_person_overrides(
+    count: float,
+    default_hours: float,
+    people: pd.DataFrame | None = None,
+    person_col: str = "person",
+) -> float:
+    capacity_hours = float(count) * float(default_hours)
+    if people is None or people.empty or person_col not in people.columns:
+        return capacity_hours
+    person_keys = people[person_col].dropna().map(person_key).drop_duplicates()
+    for key in person_keys:
+        if key in PERSON_WEEKLY_HOURS:
+            capacity_hours += PERSON_WEEKLY_HOURS[key] - float(default_hours)
+    return capacity_hours
 def normalize_person_name(name: str) -> str:
     s = str(name or "").strip()
     s = " ".join(s.split())
@@ -795,6 +814,7 @@ def build_person_weekly_accounting(
         ("peter mchugh", "CDS"): 10.0,
         ("peter mchugh", "NI"): 27.75,
     }
+    person_override_expected = out["person_key"].map(PERSON_WEEKLY_HOURS).astype("float64")
     base_expected = pd.Series(
         np.where(
             out["person_key"].isin(irl_people_norm),
@@ -807,7 +827,11 @@ def build_person_weekly_accounting(
     team_override_expected = out["person_key"].map(
         lambda p: PERSON_TEAM_WEEKLY_HOURS.get((p, team_key), np.nan)
     ).astype("float64")
-    out["Expected Hours"] = team_override_expected.combine_first(base_expected)
+    out["Expected Hours"] = (
+        team_override_expected
+        .combine_first(person_override_expected)
+        .combine_first(base_expected)
+    )
     if team_key in {"CDS", "NI"} and "Available Hours" in out.columns:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
         out.loc[
@@ -1438,7 +1462,20 @@ def ent_capacity_hours_for_week(
             irl_count = sum(1 for n in names if n in irl_people_norm)
     irl_count = min(irl_count, people_count)
     non_irl_count = max(people_count - irl_count, 0)
-    return float((irl_count * 39.0) + (non_irl_count * 40.0))
+    capacity_hours = float((irl_count * 39.0) + (non_irl_count * 40.0))
+    if "non_wip_by_person" in row.columns:
+        payload = row.iloc[0].get("non_wip_by_person")
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            obj = {}
+        if isinstance(obj, dict):
+            for name in obj.keys():
+                key = person_key(name)
+                if key in PERSON_WEEKLY_HOURS:
+                    default_hours = 39.0 if key in irl_people_norm else 40.0
+                    capacity_hours += PERSON_WEEKLY_HOURS[key] - default_hours
+    return capacity_hours
 def _person_available_hours_for_week(
     person_hours: pd.DataFrame | None,
     team: str,
@@ -1568,11 +1605,11 @@ def _weekly_team_export_df(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
         if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC", "TCT"}:
-            capacity_hours = float(people_count) * 40.0
+            capacity_hours = _capacity_from_count_with_person_overrides(people_count, 40.0, wk_people)
         elif team == "DS":
-            capacity_hours = float(people_count) * 37.5
+            capacity_hours = _capacity_from_count_with_person_overrides(people_count, 37.5, wk_people)
         elif team == "Lit & Letters":
-            capacity_hours = float(people_count) * 37.5
+            capacity_hours = _capacity_from_count_with_person_overrides(people_count, 37.5, wk_people)
         elif team == "CPT":
             cpt_31_count = 2
             cpt_30_2_count = 1
