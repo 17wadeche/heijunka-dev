@@ -2432,6 +2432,7 @@ ACTIVITY_MAP = {
     "eoin c sign off + deco training": "Training/Mentoring",
     "list of divices project":"Project Work",
     "dt transfer invoice":"Ordering",
+    "chemical check- stock and order":"Ordering",
     "device document/previous case reading":"Reviewing Documents & Case Video",
     "admin, training video": "Training/Mentoring",
     "dt transfer document":"Reviewing Documents & Case Video",
