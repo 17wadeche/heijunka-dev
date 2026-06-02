@@ -2007,27 +2007,78 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
 ET_SPLIT_START_DATE = pd.Timestamp("2026-04-13").normalize()
 ET_LEGACY_TEAMS = {"AE MEIC", "CSF", "Mazor", "O-Arm MEIC", "Nav"}
 ET_SPLIT_TEAMS = {"ET US", "ET MEIC"}
+ET_MEIC_ROLLUP_TEAMS = {"AE MEIC", "O-Arm MEIC"}
 ENABLE_TEAMS = set(ET_LEGACY_TEAMS | ET_SPLIT_TEAMS)
 ENABLE_TEAM_NAME = "Enabling Technologies"
 ET_FIXED_PEOPLE_COUNT = {
     "ET US": 23,
-    "ET MEIC": 9,
+    "ET MEIC": 10,
 }
 def _et_component_teams_for_week(period_date) -> set[str]:
     week = pd.Timestamp(period_date).normalize()
     return set(ET_SPLIT_TEAMS if week >= ET_SPLIT_START_DATE else ET_LEGACY_TEAMS)
+def _collapse_duplicate_team_week_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
+    rows = []
+    for (team, period_date), g in df.groupby(["team", "period_date"], dropna=False, sort=False):
+        row = g.iloc[-1].copy()
+        for col in ["total_non_wip_hours", "OOO Hours", "wip_workers_ooo_hours"]:
+            if col in g.columns:
+                row[col] = float(
+                    pd.to_numeric(g[col], errors="coerce").fillna(0).sum()
+                )
+        if "% in WIP" in g.columns:
+            pct = pd.to_numeric(g["% in WIP"], errors="coerce")
+            row["% in WIP"] = float(pct.mean()) if pct.notna().any() else np.nan
+        if "people_count" in g.columns:
+            row["people_count"] = int(
+                pd.to_numeric(g["people_count"], errors="coerce").fillna(0).sum()
+            )
+        if "non_wip_by_person" in g.columns:
+            row["non_wip_by_person"] = json.dumps(
+                _merge_person_hours_dicts(g["non_wip_by_person"]),
+                ensure_ascii=False,
+            )
+        if "non_wip_activities" in g.columns:
+            row["non_wip_activities"] = json.dumps(
+                _merge_activities_lists(g["non_wip_activities"]),
+                ensure_ascii=False,
+            )
+        if "wip_workers" in g.columns:
+            workers = _merge_workers_union(g["wip_workers"])
+            row["wip_workers"] = json.dumps(workers, ensure_ascii=False)
+            if "wip_workers_count" in g.columns:
+                row["wip_workers_count"] = len(workers)
+        if "team_member_names" in g.columns:
+            names = sorted({
+                n
+                for cell in g["team_member_names"]
+                for n in _parse_json_str_list(cell)
+                if is_real_person(n)
+            })
+            row["team_member_names"] = json.dumps(names, ensure_ascii=False)
+        if "source_file" in g.columns:
+            sources = [
+                str(x).strip()
+                for x in g["source_file"].dropna().tolist()
+                if str(x).strip()
+            ]
+            row["source_file"] = " | ".join(dict.fromkeys(sources))
+        rows.append(row)
+    return pd.DataFrame(rows)
 def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty or "team" not in df.columns or "period_date" not in df.columns:
         return df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
     out = df.copy()
     out["team"] = out["team"].astype(str).str.strip()
     out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    post_split_oarm = (
-        out["team"].eq("O-Arm MEIC")
+    post_split_et_meic = (
+        out["team"].isin(ET_MEIC_ROLLUP_TEAMS)
         & out["period_date"].notna()
         & (out["period_date"] >= ET_SPLIT_START_DATE)
     )
-    out.loc[post_split_oarm, "team"] = "ET MEIC"
+    out.loc[post_split_et_meic, "team"] = "ET MEIC"
     pre_split_new_names = (
         out["team"].isin({"ET US", "ET MEIC"})
         & out["period_date"].notna()
@@ -2054,7 +2105,27 @@ def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
         }.items():
             if col in out.columns:
                 out.loc[mask, col] = blank_value
-    out = out.drop_duplicates(subset=["team", "period_date"], keep="last")
+    out = _collapse_duplicate_team_week_rows(out)
+    for team_name, fixed_count in ET_FIXED_PEOPLE_COUNT.items():
+        mask = (
+            out["team"].eq(team_name)
+            & out["period_date"].notna()
+            & (out["period_date"] >= ET_SPLIT_START_DATE)
+        )
+        if not mask.any():
+            continue
+        if "people_count" in out.columns:
+            out.loc[mask, "people_count"] = fixed_count
+        if team_name == "ET US" and "% in WIP" in out.columns:
+            out.loc[mask, "% in WIP"] = np.nan
+        for col, blank_value in {
+            "team_member_names": "",
+            "wip_workers": "",
+            "wip_workers_count": "",
+            "wip_workers_ooo_hours": "",
+        }.items():
+            if col in out.columns:
+                out.loc[mask, col] = blank_value
     out = out.sort_values(["team", "period_date"]).reset_index(drop=True)
     return out
 MEIC_PARENT_MAP = {
