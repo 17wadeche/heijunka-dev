@@ -1375,3 +1375,32 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-01 23:27:08,767 | INFO | [ALL] drop period_date == 2023-11-06: 467 -> 467
 2026-06-01 23:27:08,768 | INFO | [ALL] drop period_date == 2026-09-07: 467 -> 467
 2026-06-01 23:27:08,941 | INFO | Wrote 467 rows to NS_DATA\NS_metrics.csv
+2026-06-02 08:48:20,470 | INFO | === NS Metrics Run START ===
+2026-06-02 08:48:20,472 | INFO | Selected team: all
+2026-06-02 08:48:20,479 | INFO | [TDD COS 1] START
+2026-06-02 08:48:39,693 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-02 08:48:39,695 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:19.215790
+2026-06-02 08:48:39,695 | INFO | [Spine] START
+2026-06-02 08:49:06,665 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 08:49:06,665 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:26.970346
+2026-06-02 08:49:06,665 | INFO | [PH] START
+2026-06-02 08:50:57,122 | INFO | [PH] loaded cached PH rows from NS_metrics: 22 | kept=19 | refreshed=7 | final=22
+2026-06-02 08:50:57,123 | INFO | [PH] DONE | rows=22 | elapsed=0:01:50.457940
+2026-06-02 08:50:57,123 | INFO | [PH Cell 17] START
+2026-06-02 08:51:31,066 | INFO | [PH Cell 17] DONE | rows=10 | elapsed=0:00:33.942696
+2026-06-02 08:51:31,066 | INFO | [SCS Cell 1] START
+2026-06-02 08:51:49,684 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=4 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-02 08:51:49,684 | INFO | [SCS Cell 1] DONE | rows=21 | elapsed=0:00:18.618325
+2026-06-02 08:51:49,684 | INFO | [MEIC PH] START
+2026-06-02 08:52:02,158 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 22 | kept=19 | refreshed=3 | final=22
+2026-06-02 08:52:02,158 | INFO | [MEIC PH] DONE | rows=22 | elapsed=0:00:12.474566
+2026-06-02 08:52:02,158 | INFO | [DBS C13] START
+2026-06-02 08:53:19,131 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:01:16.972199
+2026-06-02 08:53:19,131 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
+2026-06-02 08:53:19,131 | INFO | [DBS C14] START
+2026-06-02 08:54:20,844 | INFO | [DBS C14] DONE | rows=11 | elapsed=0:01:01.713623
+2026-06-02 08:54:20,859 | INFO | [DBS C14] filter >= 2025-07-07: 11 -> 11
+2026-06-02 08:54:20,859 | INFO | [NV] START
+2026-06-02 08:54:53,786 | INFO | [NV] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=3 | final=22
+2026-06-02 08:54:53,788 | INFO | [NV] DONE | rows=22 | elapsed=0:00:32.929582
+2026-06-02 08:54:53,790 | INFO | [Nav] START
