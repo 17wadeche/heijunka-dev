@@ -3084,6 +3084,7 @@ ACTIVITY_MAP = {
     "fda query call and action":"Question",
     "pvh report review/update":"Team Report",
     "pvh coding update":"Coding/Code Gov",
+    "coding updates / fi tool updates":"Coding/Code Gov",
     "readcube ai training":"Training/Mentoring",
     "emails & query":"Email & IM",
     "letter review from other cqxm tm":"Training/Mentoring",
