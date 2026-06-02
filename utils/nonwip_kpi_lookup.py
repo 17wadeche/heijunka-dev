@@ -14,6 +14,11 @@ ENTERPRISE_PEOPLE_COUNT_FROM_NW_TEAMS = {
     "TDD", "ACM", "CPT", "DS", "CDS", "NI", "VSS", "Endoscopy",
     "Surgical AST-GST", "PH-NM MEIC", "TCT",
 }
+PERSON_CAPACITY_OVERRIDES = {
+    "chelsey": 16.0,
+    "mg": 36.0, 
+    "lindsey": 32.0
+}
 def _to_float(value: Any, default: float = 0.0) -> float:
     try:
         out = pd.to_numeric(value, errors="coerce")
@@ -26,6 +31,24 @@ def _sum_col(df: pd.DataFrame | None, col: str) -> float:
     if df is None or df.empty or col not in df.columns:
         return 0.0
     return float(pd.to_numeric(df[col], errors="coerce").fillna(0.0).sum())
+def _capacity_from_count_with_person_overrides(
+    count: float,
+    default_hours: float,
+    wk_people: pd.DataFrame | None,
+) -> float:
+    capacity_hours = float(count) * float(default_hours)
+    if wk_people is None or wk_people.empty or "person" not in wk_people.columns:
+        return capacity_hours
+    people = (
+        wk_people["person"]
+        .dropna()
+        .map(_person_key)
+        .drop_duplicates()
+    )
+    for person in people:
+        if person in PERSON_CAPACITY_OVERRIDES:
+            capacity_hours += PERSON_CAPACITY_OVERRIDES[person] - float(default_hours)
+    return capacity_hours
 def _normalize_person_name(name: Any) -> str:
     return " ".join(str(name or "").strip().split())
 def _person_key(name: Any) -> str:
@@ -197,9 +220,9 @@ def enterprise_nonwip_kpi_lookup(
     if count <= 0 and not wk_people.empty and "person" in wk_people.columns:
         count = float(wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique())
     if team_name in FORTY_HOUR_TEAMS:
-        capacity_hours = count * 40.0
+        capacity_hours = _capacity_from_count_with_person_overrides(count, 40.0, wk_people)
     elif team_name in {"DS", "Lit & Letters"}:
-        capacity_hours = count * 37.5
+        capacity_hours = _capacity_from_count_with_person_overrides(count, 37.5, wk_people)
     elif team_name == "CPT":
         cpt_31_count = 2
         cpt_30_2_count = 1
