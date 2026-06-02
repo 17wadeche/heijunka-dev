@@ -2460,6 +2460,7 @@ ACTIVITY_MAP = {
     "admin, training video": "Training/Mentoring",
     "dt transfer document":"Reviewing Documents & Case Video",
     "looking over fy":"Reviewing Documents & Case Video",
+    "labels 2b":"Labels",
     "reading heli-fx dcs":"Reviewing Documents & Case Video",
     "cornerstone 120":"Cornerstone",
     "reading alternatice device document":"Reviewing Documents & Case Video",
