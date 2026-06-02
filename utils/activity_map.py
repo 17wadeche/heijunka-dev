@@ -40,6 +40,8 @@ ACTIVITY_MAP = {
     "reverse shadowing with densie": "Training/Mentoring",
     "shadowing sith louise": "Training/Mentoring",
     "shadowing with densie": "Training/Mentoring",
+    "2b label":"Labels",
+    "labels/review":"Labels",
     "shadowing training with denise": "Training/Mentoring",
     "zoya's assessment file": "Training/Mentoring",
     "emails/training querie": "Training/Mentoring",
