@@ -1679,3 +1679,6 @@ pywintypes.com_error: (-2147418111, 'Call was rejected by callee.', None, None)
 2026-06-02 14:03:00,735 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:00:51.270568
 2026-06-02 14:03:00,735 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
 2026-06-02 14:03:00,736 | INFO | [DBS C14] START
+2026-06-02 14:03:54,529 | INFO | [DBS C14] DONE | rows=11 | elapsed=0:00:53.793663
+2026-06-02 14:03:54,529 | INFO | [DBS C14] filter >= 2025-07-07: 11 -> 11
+2026-06-02 14:03:54,530 | INFO | [NV] START
