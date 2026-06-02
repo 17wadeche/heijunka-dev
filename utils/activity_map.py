@@ -1478,6 +1478,7 @@ ACTIVITY_MAP = {
     "ml/ai gap review":"Data Request/Review",
     "ad hoc question":"Question",
     "pmpa questoins/update":"PMPA",
+    "1 on 1's":"Meeting",
     "consult event consult":"WIP/Event Review",
     "customer letter":"WIP/Event Review",
     "geo id added to pe":"WIP/Event Review",
