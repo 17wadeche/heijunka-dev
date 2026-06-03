@@ -1483,6 +1483,8 @@ ACTIVITY_MAP = {
     "customer letter":"WIP/Event Review",
     "collaboration, meetings, code support, event reviews for rerd not triggering, data analysi":"Collaboration",
     "ng st, event reviews/data review":"Next Gen",
+    "with monica":"Meeting",
+    "emails/tl check":"Email & IM",
     "scrum rpa collab":"Scrum & Action",
     "create srs for medwatch, collab with tachy team":"Collaboration",
     "geo id added to pe":"WIP/Event Review",
