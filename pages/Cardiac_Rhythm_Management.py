@@ -1885,45 +1885,6 @@ tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.colum
 prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
 productivity = (float(tot_closures) / prod_den) if (pd.notna(tot_closures) and prod_den) else np.nan
 efficiency = (float(tot_closures) / float(tot_chl)) if (pd.notna(tot_closures) and tot_chl) else np.nan
-kpi_cols = st.columns(2)
-def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
-    if pd.isna(value):
-        col.metric(label, "—", help=help)
-    else:
-        try:
-            col.metric(label, fmt.format(value), help=help)
-        except Exception:
-            col.metric(label, str(value), help=help)
-def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | None = None):
-    if pd.isna(actual) or pd.isna(target) or not target:
-        col.metric(label, "—", help=help)
-        return
-    try:
-        value_str = fmt_val.format(actual)
-    except Exception:
-        value_str = str(actual)
-    diff = (float(actual) - float(target)) / float(target)
-    delta_str = f"{diff:+.0%} vs target"
-    col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
-if has_dates and min_date and max_date:
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            value=st.session_state["start_date"],
-            min_value=min_date,
-            max_value=st.session_state["end_date"],
-            key="start_date",
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            value=st.session_state["end_date"],
-            min_value=st.session_state["start_date"],
-            max_value=max_date,
-            key="end_date",
-        )
 st.markdown("---")
 left, right = st.columns(2)
 base = alt.Chart(f).transform_calculate(
