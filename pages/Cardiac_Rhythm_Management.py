@@ -1925,7 +1925,7 @@ if has_dates and min_date and max_date:
             key="end_date",
         )
 st.markdown("---")
-left, mid, right = st.columns(3)
+left, right = st.columns(2)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
 ).encode(
@@ -1934,7 +1934,7 @@ base = alt.Chart(f).transform_calculate(
 teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
-with mid:
+with left:
     st.subheader("Actual WIP HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
         if len(teams_in_view) == 1:
