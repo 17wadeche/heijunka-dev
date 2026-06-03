@@ -1612,40 +1612,6 @@ if nonwip_mode:
                         )
                     )
                     st.altair_chart(act_chart, width="stretch")
-    st.markdown("#### Team Trends")
-    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
-    if not team_hist.empty:
-        t1, t2 = st.columns(2)
-        with t1:
-            ch1 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
-                    ],
-                )
-                .properties(height=240, title="Total Non-WIP Hours")
-            )
-            st.altair_chart(ch1, width="stretch")
-        with t2:
-            ch2 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
-                    ],
-                )
-                .properties(height=240, title="% Non-WIP")
-            )
-            st.altair_chart(ch2, width="stretch")
     st.stop()
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.csv exists and has the 'All Metrics' sheet.")
