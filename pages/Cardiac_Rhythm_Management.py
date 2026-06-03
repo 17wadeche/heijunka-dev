@@ -1719,6 +1719,7 @@ latest = (f.sort_values(["team", "period_date"])
             .tail(1)
             .copy()
 )
+
 tot_target = latest["Target Output"].sum(skipna=True)
 tot_actual = latest["Actual Output"].sum(skipna=True)
 tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
