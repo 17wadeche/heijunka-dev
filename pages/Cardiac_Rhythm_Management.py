@@ -2232,8 +2232,8 @@ with left:
                                         width="stretch",
                                     )
 with mid:
-    st.subheader("Actual HC used Trend")
-    if "Actual WIP HC used" in f.columns and f["Actual HC used"].notna().any():
+    st.subheader("Actual WIP HC used Trend")
+    if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
         if len(teams_in_view) == 1:
             team_name = teams_in_view[0]
             if 'ppl_hours' not in locals():
