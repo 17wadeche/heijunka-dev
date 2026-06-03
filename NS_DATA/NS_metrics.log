@@ -1,3 +1,26 @@
 2026-06-03 11:39:17,625 | INFO | === NS Metrics Run START ===
 2026-06-03 11:39:17,625 | INFO | Selected team: all
 2026-06-03 11:39:17,631 | INFO | [TDD COS 1] START
+2026-06-03 11:39:48,732 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-03 11:39:48,734 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:31.102468
+2026-06-03 11:39:48,734 | INFO | [Spine] START
+2026-06-03 11:40:40,073 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-03 11:40:40,078 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:51.343384
+2026-06-03 11:40:40,078 | INFO | [PH] START
+2026-06-03 11:42:07,270 | INFO | [PH] loaded cached PH rows from NS_metrics: 22 | kept=19 | refreshed=7 | final=22
+2026-06-03 11:42:07,272 | INFO | [PH] DONE | rows=22 | elapsed=0:01:27.194420
+2026-06-03 11:42:07,272 | INFO | [PH Cell 17] START
+2026-06-03 11:42:37,107 | INFO | [PH Cell 17] DONE | rows=10 | elapsed=0:00:29.834165
+2026-06-03 11:42:37,108 | INFO | [SCS Cell 1] START
+2026-06-03 11:42:51,340 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=4 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-03 11:42:51,341 | INFO | [SCS Cell 1] DONE | rows=21 | elapsed=0:00:14.233842
+2026-06-03 11:42:51,342 | INFO | [MEIC PH] START
+2026-06-03 11:43:00,232 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 22 | kept=19 | refreshed=3 | final=22
+2026-06-03 11:43:00,233 | INFO | [MEIC PH] DONE | rows=22 | elapsed=0:00:08.890819
+2026-06-03 11:43:00,234 | INFO | [DBS C13] START
+2026-06-03 11:43:49,280 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:00:49.045595
+2026-06-03 11:43:49,281 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
+2026-06-03 11:43:49,281 | INFO | [DBS C14] START
+2026-06-03 11:50:51,616 | INFO | [DBS C14] DONE | rows=11 | elapsed=0:07:02.335544
+2026-06-03 11:50:51,616 | INFO | [DBS C14] filter >= 2025-07-07: 11 -> 11
+2026-06-03 11:50:51,617 | INFO | [NV] START
