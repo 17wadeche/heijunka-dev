@@ -1730,8 +1730,6 @@ else:
     nw_all = pd.DataFrame(columns=["team", "period_date", "total_non_wip_hours"])
 latest_nw = latest.merge(nw_all, on=["team", "period_date"], how="left")
 tot_nonwip = latest_nw["total_non_wip_hours"].sum(skipna=True) if "total_non_wip_hours" in latest_nw.columns else 0.0
-tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.columns else np.nan
-prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
 st.markdown("---")
 left, right = st.columns(2)
 base = alt.Chart(f).transform_calculate(
