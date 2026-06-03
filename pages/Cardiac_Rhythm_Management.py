@@ -1925,6 +1925,1025 @@ if has_dates and min_date and max_date:
             key="end_date",
         )
 st.markdown("---")
+left, mid, right = st.columns(3)
+base = alt.Chart(f).transform_calculate(
+    week="toDate(datum.period_date)"
+).encode(
+    x=alt.X("period_date:T", title="Week")
+)
+teams_in_view = sorted([t for t in f["team"].dropna().unique()])
+multi_team = len(teams_in_view) > 1
+team_sel = alt.selection_point(fields=["team"], bind="legend")
+with left:
+    st.subheader("WIP Hours Trend")
+    have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
+    teams_in_view = sorted([t for t in f["team"].dropna().unique()])
+    single_team = (len(teams_in_view) == 1)
+    if not have_hours:
+        st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
+    else:
+        hrs_long = (
+            f.melt(
+                id_vars=["team", "period_date"],
+                value_vars=["Total Available Hours", "Completed Hours"],
+                var_name="Metric",
+                value_name="Value"
+            )
+            .dropna(subset=["Value"])
+            .assign(Metric=lambda d: d["Metric"].replace({
+                "Total Available Hours": "Target Hours",
+                "Completed Hours": "Actual Hours"
+            }))
+        )
+        team_sel = alt.selection_point(fields=["team"], bind="legend")
+        base_trend = alt.Chart(hrs_long).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Hours"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
+        )
+        line = base_trend.mark_line(point=False).encode(
+            detail="team:N",
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if len(teams_in_view) > 1 else alt.value(1.0)
+        )
+        pts = base_trend.mark_point().encode(
+            shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
+            size=alt.value(45),
+            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if len(teams_in_view) > 1 else alt.value(1.0)
+        )
+        chart_ph = st.empty()
+        chart_ph.altair_chart(
+            alt.layer(line, pts).properties(height=280).add_params(team_sel),
+            width="stretch"
+        )
+        team_name = teams_in_view[0] if len(teams_in_view) == 1 else None
+        if team_name is None:
+            if 'ppl_hours' in locals() and ppl_hours.empty:
+                st.caption("Per-person drilldown not available (no 'Person Hours' found).")
+            else:
+                st.caption("Per-person & cell/station drilldowns are available when exactly one team is selected.")
+        else:
+            hours_by = st.selectbox(
+                "WIP Hours by:",
+                options=["Person", "Cell/Station"],
+                index=0,
+                key="hours_by_select",
+            )
+            team_weeks = sorted(
+                pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()),
+                reverse=True
+            )
+            if not team_weeks:
+                st.info("No weeks available for drilldown.")
+            else:
+                picked_week = st.selectbox(
+                    f"Week:",
+                    options=team_weeks,
+                    index=0,
+                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                    key="hours_by_week_select",
+                )
+                picked_week = pd.to_datetime(picked_week).normalize()
+                layers = [line, pts]
+                if picked_week is not None:
+                    rule_df = pd.DataFrame({"period_date": [picked_week]})
+                    rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+                    layers.append(rule)
+                chart_ph.altair_chart(
+                    alt.layer(*layers).properties(height=280).add_params(team_sel),
+                    width="stretch"
+                )
+                if hours_by == "Person":
+                    if 'ppl_hours' not in locals() or ppl_hours.empty:
+                        st.info(f"No per-person data available for {team_name}.")
+                    else:
+                        team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+                        wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
+                        if wk_people.empty:
+                            st.info("No per-person data for the selected week.")
+                        else:
+                            wk2 = (
+                                wk_people.assign(
+                                    Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
+                                    Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
+                                )
+                                .assign(Diff=lambda d: d["Actual"] - d["Avail"])
+                                .assign(DiffRounded=lambda d: d["Diff"].round(1))
+                            )
+                            wk2 = wk2.loc[
+                                ~(
+                                    (wk2["Actual"].fillna(0) == 0) &
+                                    (wk2["Avail"].fillna(0)  == 0)
+                                )
+                            ].assign(
+                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
+                            )
+                            if wk2.empty:
+                                st.info("Nobody to show after filtering zero-hour +0.0 entries.")
+                            else:
+                                bars = (
+                                    alt.Chart(wk2)
+                                    .mark_bar()
+                                    .encode(
+                                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
+                                        y=alt.Y("Actual:Q", title="Actual Hours"),
+                                        tooltip=[
+                                            "person:N",
+                                            alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
+                                            alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
+                                            alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
+                                            alt.Tooltip("period_date:T", title="Week"),
+                                        ],
+                                    )
+                                    .properties(height=280)
+                                )
+                                labels = (
+                                    alt.Chart(wk2)
+                                    .mark_text(dy=-6)
+                                    .encode(
+                                        x="person:N",
+                                        y="Actual:Q",
+                                        text=alt.Text("DiffLabel:N"),
+                                        color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                                    )
+                                )
+                                st.altair_chart(bars + labels, width="stretch")
+                                people_in_week = (
+                                    wk2["person"].dropna().astype(str).str.strip().drop_duplicates().tolist()
+                                    if "person" in wk2.columns and not wk2.empty else []
+                                )
+                                if people_in_week:
+                                    picked_person_hours = st.selectbox(
+                                        "Drill further: Person over time (per-station lines)",
+                                        options=sorted(people_in_week),
+                                        index=0,
+                                        key="hours_person_over_time_select",
+                                    )
+                                    pt = build_person_station_hours_over_time(f, team_name, picked_person_hours)
+                                    if pt.empty:
+                                        st.caption("No nested per-station hours found for this person.")
+                                    else:
+                                        pt_sum = (
+                                            pt.groupby("period_date", as_index=False)
+                                            .agg({
+                                                "Actual Hours": "sum",
+                                                "Available Hours": "sum",
+                                            })
+                                        )
+                                        base_ts = alt.Chart(pt_sum).encode(
+                                            x=alt.X("period_date:T", title="Week"),
+                                            y=alt.Y("Actual Hours:Q", title="Actual Hours (all stations)"),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("Actual Hours:Q",    title="Actual Hours (sum)",    format=",.1f"),
+                                                alt.Tooltip("Available Hours:Q", title="Available Hours (sum)", format=",.1f"),
+                                            ],
+                                        )
+                                        lines = base_ts.mark_line()
+                                        pts   = base_ts.mark_point(size=70, filled=True)
+
+                                        st.altair_chart(
+                                            (lines + pts).properties(height=280),
+                                            width="stretch",
+                                        )
+                    pass
+                else:
+                    cells_hours = explode_cell_station_hours(f)
+                    team_cells = cells_hours.loc[cells_hours["team"] == team_name].copy()
+                    if team_cells.empty:
+                        st.info(f"No cell/station data available for {team_name}.")
+                    else:
+                        wk_cells = team_cells.loc[team_cells["period_date"] == picked_week].copy()
+                        if wk_cells.empty:
+                            st.info("No cell/station data for the selected week.")
+                        else:
+                            wk_cells2 = (
+                                wk_cells.assign(
+                                    Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
+                                    Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
+                                )
+                                .assign(Diff=lambda d: d["Actual"] - d["Avail"])
+                                .assign(DiffRounded=lambda d: d["Diff"].round(1))
+                            )
+                            wk_cells2 = wk_cells2.loc[
+                                ~(
+                                    (wk_cells2["Actual"].fillna(0) == 0) &
+                                    (wk_cells2["Avail"].fillna(0)  == 0)
+                                )
+                            ].assign(
+                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
+                            )
+                            if wk_cells2.empty:
+                                st.info("Nothing to show after filtering zero-hour +0.0 entries.")
+                            else:
+                                order_cells = wk_cells2.sort_values("Actual", ascending=False)["cell_station"].tolist()
+                                bars = (
+                                    alt.Chart(wk_cells2)
+                                    .mark_bar()
+                                    .encode(
+                                        x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
+                                        y=alt.Y("Actual:Q", title="Actual Hours"),
+                                        tooltip=[
+                                            alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                            alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
+                                            alt.Tooltip("period_date:T", title="Week"),
+                                        ],
+                                    )
+                                    .properties(height=280)
+                                )
+                                labels = alt.Chart(wk_cells2).mark_text(dy=-6).encode(
+                                    x="cell_station:N",
+                                    y="Actual:Q",
+                                )
+                                st.altair_chart(bars + labels, width="stretch")
+                            stations_in_week = (
+                                wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
+                                if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
+                                else []
+                            )
+                            stations_in_week = (
+                                wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
+                                if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
+                                else []
+                            )
+                            if stations_in_week:
+                                picked_station_hours = st.selectbox(
+                                    "Drill further: Station over time (per-person lines)",
+                                    options=stations_in_week,
+                                    index=0,
+                                    key="hours_station_over_time_select",
+                                )
+                                ht = build_station_person_hours_over_time(f, team_name, picked_station_hours)
+                                if ht.empty:
+                                    st.caption("No nested per-person station-hours found. Showing station totals over time.")
+                                    stn_hours_tot = (
+                                        explode_cell_station_hours(f[f["team"] == team_name])
+                                        .query("cell_station == @picked_station_hours")
+                                        .dropna(subset=["period_date"])
+                                        .rename(columns={"Actual Hours": "Actual", "Available Hours": "Target"})
+                                    )
+                                    if not stn_hours_tot.empty:
+                                        base_ts = alt.Chart(stn_hours_tot).encode(
+                                            x=alt.X("period_date:T", title="Week"),
+                                            y=alt.Y("Actual:Q", title="Actual Hours"),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("Actual:Q", title="Actual", format=",.1f"),
+                                                alt.Tooltip("Target:Q", title="Available", format=",.1f"),
+                                            ],
+                                        )
+                                        line_a = base_ts.mark_line(point=True)
+                                        line_t = (
+                                            alt.Chart(stn_hours_tot)
+                                            .mark_line(point=True, strokeDash=[4, 3], color="#6b7280")
+                                            .encode(x="period_date:T", y=alt.Y("Target:Q", title="Available"))
+                                        )
+                                        st.altair_chart(
+                                            (line_a + line_t).properties(
+                                                height=280,
+                                                title=f"{picked_station_hours} • Hours over time (station total)",
+                                            ),
+                                            width="stretch",
+                                        )
+                                else:
+                                    ht_sum = (
+                                        ht.groupby("period_date", as_index=False)
+                                        .agg({
+                                            "Actual Hours": "sum",
+                                            "Available Hours": "sum",
+                                        })
+                                    )
+                                    base_ts = alt.Chart(ht_sum).encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Actual Hours:Q", title="Actual Hours (all people)"),
+                                        tooltip=[
+                                            "period_date:T",
+                                            alt.Tooltip("Actual Hours:Q",    title="Actual Hours (sum)",    format=",.1f"),
+                                            alt.Tooltip("Available Hours:Q", title="Available Hours (sum)", format=",.1f"),
+                                        ],
+                                    )
+                                    lines = base_ts.mark_line()
+                                    pts   = base_ts.mark_point(size=70, filled=True)
+
+                                    st.altair_chart(
+                                        (lines + pts).properties(height=280),
+                                        width="stretch",
+                                    )
+with mid:
+    st.subheader("Opened vs Closed")
+    needed_cols = {"Opened", "Closures"}
+    if not needed_cols.issubset(f.columns):
+        st.info("Need 'Opened' and 'Closures' columns to show this chart.")
+    else:
+        out_long = (
+            f.melt(
+                id_vars=["team", "period_date"],
+                value_vars=["Opened", "Closures"],
+                var_name="Metric",
+                value_name="Value",
+            )
+            .dropna(subset=["Value"])
+        )
+        base = alt.Chart(out_long).encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Count"),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=[
+                "team:N",
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.0f"),
+            ],
+        )
+        line = base.mark_line().encode(
+            detail="team:N",
+            opacity=alt.condition(
+                team_sel,
+                alt.value(1.0),
+                alt.value(0.25),
+            ) if multi_team else alt.value(1.0),
+        )
+        pts = base.mark_point().encode(
+            shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+            size=alt.value(45),
+            opacity=alt.condition(
+                team_sel,
+                alt.value(1.0),
+                alt.value(0.25),
+            ) if multi_team else alt.value(1.0),
+        )
+        st.altair_chart(
+            (line + pts).properties(height=280).add_params(team_sel),
+            width="stretch",
+        )
+    if len(teams_in_view) != 1:
+        st.caption("Select exactly one team to enable week drilldown.")
+    else:
+        team_name = teams_in_view[0]
+        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()), reverse=True)
+        if not team_weeks:
+            st.info("No weeks available for drilldown.")
+        else:
+            by_choice = st.selectbox(
+                "Output by:",
+                options=["Cell/Station", "Person"],
+                index=0,
+                key="output_by_select"
+            )
+            col_map = {
+                "Person": ("Outputs by Person", "person"),
+                "Cell/Station": ("Outputs by Cell/Station", "cell_station"),
+            }
+            col_name, key_label = col_map[by_choice]
+            picked_week = st.selectbox(
+                "Week:",
+                options=team_weeks,
+                index=0,
+                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                key="output_by_week_select",
+            )
+            picked_week = pd.to_datetime(picked_week).normalize()
+            if col_name not in f.columns:
+                st.info(f"No '{col_name}' data available.")
+            else:
+                exploded = explode_outputs_json(f[f["team"] == team_name], col_name, key_label)
+                if exploded.empty or "period_date" not in exploded.columns:
+                    st.info("No drilldown records for the selected grouping.")
+                else:
+                    wk = exploded.loc[exploded["period_date"] == picked_week].copy()
+                    if wk.empty:
+                        st.info("No data for the selected week.")
+                    else:
+                        wk2 = (
+                            wk.assign(
+                                Actual=pd.to_numeric(wk["Actual"], errors="coerce"),
+                                Target=pd.to_numeric(wk["Target"], errors="coerce"),
+                            )
+                            .dropna(subset=["Actual"])
+                            .assign(
+                                HasTarget=lambda d: d["Target"].notna(),
+                                Diff=lambda d: d["Actual"] - d["Target"],
+                            )
+                        )
+                        wk2["DiffRounded"] = np.where(wk2["HasTarget"], wk2["Diff"].round(1), np.nan)
+                        wk2["DiffLabel"]   = np.where(wk2["HasTarget"], wk2["DiffRounded"].map(lambda x: f"{x:+.1f}"), "—")
+                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["Target"].fillna(0) == 0))].copy()
+                        order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
+                        if not wk2.empty:
+                            vmax = float(pd.to_numeric(wk2["Actual"], errors="coerce").max())
+                            rng  = max(0.0, vmax)
+                            pad  = max(3.0, rng * 0.22)
+                            y_scale = alt.Scale(domain=[0.0, vmax + pad], nice=False, clamp=False)
+                            label_pad = max(1.0, (vmax + pad) * 0.04)
+                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"].fillna(-1) >= 0, label_pad, -label_pad)
+                        else:
+                            y_scale = alt.Scale()
+                            wk2["LabelY"] = wk2["Actual"]
+                        bars = (
+                            alt.Chart(wk2)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
+                                y=alt.Y("Actual:Q", title="Actual Output", scale=y_scale),
+                                tooltip=[
+                                    alt.Tooltip(f"{key_label}:N", title=by_choice),
+                                    alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
+                                    alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                    alt.Tooltip("DiffLabel:N", title="Over / Under"),  # <- use string label, shows "—" if no target
+                                    alt.Tooltip("period_date:T", title="Week"),
+                                ],
+                            )
+                            .properties(height=280)
+                        )
+                        labels = (
+                            alt.Chart(wk2)
+                            .mark_text()
+                            .encode(
+                                x=f"{key_label}:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DiffLabel:N",  # <- no "nan"
+                                color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
+                            )
+                        )
+                        st.altair_chart(bars + labels, width="stretch")
+                        if by_choice == "Cell/Station":
+                            stations_in_week = wk2["cell_station"].dropna().unique().tolist()
+                            if stations_in_week:
+                                picked_station = st.selectbox(
+                                    "Drill further: Station over time (per-person lines)",
+                                    options=stations_in_week,
+                                    index=0,
+                                    key="outputs_station_over_time_select",
+                                )
+                                ot = build_station_person_outputs_over_time(f, team_name, picked_station)
+                                if ot.empty:
+                                    st.caption("No nested per-person outputs found for this station. Showing station totals over time.")
+                                    stn_long = (
+                                        explode_outputs_json(
+                                            f[f["team"] == team_name],
+                                            "Outputs by Cell/Station",
+                                            "cell_station"
+                                        )
+                                        .query("cell_station == @picked_station")
+                                        .rename(columns={"Actual": "Value", "Target": "Target"})
+                                        .dropna(subset=["period_date"])
+                                    )
+                                    if not stn_long.empty:
+                                        base_ts = alt.Chart(stn_long).encode(
+                                            x=alt.X("period_date:T", title="Week"),
+                                            y=alt.Y("Value:Q", title="Actual Output"),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("Value:Q", title="Actual", format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
+                                            ],
+                                        )
+                                        line_a = base_ts.mark_line(point=True)
+                                        line_t = (
+                                            alt.Chart(stn_long)
+                                            .mark_line(point=True, strokeDash=[4, 3])
+                                            .encode(x="period_date:T", y=alt.Y("Target:Q", title="Target"))
+                                        )
+                                        st.altair_chart(
+                                            (line_a + line_t).properties(
+                                                height=280,
+                                            ),
+                                            width="stretch"
+                                        )
+                                else:
+                                    ot_sum = (
+                                        ot.groupby("period_date", as_index=False)
+                                        .agg({"Actual": "sum", "Target": "sum"})
+                                    )
+                                    ot_sum = ot_sum.assign(
+                                        HasTarget=lambda d: d["Target"].notna(),
+                                        Delta=lambda d: d["Actual"] - d["Target"],
+                                    )
+                                    ot_sum = ot_sum.assign(
+                                        DiffLabel=lambda d: np.where(
+                                            d["HasTarget"],
+                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
+                                            "—"
+                                        ),
+                                        PointFillGroup=lambda d: np.where(
+                                            ~d["HasTarget"],
+                                            "none",
+                                            np.where(d["Delta"] >= 0, "pos", "neg")
+                                        ),
+                                    )
+                                    base_ts = alt.Chart(ot_sum).encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Actual:Q", title="Actual Output (all people)"),
+                                        tooltip=[
+                                            "period_date:T",
+                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
+                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                        ],
+                                    )
+                                    lines = base_ts.mark_line()
+                                    pts = (
+                                        alt.Chart(ot_sum)
+                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                        .encode(
+                                            x="period_date:T",
+                                            y="Actual:Q",
+                                            stroke=alt.value("#111827"),  # single stroke color
+                                            fill=alt.Color(
+                                                "PointFillGroup:N",
+                                                legend=None,
+                                                scale=alt.Scale(
+                                                    domain=["pos", "neg", "none"],
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
+                                                ),
+                                            ),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
+                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                            ],
+                                        )
+                                    )
+                                    st.altair_chart(
+                                        (lines + pts).properties(height=280),
+                                        width="stretch"
+                                    )
+                        elif by_choice == "Person":
+                            people_in_week = wk2["person"].dropna().unique().tolist()
+                            if people_in_week:
+                                picked_person = st.selectbox(
+                                    "Drill further: Person over time (per-station lines)",
+                                    options=people_in_week,
+                                    index=0,
+                                    key="outputs_person_over_time_select",
+                                )
+                                pt = build_person_station_outputs_over_time(f, team_name, picked_person)
+                                if pt.empty:
+                                    st.caption("No nested per-station outputs found for this person.")
+                                else:
+                                    pt_sum = (
+                                        pt.groupby("period_date", as_index=False)
+                                        .agg({"Actual": "sum", "Target": "sum"})
+                                    )
+                                    pt_sum = pt_sum.assign(
+                                        HasTarget=lambda d: d["Target"].notna(),
+                                        Delta=lambda d: d["Actual"] - d["Target"],
+                                    )
+                                    pt_sum = pt_sum.assign(
+                                        DiffLabel=lambda d: np.where(
+                                            d["HasTarget"],
+                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
+                                            "—"
+                                        ),
+                                        PointFillGroup=lambda d: np.where(
+                                            ~d["HasTarget"],
+                                            "none",
+                                            np.where(d["Delta"] >= 0, "pos", "neg")
+                                        ),
+                                    )
+                                    base_ts = alt.Chart(pt_sum).encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Actual:Q", title="Actual Output (all stations)"),
+                                        tooltip=[
+                                            "period_date:T",
+                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
+                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                        ],
+                                    )
+                                    lines = base_ts.mark_line()
+                                    pts = (
+                                        alt.Chart(pt_sum)
+                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                        .encode(
+                                            x="period_date:T",
+                                            y="Actual:Q",
+                                            stroke=alt.value("#111827"),
+                                            fill=alt.Color(
+                                                "PointFillGroup:N",
+                                                legend=None,
+                                                scale=alt.Scale(
+                                                    domain=["pos", "neg", "none"],
+                                                    range=["#22c55e", "#ef4444", "#9ca3af"],
+                                                ),
+                                            ),
+                                            tooltip=[
+                                                "period_date:T",
+                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
+                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
+                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
+                                            ],
+                                        )
+                                    )
+                                    st.altair_chart(
+                                        (lines + pts).properties(height=280),
+                                        width="stretch"
+                                    )
+with right:
+    st.subheader("Productivity vs Efficiency")
+    team_sel = alt.selection_point(fields=["team"], bind="legend")
+    prod_df = f.copy()
+    if "total_non_wip_hours" not in prod_df.columns:
+        if "nw_all" in globals() and isinstance(nw_all, pd.DataFrame) and not nw_all.empty:
+            cols_needed = ["team", "period_date", "total_non_wip_hours"]
+            for c in cols_needed:
+                if c not in nw_all.columns:
+                    nw_all[c] = np.nan
+            nw_all["total_non_wip_hours"] = pd.to_numeric(
+                nw_all["total_non_wip_hours"], errors="coerce"
+            )
+            prod_df = prod_df.merge(
+                nw_all[cols_needed],
+                on=["team", "period_date"],
+                how="left",
+            )
+        else:
+            prod_df["total_non_wip_hours"] = np.nan
+    if {"Closures", "Completed Hours"}.issubset(prod_df.columns):
+        num_close = pd.to_numeric(prod_df["Closures"], errors="coerce")
+
+        denom_prod = (
+            prod_df["Completed Hours"].fillna(0).astype(float)
+            + prod_df["total_non_wip_hours"].fillna(0).astype(float)
+        )
+        prod_df["Productivity"] = np.where(
+            denom_prod > 0, num_close / denom_prod, np.nan
+        )
+        denom_eff = prod_df["Completed Hours"].astype(float)
+        prod_df["Efficiency"] = np.where(
+            denom_eff > 0, num_close / denom_eff, np.nan
+        )
+    else:
+        prod_df["Productivity"] = np.nan
+        prod_df["Efficiency"] = np.nan
+    pe_long = (
+        prod_df.melt(
+            id_vars=["team", "period_date"],
+            value_vars=["Productivity", "Efficiency"],
+            var_name="Metric",
+            value_name="Value",
+        )
+        .dropna(subset=["Value"])
+    )
+    if not pe_long.empty:
+        vmin = float(pd.to_numeric(pe_long["Value"], errors="coerce").min())
+        vmax = float(pd.to_numeric(pe_long["Value"], errors="coerce").max())
+        rng  = max(0.0, vmax - vmin)
+        pad  = max(0.01, rng * 0.15)
+        lo   = max(0.0, vmin - pad)
+        hi   = vmax + pad
+        y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
+    else:
+        y_scale = alt.Scale()
+    sel_wk = alt.selection_point(
+        name="wk_prod_eff",
+        fields=["period_date"],
+        on="click",
+        clear="dblclick",
+        empty="none",
+    )
+    trend_base = (
+        alt.Chart(pe_long)
+        .encode(
+            x=alt.X("period_date:T", title="Week"),
+            y=alt.Y("Value:Q", title="Closures per Hour", scale=y_scale),
+            color=alt.Color("Metric:N", title="Series"),
+            tooltip=[
+                "team:N",
+                "period_date:T",
+                "Metric:N",
+                alt.Tooltip("Value:Q", format=",.3f"),
+            ],
+        )
+    )
+    line = trend_base.mark_line().encode(
+        detail="team:N",
+        opacity=(
+            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if multi_team else alt.value(1.0)
+        ),
+    )
+    pts = trend_base.mark_point(size=70).encode(
+        shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
+        opacity=(
+            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
+            if multi_team else alt.value(1.0)
+        ),
+    )
+    rule = (
+        alt.Chart(pe_long)
+        .transform_filter(sel_wk)
+        .mark_rule(strokeDash=[4, 3])
+        .encode(x="period_date:T")
+    )
+    top = (
+        alt.layer(line, pts, rule)
+        .properties(height=280)
+        .add_params(team_sel, sel_wk)
+    )
+    def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
+        wp1, wp2 = None, None
+        for c in df.columns:
+            lc = str(c).lower().replace(" ", "")
+            if "uplh" not in lc:
+                continue
+            if any(tag in lc for tag in ("wp1", "wp01", "wp_1", "wp-1")) and wp1 is None:
+                wp1 = c
+            if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
+                wp2 = c
+        return wp1, wp2
+    wp1_col, wp2_col = _find_wp_uplh_cols(f)
+    team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
+    if not multi_team and team_for_drill is not None:
+        top_ph = st.empty()
+        top_ph.altair_chart(top, width="stretch")
+        by_choice = st.selectbox(
+            "UPLH by:",
+            options=["Person", "Cell/Station"],
+            index=0,
+            key="uplh_by_select",
+        )
+        team_weeks = sorted(
+            pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()),
+            reverse=True
+        )
+        if team_weeks:
+            picked_week = st.selectbox(
+                "Week:",
+                options=team_weeks,
+                index=0,
+                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
+                key="uplh_week_select",
+            )
+            picked_week = pd.to_datetime(picked_week).normalize()
+            rule_df = pd.DataFrame({"period_date": [picked_week]})
+            rule_week = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
+            top_ph.altair_chart(
+                alt.layer(line, pts, rule_week).properties(height=280).add_params(team_sel),
+                width="stretch"
+            )
+        else:
+            picked_week = None
+            st.info("No weeks available for drilldown.")
+        lower = None
+        drill = None 
+        lower_area   = st.container()
+        controls_area = st.container()
+        drill_area   = st.container()
+        if picked_week is not None:
+            if by_choice == "Person":
+                uplh_person = build_uplh_by_person_long(f, team_for_drill)
+                if uplh_person.empty:
+                    st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
+                else:
+                    wk_p = uplh_person.loc[uplh_person["period_date"] == picked_week].copy()
+                    if wk_p.empty:
+                        st.info("No UPLH-by-person records for that week.")
+                    else:
+                        wk_p["HasTarget"]   = wk_p["Target UPLH"].notna()
+                        wk_p["Delta"]       = wk_p["Actual UPLH"] - wk_p["Target UPLH"]
+                        wk_p["DeltaRounded"]= wk_p["Delta"].round(2)
+                        wk_p["DeltaLabel"]  = np.where(wk_p["HasTarget"], wk_p["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—")
+                        wk_p["LabelGroup"]  = np.where(~wk_p["HasTarget"], "none", np.where(wk_p["Delta"] >= 0, "pos", "neg"))
+                        order_people = wk_p.sort_values("Actual UPLH", ascending=False)["person"].tolist()
+                        vmax = float(pd.to_numeric(wk_p["Actual UPLH"], errors="coerce").max())
+                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
+                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
+                        bars = (
+                            alt.Chart(wk_p)
+                            .mark_bar(color="#2563eb")
+                            .encode(
+                                x=alt.X("person:N", title="Person", sort=order_people),
+                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
+                                tooltip=[
+                                    "period_date:T", "person:N",
+                                    alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
+                                    alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
+                                    alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
+                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
+                                ],
+                            )
+                            .properties(height=280)
+                        )
+                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
+                        labels = (
+                            alt.Chart(
+                                wk_p.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad))
+                            )
+                            .mark_text(dy=-10)
+                            .encode(
+                                x="person:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DeltaLabel:N",
+                                color=alt.Color(
+                                    "LabelGroup:N",
+                                    legend=None,
+                                    scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
+                                ),
+                            )
+                        )
+                        lower = bars + labels
+                        people_in_week = wk_p["person"].dropna().unique().tolist()
+                        if people_in_week:
+                            picked_person_uplh = controls_area.selectbox(
+                                "Drill further: Person UPLH over time (per-station lines)",
+                                options=sorted(people_in_week),
+                                index=0,
+                                key="uplh_person_over_time_select",
+                            )
+                            pu = build_person_station_uplh_over_time(f, team_for_drill, picked_person_uplh)
+                            if pu.empty:
+                                st.caption("No nested per-station UPLH found for this person.")
+                            else:
+                                pu = pu.assign(
+                                    HasTarget=lambda d: d["Target UPLH"].notna(),
+                                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
+                                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
+                                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
+                                )
+                                base_ts = alt.Chart(pu).encode(
+                                    x=alt.X("period_date:T", title="Week"),
+                                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                                    color=alt.Color("cell_station:N", title="Cell/Station"),
+                                    tooltip=[
+                                        "period_date:T",
+                                        alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
+                                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
+                                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
+                                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                                    ],
+                                )
+                                lines = base_ts.mark_line()
+                                pts   = (
+                                    alt.Chart(pu)
+                                    .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                    .encode(
+                                        x="period_date:T",
+                                        y="Actual UPLH:Q",
+                                        stroke=alt.Color("cell_station:N", legend=None),
+                                        fill=alt.Color(
+                                            "LabelGroup:N",
+                                            legend=None,
+                                            scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
+                                        ),
+                                    )
+                                )
+                                drill = (lines + pts).properties(
+                                    height=280,
+                                )
+            else:  # by_choice == "Cell/Station"
+                uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
+                if uplh_cell.empty:
+                    st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
+                else:
+                    wk_c = uplh_cell.loc[uplh_cell["period_date"] == picked_week].copy()
+                    if wk_c.empty:
+                        st.info("No UPLH-by-cell/station records for that week.")
+                    else:
+                        wk_c["HasTarget"]   = wk_c["Target UPLH"].notna()
+                        wk_c["Delta"]       = wk_c["Actual UPLH"] - wk_c["Target UPLH"]
+                        wk_c["DeltaRounded"]= wk_c["Delta"].round(2)
+                        wk_c["DeltaLabel"]  = np.where(wk_c["HasTarget"], wk_c["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—")
+                        wk_c["LabelGroup"]  = np.where(~wk_c["HasTarget"], "none", np.where(wk_c["Delta"] >= 0, "pos", "neg"))
+                        order_cells = wk_c.sort_values("Actual UPLH", ascending=False)["cell_station"].tolist()
+                        vmax = float(pd.to_numeric(wk_c["Actual UPLH"], errors="coerce").max())
+                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
+                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
+                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
+                        wk_c["LabelY"] = wk_c["Actual UPLH"] + np.where(wk_c["Delta"].fillna(-1) >= 0, label_pad, -label_pad)
+                        bars = (
+                            alt.Chart(wk_c)
+                            .mark_bar(color="#2563eb")
+                            .encode(
+                                x=alt.X(
+                                    "cell_station:N",
+                                    sort=order_cells,
+                                    axis=alt.Axis(
+                                        title="Cell/Station",
+                                        labelAngle=-35,      # <- ensures the x-axis shows and is readable
+                                        labelOverlap=False,
+                                    ),
+                                ),
+                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
+                                tooltip=[
+                                    alt.Tooltip("cell_station:N", title="Cell/Station"),
+                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
+                                    "period_date:T",
+                                ],
+                            )
+                            .properties(height=280)
+                        )
+                        labels = (
+                            alt.Chart(wk_c)
+                            .mark_text()
+                            .encode(
+                                x="cell_station:N",
+                                y=alt.Y("LabelY:Q", scale=y_scale),
+                                text="DeltaLabel:N",  # already formatted with +/-
+                                color=alt.Color(
+                                    "LabelGroup:N",
+                                    legend=None,
+                                    scale=alt.Scale(
+                                        domain=["pos", "neg", "none"],
+                                        range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
+                                    ),
+                                ),
+                            )
+                        )
+                        lower = bars + labels
+                        stations_in_week = wk_c["cell_station"].dropna().astype(str).str.strip().unique().tolist()
+                        if stations_in_week:
+                            picked_station_uplh = controls_area.selectbox(
+                                "Drill further: Station UPLH over time (per-person lines)",
+                                options=stations_in_week,
+                                index=0,
+                                key="uplh_station_over_time_select",
+                            )
+                            ut = build_station_person_uplh_over_time(f, team_for_drill, picked_station_uplh)
+                            if ut.empty:
+                                st.caption("No nested per-person station-hours found. Showing station UPLH totals over time.")
+                                stn_uplh_tot = (
+                                    build_uplh_by_cell_long(f, team_for_drill)
+                                    .query("cell_station == @picked_station_uplh")
+                                    .dropna(subset=["period_date"])
+                                )
+                                if not stn_uplh_tot.empty:
+                                    base_ts = alt.Chart(stn_uplh_tot).encode(
+                                        x=alt.X("period_date:T", title="Week"),
+                                        y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                                        tooltip=[
+                                            "period_date:T",
+                                            alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                            alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                        ],
+                                    )
+                                    line_a = base_ts.mark_line(point=True, color="#2563eb")
+                                    line_t = (
+                                        alt.Chart(stn_uplh_tot)
+                                        .mark_line(point=True, strokeDash=[4,3], color="#6b7280")
+                                        .encode(x="period_date:T", y=alt.Y("Target UPLH:Q", title="Target UPLH"))
+                                    )
+                                    drill = (line_a + line_t).properties(
+                                        height=280,
+                                        title=f"{picked_station_uplh} • UPLH over time (station total)"
+                                    )
+                            else:
+                                ut = ut.assign(
+                                    HasTarget=lambda d: d["Target UPLH"].notna(),
+                                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
+                                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
+                                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
+                                )
+                                base_ts = alt.Chart(ut).encode(
+                                    x=alt.X("period_date:T", title="Week"),
+                                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
+                                    color=alt.Color("person:N", title="Person"),
+                                    tooltip=[
+                                        "period_date:T",
+                                        "person:N",
+                                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
+                                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
+                                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
+                                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
+                                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
+                                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
+                                    ],
+                                )
+                                lines = base_ts.mark_line()
+                                pts = (
+                                    alt.Chart(ut)
+                                    .mark_point(size=85, filled=True, strokeWidth=1.2)
+                                    .encode(
+                                        x="period_date:T",
+                                        y="Actual UPLH:Q",
+                                        stroke=alt.Color("person:N", legend=None),
+                                        fill=alt.Color(
+                                            "LabelGroup:N",
+                                            legend=None,
+                                            scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
+                                        ),
+                                    )
+                                )
+                                drill = (lines + pts).properties(
+                                    height=280,
+                                )
+        if lower is not None:
+            lower_area.altair_chart(lower, width="stretch")
+        else:
+            lower_area.altair_chart(top, width="stretch")
+        if drill is not None:
+            drill_area.altair_chart(drill, width="stretch")
+st.markdown("---")
 left2, mid2, right2 = st.columns(3) 
 with left2:
     st.subheader("HC in WIP Trend")
