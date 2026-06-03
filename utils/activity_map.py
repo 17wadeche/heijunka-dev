@@ -1484,6 +1484,7 @@ ACTIVITY_MAP = {
     "collaboration, meetings, code support, event reviews for rerd not triggering, data analysi":"Collaboration",
     "ng st, event reviews/data review":"Next Gen",
     "metrics / scrums / meeting / reg inquirie":"Metrics & Schedule",
+    "dhr reviews/audit 30":"Audit",
     "nextgen support":"Next Gen",
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
