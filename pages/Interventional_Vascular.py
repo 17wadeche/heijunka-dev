@@ -3683,21 +3683,6 @@ if len(teams_in_view) == 1:
             return alt.Axis(**kwargs)
         def y_enc(metric: str, field: str) -> alt.Y:
             ax = axis_for(metric)
-            if metric == "Open Complaint Timeliness":
-                col = display_to_col[metric]
-                vals = single[col].dropna().astype(float)
-                if len(vals):
-                    vmin = float(vals.min())
-                    vmax = float(vals.max())
-                else:
-                    vmin, vmax = 0.0, 1.0
-                rng = max(0.0, vmax - vmin)
-                pad = max(0.02, rng * 0.15)
-                lo = max(0.0, vmin - pad)
-                hi = min(1.0, vmax + pad)
-                return alt.Y(f"{field}:Q", axis=ax, scale=alt.Scale(domain=[lo, hi], clamp=True, nice=False))
-            else:
-                return alt.Y(f"{field}:Q", axis=ax)
         layers = []
         for metric in selected:
             col = display_to_col.get(metric)

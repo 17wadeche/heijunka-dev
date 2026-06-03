@@ -414,8 +414,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         lc = c.lower()
         if lc == "hc in wip":
             canon_map[c] = "HC in WIP"
-        elif lc in ("open complaint timeliness", "open complaints timeliness", "complaint timeliness"):
-            canon_map[c] = "Open Complaint Timeliness"
         elif lc in ("actual hc used", "actual_hc_used", "actual-hc-used"):
             canon_map[c] = "Actual HC used"
         elif lc in ("people in wip", "people_wip", "people-in-wip", "people_wip_list"):
@@ -424,16 +422,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    if "Open Complaint Timeliness" in df.columns:
-        s = (df["Open Complaint Timeliness"]
-                .astype(str)
-                .str.strip()
-                .replace({"": np.nan, "—": np.nan, "-": np.nan}))
-        s = s.str.replace("%", "", regex=False).str.replace(",", "", regex=False)
-        v = pd.to_numeric(s, errors="coerce")
-        if pd.notna(v.max()) and float(v.max()) > 1.5:
-            v = v / 100.0
-        df["Open Complaint Timeliness"] = v
     for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
                 "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
         if col in df.columns:
@@ -2197,18 +2185,6 @@ def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person
         out[c] = pd.to_numeric(out[c], errors="coerce")
     out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
     return out
-def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
-    if pd.isna(v):
-        return np.nan, "{:.0%}"
-    try:
-        v = float(v)
-    except Exception:
-        return np.nan, "{:.0%}"
-    if v <= 1.0:
-        return v, "{:.0%}"
-    return v / 100.0, "{:.0%}"
-timeliness_avg_raw = latest["Open Complaint Timeliness"].dropna().mean() if "Open Complaint Timeliness" in latest.columns else np.nan
-timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 nw_all = load_non_wip()
 if not nw_all.empty:
     if "total_non_wip_hours" in nw_all.columns:

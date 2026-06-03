@@ -297,7 +297,6 @@ def scrape_one_workbook_lit_letters(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -791,7 +790,6 @@ def scrape_one_workbook_meic(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -875,7 +873,6 @@ def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -990,19 +987,6 @@ def _norm_period_date(s: str) -> str:
         return _dt.date.fromisoformat(ss).isoformat()
     except ValueError:
         return ss
-def load_timeliness_lookup(path: str) -> Dict[Tuple[str, str], str]:
-    lut: Dict[Tuple[str, str], str] = {}
-    if not path or not os.path.exists(path):
-        return lut
-    with open(path, "r", newline="", encoding="utf-8-sig") as fp:
-        r = csv.DictReader(fp)
-        for row in r:
-            team = _norm_team(row.get("team", ""))
-            period = _norm_period_date(row.get("period_date", ""))
-            val = (row.get("Open Complaint Timeliness", "") or "").strip()
-            if team and period:
-                lut[(team, period)] = val
-    return lut
 def load_closures_lookup(path: str) -> Dict[Tuple[str, str], Tuple[str, str]]:
     lut: Dict[Tuple[str, str], Tuple[str, str]] = {}
     if not path or not os.path.exists(path):
@@ -1019,13 +1003,10 @@ def load_closures_lookup(path: str) -> Dict[Tuple[str, str], Tuple[str, str]]:
     return lut
 def enrich_rows_with_metrics(
     rows: List[Dict[str, Any]],
-    timeliness_lut: Dict[Tuple[str, str], str],
     closures_lut: Dict[Tuple[str, str], Tuple[str, str]],
 ) -> None:
     for r in rows:
         key = (_norm_team(r.get("team", "")), _norm_period_date(r.get("period_date", "")))
-        if key in timeliness_lut:
-            r["Open Complaint Timeliness"] = timeliness_lut[key]
         if key in closures_lut:
             c, o = closures_lut[key]
             r["Closures"] = c
@@ -1527,7 +1508,6 @@ def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -1602,7 +1582,6 @@ def scrape_one_workbook_ds(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -1696,7 +1675,6 @@ def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
             "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_prod is not None else "",
             "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_prod is not None else "",
             "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_prod is not None else "",
-            "Open Complaint Timeliness": "",
             "error": "; ".join(err_msgs) if err_msgs else "",
             "Closures": "",
             "Opened": "",
@@ -1781,7 +1759,6 @@ def scrape_one_workbook_cds(path: str) -> List[Dict[str, Any]]:
         "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
         "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
         "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
-        "Open Complaint Timeliness": "",
         "error": "; ".join(err_msgs) if err_msgs else "",
         "Closures": "",
         "Opened": "",
@@ -1818,7 +1795,7 @@ CSV_COLUMNS = [
     "HC in WIP", "Actual HC Used", "People in WIP", "Person Hours", "Outputs by Person",
     "Outputs by Cell/Station", "Cell/Station Hours", "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person", "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness", "error", "Closures", "Opened",
+    "error", "Closures", "Opened",
 ]
 def iter_input_files(paths: List[str]) -> Iterable[str]:
     for p in paths:
@@ -1868,7 +1845,6 @@ def blank_row_for_missing_file(f: str) -> Dict[str, Any]:
         "Hours by Cell/Station - by person": "",
         "Output by Cell/Station - by person": "",
         "UPLH by Cell/Station - by person": "",
-        "Open Complaint Timeliness": "",
         "error": f"file_not_found: {f}",
         "Closures": "",
         "Opened": "",
@@ -1892,8 +1868,6 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")
     ap.add_argument("--out", default="CRM_DATA\\CRM_WIP.csv", help="Output CSV path (default: CRM_WIP.csv).")
-    ap.add_argument("--timeliness-csv", default="timeliness.csv", help="Path to timeliness.csv")
-    ap.add_argument("--closures-csv", default="closures.csv", help="Path to closures.csv")
     args = ap.parse_args()
     inputs = args.files or default_paths
     all_rows: List[Dict[str, Any]] = []
@@ -1902,9 +1876,6 @@ def main() -> int:
             all_rows.append(blank_row_for_missing_file(f))
             continue
         all_rows.extend(scrape_one_workbook(f))
-    timeliness_lut = load_timeliness_lookup(args.timeliness_csv)
-    closures_lut = load_closures_lookup(args.closures_csv)
-    enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     all_rows.sort(key=lambda r: ((r.get("team") or ""), (r.get("period_date") or "")))
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:

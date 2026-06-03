@@ -97,7 +97,6 @@ CSV_COLUMNS = [
     "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person",
     "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness",
     "error",
     "Closures",
     "Opened",
@@ -125,7 +124,6 @@ METRICS_CSV_COLUMNS = [
     "Hours by Cell/Station - by person",
     "Output by Cell/Station - by person",
     "UPLH by Cell/Station - by person",
-    "Open Complaint Timeliness",
     "error",
     "Closures",
     "Opened",
@@ -260,7 +258,6 @@ def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any
         station_hours: Dict[str, float] = {}
         hours_by_station_by_person: Dict[str, Dict[str, float]] = {}
         output_by_station_by_person: Dict[str, Dict[str, float]] = {}
-        open_complaint_timeliness = ""
         closures = ""
         opened = ""
         source_files: List[str] = []
@@ -304,8 +301,6 @@ def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any
             er = (row.get("error", "") or "").strip()
             if er:
                 errors.append(er)
-            if not open_complaint_timeliness:
-                open_complaint_timeliness = (row.get("Open Complaint Timeliness", "") or "").strip()
             if not closures:
                 closures = (row.get("Closures", "") or "").strip()
             if not opened:
@@ -345,7 +340,6 @@ def rollup_rows_by_team_period(rows: List[Dict[str, Any]]) -> List[Dict[str, Any
             "Hours by Cell/Station - by person": dumps_json(hours_by_station_by_person),
             "Output by Cell/Station - by person": dumps_json(output_by_station_by_person),
             "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person),
-            "Open Complaint Timeliness": open_complaint_timeliness,
             "error": "; ".join(sorted(set(errors))) if errors else "",
             "Closures": closures,
             "Opened": opened,
@@ -389,19 +383,6 @@ def _norm_period_date(s: str) -> str:
         return s
 def script_dir() -> str:
     return os.path.dirname(os.path.abspath(__file__))
-def load_timeliness_lookup(path: str) -> Dict[Tuple[str, str], str]:
-    lut: Dict[Tuple[str, str], str] = {}
-    if not os.path.exists(path):
-        return lut
-    with open(path, "r", newline="", encoding="utf-8-sig") as fp:
-        reader = csv.DictReader(fp)
-        for row in reader:
-            team = _norm_team(row.get("team", ""))
-            period = _norm_period_date(row.get("period_date", ""))
-            val = (row.get("Open Complaint Timeliness", "") or "").strip()
-            if team and period:
-                lut[(team, period)] = val
-    return lut
 def load_closures_lookup(path: str) -> Dict[Tuple[str, str], Tuple[str, str]]:
     lut: Dict[Tuple[str, str], Tuple[str, str]] = {}
     if not os.path.exists(path):
@@ -418,17 +399,9 @@ def load_closures_lookup(path: str) -> Dict[Tuple[str, str], Tuple[str, str]]:
     return lut
 def enrich_rows_with_metrics(
     rows: List[Dict[str, Any]],
-    timeliness_lut: Dict[Tuple[str, str], str],
-    closures_lut: Dict[Tuple[str, str], Tuple[str, str]],
 ) -> None:
     for row in rows:
         key = (_norm_team(row.get("team", "")), _norm_period_date(row.get("period_date", "")))
-        if key in timeliness_lut:
-            row["Open Complaint Timeliness"] = timeliness_lut[key]
-        if key in closures_lut:
-            closures, opened = closures_lut[key]
-            row["Closures"] = closures
-            row["Opened"] = opened
 def _as_text(v: Any) -> str:
     return str(v).strip() if v is not None else ""
 def _as_date(v: Any) -> Optional[_dt.date]:
@@ -592,7 +565,6 @@ def blank_row_for_missing_file(path: str) -> Dict[str, Any]:
         "Hours by Cell/Station - by person": "",
         "Output by Cell/Station - by person": "",
         "UPLH by Cell/Station - by person": "",
-        "Open Complaint Timeliness": "",
         "error": f"file_not_found: {path}",
         "Closures": "",
         "Opened": "",
@@ -671,7 +643,6 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             "Hours by Cell/Station - by person": dumps_json(hours_by_station_by_person),
             "Output by Cell/Station - by person": dumps_json(output_by_station_by_person),
             "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person),
-            "Open Complaint Timeliness": "",
             "error": "; ".join(week_errors) if week_errors else "",
             "Closures": "",
             "Opened": "",
@@ -701,7 +672,6 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             "Hours by Cell/Station - by person": "",
             "Output by Cell/Station - by person": "",
             "UPLH by Cell/Station - by person": "",
-            "Open Complaint Timeliness": "",
             "error": "; ".join(err_msgs) if err_msgs else "no_periods_found",
             "Closures": "",
             "Opened": "",
@@ -748,11 +718,6 @@ def main() -> int:
         all_rows.extend(scrape_one_workbook(path))
         log_timing(f"Team {team} total processing time: {time.perf_counter() - team_start:.2f}s")
     base_dir = script_dir()
-    timeliness_csv = os.path.join(base_dir, "timeliness.csv")
-    closures_csv = os.path.join(base_dir, "closures.csv")
-    timeliness_lut = load_timeliness_lookup(timeliness_csv)
-    closures_lut = load_closures_lookup(closures_csv)
-    enrich_rows_with_metrics(all_rows, timeliness_lut, closures_lut)
     final_rows = rollup_rows_by_team_period(all_rows)
     metrics_rows = detail_rows_for_metrics(all_rows)
     write_csv_rows(args.out, final_rows, CSV_COLUMNS)
