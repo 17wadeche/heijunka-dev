@@ -1483,6 +1483,8 @@ ACTIVITY_MAP = {
     "customer letter":"WIP/Event Review",
     "collaboration, meetings, code support, event reviews for rerd not triggering, data analysi":"Collaboration",
     "ng st, event reviews/data review":"Next Gen",
+    "metrics / scrums / meeting / reg inquirie":"Metrics & Schedule",
+    "nextgen support":"Next Gen",
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
     "audit prep meeting/1-1 transfer of resp.":"Audit",
