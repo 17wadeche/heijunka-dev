@@ -2008,7 +2008,7 @@ with right:
             with top_controls_left:
                 factor_out_ooo_top = st.toggle(
                     "Factor out OOO (top chart)",
-                    value=True,
+                    value=False,
                     key="time_mix_factor_out_ooo_top_right2",
                 )
             top_mix = week_mix.copy()
