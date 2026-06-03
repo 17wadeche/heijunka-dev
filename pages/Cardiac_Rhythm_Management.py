@@ -2234,17 +2234,6 @@ with left:
 with mid:
     st.subheader("Actual HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
-        ahu = f[["team", "period_date", "Actual HC used"]].dropna()
-        base_ahu = alt.Chart(ahu).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Actual HC used:Q", title="Actual HC used"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("indianred"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")]
-        )
-        st.altair_chart(
-            base_ahu.mark_line(point=True).properties(height=280),
-            width="stretch"
-        )
         if len(teams_in_view) == 1:
             team_name = teams_in_view[0]
             if 'ppl_hours' not in locals():
