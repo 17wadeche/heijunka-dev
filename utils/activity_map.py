@@ -1486,6 +1486,7 @@ ACTIVITY_MAP = {
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
     "scrum rpa collab":"Scrum & Action",
+    
     "create srs for medwatch, collab with tachy team":"Collaboration",
     "geo id added to pe":"WIP/Event Review",
     "project surge oem":"Project Work",
