@@ -1,28 +1,27 @@
-# pages/Cardiac_Rhythm_Management.py
-import hmac
+# pages/Neuroscience.py
 import os, sys
 from pathlib import Path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import pandas as pd
 import numpy as np
 import streamlit as st
 import altair as alt
-from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
 import json
-import unicodedata
 import re
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import unicodedata
+from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
-NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\CRM_DATA\crm_non_wip_activities.csv")
+NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\NS_DATA\ns_non_wip_activities.csv")
 def _safe_secret(name: str, default=None):
     import os
     try:
         return st.secrets.get(name, os.environ.get(name, default))
     except Exception:
         return os.environ.get(name, default)
-NON_WIP_DATA_URL = _safe_secret("CRM_NON_WIP_DATA_URL")
-DATA_URL = _safe_secret("CRM_HEIJUNKA_DATA_URL")
+NON_WIP_DATA_URL = _safe_secret("NS_NON_WIP_DATA_URL")
+DATA_URL = _safe_secret("NS_HEIJUNKA_DATA_URL")
 def _fmt_hours_minutes(x) -> str:
     try:
         total_mins = int(round(float(x) * 60))
@@ -45,37 +44,6 @@ def load_team_config(config_path: str | None = None) -> dict:
         return obj if isinstance(obj, dict) else {}
     except Exception:
         return {}
-NAME_ALIASES = {
-    "-": "-",
-    "peter mchugh": "Peter McHugh",
-    "peter mc hugh": "Peter McHugh",
-}
-def normalize_person_name(name: str) -> str:
-    s = str(name or "")
-    s = unicodedata.normalize("NFKC", s)
-    s = "".join(ch for ch in s if unicodedata.category(ch)[0] != "C")
-    s = s.replace("\u00a0", " ")
-    s = re.sub(r"\s+", " ", s).strip()
-    key = s.casefold()
-    if key in NAME_ALIASES:
-        return NAME_ALIASES[key]
-    def _title_token(t: str) -> str:
-        if not t:
-            return t
-        for prefix in ("mc", "mac"):
-            if t.lower().startswith(prefix) and len(t) > len(prefix):
-                return prefix.capitalize() + t[len(prefix):].capitalize()
-        return t.capitalize()
-    tokens = s.split(" ")
-    normalized = " ".join(_title_token(t) for t in tokens)
-    if normalized.casefold() in NAME_ALIASES:
-        return NAME_ALIASES[normalized.casefold()]
-    return normalized
-def person_key(name: str) -> str:
-    s = normalize_person_name(name)
-    s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
-    s = re.sub(r"\s+", " ", s).strip()
-    return s.casefold()
 def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(config, dict):
         return set()
@@ -86,11 +54,17 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+def canonical_activity_key(label: str) -> str:
+    raw = str(label or "").strip()
+    if not raw:
+        return ""
+    mapped = ACTIVITY_MAP.get(raw.lower().strip(), raw)
+    return re.sub(r"[^A-Z0-9]", "", str(mapped).upper())
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_non_wip(
     nw_path: str | None = None,
     nw_url: str | None = None,
-    cache_tag: str = "CRM", 
+    cache_tag: str = "NS", 
 ) -> pd.DataFrame:
     if nw_url is None:
         nw_url = NON_WIP_DATA_URL
@@ -149,51 +123,16 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
                 v = np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": safe_normalize_date(r["period_date"]),
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
                 "person": normalize_person_name(str(person).strip()),
                 "Non-WIP Hours": v
             })
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
-def merged_people_count_for_week(
-    team: str,
-    week,
-    nw_frame: pd.DataFrame,
-    person_hours: pd.DataFrame,
-    people_in_wip: pd.DataFrame,
-) -> int:
-    wk = pd.to_datetime(week, errors="coerce").normalize()
-    if nw_frame is not None and not nw_frame.empty:
-        raw_nw = nw_frame.copy()
-        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
-        if "people_count" in raw_nw.columns:
-            team_match = raw_nw.loc[
-                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
-                "people_count",
-            ]
-            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
-            if not team_match.empty:
-                return int(team_match.iloc[0])
-    names = set()
-    long_nw = explode_non_wip_by_person(nw_frame)
-    for df_, person_col in [
-        (long_nw, "person"),
-        (person_hours, "person"),
-        (people_in_wip, "person"),
-    ]:
-        if df_ is None or df_.empty:
-            continue
-        sub = df_.loc[
-            (df_["team"] == team) & (df_["period_date"] == wk),
-            [person_col],
-        ].copy()
-        if not sub.empty:
-            vals = sub[person_col].astype(str).str.strip()
-            names.update(x for x in vals if x)
-    return len(names)
-DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\CRM_DATA\CRM_WIP.csv")
+DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
@@ -264,6 +203,183 @@ def load_data(data_path: str | None, data_url: str | None):
     else:
         return pd.DataFrame()
     return _postprocess(df)
+def normalize_person_name(name: str) -> str:
+    def _norm(x: str) -> str:
+        x = str(x or "")
+        x = unicodedata.normalize("NFKC", x)
+        x = x.replace("\u00A0", " ")
+        x = " ".join(x.split()).strip()
+        x = x.lower()
+        x = re.sub(r"[^\w\s]", "", x) 
+        x = " ".join(x.split())
+        return x
+    raw = str(name or "")
+    clean = " ".join(unicodedata.normalize("NFKC", raw).replace("\u00A0", " ").split()).strip()
+    key = _norm(clean)
+    aliases = {
+        _norm("mirlay morin"): "Mirlay",
+        _norm("nikita schazenbach"): "Nikita",
+        _norm( "bandaru, phaneedra"): "Phaneedra Bandaru",
+        _norm( "kasi m"): "Kasi Rajan",
+        _norm("phaneedra"): "Phaneedra Bandaru",
+        _norm("jacob"): "Jacob Woolley",
+        _norm("pang lee"): "Pang",
+        _norm("jacob g"): "Jacob Geraghty",
+        _norm("jake"): "Jacob Geraghty",
+        _norm("madison moeller"): "Madison",
+        _norm("pavani uppari"): "Uppari Pavani",
+        _norm("s, prabhu"): "Prabhu S",
+        _norm("chandra"): "Nitheesh",
+        _norm("damahe, jagruti"): "Jagruti Damahe",
+        _norm("kallagunta, malleshwari"): "Malleshwari Kallagunta",
+        _norm("gopikalyani ijigiri"): "Gopikalyani Iligiri",
+        _norm("dey, pranjal"): "Pranjal Dey",
+        _norm("shanmugasundaram, naveen"): "Naveen Shanmugasundaram",
+        _norm("shanmugasundaram, naveenkumar"): "Naveen Shanmugasundaram",
+        _norm("naveenkumar shanmugasundaram"): "Naveen Shanmugasundaram",
+        _norm("badugu, aravind kumar"): "Aravind Kumar Badugu",
+        _norm("aravind badugu"): "Aravind Kumar Badugu",
+        _norm("aravind kumar badugu"): "Aravind Kumar Badugu",
+        _norm("s, giridhar"): "Giridhar S",
+        _norm("vemulapalli, reshmita"): "Reshmita",
+        _norm("rick kennedy"): "Rick",
+        _norm("surekha raju anantarapu"): "Surekha Raju",
+        _norm("anwar, mohd faiz"): "Mohd Faiz Anwar",
+        _norm("mohd anwar"): "Mohd Faiz Anwar",
+        _norm("dominick olaes"): "Dominick",
+        _norm("tabitha robertson"): "Tabitha",
+        _norm("mariyadas, abhish"): "Abhish Mariyadas",
+        _norm("abhish m"): "Abhish Mariyadas",
+        _norm("m, kasi"): "Kasi M",
+        _norm("kasi"): "Kasi M",
+        _norm("divya, netti"): "Divya",
+        _norm("megan r"): "Megan",
+        _norm("patil, shankar"): "Shankar",
+        _norm("yadav, trilok"): "Trilok",
+        _norm("sengupta, trisha"): "Trisha",
+        _norm("rauta, brajendra"): "Brajendra",
+        _norm("m g"): "MG",
+        _norm("sikkander, nadeem"): "Nadeem",
+        _norm("Naidu, Priyadarshini"): "Priyadarshini",
+        _norm("nath, koushik"): "Koushik Nath",
+        _norm("raviteja, gade"): "Raviteja",
+        _norm("iligiri, gopikalyani"): "Gopikalyani Iligiri",
+        _norm("gundlapally, sinduja"): "Sinduja",
+        _norm("s, sharavanan"): "Sharavanan",
+        _norm(" tuniki, nitheesh chandra"): "Chandra",
+        _norm("embari, chaitanya"): "Chaitanya",
+        _norm("gowda, manjunath"): "Manjunath Gowda",
+        _norm("andrew o"): "Andrew",
+        _norm("kumar, shailesh"): "Shailesh Kumar",
+        _norm("michael"): "Michael F",
+        _norm("anu nandyala"): "Anu",
+        _norm("kuche"): "Ku Che",
+        _norm("goutham kumar, p"): "P Goutham Kumar",
+    }
+    return aliases.get(key, clean)
+ENT_EXCLUSION_START = pd.Timestamp("2026-04-27")
+ENT_EXCLUDED_PEOPLE = {
+    normalize_person_name(x)
+    for x in [
+        "Aravind Kumar Badugu",
+        "Jagruti Damahe",
+        "Naveen Shanmugasundaram",
+        "Prabhu S",
+    ]
+}
+def is_excluded_from_team_after_date(team: str, week, person: str) -> bool:
+    if str(team or "").strip().upper() != "ENT":
+        return False
+    wk = pd.to_datetime(week, errors="coerce")
+    if pd.isna(wk):
+        return False
+    wk = wk.normalize()
+    if wk < ENT_EXCLUSION_START:
+        return False
+    return normalize_person_name(str(person or "").strip()) in ENT_EXCLUDED_PEOPLE
+def _filter_excluded_people_frame(
+    df_in: pd.DataFrame,
+    team_col: str = "team",
+    week_col: str = "period_date",
+    person_col: str = "person",
+) -> pd.DataFrame:
+    if df_in is None or df_in.empty:
+        return df_in
+    needed = {team_col, week_col, person_col}
+    if not needed.issubset(df_in.columns):
+        return df_in
+    out = df_in.copy()
+    exclude_mask = out.apply(
+        lambda r: is_excluded_from_team_after_date(
+            r.get(team_col), r.get(week_col), r.get(person_col)
+        ),
+        axis=1,
+    )
+    return out.loc[~exclude_mask].copy()
+PSS_GROUPS = {
+    "US": {"Abby", "Claire", "Nick", "Paige", "Gianna"},
+    "MEIC": set(), 
+}
+def filter_people_df_by_group(df_in: pd.DataFrame, team: str, group_name: str | None) -> pd.DataFrame:
+    if df_in is None or df_in.empty or team != "PSS" or not group_name:
+        return df_in
+    out = df_in.copy()
+    if "person" not in out.columns:
+        return out
+    us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
+    out["person"] = out["person"].astype(str).map(normalize_person_name)
+    if group_name == "US":
+        return out[out["person"].isin(us_people)].copy()
+    if group_name == "MEIC":
+        return out[~out["person"].isin(us_people)].copy()
+    return out
+def metric_row_filtered_to_group(row, team: str, group_name: str | None):
+    if team != "PSS" or not group_name:
+        return row
+    us_people = {normalize_person_name(x) for x in PSS_GROUPS["US"]}
+    def keep_person(name: str) -> bool:
+        n = normalize_person_name(name)
+        if group_name == "US":
+            return n in us_people
+        if group_name == "MEIC":
+            return n not in us_people
+        return True
+    row = row.copy()
+    json_person_cols = [
+        "Person Hours",
+        "Outputs by Person",
+        "People in WIP",
+        "non_wip_by_person",
+    ]
+    for col in json_person_cols:
+        if col not in row.index or pd.isna(row[col]):
+            continue
+        try:
+            payload = json.loads(row[col]) if isinstance(row[col], str) else row[col]
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            payload = {k: v for k, v in payload.items() if keep_person(str(k))}
+        elif isinstance(payload, list):
+            payload = [x for x in payload if keep_person(str(x))]
+        row[col] = json.dumps(payload)
+    if "non_wip_activities" in row.index and pd.notna(row["non_wip_activities"]):
+        try:
+            acts = json.loads(row["non_wip_activities"]) if isinstance(row["non_wip_activities"], str) else row["non_wip_activities"]
+            if isinstance(acts, list):
+                acts = [a for a in acts if keep_person(str(a.get("name", "")))]
+                row["non_wip_activities"] = json.dumps(acts)
+        except Exception:
+            pass
+    return row
+PERSON_WEEKLY_HOURS = {
+    "Chelsey": 16.0,
+    "MG": 36.0,
+    "Lindsey": 32.0,
+}
+def weekly_hours_for_person(name: str, default: float = 40.0) -> float:
+    person = normalize_person_name(name)
+    return float(PERSON_WEEKLY_HOURS.get(person, default))
 def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
     _NA_STRINGS = {
         "": np.nan, "-": np.nan, "–": np.nan, "—": np.nan,
@@ -282,8 +398,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         lc = c.lower()
         if lc == "hc in wip":
             canon_map[c] = "HC in WIP"
-        elif lc in ("open complaint timeliness", "open complaints timeliness", "complaint timeliness"):
-            canon_map[c] = "Open Complaint Timeliness"
         elif lc in ("actual hc used", "actual_hc_used", "actual-hc-used"):
             canon_map[c] = "Actual HC used"
         elif lc in ("people in wip", "people_wip", "people-in-wip", "people_wip_list"):
@@ -292,18 +406,7 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
         df = df.rename(columns=canon_map)
     if "period_date" in df.columns:
         df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-    if "Open Complaint Timeliness" in df.columns:
-        s = (df["Open Complaint Timeliness"]
-                .astype(str)
-                .str.strip()
-                .replace({"": np.nan, "—": np.nan, "-": np.nan}))
-        s = s.str.replace("%", "", regex=False).str.replace(",", "", regex=False)
-        v = pd.to_numeric(s, errors="coerce")
-        if pd.notna(v.max()) and float(v.max()) > 1.5:
-            v = v / 100.0
-        df["Open Complaint Timeliness"] = v
-    for col in ["Total Available Hours", "Completed Hours", "Target Output", "Actual Output",
-                "Target UPLH", "Actual UPLH", "HC in WIP", "Actual HC used", "Closures", "Opened"]:
+    for col in ["Completed Hours", "Actual HC used"]:
         if col in df.columns:
             s = (
                 df[col]
@@ -314,10 +417,6 @@ def _postprocess(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(s, errors="coerce")  
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    if {"Actual Output", "Target Output"}.issubset(df.columns):
-        df["Efficiency vs Target"] = (df["Actual Output"] / df["Target Output"]).replace([np.inf, -np.inf], np.nan)
-    if {"Completed Hours", "Total Available Hours"}.issubset(df.columns):
-        df["Capacity Utilization"] = (df["Completed Hours"] / df["Total Available Hours"]).replace([np.inf, -np.inf], np.nan)
     return df
 def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str, float]]:
     payload = row.get("non_wip_activities", "[]")
@@ -327,17 +426,21 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
         activities = []
     if not isinstance(activities, list) or not activities:
         return {}, {}
+    team = row.get("team", "")
+    wk = row.get("period_date")
     import re
     other_team_key = "OTHERTEAMWIP"
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
-        name = normalize_person_name(d.get("name", ""))
+        name = normalize_person_name(str(d.get("name", "")).strip())
         if not name:
             continue
-        act_raw = str(d.get("activity", ""))
-        act_key = re.sub(r"[^A-Z0-9]", "", act_raw.upper())  # normalize
-        if act_key == "OOO":
+        if is_excluded_from_team_after_date(team, wk, name):
+            continue
+        raw_act = str(d.get("activity", "")).strip().upper()
+        act_key = canonical_activity_key(d.get("activity", ""))
+        if act_key == "OOO" or raw_act in {"OOO", "OUT OF OFFICE", "HOLIDAY"}:
             continue
         try:
             hrs = float(d.get("hours", 0) or 0)
@@ -359,65 +462,48 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
     except Exception:
         obj = []
     if not isinstance(obj, list) or not obj:
-        return pd.DataFrame(columns=["Activity", "Day", "Name", "Time"])
+        return pd.DataFrame(columns=["Activity", "Name", "Time"])
+    team = row.get("team", "")
+    wk = row.get("period_date")
     df = pd.DataFrame(obj)
-    for c in ["activity", "day", "name", "hours"]:
+    for c in ["activity", "name", "hours"]:
         if c not in df.columns:
             df[c] = None
-    if "days" not in df.columns:
-        df["days"] = np.nan
     df["hours"] = pd.to_numeric(df["hours"], errors="coerce")
-    df["days"]  = pd.to_numeric(df["days"], errors="coerce")
-    df["day_norm"] = (
-        df["day"]
+    df["activity"] = (
+        df["activity"]
         .astype(str)
         .str.strip()
-        .replace({"": np.nan, "None": np.nan, "nan": np.nan})
+        .replace({
+            "Out of Office": "OOO",
+            "Holiday": "OOO",
+        })
     )
-    grp = (
-        df.groupby(["activity", "name"], as_index=False)
-          .agg(
-              hours=("hours", "sum"),
-              days_known=("days", lambda s: pd.to_numeric(s, errors="coerce").sum(min_count=1)),
-              day_values=("day_norm", lambda s: sorted(set([x for x in s.dropna().unique()]))),
+    out = (
+        df.groupby(["activity", "name"], as_index=False)["hours"]
+          .sum()
+          .rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
+          .assign(
+              Activity=lambda d: d["Activity"].astype(str).str.strip(),
+              Name=lambda d: d["Name"].astype(str).map(normalize_person_name),
           )
     )
-    def _label_row(r):
-        n = r["days_known"]
-        dv = r["day_values"] or []
-        try:
-            n_int = int(n) if pd.notna(n) else None
-        except Exception:
-            n_int = None
-        if n_int is not None:
-            if n_int > 1:
-                return f"{n_int} days"
-            if n_int == 1:
-                return dv[0] if len(dv) == 1 else "Week"
-        if len(dv) > 1:
-            return f"{len(dv)} days"
-        if len(dv) == 1:
-            return dv[0]
-        return "Week"
-    grp["Day"] = grp.apply(_label_row, axis=1)
-    out = (
-        grp.rename(columns={"activity": "Activity", "name": "Name", "hours": "HoursRaw"})
-           [["Activity", "Day", "Name", "HoursRaw"]]
-           .assign(
-               Activity=lambda d: d["Activity"].astype(str).str.strip(),
-               Name=lambda d: d["Name"].astype(str).str.strip(),
-           )
-    )
+    if not out.empty:
+        out = out.loc[
+            ~out.apply(
+                lambda r: is_excluded_from_team_after_date(team, wk, r["Name"]),
+                axis=1,
+            )
+        ].copy()
     out["Time"] = out["HoursRaw"].fillna(0).map(_fmt_hours_minutes)
     out = (
-        out[["Activity", "Day", "Name", "Time", "HoursRaw"]]
-           .sort_values(["Activity", "Name"])
-           .reset_index(drop=True)
+        out[["Activity", "Name", "Time", "HoursRaw"]]
+        .sort_values(["Activity", "Name"])
+        .reset_index(drop=True)
     )
     return out
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
-    import numpy as np
     if cat.empty:
         return cat
     def _canon_activity(label: str) -> str:
@@ -486,9 +572,9 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             label = label.strip()
             if not label:
                 continue
-            label = re.sub(r"\([^)]*$", "", label)       # half-open "( ... "
-            label = re.sub(r"\(.*?\)", "", label)        # full "( ... )"
-            label = re.sub(r"[:\-–—]+$", "", label)      # trailing punctuation
+            label = re.sub(r"\([^)]*$", "", label)   
+            label = re.sub(r"\(.*?\)", "", label)    
+            label = re.sub(r"[:\-–—]+$", "", label)  
             label = label.strip(" ,;:()[]-–—")
             label = re.sub(r"\s+", " ", label).strip()
             label = _canon_activity(label)
@@ -555,55 +641,10 @@ def ahu_person_share_for_week(frame: pd.DataFrame, week, teams_in_view: list[str
         return pd.DataFrame(columns=["team", "period_date", "person", "percent"])
     return pd.concat(out_rows, ignore_index=True)
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def explode_outputs_json(df: pd.DataFrame, col_name: str, key_label: str) -> pd.DataFrame:
-    cols = ["team", "period_date", key_label, "Actual", "Target"]
-    if df.empty or col_name not in df.columns:
-        return pd.DataFrame(columns=cols)
-    def _bad_key(k: str) -> bool:
-        s = str(k).strip()
-        return s in {"", "-", "–", "—"}
-    rows: list[dict] = []
-    sub = df.loc[:, ["team", "period_date", col_name]].dropna(subset=[col_name]).copy()
-    for _, r in sub.iterrows():
-        payload = r[col_name]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            continue
-        if not isinstance(obj, dict):
-            continue
-        for k, vals in obj.items():
-            if _bad_key(k):
-                continue
-            if isinstance(vals, dict):
-                outv = (vals.get("output", None) if "output" in vals else
-                        vals.get("actual", None) if "actual" in vals else
-                        vals.get("Actual", None))
-                tgtv = vals.get("target", vals.get("Target"))
-            else:
-                outv, tgtv = vals, np.nan
-            outv = pd.to_numeric(outv, errors="coerce")
-            tgtv = pd.to_numeric(tgtv, errors="coerce")
-            if pd.isna(outv) and pd.isna(tgtv):
-                continue
-            rows.append({
-                "team": r["team"],
-                "period_date": safe_normalize_date(r["period_date"]),
-                key_label: str(k).strip(),
-                "Actual": outv,
-                "Target": tgtv
-            })
-    out = pd.DataFrame(rows, columns=cols)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
-@st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "People in WIP" not in df.columns:
         return pd.DataFrame(columns=["team", "period_date", "person"])
     sub = df.loc[:, ["team", "period_date", "People in WIP"]].dropna(subset=["People in WIP"]).copy()
-    sub["period_date"] = sub["period_date"].map(safe_normalize_date)
-    sub = sub.dropna(subset=["period_date"])
     BAD_NAMES = {"", "-", "–", "—", "nan", "NaN", "NAN", "n/a", "N/A", "na", "NA", "null", "NULL", "none", "None"}
     def _is_good_name(s: str) -> bool:
         return s.strip() and s.strip() not in BAD_NAMES
@@ -621,6 +662,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
                     return [str(k).strip() for k, v in obj.items() if _is_good_name(str(k))]
             except Exception:
                 pass
+            import re
             parts = [p.strip() for p in re.split(r"[,;\n\r]+", s) if _is_good_name(p)]
             return parts
         if isinstance(x, dict):
@@ -631,12 +673,13 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
         for person in people:
             rows.append({
                 "team": r["team"],
-                "period_date": r["period_date"],
-                "person": normalize_person_name(person),
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": normalize_person_name(person)
             })
     out = pd.DataFrame(rows, columns=["team", "period_date", "person"])
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
@@ -666,38 +709,25 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
-            person_name = normalize_person_name(str(person).strip())
-            team_name = str(r["team"]).strip().upper()
-            keep_zero_capacity_person = (
-                team_name in {"CDS", "NI"}
-                and person_key(person_name) == "peter mchugh"
-            )
-            if (a == 0.0) and (t == 0.0) and not keep_zero_capacity_person:
+            if (a == 0.0) and (t == 0.0):
                 continue
             util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
                 "team": r["team"],
-                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize() if pd.notna(pd.to_datetime(r["period_date"], errors="coerce")) else pd.NaT,
-                "person": person_name,
+                "period_date": pd.to_datetime(r["period_date"], errors="coerce").normalize(),
+                "person": normalize_person_name(str(person).strip()),
                 "Actual Hours": a,
                 "Available Hours": t,
                 "Utilization": util
             })
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(
+        rows,
+        columns=["team","period_date","person","Actual Hours","Available Hours","Utilization"]
+    )
     if not out.empty:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
+    out = _filter_excluded_people_frame(out)
     return out
-PERSON_WEEKLY_HOURS = {
-    "colm larkin": 30.2,
-    "megan mulligan": 31.0,
-    "roland simpson": 37.5,
-    "kara housmann": 37.5,
-    "sarah korthauer": 37.5,
-    "kyle mai": 37.5,
-}
-PERSON_TEAM_WEEKLY_HOURS = {
-    ("peter mchugh", "NI"): 27.75,
-}
 def build_person_weekly_accounting(
     team: str,
     week,
@@ -720,15 +750,13 @@ def build_person_weekly_accounting(
     person_hours = explode_person_hours(metrics_frame)
     wip_people = person_hours.loc[
         (person_hours["team"] == team) & (person_hours["period_date"] == wk),
-        ["person", "Actual Hours", "Available Hours"]
+        ["person", "Actual Hours"]
     ].copy()
     if wip_people.empty:
-        wip_people = pd.DataFrame(columns=["person", "Actual Hours", "Available Hours"])
+        wip_people = pd.DataFrame(columns=["person", "Actual Hours"])
     wip_people["person"] = wip_people["person"].astype(str).str.strip()
     wip_people["Completed Hours"] = pd.to_numeric(wip_people["Actual Hours"], errors="coerce").fillna(0.0)
-    wip_people["Available Hours"] = pd.to_numeric(wip_people["Available Hours"], errors="coerce")
-    available_people = wip_people[["person", "Available Hours"]].copy()
-    wip_people = wip_people[["person", "Completed Hours"]]
+    wip_people = wip_people.drop(columns=["Actual Hours"], errors="ignore")
     acct_other_map, acct_nonother_map = accounted_nonwip_by_person_from_row(nw_row)
     other_df = pd.DataFrame(
         [{"person": str(k).strip(), "Other Team WIP": float(v)} for k, v in acct_other_map.items()]
@@ -751,14 +779,16 @@ def build_person_weekly_accounting(
             if not isinstance(item, dict):
                 continue
             person = normalize_person_name(str(item.get("name", "")).strip())
-            activity = str(item.get("activity", "")).strip().upper()
+            if is_excluded_from_team_after_date(team, wk, person):
+                continue
+            activity_key = canonical_activity_key(item.get("activity", ""))
             try:
                 hrs = float(item.get("hours", 0) or 0)
             except Exception:
                 hrs = 0.0
             if not person or hrs <= 0:
                 continue
-            if activity == "OOO":
+            if activity_key == "OOO":
                 ooo_by_person[person] = ooo_by_person.get(person, 0.0) + hrs
     ooo_df = pd.DataFrame(
         [{"person": k, "OOO Hours": round(v, 2)} for k, v in ooo_by_person.items()]
@@ -781,13 +811,11 @@ def build_person_weekly_accounting(
         return out[["person", value_col]]
     nw_people = _clean_person_col(nw_people, "Non-WIP Hours")
     wip_people = _clean_person_col(wip_people, "Completed Hours")
-    available_people = _clean_person_col(available_people, "Available Hours")
     other_df = _clean_person_col(other_df, "Other Team WIP")
     acct_df = _clean_person_col(acct_df, "Accounted Non-WIP")
     ooo_df = _clean_person_col(ooo_df, "OOO Hours")
     nw_people = nw_people.groupby("person", as_index=False)["Non-WIP Hours"].sum()
     wip_people = wip_people.groupby("person", as_index=False)["Completed Hours"].sum()
-    available_people = available_people.groupby("person", as_index=False)["Available Hours"].sum()
     other_df = other_df.groupby("person", as_index=False)["Other Team WIP"].sum()
     acct_df = acct_df.groupby("person", as_index=False)["Accounted Non-WIP"].sum()
     ooo_df = ooo_df.groupby("person", as_index=False)["OOO Hours"].sum()
@@ -803,339 +831,68 @@ def build_person_weekly_accounting(
         people
         .merge(nw_people.astype({"person": "string"}), on="person", how="left")
         .merge(wip_people.astype({"person": "string"}), on="person", how="left")
-        .merge(available_people.astype({"person": "string"}), on="person", how="left")
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
-        .fillna(0.0)
     )
-    out["person_key"] = out["person"].map(person_key)
-    irl_people_norm = {person_key(x) for x in (irl_people or set())}
-    base_expected = pd.Series(
-        np.where(
-            out["person_key"].isin(irl_people_norm),
-            39.0,
-            float(week_hours),
-        ),
-        index=out.index,
-        dtype="float64",
+    numeric_cols = [
+        "Non-WIP Hours",
+        "Completed Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+        "OOO Hours",
+    ]
+    for col in numeric_cols:
+        if col not in out.columns:
+            out[col] = 0.0
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0)
+    out["person"] = out["person"].astype("string")
+    out["person_key"] = out["person"].astype(str).str.strip().str.lower()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    PERSON_WEEKLY_HOURS = {
+        "chelsey": 16.0,
+        "mg": 36.0,
+        "lindsey": 32.0,
+    }
+    def get_expected_hours(person_key: str, default_hours: float, irl_people_norm: set[str]) -> float:
+        if person_key in PERSON_WEEKLY_HOURS:
+            return PERSON_WEEKLY_HOURS[person_key]
+        if person_key in irl_people_norm:
+            return 39.0
+        return float(default_hours)
+    out["Expected Hours"] = out["person_key"].apply(
+        lambda p: get_expected_hours(p, week_hours, irl_people_norm)
     )
-    team_key = str(team).strip().upper()
-    team_override_expected = out["person_key"].map(
-        lambda p: PERSON_TEAM_WEEKLY_HOURS.get((p, team_key), np.nan)
-    ).astype("float64")
-    person_override_expected = out["person_key"].map(PERSON_WEEKLY_HOURS).astype("float64")
-    out["Expected Hours"] = (
-        team_override_expected
-        .combine_first(person_override_expected)
-        .combine_first(base_expected)
-    )
-    if team_key in {"CDS", "NI"}:
-        peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
-        out.loc[
-            out["person_key"].eq("peter mchugh") & peter_available.notna(),
-            "Expected Hours"
-        ] = peter_available
-    out["OOO Hours"] = pd.to_numeric(out["OOO Hours"], errors="coerce").fillna(0.0)
-    out["Non-WIP Hours"] = pd.to_numeric(out["Non-WIP Hours"], errors="coerce").fillna(0.0)
-    out["Completed Hours"] = pd.to_numeric(out["Completed Hours"], errors="coerce").fillna(0.0)
-    out["Other Team WIP"] = pd.to_numeric(out["Other Team WIP"], errors="coerce").fillna(0.0)
-    out["Accounted Non-WIP"] = pd.to_numeric(out["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+    calc_cols = [
+        "Expected Hours",
+        "OOO Hours",
+        "Non-WIP Hours",
+        "Completed Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+    ]
+    for col in calc_cols:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0).astype("float64")
     non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
-    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
+    out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total).astype("float64")
     remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
-    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
+    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip).astype("float64")
     out["Unaccounted"] = (
         out["Expected Hours"]
         - out["Completed Hours"]
         - out["OOO Hours"]
         - out["Other Team WIP"]
         - out["Accounted Non-WIP"]
-    ).clip(lower=0.0)
+    ).clip(lower=0.0).astype("float64")
     out["Total Used"] = (
         out["Completed Hours"]
         + out["OOO Hours"]
         + out["Other Team WIP"]
         + out["Accounted Non-WIP"]
-    )
+    ).astype("float64")
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
-def _find_first_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    for c in candidates:
-        if c in df.columns:
-            return c
-    return None
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def explode_cell_station_hours(df: pd.DataFrame) -> pd.DataFrame:
-    col = _find_first_col(
-        df,
-        ["Cell/Station Hours", "Cell Station Hours", "Hours by Cell/Station", "Cell Hours", "Station Hours"]
-    )
-    if not col or df.empty or col not in df.columns:
-        return pd.DataFrame(columns=["team", "period_date", "cell_station", "Actual Hours", "Available Hours"])
-    sub = df.loc[:, ["team", "period_date", col]].dropna(subset=[col]).copy()
-    rows: list[dict] = []
-    for _, r in sub.iterrows():
-        payload = r[col]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-            if not isinstance(obj, dict):
-                continue
-        except Exception:
-            continue
-        for cell, vals in obj.items():
-            if isinstance(vals, dict):
-                a = pd.to_numeric((vals or {}).get("actual"), errors="coerce")
-                t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
-            else:
-                a = pd.to_numeric(vals, errors="coerce")
-                t = np.nan
-            rows.append({
-                "team": r["team"],
-                "period_date": safe_normalize_date(r["period_date"]),
-                "cell_station": str(cell).strip(),
-                "Actual Hours": a,
-                "Available Hours": t,
-            })
-    out = pd.DataFrame(rows)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
-def _maybe_as_float(x):
-    try:
-        return float(x)
-    except Exception:
-        return np.nan
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def explode_outputs_by_cell_person(df: pd.DataFrame, team: str) -> pd.DataFrame:
-    col = _find_first_col(
-        df,
-        [
-            "Output by Cell/Station - by person",
-            "Outputs by Cell/Station",   
-        ]
-    )
-    cols = ["team","period_date","cell_station","person","Actual","Target"]
-    if df.empty or col not in df.columns:
-        return pd.DataFrame(columns=cols)
-    sub = df.loc[df["team"] == team, ["team","period_date", col]].dropna(subset=[col]).copy()
-    rows = []
-    for _, r in sub.iterrows():
-        payload = r[col]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            obj = None
-        if not isinstance(obj, dict):
-            continue
-        for station, vals in obj.items():
-            if isinstance(vals, dict) and any(isinstance(v, dict) for v in vals.values()):
-                for person, pv in vals.items():
-                    if not isinstance(pv, dict):
-                        continue
-                    a = _maybe_as_float(pv.get("actual", pv.get("output", pv.get("Actual"))))
-                    t = _maybe_as_float(pv.get("target", pv.get("Target")))
-                    if pd.isna(a) and pd.isna(t):
-                        continue
-                    rows.append({
-                        "team": r["team"],
-                        "period_date": safe_normalize_date(r["period_date"]),
-                        "cell_station": str(station).strip(),
-                        "person": normalize_person_name(str(person).strip()),
-                        "Actual": a,
-                        "Target": t,
-                    })
-    out = pd.DataFrame(rows, columns=cols)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def explode_cell_person_hours(df: pd.DataFrame, team: str) -> pd.DataFrame:
-    col = _find_first_col(
-        df,
-        [
-            "Hours by Cell/Station - by person",   # <- NEW: your per-person column
-            "Hours by Cell Station - by person",   # <- tolerant variant
-            "Cell/Station Hours",                  # totals (no person breakdown)
-            "Hours by Cell/Station",
-            "Cell Station Hours",
-            "Cell Hours",
-            "Station Hours",
-        ]
-    )
-    cols = ["team","period_date","cell_station","person","Actual Hours","Available Hours"]
-    if not col or df.empty or col not in df.columns:
-        return pd.DataFrame(columns=cols)
-    sub = df.loc[df["team"] == team, ["team","period_date", col]].dropna(subset=[col]).copy()
-    rows = []
-    for _, r in sub.iterrows():
-        payload = r[col]
-        try:
-            obj = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            obj = None
-        if not isinstance(obj, dict):
-            continue
-        for station, per in obj.items():
-            if not isinstance(per, dict):
-                continue
-            if all(not isinstance(v, dict) for v in per.values()):
-                for person, hours in per.items():
-                    a = _maybe_as_float(hours)
-                    if pd.isna(a):
-                        continue
-                    rows.append({
-                        "team": r["team"],
-                        "period_date": safe_normalize_date(r["period_date"]),
-                        "cell_station": str(station).strip(),
-                        "person": normalize_person_name(str(person).strip()),
-                        "Actual Hours": a,
-                        "Available Hours": np.nan,
-                    })
-                continue
-            for person, pv in per.items():
-                if not isinstance(pv, dict):
-                    continue
-                a = _maybe_as_float(pv.get("actual", pv.get("hours")))
-                t = _maybe_as_float(pv.get("available", pv.get("target")))
-                if pd.isna(a) and pd.isna(t):
-                    continue
-                rows.append({
-                    "team": r["team"],
-                    "period_date": safe_normalize_date(r["period_date"]),
-                    "cell_station": str(station).strip(),
-                    "person": normalize_person_name(str(person).strip()),
-                    "Actual Hours": a,
-                    "Available Hours": t,
-                })
-    out = pd.DataFrame(rows, columns=cols)
-    if not out.empty:
-        out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
-    return out
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_person_station_hours_over_time(frame: pd.DataFrame, team: str, person: str) -> pd.DataFrame:
-    hrs = explode_cell_person_hours(frame, team)
-    if hrs.empty:
-        return pd.DataFrame(columns=["period_date", "cell_station", "Actual Hours", "Available Hours"])
-    sub = (
-        hrs[(hrs["person"] == person)]
-        .copy()
-        .assign(
-            **{
-                "Actual Hours": pd.to_numeric(hrs.loc[hrs["person"] == person, "Actual Hours"], errors="coerce"),
-                "Available Hours": pd.to_numeric(hrs.loc[hrs["person"] == person, "Available Hours"], errors="coerce"),
-            }
-        )
-        .dropna(subset=["period_date", "cell_station"])
-    )
-    if not sub.empty:
-        sub = (sub
-               .groupby(["period_date", "cell_station"], as_index=False)
-               .agg({"Actual Hours": "sum", "Available Hours": "sum"}))
-    return sub.sort_values(["period_date", "cell_station"])
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_station_person_hours_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
-    hrs = explode_cell_person_hours(frame, team)
-    if hrs.empty:
-        return pd.DataFrame(columns=["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"])
-    sub = hrs[(hrs["cell_station"] == station)].copy()
-    if sub.empty:
-        return pd.DataFrame(columns=["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"])
-    sub["Actual Hours"] = pd.to_numeric(sub["Actual Hours"], errors="coerce")
-    sub["Available Hours"] = pd.to_numeric(sub["Available Hours"], errors="coerce")
-    sub["Delta"] = sub["Actual Hours"] - sub["Available Hours"]
-    sub["LabelGroup"] = np.where(
-        sub["Available Hours"].notna(),
-        np.where(sub["Delta"] >= 0, "pos", "neg"),
-        "none"
-    )
-    keep = ["period_date","person","Actual Hours","Available Hours","Delta","LabelGroup"]
-    return sub[keep].sort_values(["period_date","person"])
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_station_person_outputs_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
-    cp = explode_outputs_by_cell_person(frame, team)
-    if cp.empty:
-        return pd.DataFrame(columns=["period_date","person","Actual","Target","Delta","LabelGroup"])
-    sub = cp[(cp["cell_station"] == station)].copy()
-    if sub.empty:
-        return pd.DataFrame(columns=["period_date","person","Actual","Target","Delta","LabelGroup"])
-    sub["Delta"] = sub["Actual"] - sub["Target"]
-    sub["LabelGroup"] = np.where(
-        sub["Target"].notna(),
-        np.where(sub["Delta"] >= 0, "pos", "neg"),
-        "none"
-    )
-    return sub.sort_values(["period_date","person"])
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_station_person_uplh_over_time(frame: pd.DataFrame, team: str, station: str) -> pd.DataFrame:
-    outs = explode_outputs_by_cell_person(frame, team)
-    hrs  = explode_cell_person_hours(frame, team)
-    if outs.empty or hrs.empty:
-        return pd.DataFrame(columns=[
-            "period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"
-        ])
-    m = (
-        outs[outs["cell_station"] == station]
-        .merge(hrs[hrs["cell_station"] == station][["period_date","person","Actual Hours"]],
-               on=["period_date","person"], how="left")
-        .dropna(subset=["Actual"])
-    )
-    if m.empty:
-        return pd.DataFrame(columns=[
-            "period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"
-        ])
-    m["Actual UPLH"] = (m["Actual"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["Target UPLH"] = (m["Target"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["Delta"] = m["Actual UPLH"] - m["Target UPLH"]
-    m["LabelGroup"] = np.where(
-        m["Target UPLH"].notna(),
-        np.where(m["Delta"] >= 0, "pos", "neg"),
-        "none"
-    )
-    keep = ["period_date","person","Actual","Target","Actual Hours","Actual UPLH","Target UPLH","Delta","LabelGroup"]
-    return m[keep].sort_values(["period_date","person"])
-def safe_normalize_date(x):
-    ts = pd.to_datetime(x, errors="coerce")
-    return pd.NaT if pd.isna(ts) else ts.normalize()
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_uplh_by_person_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
-    outp = explode_outputs_json(frame[frame["team"] == team], "Outputs by Person", "person")
-    if outp.empty:
-        return pd.DataFrame(columns=[
-            "team", "period_date", "person",
-            "Actual Output", "Target Output", "Actual Hours",
-            "Actual UPLH", "Target UPLH"
-        ])
-    hrs = explode_person_hours(frame[frame["team"] == team])[["period_date", "person", "Actual Hours"]]
-    m = (
-        outp.merge(hrs, on=["period_date", "person"], how="left")
-            .rename(columns={"Actual": "Actual Output", "Target": "Target Output"})
-    )
-    m["Actual UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["Target UPLH"] = (m["Target Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["team"] = team
-    cols = ["team", "period_date", "person", "Actual Output", "Target Output", "Actual Hours", "Actual UPLH", "Target UPLH"]
-    return m[cols].dropna(subset=["Actual Hours"])  # keep rows with hours; UPLH itself can be NaN if target missing
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_uplh_by_cell_long(frame: pd.DataFrame, team: str) -> pd.DataFrame:
-    outc = explode_outputs_json(frame[frame["team"] == team], "Outputs by Cell/Station", "cell_station")
-    if outc.empty:
-        return pd.DataFrame(columns=[
-            "team", "period_date", "cell_station",
-            "Actual Output", "Target Output", "Actual Hours",
-            "Actual UPLH", "Target UPLH"
-        ])
-    hc = explode_cell_station_hours(frame[frame["team"] == team])[["period_date", "cell_station", "Actual Hours"]]
-    m = (
-        outc.merge(hc, on=["period_date", "cell_station"], how="left")
-            .rename(columns={"Actual": "Actual Output", "Target": "Target Output"})
-    )
-    m["Actual UPLH"] = (m["Actual Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["Target UPLH"] = (m["Target Output"] / m["Actual Hours"]).replace([np.inf, -np.inf], np.nan)
-    m["team"] = team
-    cols = ["team", "period_date", "cell_station", "Actual Output", "Target Output", "Actual Hours", "Actual UPLH", "Target UPLH"]
-    return m[cols].dropna(subset=["Actual Hours"])
 data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
@@ -1157,6 +914,13 @@ if "selected_team" not in st.session_state:
         st.session_state.selected_team = existing_teams[0]
     elif _all_wip_teams:
         st.session_state.selected_team = _all_wip_teams[0]
+PSS_GROUP_OPTIONS = ["All", "US", "MEIC"]
+def _first_valid_pss_group(value):
+    return value if value in PSS_GROUP_OPTIONS else "All"
+if "selected_pss_group" not in st.session_state:
+    st.session_state.selected_pss_group = _first_valid_pss_group(
+        st.session_state.get("pss_group", "All")
+    )
 def kpi_card(
     container,
     label: str,
@@ -1194,12 +958,83 @@ def _capacity_subtext(hours_val, capacity_val) -> str | None:
     pct = float(hours_val) / float(capacity_val)
     hrs_per_day = pct * 8.0
     return f"{pct:.1%} of capacity • {hrs_per_day:.1f}h/day"
+def merged_people_count_for_week(team: str, week, metrics_frame: pd.DataFrame, nw_frame: pd.DataFrame) -> int:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    if nw_frame is not None and not nw_frame.empty:
+        raw_nw = nw_frame.copy()
+        raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
+        if "people_count" in raw_nw.columns:
+            team_match = raw_nw.loc[
+                (raw_nw["team"] == team) & (raw_nw["period_date"] == wk),
+                "people_count",
+            ]
+            team_match = pd.to_numeric(team_match, errors="coerce").dropna()
+            if not team_match.empty:
+                return int(team_match.iloc[0])
+    a = explode_non_wip_by_person(nw_frame)
+    b = explode_person_hours(metrics_frame)
+    c = explode_people_in_wip(metrics_frame)
+    names = set()
+    for df_, person_col in [(a, "person"), (b, "person"), (c, "person")]:
+        sub = df_.loc[
+            (df_["team"] == team) & (df_["period_date"] == wk),
+            [person_col]
+        ].copy()
+        if not sub.empty:
+            vals = (
+                sub[person_col]
+                .astype(str)
+                .map(normalize_person_name)
+                .str.strip()
+            )
+            names.update(x for x in vals if x)
+    return len(names)
 def percent_color(v: float | None, threshold: float, invert: bool = False) -> str:
     if v is None or pd.isna(v):
         return "#111827"
     good = (v >= threshold) if not invert else (v <= threshold)
     return "#22c55e" if good else "#ef4444"
-st.markdown("<h1 style='text-align: center;'>CRM Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>NS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
+def ent_capacity_hours_for_week(
+    team: str,
+    week,
+    nw_frame: pd.DataFrame,
+    irl_people: set[str] | None = None,
+) -> float:
+    wk = pd.to_datetime(week, errors="coerce").normalize()
+    irl_people_norm = {str(x).strip().lower() for x in (irl_people or set())}
+    if nw_frame is None or nw_frame.empty:
+        return 0.0
+    raw_nw = nw_frame.copy()
+    raw_nw["period_date"] = pd.to_datetime(
+        raw_nw["period_date"], errors="coerce"
+    ).dt.normalize()
+    row = raw_nw.loc[
+        (raw_nw["team"] == team) & (raw_nw["period_date"] == wk)
+    ]
+    if row.empty:
+        return 0.0
+    people_count_series = pd.to_numeric(
+        row["people_count"], errors="coerce"
+    ).dropna()
+    people_count = int(people_count_series.iloc[0]) if not people_count_series.empty else 0
+    irl_count = 0
+    if "non_wip_by_person" in row.columns:
+        payload = row.iloc[0].get("non_wip_by_person")
+        try:
+            obj = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            obj = {}
+        if isinstance(obj, dict):
+            names = {
+                normalize_person_name(str(k).strip()).strip().lower()
+                for k in obj.keys()
+                if str(k).strip()
+            }
+            irl_count = sum(1 for n in names if n in irl_people_norm)
+    irl_count = min(irl_count, people_count)
+    non_irl_count = max(people_count - irl_count, 0)
+    return float((irl_count * 39.0) + (non_irl_count * 40.0))
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
     label,
@@ -1215,16 +1050,23 @@ if nonwip_mode:
     st.markdown("### Non-WIP Overview")
     teams_nw = sorted([t for t in nw["team"].dropna().unique()])
     c_team, c_week = st.columns(2)
-    preferred_team = st.session_state.get("selected_team")
-    if preferred_team not in teams_nw:
-        preferred_team = _first_valid_team(preferred_team, teams_nw)
+    preferred_team = _first_valid_team(
+        st.session_state.get("selected_team"),
+        teams_nw,
+    )
     if preferred_team is not None:
         st.session_state["nw_team"] = preferred_team
+    if "selected_pss_group" not in st.session_state:
+        st.session_state.selected_pss_group = "All"
     def _sync_from_nonwip_team():
         team = st.session_state.get("nw_team")
         if team:
             st.session_state.selected_team = team
             st.session_state.teams_sel = [team]
+    def _sync_from_pss_group():
+        st.session_state.selected_pss_group = _first_valid_pss_group(
+            st.session_state.get("pss_group", "All")
+        )
     with c_team:
         team_nw = st.selectbox(
             "Team",
@@ -1232,14 +1074,35 @@ if nonwip_mode:
             key="nw_team",
             on_change=_sync_from_nonwip_team,
         )
+        pss_group = None
+        if team_nw == "PSS":
+            st.session_state["pss_group"] = _first_valid_pss_group(
+                st.session_state.get("selected_pss_group", "All")
+            )
+            pss_group = st.selectbox(
+                "Group",
+                options=PSS_GROUP_OPTIONS,
+                key="pss_group",
+                on_change=_sync_from_pss_group,
+            )
+        else:
+            pss_group = None
     st.session_state.selected_team = team_nw
     st.session_state.teams_sel = [team_nw]
+    if team_nw == "PSS":
+        st.session_state.selected_pss_group = _first_valid_pss_group(pss_group)
+    today_nw = pd.Timestamp.today().normalize()
     weeks_nw = sorted(
-        pd.to_datetime(nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()),
+        [
+            d for d in pd.to_datetime(
+                nw.loc[nw["team"] == team_nw, "period_date"].dropna().unique()
+            )
+            if pd.notna(d) and pd.to_datetime(d).normalize() <= today_nw
+        ],
         reverse=True
     )
     if not weeks_nw:
-        st.info("No weeks available for this team.")
+        st.info("No weeks available for this team up to today.")
         st.stop()
     with c_week:
         week_nw = st.selectbox(
@@ -1255,6 +1118,7 @@ if nonwip_mode:
         st.info("No Non-WIP row for that team/week.")
         st.stop()
     row = sel.iloc[0]
+    row = metric_row_filtered_to_group(row, team_nw, pss_group if team_nw == "PSS" else None)
     if "% Non-WIP" in row.index and pd.notna(row["% Non-WIP"]):
         pct_non_wip = float(row["% Non-WIP"])
     else:
@@ -1280,60 +1144,73 @@ if nonwip_mode:
             """,
             unsafe_allow_html=True,
         )
-    c1, c2, c3, c4 = st.columns(4)
-    wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
-    wip_hours_val = (
-        float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
-        if not wip_match.empty and "Completed Hours" in wip_match.columns
-        else np.nan
-    )
-    TEAM_WEEKLY_HOURS = {
-        "CPT": 37.75,
-        "CDS": 37.75,
-        "NI": 37.75,
-        "DS": 37.5,
-        "LIT & LETTERS": 37.5,
-    }
-    team_key = str(team_nw).strip().upper()
-    team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
-    _ppl_hours_kpi = explode_person_hours(df)
-    _ppl_in_wip_kpi = explode_people_in_wip(df)
-    people_count_merged = merged_people_count_for_week(
-        team=team_nw,
-        week=week_nw,
-        nw_frame=nw,
-        person_hours=_ppl_hours_kpi,
-        people_in_wip=_ppl_in_wip_kpi,
-    )
+    c1, c2, c3, c4, c5 = st.columns(5)
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people_kpi = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
-        nw_row=row,
+        nw_row=row,            # already filtered for PSS group
         metrics_frame=df,
         nw_frame=nw,
-        week_hours=team_week_hours,
-        irl_people=set(),
+        week_hours=40.0,
+        irl_people=team_irl_people,
     )
-    if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns:
-        capacity_val = float(
-            pd.to_numeric(wk_people_kpi["Expected Hours"], errors="coerce").fillna(0.0).sum()
+    if team_nw == "PSS":
+        wk_people_kpi = filter_people_df_by_group(wk_people_kpi, team_nw, pss_group)
+    wk_people_kpi = wk_people_kpi.copy()
+    num_cols = [
+        "Completed Hours",
+        "Non-WIP Hours",
+        "OOO Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+        "Unaccounted",
+        "Expected Hours",
+    ]
+    for col in num_cols:
+        if col in wk_people_kpi.columns:
+            wk_people_kpi[col] = pd.to_numeric(wk_people_kpi[col], errors="coerce").fillna(0.0)
+    people_count_val = (
+        float(
+            wk_people_kpi["person"]
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .nunique()
         )
-    elif people_count_merged > 0:
-        capacity_val = float(people_count_merged * team_week_hours)
-    else:
-        capacity_val = np.nan
-    nonwip_hours_val = float(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) \
-        if pd.notna(pd.to_numeric(row.get("total_non_wip_hours", np.nan), errors="coerce")) else np.nan
-    ooo_hours_val = float(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) \
-        if pd.notna(pd.to_numeric(row.get("OOO Hours", np.nan), errors="coerce")) else 0.0
-    used_hours = (
-        (0.0 if pd.isna(wip_hours_val) else float(wip_hours_val))
-        + (0.0 if pd.isna(nonwip_hours_val) else float(nonwip_hours_val))
-        + (0.0 if pd.isna(ooo_hours_val) else float(ooo_hours_val))
+        if not wk_people_kpi.empty and "person" in wk_people_kpi.columns
+        else np.nan
+    )
+    wip_hours_val = (
+        float(wk_people_kpi["Completed Hours"].sum())
+        if not wk_people_kpi.empty and "Completed Hours" in wk_people_kpi.columns
+        else np.nan
+    )
+    other_team_wip_hours_val = (
+        float(wk_people_kpi["Other Team WIP"].sum())
+        if not wk_people_kpi.empty and "Other Team WIP" in wk_people_kpi.columns
+        else 0.0
+    )
+    nonwip_hours_val = (
+        float(wk_people_kpi["Accounted Non-WIP"].sum())
+        if not wk_people_kpi.empty and "Accounted Non-WIP" in wk_people_kpi.columns
+        else np.nan
+    )
+    ooo_hours_val = (
+        float(wk_people_kpi["OOO Hours"].sum())
+        if not wk_people_kpi.empty and "OOO Hours" in wk_people_kpi.columns
+        else 0.0
     )
     unaccounted_hours_val = (
-        max(float(capacity_val) - used_hours, 0.0)
-        if pd.notna(capacity_val)
+        float(wk_people_kpi["Unaccounted"].sum())
+        if not wk_people_kpi.empty and "Unaccounted" in wk_people_kpi.columns
+        else np.nan
+    )
+    capacity_val = (
+        float(wk_people_kpi["Expected Hours"].sum())
+        if not wk_people_kpi.empty and "Expected Hours" in wk_people_kpi.columns
         else np.nan
     )
     capacity_pct_basis = capacity_val
@@ -1342,6 +1219,11 @@ if nonwip_mode:
     wip_pct = (
         wip_hours_val / capacity_pct_basis
         if pd.notna(wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
+        else np.nan
+    )
+    other_team_wip_pct = (
+        other_team_wip_hours_val / capacity_pct_basis
+        if pd.notna(other_team_wip_hours_val) and pd.notna(capacity_pct_basis) and capacity_pct_basis > 0
         else np.nan
     )
     nonwip_pct = (
@@ -1402,6 +1284,13 @@ if nonwip_mode:
     )
     kpi_card(
         c2,
+        "Other Team WIP",
+        other_team_wip_hours_val,
+        fmt="{:,.1f}",
+        subtext=_capacity_subtext(other_team_wip_hours_val, capacity_pct_basis),
+    )
+    kpi_card(
+        c3,
         "Non-WIP Hours",
         nonwip_hours_val,
         fmt="{:,.1f}",
@@ -1409,7 +1298,7 @@ if nonwip_mode:
         subtext=_capacity_subtext(nonwip_hours_val, capacity_pct_basis),
     )
     kpi_card(
-        c3,
+        c4,
         "OOO Hours",
         ooo_hours_val,
         fmt="{:,.1f}",
@@ -1419,7 +1308,7 @@ if nonwip_mode:
         ),
     )
     kpi_card(
-        c4,
+        c5,
         "Unaccounted Hours",
         unaccounted_hours_val,
         fmt="{:,.1f}",
@@ -1427,33 +1316,28 @@ if nonwip_mode:
     )
     st.markdown("---")
     st.markdown("#### Non-WIP Activities")
-    if "non_wip_activities" not in sel.columns or sel.iloc[0].get("non_wip_activities", "") in ("", "[]", None):
+    if "non_wip_activities" not in row.index or row.get("non_wip_activities", "") in ("", "[]", None):
         st.info("No Non-WIP activities recorded for this selection.")
     else:
-        act_tbl = build_ooo_table_from_row(sel.iloc[0])
+        act_tbl = build_ooo_table_from_row(row)
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
             display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
             st.dataframe(display_tbl, width="stretch", hide_index=True)
-    TEAM_WEEKLY_HOURS = {
-        "CPT": 37.75,
-        "CDS": 37.75,
-        "NI": 37.75,
-        "DS": 37.5,
-        "LIT & LETTERS": 37.5,
-    }
-    team_key = str(team_nw).strip().upper()
-    team_week_hours = TEAM_WEEKLY_HOURS.get(team_key, 40.0)
+    teams_cfg = load_team_config()
+    team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people = build_person_weekly_accounting(
         team=team_nw,
         week=week_nw,
         nw_row=row,
         metrics_frame=df,
         nw_frame=nw,
-        week_hours=team_week_hours,
-        irl_people=set(),
+        week_hours=40.0,
+        irl_people=team_irl_people,
     )
+    if team_nw == "PSS":
+        wk_people = filter_people_df_by_group(wk_people, team_nw, pss_group)
     if wk_people.empty:
         st.info("No per-person weekly breakdown for this selection.")
     else:
@@ -1530,9 +1414,9 @@ if nonwip_mode:
                     title="Person",
                     sort=order_people,
                     axis=alt.Axis(
-                        labelAngle=-45,
-                        labelOverlap=False,   # show all labels
-                        labelLimit=0,         # don't truncate names
+                        labelAngle=-35,
+                        labelLimit=0,
+                        labelOverlap=False,
                     ),
                 ),
                 y=alt.Y(
@@ -1566,15 +1450,15 @@ if nonwip_mode:
         )
         chart = (outline + ref + bars) \
             .properties(
-                height=300,
+                height=340,
                 padding={"left": 8, "right": 12, "top": 36, "bottom": 64},
             ) \
             .configure_axis(labelOverlap=True) \
             .configure_view(stroke=None)
         st.altair_chart(chart, width="stretch")
         st.markdown("#### Non-WIP Activities")
-        if "non_wip_activities" in sel.columns and sel.iloc[0].get("non_wip_activities", "") not in ("", "[]", None):
-            act_tbl2 = build_ooo_table_from_row(sel.iloc[0])
+        if "non_wip_activities" in row.index and row.get("non_wip_activities", "") not in ("", "[]", None):
+            act_tbl2 = build_ooo_table_from_row(row)
             if not act_tbl2.empty and "HoursRaw" in act_tbl2.columns:
                 cat = (
                     act_tbl2.groupby("Activity", as_index=False)["HoursRaw"]
@@ -1607,45 +1491,11 @@ if nonwip_mode:
                             ],
                         )
                         .properties(
-                            height=420,
+                            height=320,
                             padding={"left": 8, "right": 12, "top": 16, "bottom": 80},
                         )
                     )
                     st.altair_chart(act_chart, width="stretch")
-    st.markdown("#### Team Trends")
-    team_hist = nw[nw["team"] == team_nw].dropna(subset=["period_date"]).sort_values("period_date")
-    if not team_hist.empty:
-        t1, t2 = st.columns(2)
-        with t1:
-            ch1 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("total_non_wip_hours:Q", title="Total Non-WIP Hours"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("total_non_wip_hours:Q", title="Non-WIP Hours", format=",.1f"),
-                    ],
-                )
-                .properties(height=240, title="Total Non-WIP Hours")
-            )
-            st.altair_chart(ch1, width="stretch")
-        with t2:
-            ch2 = (
-                alt.Chart(team_hist)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X("period_date:T", title="Week"),
-                    y=alt.Y("% Non-WIP:Q", title="% Non-WIP"),
-                    tooltip=[
-                        alt.Tooltip("period_date:T", title="Date"),
-                        alt.Tooltip("% Non-WIP:Q", title="% Non-WIP", format=",.2f"),
-                    ],
-                )
-                .properties(height=240, title="% Non-WIP")
-            )
-            st.altair_chart(ch2, width="stretch")
     st.stop()
 if df.empty:
     st.warning("No data found yet. Make sure metrics_aggregate_dev.csv exists and has the 'All Metrics' sheet.")
@@ -1670,7 +1520,10 @@ def _set_qp_teams(values: list[str]) -> None:
 def _sets_equal(a, b) -> bool:
     return set(a) == set(b)
 teams = sorted([t for t in df["team"].dropna().unique()])
-default_team = _first_valid_team(st.session_state.get("selected_team"), teams)
+default_team = _first_valid_team(
+    st.session_state.get("selected_team"),
+    teams,
+)
 default_teams = [default_team] if default_team else []
 if "teams_sel" not in st.session_state:
     saved = [t for t in teams if t in _get_qp_teams()]
@@ -1684,20 +1537,20 @@ has_dates = df["period_date"].notna().any()
 min_date = pd.to_datetime(df["period_date"].min()).date() if has_dates else None
 max_date = pd.to_datetime(df["period_date"].max()).date() if has_dates else None
 if has_dates and min_date and max_date:
-    if "start_date" not in st.session_state or st.session_state["start_date"] is None:
+    if "start_date" not in st.session_state:
         st.session_state["start_date"] = min_date
-    if "end_date" not in st.session_state or st.session_state["end_date"] is None:
-        st.session_state["end_date"] = max_date
-    st.session_state["start_date"] = min(max(st.session_state["start_date"], min_date), max_date)
-    st.session_state["end_date"] = min(max(st.session_state["end_date"], min_date), max_date)
-    if st.session_state["start_date"] > st.session_state["end_date"]:
-        st.session_state["start_date"] = min_date
+    if "end_date" not in st.session_state:
         st.session_state["end_date"] = max_date
     start = st.session_state["start_date"]
     end = st.session_state["end_date"]
+    if start > end:
+        st.error("Start date cannot be after end date!")
+        start, end = min_date, max_date
+        st.session_state["start_date"] = start
+        st.session_state["end_date"] = end
 else:
     start, end = None, None
-col1, col2, col3 = st.columns([2, 2, 6], gap="large")
+col1, col2 = st.columns([6, 6], gap="large")
 with col1:
     selected_teams = st.multiselect("Teams", teams, key="teams_sel")
 if selected_teams:
@@ -1719,157 +1572,7 @@ latest = (f.sort_values(["team", "period_date"])
             .tail(1)
             .copy()
 )
-
-tot_target = latest["Target Output"].sum(skipna=True)
-tot_actual = latest["Actual Output"].sum(skipna=True)
-tot_tahl  = latest["Total Available Hours"].sum(skipna=True)
-tot_chl   = latest["Completed Hours"].sum(skipna=True)
-tot_hc_wip = latest["HC in WIP"].sum(skipna=True) if "HC in WIP" in latest.columns else np.nan
 tot_hc_used = latest["Actual HC used"].sum(skipna=True) if "Actual HC used" in latest.columns else np.nan
-target_uplh = (tot_target / tot_tahl) if tot_tahl else np.nan
-actual_uplh = (tot_actual / tot_chl)  if tot_chl else np.nan
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_person_station_outputs_over_time(df, team_name, person):
-    import json
-    rows = []
-    col = "Output by Cell/Station - by person"
-    if col not in df.columns:
-        return pd.DataFrame()
-    sub = df.loc[df["team"] == team_name, ["period_date", col]].dropna(subset=[col]).copy()
-    for _, r in sub.iterrows():
-        pdte = pd.to_datetime(r["period_date"]).normalize()
-        payload = r[col]
-        try:
-            data = json.loads(payload) if isinstance(payload, str) else payload
-        except Exception:
-            continue
-        if not isinstance(data, dict):
-            continue
-        for station, person_map in data.items():
-            if not isinstance(person_map, dict):
-                continue
-            if person in person_map and isinstance(person_map[person], dict):
-                outv = pd.to_numeric(person_map[person].get("output"), errors="coerce")
-                tgtv = pd.to_numeric(person_map[person].get("target"), errors="coerce")
-                rows.append({
-                    "period_date": pdte,
-                    "person": person,
-                    "cell_station": station,
-                    "Actual": outv,
-                    "Target": tgtv,
-                })
-    return pd.DataFrame(rows)
-@st.cache_data(show_spinner=False, ttl=15 * 60)
-def build_person_station_uplh_over_time(df: pd.DataFrame, team_name: str, person_name: str) -> pd.DataFrame:
-    def _first_col(cands):
-        for c in cands:
-            if c in df.columns:
-                return c
-        return None
-    col_uplh_pers   = _first_col(["UPLH by Cell/Station - by person"])  # nested {station:{person:{actual,target}}}
-    col_out_pers    = _first_col(["Output by Cell/Station - by person", "Outputs by Cell/Station - by person"])  # {station:{person:{output,target}}}
-    col_hrs_pers    = _first_col(["Hours by Cell/Station - by person"])  # {station:{person:{actual,target}}}
-    d = df.loc[df["team"] == team_name].copy()
-    if d.empty:
-        return pd.DataFrame()
-    d["period_date"] = pd.to_datetime(d["period_date"], errors="coerce").dt.normalize()
-    rows = []
-    for _, r in d.iterrows():
-        wk = r.get("period_date", pd.NaT)
-        if pd.isna(wk):
-            continue
-        def _parse_json_cell(value):
-            if pd.isna(value):
-                return {}
-            if isinstance(value, (dict, list)):
-                return value
-            try:
-                return json.loads(value)
-            except Exception:
-                return {}
-        uplh_blob  = _parse_json_cell(r.get(col_uplh_pers))  if col_uplh_pers else {}
-        out_blob   = _parse_json_cell(r.get(col_out_pers))   if col_out_pers  else {}
-        hrs_blob   = _parse_json_cell(r.get(col_hrs_pers))   if col_hrs_pers  else {}
-        stations = set()
-        for blob in (uplh_blob, out_blob, hrs_blob):
-            if isinstance(blob, dict):
-                stations.update(blob.keys())
-        for stn in sorted(stations):
-            stn_key = str(stn)
-            actual_uplh = target_uplh = np.nan
-            actual_out = target_out = np.nan
-            actual_hrs = target_hrs = np.nan
-            if isinstance(uplh_blob.get(stn), dict):
-                per_map = uplh_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_uplh = pd.to_numeric(rec.get("actual"), errors="coerce")
-                    target_uplh = pd.to_numeric(rec.get("target"), errors="coerce")
-            if isinstance(out_blob.get(stn), dict):
-                per_map = out_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_out = pd.to_numeric(rec.get("output"), errors="coerce")
-                    target_out = pd.to_numeric(rec.get("target"), errors="coerce")
-            if isinstance(hrs_blob.get(stn), dict):
-                per_map = hrs_blob[stn]
-                if person_name in per_map:
-                    rec = per_map.get(person_name, {})
-                else:
-                    rec = next((per_map[k] for k in per_map if str(k).strip().lower() == str(person_name).strip().lower()), {})
-                if isinstance(rec, dict):
-                    actual_hrs = pd.to_numeric(rec.get("actual"), errors="coerce")
-                    target_hrs = pd.to_numeric(rec.get("target"), errors="coerce")
-            if pd.isna(actual_uplh):
-                if pd.notna(actual_out) and pd.notna(actual_hrs) and actual_hrs not in (0, 0.0):
-                    actual_uplh = actual_out / actual_hrs
-            if pd.isna(target_uplh):
-                if pd.notna(target_out) and pd.notna(target_hrs) and target_hrs not in (0, 0.0):
-                    target_uplh = target_out / target_hrs
-            if (pd.isna(actual_out) or actual_out == 0) and (pd.isna(actual_hrs) or actual_hrs == 0) and pd.isna(actual_uplh):
-                continue
-            delta = np.nan
-            if pd.notna(actual_uplh) and pd.notna(target_uplh):
-                delta = actual_uplh - target_uplh
-            rows.append({
-                "period_date": wk,
-                "team": team_name,
-                "person": person_name,
-                "cell_station": stn_key,
-                "Actual": actual_out,
-                "Target": target_out,
-                "Actual Hours": actual_hrs,
-                "Target Hours": target_hrs,
-                "Actual UPLH": actual_uplh,
-                "Target UPLH": target_uplh,
-                "Delta": delta,
-            })
-    if not rows:
-        return pd.DataFrame()
-    out = pd.DataFrame(rows)
-    num_cols = ["Actual", "Target", "Actual Hours", "Target Hours", "Actual UPLH", "Target UPLH", "Delta"]
-    for c in num_cols:
-        out[c] = pd.to_numeric(out[c], errors="coerce")
-    out = out.sort_values(["cell_station", "period_date"]).reset_index(drop=True)
-    return out
-def _normalize_percent_value(v: float | int | np.floating | None) -> tuple[float, str]:
-    if pd.isna(v):
-        return np.nan, "{:.0%}"
-    try:
-        v = float(v)
-    except Exception:
-        return np.nan, "{:.0%}"
-    if v <= 1.0:
-        return v, "{:.0%}"
-    return v / 100.0, "{:.0%}"
-timeliness_avg_raw = latest["Open Complaint Timeliness"].dropna().mean() if "Open Complaint Timeliness" in latest.columns else np.nan
-timeliness_avg, timeliness_fmt = _normalize_percent_value(timeliness_avg_raw)
 nw_all = load_non_wip()
 if not nw_all.empty:
     if "total_non_wip_hours" in nw_all.columns:
@@ -1881,51 +1584,8 @@ else:
     nw_all = pd.DataFrame(columns=["team", "period_date", "total_non_wip_hours"])
 latest_nw = latest.merge(nw_all, on=["team", "period_date"], how="left")
 tot_nonwip = latest_nw["total_non_wip_hours"].sum(skipna=True) if "total_non_wip_hours" in latest_nw.columns else 0.0
-tot_closures = latest["Closures"].sum(skipna=True) if "Closures" in latest.columns else np.nan
-prod_den = (tot_chl or 0.0) + (tot_nonwip or 0.0)
-productivity = (float(tot_closures) / prod_den) if (pd.notna(tot_closures) and prod_den) else np.nan
-efficiency = (float(tot_closures) / float(tot_chl)) if (pd.notna(tot_closures) and tot_chl) else np.nan
-kpi_cols = st.columns(2)
-def kpi(col, label, value, fmt="{:,.2f}", help: str | None = None):
-    if pd.isna(value):
-        col.metric(label, "—", help=help)
-    else:
-        try:
-            col.metric(label, fmt.format(value), help=help)
-        except Exception:
-            col.metric(label, str(value), help=help)
-def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | None = None):
-    if pd.isna(actual) or pd.isna(target) or not target:
-        col.metric(label, "—", help=help)
-        return
-    try:
-        value_str = fmt_val.format(actual)
-    except Exception:
-        value_str = str(actual)
-    diff = (float(actual) - float(target)) / float(target)
-    delta_str = f"{diff:+.0%} vs target"
-    col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
-if has_dates and min_date and max_date:
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            value=st.session_state["start_date"],
-            min_value=min_date,
-            max_value=st.session_state["end_date"],
-            key="start_date",
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            value=st.session_state["end_date"],
-            min_value=st.session_state["start_date"],
-            max_value=max_date,
-            key="end_date",
-        )
 st.markdown("---")
-left, mid, right = st.columns(3)
+left, right = st.columns(2)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
 ).encode(
@@ -1935,1033 +1595,6 @@ teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
 with left:
-    st.subheader("WIP Hours Trend")
-    have_hours = {"Total Available Hours", "Completed Hours"}.issubset(f.columns)
-    teams_in_view = sorted([t for t in f["team"].dropna().unique()])
-    single_team = (len(teams_in_view) == 1)
-    if not have_hours:
-        st.info("Hours columns not found (need 'Total Available Hours' and 'Completed Hours').")
-    else:
-        hrs_long = (
-            f.melt(
-                id_vars=["team", "period_date"],
-                value_vars=["Total Available Hours", "Completed Hours"],
-                var_name="Metric",
-                value_name="Value"
-            )
-            .dropna(subset=["Value"])
-            .assign(Metric=lambda d: d["Metric"].replace({
-                "Total Available Hours": "Target Hours",
-                "Completed Hours": "Actual Hours"
-            }))
-        )
-        team_sel = alt.selection_point(fields=["team"], bind="legend")
-        base_trend = alt.Chart(hrs_long).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="Hours"),
-            color=alt.Color("Metric:N", title="Series"),
-            tooltip=["team:N", "period_date:T", "Metric:N", alt.Tooltip("Value:Q", format=",.0f")],
-        )
-        line = base_trend.mark_line(point=False).encode(
-            detail="team:N",
-            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-            if len(teams_in_view) > 1 else alt.value(1.0)
-        )
-        pts = base_trend.mark_point().encode(
-            shape=alt.Shape("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("circle"),
-            size=alt.value(45),
-            opacity=alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-            if len(teams_in_view) > 1 else alt.value(1.0)
-        )
-        chart_ph = st.empty()
-        chart_ph.altair_chart(
-            alt.layer(line, pts).properties(height=280).add_params(team_sel),
-            width="stretch"
-        )
-        team_name = teams_in_view[0] if len(teams_in_view) == 1 else None
-        if team_name is None:
-            if 'ppl_hours' in locals() and ppl_hours.empty:
-                st.caption("Per-person drilldown not available (no 'Person Hours' found).")
-            else:
-                st.caption("Per-person & cell/station drilldowns are available when exactly one team is selected.")
-        else:
-            hours_by = st.selectbox(
-                "WIP Hours by:",
-                options=["Person", "Cell/Station"],
-                index=0,
-                key="hours_by_select",
-            )
-            team_weeks = sorted(
-                pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()),
-                reverse=True
-            )
-            if not team_weeks:
-                st.info("No weeks available for drilldown.")
-            else:
-                picked_week = st.selectbox(
-                    f"Week:",
-                    options=team_weeks,
-                    index=0,
-                    format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                    key="hours_by_week_select",
-                )
-                picked_week = pd.to_datetime(picked_week).normalize()
-                layers = [line, pts]
-                if picked_week is not None:
-                    rule_df = pd.DataFrame({"period_date": [picked_week]})
-                    rule = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
-                    layers.append(rule)
-                chart_ph.altair_chart(
-                    alt.layer(*layers).properties(height=280).add_params(team_sel),
-                    width="stretch"
-                )
-                if hours_by == "Person":
-                    if 'ppl_hours' not in locals() or ppl_hours.empty:
-                        st.info(f"No per-person data available for {team_name}.")
-                    else:
-                        team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
-                        wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
-                        if wk_people.empty:
-                            st.info("No per-person data for the selected week.")
-                        else:
-                            wk2 = (
-                                wk_people.assign(
-                                    Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
-                                    Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
-                                )
-                                .assign(Diff=lambda d: d["Actual"] - d["Avail"])
-                                .assign(DiffRounded=lambda d: d["Diff"].round(1))
-                            )
-                            wk2 = wk2.loc[
-                                ~(
-                                    (wk2["Actual"].fillna(0) == 0) &
-                                    (wk2["Avail"].fillna(0)  == 0)
-                                )
-                            ].assign(
-                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
-                            )
-                            if wk2.empty:
-                                st.info("Nobody to show after filtering zero-hour +0.0 entries.")
-                            else:
-                                bars = (
-                                    alt.Chart(wk2)
-                                    .mark_bar()
-                                    .encode(
-                                        x=alt.X("person:N", title="Person", sort=alt.Sort(field="person")),
-                                        y=alt.Y("Actual:Q", title="Actual Hours"),
-                                        tooltip=[
-                                            "person:N",
-                                            alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
-                                            alt.Tooltip("Avail:Q", title="Available Hours", format=",.1f"),
-                                            alt.Tooltip("DiffRounded:Q", title="Over / Under", format="+.1f"),
-                                            alt.Tooltip("period_date:T", title="Week"),
-                                        ],
-                                    )
-                                    .properties(height=280)
-                                )
-                                labels = (
-                                    alt.Chart(wk2)
-                                    .mark_text(dy=-6)
-                                    .encode(
-                                        x="person:N",
-                                        y="Actual:Q",
-                                        text=alt.Text("DiffLabel:N"),
-                                        color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
-                                    )
-                                )
-                                st.altair_chart(bars + labels, width="stretch")
-                                people_in_week = (
-                                    wk2["person"].dropna().astype(str).str.strip().drop_duplicates().tolist()
-                                    if "person" in wk2.columns and not wk2.empty else []
-                                )
-                                if people_in_week:
-                                    picked_person_hours = st.selectbox(
-                                        "Drill further: Person over time (per-station lines)",
-                                        options=sorted(people_in_week),
-                                        index=0,
-                                        key="hours_person_over_time_select",
-                                    )
-                                    pt = build_person_station_hours_over_time(f, team_name, picked_person_hours)
-                                    if pt.empty:
-                                        st.caption("No nested per-station hours found for this person.")
-                                    else:
-                                        pt_sum = (
-                                            pt.groupby("period_date", as_index=False)
-                                            .agg({
-                                                "Actual Hours": "sum",
-                                                "Available Hours": "sum",
-                                            })
-                                        )
-                                        base_ts = alt.Chart(pt_sum).encode(
-                                            x=alt.X("period_date:T", title="Week"),
-                                            y=alt.Y("Actual Hours:Q", title="Actual Hours (all stations)"),
-                                            tooltip=[
-                                                "period_date:T",
-                                                alt.Tooltip("Actual Hours:Q",    title="Actual Hours (sum)",    format=",.1f"),
-                                                alt.Tooltip("Available Hours:Q", title="Available Hours (sum)", format=",.1f"),
-                                            ],
-                                        )
-                                        lines = base_ts.mark_line()
-                                        pts   = base_ts.mark_point(size=70, filled=True)
-
-                                        st.altair_chart(
-                                            (lines + pts).properties(height=280),
-                                            width="stretch",
-                                        )
-                    pass
-                else:
-                    cells_hours = explode_cell_station_hours(f)
-                    team_cells = cells_hours.loc[cells_hours["team"] == team_name].copy()
-                    if team_cells.empty:
-                        st.info(f"No cell/station data available for {team_name}.")
-                    else:
-                        wk_cells = team_cells.loc[team_cells["period_date"] == picked_week].copy()
-                        if wk_cells.empty:
-                            st.info("No cell/station data for the selected week.")
-                        else:
-                            wk_cells2 = (
-                                wk_cells.assign(
-                                    Actual=lambda d: pd.to_numeric(d["Actual Hours"], errors="coerce"),
-                                    Avail=lambda d: pd.to_numeric(d["Available Hours"], errors="coerce"),
-                                )
-                                .assign(Diff=lambda d: d["Actual"] - d["Avail"])
-                                .assign(DiffRounded=lambda d: d["Diff"].round(1))
-                            )
-                            wk_cells2 = wk_cells2.loc[
-                                ~(
-                                    (wk_cells2["Actual"].fillna(0) == 0) &
-                                    (wk_cells2["Avail"].fillna(0)  == 0)
-                                )
-                            ].assign(
-                                DiffLabel=lambda d: d["DiffRounded"].map(lambda x: f"{x:+.1f}")
-                            )
-                            if wk_cells2.empty:
-                                st.info("Nothing to show after filtering zero-hour +0.0 entries.")
-                            else:
-                                order_cells = wk_cells2.sort_values("Actual", ascending=False)["cell_station"].tolist()
-                                bars = (
-                                    alt.Chart(wk_cells2)
-                                    .mark_bar()
-                                    .encode(
-                                        x=alt.X("cell_station:N", title="Cell/Station", sort=order_cells),
-                                        y=alt.Y("Actual:Q", title="Actual Hours"),
-                                        tooltip=[
-                                            alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                            alt.Tooltip("Actual:Q", title="Actual Hours", format=",.1f"),
-                                            alt.Tooltip("period_date:T", title="Week"),
-                                        ],
-                                    )
-                                    .properties(height=280)
-                                )
-                                labels = alt.Chart(wk_cells2).mark_text(dy=-6).encode(
-                                    x="cell_station:N",
-                                    y="Actual:Q",
-                                )
-                                st.altair_chart(bars + labels, width="stretch")
-                            stations_in_week = (
-                                wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
-                                if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
-                                else []
-                            )
-                            stations_in_week = (
-                                wk_cells2["cell_station"].dropna().astype(str).str.strip().unique().tolist()
-                                if ("cell_station" in wk_cells2.columns and not wk_cells2.empty)
-                                else []
-                            )
-                            if stations_in_week:
-                                picked_station_hours = st.selectbox(
-                                    "Drill further: Station over time (per-person lines)",
-                                    options=stations_in_week,
-                                    index=0,
-                                    key="hours_station_over_time_select",
-                                )
-                                ht = build_station_person_hours_over_time(f, team_name, picked_station_hours)
-                                if ht.empty:
-                                    st.caption("No nested per-person station-hours found. Showing station totals over time.")
-                                    stn_hours_tot = (
-                                        explode_cell_station_hours(f[f["team"] == team_name])
-                                        .query("cell_station == @picked_station_hours")
-                                        .dropna(subset=["period_date"])
-                                        .rename(columns={"Actual Hours": "Actual", "Available Hours": "Target"})
-                                    )
-                                    if not stn_hours_tot.empty:
-                                        base_ts = alt.Chart(stn_hours_tot).encode(
-                                            x=alt.X("period_date:T", title="Week"),
-                                            y=alt.Y("Actual:Q", title="Actual Hours"),
-                                            tooltip=[
-                                                "period_date:T",
-                                                alt.Tooltip("Actual:Q", title="Actual", format=",.1f"),
-                                                alt.Tooltip("Target:Q", title="Available", format=",.1f"),
-                                            ],
-                                        )
-                                        line_a = base_ts.mark_line(point=True)
-                                        line_t = (
-                                            alt.Chart(stn_hours_tot)
-                                            .mark_line(point=True, strokeDash=[4, 3], color="#6b7280")
-                                            .encode(x="period_date:T", y=alt.Y("Target:Q", title="Available"))
-                                        )
-                                        st.altair_chart(
-                                            (line_a + line_t).properties(
-                                                height=280,
-                                                title=f"{picked_station_hours} • Hours over time (station total)",
-                                            ),
-                                            width="stretch",
-                                        )
-                                else:
-                                    ht_sum = (
-                                        ht.groupby("period_date", as_index=False)
-                                        .agg({
-                                            "Actual Hours": "sum",
-                                            "Available Hours": "sum",
-                                        })
-                                    )
-                                    base_ts = alt.Chart(ht_sum).encode(
-                                        x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual Hours:Q", title="Actual Hours (all people)"),
-                                        tooltip=[
-                                            "period_date:T",
-                                            alt.Tooltip("Actual Hours:Q",    title="Actual Hours (sum)",    format=",.1f"),
-                                            alt.Tooltip("Available Hours:Q", title="Available Hours (sum)", format=",.1f"),
-                                        ],
-                                    )
-                                    lines = base_ts.mark_line()
-                                    pts   = base_ts.mark_point(size=70, filled=True)
-
-                                    st.altair_chart(
-                                        (lines + pts).properties(height=280),
-                                        width="stretch",
-                                    )
-with mid:
-    st.subheader("Opened vs Closed")
-    needed_cols = {"Opened", "Closures"}
-    if not needed_cols.issubset(f.columns):
-        st.info("Need 'Opened' and 'Closures' columns to show this chart.")
-    else:
-        out_long = (
-            f.melt(
-                id_vars=["team", "period_date"],
-                value_vars=["Opened", "Closures"],
-                var_name="Metric",
-                value_name="Value",
-            )
-            .dropna(subset=["Value"])
-        )
-        base = alt.Chart(out_long).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="Count"),
-            color=alt.Color("Metric:N", title="Series"),
-            tooltip=[
-                "team:N",
-                "period_date:T",
-                "Metric:N",
-                alt.Tooltip("Value:Q", format=",.0f"),
-            ],
-        )
-        line = base.mark_line().encode(
-            detail="team:N",
-            opacity=alt.condition(
-                team_sel,
-                alt.value(1.0),
-                alt.value(0.25),
-            ) if multi_team else alt.value(1.0),
-        )
-        pts = base.mark_point().encode(
-            shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-            size=alt.value(45),
-            opacity=alt.condition(
-                team_sel,
-                alt.value(1.0),
-                alt.value(0.25),
-            ) if multi_team else alt.value(1.0),
-        )
-        st.altair_chart(
-            (line + pts).properties(height=280).add_params(team_sel),
-            width="stretch",
-        )
-    if len(teams_in_view) != 1:
-        st.caption("Select exactly one team to enable week drilldown.")
-    else:
-        team_name = teams_in_view[0]
-        team_weeks = sorted(pd.to_datetime(f.loc[f["team"] == team_name, "period_date"].dropna().unique()), reverse=True)
-        if not team_weeks:
-            st.info("No weeks available for drilldown.")
-        else:
-            by_choice = st.selectbox(
-                "Output by:",
-                options=["Cell/Station", "Person"],
-                index=0,
-                key="output_by_select"
-            )
-            col_map = {
-                "Person": ("Outputs by Person", "person"),
-                "Cell/Station": ("Outputs by Cell/Station", "cell_station"),
-            }
-            col_name, key_label = col_map[by_choice]
-            picked_week = st.selectbox(
-                "Week:",
-                options=team_weeks,
-                index=0,
-                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                key="output_by_week_select",
-            )
-            picked_week = pd.to_datetime(picked_week).normalize()
-            if col_name not in f.columns:
-                st.info(f"No '{col_name}' data available.")
-            else:
-                exploded = explode_outputs_json(f[f["team"] == team_name], col_name, key_label)
-                if exploded.empty or "period_date" not in exploded.columns:
-                    st.info("No drilldown records for the selected grouping.")
-                else:
-                    wk = exploded.loc[exploded["period_date"] == picked_week].copy()
-                    if wk.empty:
-                        st.info("No data for the selected week.")
-                    else:
-                        wk2 = (
-                            wk.assign(
-                                Actual=pd.to_numeric(wk["Actual"], errors="coerce"),
-                                Target=pd.to_numeric(wk["Target"], errors="coerce"),
-                            )
-                            .dropna(subset=["Actual"])
-                            .assign(
-                                HasTarget=lambda d: d["Target"].notna(),
-                                Diff=lambda d: d["Actual"] - d["Target"],
-                            )
-                        )
-                        wk2["DiffRounded"] = np.where(wk2["HasTarget"], wk2["Diff"].round(1), np.nan)
-                        wk2["DiffLabel"]   = np.where(wk2["HasTarget"], wk2["DiffRounded"].map(lambda x: f"{x:+.1f}"), "—")
-                        wk2 = wk2.loc[~((wk2["Actual"].fillna(0) == 0) & (wk2["Target"].fillna(0) == 0))].copy()
-                        order_keys = wk2.sort_values("Actual", ascending=False)[key_label].tolist()
-                        if not wk2.empty:
-                            vmax = float(pd.to_numeric(wk2["Actual"], errors="coerce").max())
-                            rng  = max(0.0, vmax)
-                            pad  = max(3.0, rng * 0.22)
-                            y_scale = alt.Scale(domain=[0.0, vmax + pad], nice=False, clamp=False)
-                            label_pad = max(1.0, (vmax + pad) * 0.04)
-                            wk2["LabelY"] = wk2["Actual"] + np.where(wk2["DiffRounded"].fillna(-1) >= 0, label_pad, -label_pad)
-                        else:
-                            y_scale = alt.Scale()
-                            wk2["LabelY"] = wk2["Actual"]
-                        bars = (
-                            alt.Chart(wk2)
-                            .mark_bar()
-                            .encode(
-                                x=alt.X(f"{key_label}:N", title=by_choice, sort=order_keys),
-                                y=alt.Y("Actual:Q", title="Actual Output", scale=y_scale),
-                                tooltip=[
-                                    alt.Tooltip(f"{key_label}:N", title=by_choice),
-                                    alt.Tooltip("Actual:Q", title="Actual", format=",.0f"),
-                                    alt.Tooltip("Target:Q", title="Target", format=",.0f"),
-                                    alt.Tooltip("DiffLabel:N", title="Over / Under"),  # <- use string label, shows "—" if no target
-                                    alt.Tooltip("period_date:T", title="Week"),
-                                ],
-                            )
-                            .properties(height=280)
-                        )
-                        labels = (
-                            alt.Chart(wk2)
-                            .mark_text()
-                            .encode(
-                                x=f"{key_label}:N",
-                                y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DiffLabel:N",  # <- no "nan"
-                                color=alt.condition("datum.DiffRounded >= 0", alt.value("#22c55e"), alt.value("#ef4444")),
-                            )
-                        )
-                        st.altair_chart(bars + labels, width="stretch")
-                        if by_choice == "Cell/Station":
-                            stations_in_week = wk2["cell_station"].dropna().unique().tolist()
-                            if stations_in_week:
-                                picked_station = st.selectbox(
-                                    "Drill further: Station over time (per-person lines)",
-                                    options=stations_in_week,
-                                    index=0,
-                                    key="outputs_station_over_time_select",
-                                )
-                                ot = build_station_person_outputs_over_time(f, team_name, picked_station)
-                                if ot.empty:
-                                    st.caption("No nested per-person outputs found for this station. Showing station totals over time.")
-                                    stn_long = (
-                                        explode_outputs_json(
-                                            f[f["team"] == team_name],
-                                            "Outputs by Cell/Station",
-                                            "cell_station"
-                                        )
-                                        .query("cell_station == @picked_station")
-                                        .rename(columns={"Actual": "Value", "Target": "Target"})
-                                        .dropna(subset=["period_date"])
-                                    )
-                                    if not stn_long.empty:
-                                        base_ts = alt.Chart(stn_long).encode(
-                                            x=alt.X("period_date:T", title="Week"),
-                                            y=alt.Y("Value:Q", title="Actual Output"),
-                                            tooltip=[
-                                                "period_date:T",
-                                                alt.Tooltip("Value:Q", title="Actual", format=",.0f"),
-                                                alt.Tooltip("Target:Q", title="Target", format=",.0f"),
-                                            ],
-                                        )
-                                        line_a = base_ts.mark_line(point=True)
-                                        line_t = (
-                                            alt.Chart(stn_long)
-                                            .mark_line(point=True, strokeDash=[4, 3])
-                                            .encode(x="period_date:T", y=alt.Y("Target:Q", title="Target"))
-                                        )
-                                        st.altair_chart(
-                                            (line_a + line_t).properties(
-                                                height=280,
-                                            ),
-                                            width="stretch"
-                                        )
-                                else:
-                                    ot_sum = (
-                                        ot.groupby("period_date", as_index=False)
-                                        .agg({"Actual": "sum", "Target": "sum"})
-                                    )
-                                    ot_sum = ot_sum.assign(
-                                        HasTarget=lambda d: d["Target"].notna(),
-                                        Delta=lambda d: d["Actual"] - d["Target"],
-                                    )
-                                    ot_sum = ot_sum.assign(
-                                        DiffLabel=lambda d: np.where(
-                                            d["HasTarget"],
-                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
-                                            "—"
-                                        ),
-                                        PointFillGroup=lambda d: np.where(
-                                            ~d["HasTarget"],
-                                            "none",
-                                            np.where(d["Delta"] >= 0, "pos", "neg")
-                                        ),
-                                    )
-                                    base_ts = alt.Chart(ot_sum).encode(
-                                        x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual:Q", title="Actual Output (all people)"),
-                                        tooltip=[
-                                            "period_date:T",
-                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
-                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
-                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
-                                        ],
-                                    )
-                                    lines = base_ts.mark_line()
-                                    pts = (
-                                        alt.Chart(ot_sum)
-                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
-                                        .encode(
-                                            x="period_date:T",
-                                            y="Actual:Q",
-                                            stroke=alt.value("#111827"),  # single stroke color
-                                            fill=alt.Color(
-                                                "PointFillGroup:N",
-                                                legend=None,
-                                                scale=alt.Scale(
-                                                    domain=["pos", "neg", "none"],
-                                                    range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
-                                                ),
-                                            ),
-                                            tooltip=[
-                                                "period_date:T",
-                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
-                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
-                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
-                                            ],
-                                        )
-                                    )
-                                    st.altair_chart(
-                                        (lines + pts).properties(height=280),
-                                        width="stretch"
-                                    )
-                        elif by_choice == "Person":
-                            people_in_week = wk2["person"].dropna().unique().tolist()
-                            if people_in_week:
-                                picked_person = st.selectbox(
-                                    "Drill further: Person over time (per-station lines)",
-                                    options=people_in_week,
-                                    index=0,
-                                    key="outputs_person_over_time_select",
-                                )
-                                pt = build_person_station_outputs_over_time(f, team_name, picked_person)
-                                if pt.empty:
-                                    st.caption("No nested per-station outputs found for this person.")
-                                else:
-                                    pt_sum = (
-                                        pt.groupby("period_date", as_index=False)
-                                        .agg({"Actual": "sum", "Target": "sum"})
-                                    )
-                                    pt_sum = pt_sum.assign(
-                                        HasTarget=lambda d: d["Target"].notna(),
-                                        Delta=lambda d: d["Actual"] - d["Target"],
-                                    )
-                                    pt_sum = pt_sum.assign(
-                                        DiffLabel=lambda d: np.where(
-                                            d["HasTarget"],
-                                            d["Delta"].round(1).map(lambda x: f"{x:+.1f}"),
-                                            "—"
-                                        ),
-                                        PointFillGroup=lambda d: np.where(
-                                            ~d["HasTarget"],
-                                            "none",
-                                            np.where(d["Delta"] >= 0, "pos", "neg")
-                                        ),
-                                    )
-                                    base_ts = alt.Chart(pt_sum).encode(
-                                        x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual:Q", title="Actual Output (all stations)"),
-                                        tooltip=[
-                                            "period_date:T",
-                                            alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
-                                            alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
-                                            alt.Tooltip("DiffLabel:N", title="Over / Under"),
-                                        ],
-                                    )
-                                    lines = base_ts.mark_line()
-                                    pts = (
-                                        alt.Chart(pt_sum)
-                                        .mark_point(size=85, filled=True, strokeWidth=1.2)
-                                        .encode(
-                                            x="period_date:T",
-                                            y="Actual:Q",
-                                            stroke=alt.value("#111827"),
-                                            fill=alt.Color(
-                                                "PointFillGroup:N",
-                                                legend=None,
-                                                scale=alt.Scale(
-                                                    domain=["pos", "neg", "none"],
-                                                    range=["#22c55e", "#ef4444", "#9ca3af"],
-                                                ),
-                                            ),
-                                            tooltip=[
-                                                "period_date:T",
-                                                alt.Tooltip("Actual:Q", title="Actual (sum)",  format=",.0f"),
-                                                alt.Tooltip("Target:Q", title="Target (sum)",  format=",.0f"),
-                                                alt.Tooltip("DiffLabel:N", title="Over / Under"),
-                                            ],
-                                        )
-                                    )
-                                    st.altair_chart(
-                                        (lines + pts).properties(height=280),
-                                        width="stretch"
-                                    )
-with right:
-    st.subheader("Productivity vs Efficiency")
-    team_sel = alt.selection_point(fields=["team"], bind="legend")
-    prod_df = f.copy()
-    if "total_non_wip_hours" not in prod_df.columns:
-        if "nw_all" in globals() and isinstance(nw_all, pd.DataFrame) and not nw_all.empty:
-            cols_needed = ["team", "period_date", "total_non_wip_hours"]
-            for c in cols_needed:
-                if c not in nw_all.columns:
-                    nw_all[c] = np.nan
-            nw_all["total_non_wip_hours"] = pd.to_numeric(
-                nw_all["total_non_wip_hours"], errors="coerce"
-            )
-            prod_df = prod_df.merge(
-                nw_all[cols_needed],
-                on=["team", "period_date"],
-                how="left",
-            )
-        else:
-            prod_df["total_non_wip_hours"] = np.nan
-    if {"Closures", "Completed Hours"}.issubset(prod_df.columns):
-        num_close = pd.to_numeric(prod_df["Closures"], errors="coerce")
-
-        denom_prod = (
-            prod_df["Completed Hours"].fillna(0).astype(float)
-            + prod_df["total_non_wip_hours"].fillna(0).astype(float)
-        )
-        prod_df["Productivity"] = np.where(
-            denom_prod > 0, num_close / denom_prod, np.nan
-        )
-        denom_eff = prod_df["Completed Hours"].astype(float)
-        prod_df["Efficiency"] = np.where(
-            denom_eff > 0, num_close / denom_eff, np.nan
-        )
-    else:
-        prod_df["Productivity"] = np.nan
-        prod_df["Efficiency"] = np.nan
-    pe_long = (
-        prod_df.melt(
-            id_vars=["team", "period_date"],
-            value_vars=["Productivity", "Efficiency"],
-            var_name="Metric",
-            value_name="Value",
-        )
-        .dropna(subset=["Value"])
-    )
-    if not pe_long.empty:
-        vmin = float(pd.to_numeric(pe_long["Value"], errors="coerce").min())
-        vmax = float(pd.to_numeric(pe_long["Value"], errors="coerce").max())
-        rng  = max(0.0, vmax - vmin)
-        pad  = max(0.01, rng * 0.15)
-        lo   = max(0.0, vmin - pad)
-        hi   = vmax + pad
-        y_scale = alt.Scale(domain=[lo, hi], nice=False, clamp=False)
-    else:
-        y_scale = alt.Scale()
-    sel_wk = alt.selection_point(
-        name="wk_prod_eff",
-        fields=["period_date"],
-        on="click",
-        clear="dblclick",
-        empty="none",
-    )
-    trend_base = (
-        alt.Chart(pe_long)
-        .encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Value:Q", title="Closures per Hour", scale=y_scale),
-            color=alt.Color("Metric:N", title="Series"),
-            tooltip=[
-                "team:N",
-                "period_date:T",
-                "Metric:N",
-                alt.Tooltip("Value:Q", format=",.3f"),
-            ],
-        )
-    )
-    line = trend_base.mark_line().encode(
-        detail="team:N",
-        opacity=(
-            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-            if multi_team else alt.value(1.0)
-        ),
-    )
-    pts = trend_base.mark_point(size=70).encode(
-        shape=alt.Shape("team:N", title="Team") if multi_team else alt.value("circle"),
-        opacity=(
-            alt.condition(team_sel, alt.value(1.0), alt.value(0.25))
-            if multi_team else alt.value(1.0)
-        ),
-    )
-    rule = (
-        alt.Chart(pe_long)
-        .transform_filter(sel_wk)
-        .mark_rule(strokeDash=[4, 3])
-        .encode(x="period_date:T")
-    )
-    top = (
-        alt.layer(line, pts, rule)
-        .properties(height=280)
-        .add_params(team_sel, sel_wk)
-    )
-    def _find_wp_uplh_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
-        wp1, wp2 = None, None
-        for c in df.columns:
-            lc = str(c).lower().replace(" ", "")
-            if "uplh" not in lc:
-                continue
-            if any(tag in lc for tag in ("wp1", "wp01", "wp_1", "wp-1")) and wp1 is None:
-                wp1 = c
-            if any(tag in lc for tag in ("wp2", "wp02", "wp_2", "wp-2")) and wp2 is None:
-                wp2 = c
-        return wp1, wp2
-    wp1_col, wp2_col = _find_wp_uplh_cols(f)
-    team_for_drill = teams_in_view[0] if not multi_team and teams_in_view else None
-    if not multi_team and team_for_drill is not None:
-        top_ph = st.empty()
-        top_ph.altair_chart(top, width="stretch")
-        by_choice = st.selectbox(
-            "UPLH by:",
-            options=["Person", "Cell/Station"],
-            index=0,
-            key="uplh_by_select",
-        )
-        team_weeks = sorted(
-            pd.to_datetime(f.loc[f["team"] == team_for_drill, "period_date"].dropna().unique()),
-            reverse=True
-        )
-        if team_weeks:
-            picked_week = st.selectbox(
-                "Week:",
-                options=team_weeks,
-                index=0,
-                format_func=lambda d: pd.to_datetime(d).date().isoformat(),
-                key="uplh_week_select",
-            )
-            picked_week = pd.to_datetime(picked_week).normalize()
-            rule_df = pd.DataFrame({"period_date": [picked_week]})
-            rule_week = alt.Chart(rule_df).mark_rule(strokeDash=[4, 3]).encode(x="period_date:T")
-            top_ph.altair_chart(
-                alt.layer(line, pts, rule_week).properties(height=280).add_params(team_sel),
-                width="stretch"
-            )
-        else:
-            picked_week = None
-            st.info("No weeks available for drilldown.")
-        lower = None
-        drill = None 
-        lower_area   = st.container()
-        controls_area = st.container()
-        drill_area   = st.container()
-        if picked_week is not None:
-            if by_choice == "Person":
-                uplh_person = build_uplh_by_person_long(f, team_for_drill)
-                if uplh_person.empty:
-                    st.info("No 'Outputs by Person' and/or 'Person Hours' data to compute UPLH.")
-                else:
-                    wk_p = uplh_person.loc[uplh_person["period_date"] == picked_week].copy()
-                    if wk_p.empty:
-                        st.info("No UPLH-by-person records for that week.")
-                    else:
-                        wk_p["HasTarget"]   = wk_p["Target UPLH"].notna()
-                        wk_p["Delta"]       = wk_p["Actual UPLH"] - wk_p["Target UPLH"]
-                        wk_p["DeltaRounded"]= wk_p["Delta"].round(2)
-                        wk_p["DeltaLabel"]  = np.where(wk_p["HasTarget"], wk_p["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—")
-                        wk_p["LabelGroup"]  = np.where(~wk_p["HasTarget"], "none", np.where(wk_p["Delta"] >= 0, "pos", "neg"))
-                        order_people = wk_p.sort_values("Actual UPLH", ascending=False)["person"].tolist()
-                        vmax = float(pd.to_numeric(wk_p["Actual UPLH"], errors="coerce").max())
-                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
-                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
-                        bars = (
-                            alt.Chart(wk_p)
-                            .mark_bar(color="#2563eb")
-                            .encode(
-                                x=alt.X("person:N", title="Person", sort=order_people),
-                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
-                                tooltip=[
-                                    "period_date:T", "person:N",
-                                    alt.Tooltip("Actual Output:Q", title="Actual Output", format=",.0f"),
-                                    alt.Tooltip("Target Output:Q", title="Target Output", format=",.0f"),
-                                    alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.1f"),
-                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
-                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
-                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
-                                ],
-                            )
-                            .properties(height=280)
-                        )
-                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
-                        labels = (
-                            alt.Chart(
-                                wk_p.assign(LabelY=lambda d: d["Actual UPLH"] + np.where(d["Delta"].fillna(-1) >= 0, label_pad, -label_pad))
-                            )
-                            .mark_text(dy=-10)
-                            .encode(
-                                x="person:N",
-                                y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DeltaLabel:N",
-                                color=alt.Color(
-                                    "LabelGroup:N",
-                                    legend=None,
-                                    scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
-                                ),
-                            )
-                        )
-                        lower = bars + labels
-                        people_in_week = wk_p["person"].dropna().unique().tolist()
-                        if people_in_week:
-                            picked_person_uplh = controls_area.selectbox(
-                                "Drill further: Person UPLH over time (per-station lines)",
-                                options=sorted(people_in_week),
-                                index=0,
-                                key="uplh_person_over_time_select",
-                            )
-                            pu = build_person_station_uplh_over_time(f, team_for_drill, picked_person_uplh)
-                            if pu.empty:
-                                st.caption("No nested per-station UPLH found for this person.")
-                            else:
-                                pu = pu.assign(
-                                    HasTarget=lambda d: d["Target UPLH"].notna(),
-                                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
-                                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
-                                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
-                                )
-                                base_ts = alt.Chart(pu).encode(
-                                    x=alt.X("period_date:T", title="Week"),
-                                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
-                                    color=alt.Color("cell_station:N", title="Cell/Station"),
-                                    tooltip=[
-                                        "period_date:T",
-                                        alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
-                                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
-                                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
-                                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
-                                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
-                                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
-                                    ],
-                                )
-                                lines = base_ts.mark_line()
-                                pts   = (
-                                    alt.Chart(pu)
-                                    .mark_point(size=85, filled=True, strokeWidth=1.2)
-                                    .encode(
-                                        x="period_date:T",
-                                        y="Actual UPLH:Q",
-                                        stroke=alt.Color("cell_station:N", legend=None),
-                                        fill=alt.Color(
-                                            "LabelGroup:N",
-                                            legend=None,
-                                            scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
-                                        ),
-                                    )
-                                )
-                                drill = (lines + pts).properties(
-                                    height=280,
-                                )
-            else:  # by_choice == "Cell/Station"
-                uplh_cell = build_uplh_by_cell_long(f, team_for_drill)
-                if uplh_cell.empty:
-                    st.info("No 'Outputs by Cell/Station' and/or 'Cell/Station Hours' data to compute UPLH.")
-                else:
-                    wk_c = uplh_cell.loc[uplh_cell["period_date"] == picked_week].copy()
-                    if wk_c.empty:
-                        st.info("No UPLH-by-cell/station records for that week.")
-                    else:
-                        wk_c["HasTarget"]   = wk_c["Target UPLH"].notna()
-                        wk_c["Delta"]       = wk_c["Actual UPLH"] - wk_c["Target UPLH"]
-                        wk_c["DeltaRounded"]= wk_c["Delta"].round(2)
-                        wk_c["DeltaLabel"]  = np.where(wk_c["HasTarget"], wk_c["DeltaRounded"].map(lambda x: f"{x:+.2f}"), "—")
-                        wk_c["LabelGroup"]  = np.where(~wk_c["HasTarget"], "none", np.where(wk_c["Delta"] >= 0, "pos", "neg"))
-                        order_cells = wk_c.sort_values("Actual UPLH", ascending=False)["cell_station"].tolist()
-                        vmax = float(pd.to_numeric(wk_c["Actual UPLH"], errors="coerce").max())
-                        pad  = max(0.1, vmax * 0.12) if pd.notna(vmax) else 0.3
-                        y_scale = alt.Scale(domain=[0, (vmax + pad) if pd.notna(vmax) else 1.0], nice=False, clamp=False)
-                        label_pad = max(0.05, (vmax + pad) * 0.03) if pd.notna(vmax) else 0.08
-                        wk_c["LabelY"] = wk_c["Actual UPLH"] + np.where(wk_c["Delta"].fillna(-1) >= 0, label_pad, -label_pad)
-                        bars = (
-                            alt.Chart(wk_c)
-                            .mark_bar(color="#2563eb")
-                            .encode(
-                                x=alt.X(
-                                    "cell_station:N",
-                                    sort=order_cells,
-                                    axis=alt.Axis(
-                                        title="Cell/Station",
-                                        labelAngle=-35,      # <- ensures the x-axis shows and is readable
-                                        labelOverlap=False,
-                                    ),
-                                ),
-                                y=alt.Y("Actual UPLH:Q", title="Actual UPLH", scale=y_scale),
-                                tooltip=[
-                                    alt.Tooltip("cell_station:N", title="Cell/Station"),
-                                    alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
-                                    alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
-                                    alt.Tooltip("DeltaRounded:Q", title="Δ vs Target", format="+.2f"),
-                                    "period_date:T",
-                                ],
-                            )
-                            .properties(height=280)
-                        )
-                        labels = (
-                            alt.Chart(wk_c)
-                            .mark_text()
-                            .encode(
-                                x="cell_station:N",
-                                y=alt.Y("LabelY:Q", scale=y_scale),
-                                text="DeltaLabel:N",  # already formatted with +/-
-                                color=alt.Color(
-                                    "LabelGroup:N",
-                                    legend=None,
-                                    scale=alt.Scale(
-                                        domain=["pos", "neg", "none"],
-                                        range=["#22c55e", "#ef4444", "#9ca3af"],  # green / red / gray
-                                    ),
-                                ),
-                            )
-                        )
-                        lower = bars + labels
-                        stations_in_week = wk_c["cell_station"].dropna().astype(str).str.strip().unique().tolist()
-                        if stations_in_week:
-                            picked_station_uplh = controls_area.selectbox(
-                                "Drill further: Station UPLH over time (per-person lines)",
-                                options=stations_in_week,
-                                index=0,
-                                key="uplh_station_over_time_select",
-                            )
-                            ut = build_station_person_uplh_over_time(f, team_for_drill, picked_station_uplh)
-                            if ut.empty:
-                                st.caption("No nested per-person station-hours found. Showing station UPLH totals over time.")
-                                stn_uplh_tot = (
-                                    build_uplh_by_cell_long(f, team_for_drill)
-                                    .query("cell_station == @picked_station_uplh")
-                                    .dropna(subset=["period_date"])
-                                )
-                                if not stn_uplh_tot.empty:
-                                    base_ts = alt.Chart(stn_uplh_tot).encode(
-                                        x=alt.X("period_date:T", title="Week"),
-                                        y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
-                                        tooltip=[
-                                            "period_date:T",
-                                            alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
-                                            alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
-                                        ],
-                                    )
-                                    line_a = base_ts.mark_line(point=True, color="#2563eb")
-                                    line_t = (
-                                        alt.Chart(stn_uplh_tot)
-                                        .mark_line(point=True, strokeDash=[4,3], color="#6b7280")
-                                        .encode(x="period_date:T", y=alt.Y("Target UPLH:Q", title="Target UPLH"))
-                                    )
-                                    drill = (line_a + line_t).properties(
-                                        height=280,
-                                        title=f"{picked_station_uplh} • UPLH over time (station total)"
-                                    )
-                            else:
-                                ut = ut.assign(
-                                    HasTarget=lambda d: d["Target UPLH"].notna(),
-                                    Delta=lambda d: d["Actual UPLH"] - d["Target UPLH"],
-                                    DiffLabel=lambda d: np.where(d["HasTarget"], d["Delta"].round(2).map(lambda x: f"{x:+.2f}"), "—"),
-                                    LabelGroup=lambda d: np.where(~d["HasTarget"], "none", np.where(d["Delta"] >= 0, "pos", "neg")),
-                                )
-                                base_ts = alt.Chart(ut).encode(
-                                    x=alt.X("period_date:T", title="Week"),
-                                    y=alt.Y("Actual UPLH:Q", title="Actual UPLH"),
-                                    color=alt.Color("person:N", title="Person"),
-                                    tooltip=[
-                                        "period_date:T",
-                                        "person:N",
-                                        alt.Tooltip("Actual:Q", title="Actual Output", format=",.0f"),
-                                        alt.Tooltip("Target:Q", title="Target Output", format=",.0f"),
-                                        alt.Tooltip("Actual Hours:Q", title="Hours (actual)", format=",.2f"),
-                                        alt.Tooltip("Actual UPLH:Q", title="Actual UPLH", format=",.2f"),
-                                        alt.Tooltip("Target UPLH:Q", title="Target UPLH", format=",.2f"),
-                                        alt.Tooltip("DiffLabel:N", title="Δ vs Target"),
-                                    ],
-                                )
-                                lines = base_ts.mark_line()
-                                pts = (
-                                    alt.Chart(ut)
-                                    .mark_point(size=85, filled=True, strokeWidth=1.2)
-                                    .encode(
-                                        x="period_date:T",
-                                        y="Actual UPLH:Q",
-                                        stroke=alt.Color("person:N", legend=None),
-                                        fill=alt.Color(
-                                            "LabelGroup:N",
-                                            legend=None,
-                                            scale=alt.Scale(domain=["pos","neg","none"], range=["#22c55e","#ef4444","#9ca3af"]),
-                                        ),
-                                    )
-                                )
-                                drill = (lines + pts).properties(
-                                    height=280,
-                                )
-        if lower is not None:
-            lower_area.altair_chart(lower, width="stretch")
-        else:
-            lower_area.altair_chart(top, width="stretch")
-        if drill is not None:
-            drill_area.altair_chart(drill, width="stretch")
-st.markdown("---")
-left2, mid2, right2 = st.columns(3) 
-with left2:
-    st.subheader("HC in WIP Trend")
-    if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
-        hc = f[["team", "period_date", "HC in WIP"]].dropna()
-        base_hc = alt.Chart(hc).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("HC in WIP:Q", title="HC in WIP"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
-        )
-        st.altair_chart(
-            base_hc.mark_line(point=True).properties(height=280),
-            width="stretch"
-        )
-    else:
-        st.info("No 'HC in WIP' data available in the selected range.")
-with mid2:
     st.subheader("Actual HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
         ahu = f[["team", "period_date", "Actual HC used"]].dropna()
@@ -3067,21 +1700,11 @@ with mid2:
             st.caption("Select exactly one team to drill into per-person daily hours.")
     else:
         st.info("No 'Actual HC used' data available in the selected range.")
-with right2:
+with right:
     st.subheader("Hours Trend")
     _nw = load_non_wip()
-    TEAM_WEEKLY_HOURS = {
-        "CPT": 37.75,
-        "CDS": 37.75,
-        "NI": 37.75,
-        "DS": 37.5,
-        "LIT & LETTERS": 37.5,
-    }
-    def canonical_person_label(name: str) -> str:
-        s = normalize_person_name(name)
-        s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
-        s = re.sub(r"\s+", " ", s).strip()
-        return s
+    teams_cfg = load_team_config()
+    irl_lookup = {t: irl_people_for_team(t, teams_cfg) for t in teams_in_view}
     mix_rows = []
     nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
     if not nw_sub.empty:
@@ -3091,58 +1714,30 @@ with right2:
             if not team or pd.isna(wk):
                 continue
             wk = wk.normalize()
-            TEAM_WEEKLY_HOURS = {
-                "CPT": 37.75,
-                "CDS": 37.75,
-                "NI": 37.75,
-                "DS": 37.5,
-                "LIT & LETTERS": 37.5,
-            }
-            team_week_hours = TEAM_WEEKLY_HOURS.get(team.upper(), 40.0)
             wk_people = build_person_weekly_accounting(
                 team=team,
                 week=wk,
                 nw_row=nw_row,
                 metrics_frame=f,
                 nw_frame=_nw,
-                week_hours=team_week_hours,
-                irl_people=set(),   # do not use teams.json
+                week_hours=40.0,
+                irl_people=irl_lookup.get(team, set()),
             )
             if wk_people.empty:
                 continue
             wk_people = wk_people.copy()
-            wk_people["person"] = wk_people["person"].map(canonical_person_label)
-            wk_people["Expected Hours"] = pd.to_numeric(
-                wk_people["Expected Hours"],
-                errors="coerce"
-            ).fillna(0.0)
-            wk_people["Completed Hours"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
+            wk_people["WIP"] = pd.to_numeric(wk_people["Completed Hours"], errors="coerce").fillna(0.0)
             wk_people["Other Team WIP"] = pd.to_numeric(wk_people["Other Team WIP"], errors="coerce").fillna(0.0)
-            wk_people["Accounted Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
-            wk_people["OOO Hours"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
-            wk_people["Unaccounted"] = (
-                wk_people["Expected Hours"]
-                - wk_people["Completed Hours"]
-                - wk_people["Other Team WIP"]
-                - wk_people["Accounted Non-WIP"]
-                - wk_people["OOO Hours"]
-            ).clip(lower=0.0)
-            wk_people = wk_people.drop(columns=["person_key", "team_key"], errors="ignore")
-            wk_people["WIP"] = wk_people["Completed Hours"]
-            wk_people["Non-WIP"] = wk_people["Accounted Non-WIP"]
-            wk_people["OOO"] = wk_people["OOO Hours"]
-            wk_people = (
-                wk_people.groupby(["team", "period_date", "person"], as_index=False)
-                .agg({
-                    "WIP": "sum",
-                    "Other Team WIP": "sum",
-                    "Non-WIP": "sum",
-                    "OOO": "sum",
-                    "Unaccounted": "sum",
-                    "Expected Hours": "max",
-                })
+            wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
+            wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
+            wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people["Denom"] = (
+                wk_people["WIP"]
+                + wk_people["Other Team WIP"]
+                + wk_people["Non-WIP"]
+                + wk_people["OOO"]
+                + wk_people["Unaccounted"]
             )
-            wk_people["Denom"] = wk_people["Expected Hours"]
             long_df = wk_people.melt(
                 id_vars=["team", "period_date", "person", "Denom"],
                 value_vars=[
@@ -3222,20 +1817,6 @@ with right2:
             week_mix = week_mix[week_mix["Category"].isin(category_domain)].copy()
             week_mix["CategoryOrder"] = week_mix["Category"].map(category_order_map)
             week_mix["Pct"] = pd.to_numeric(week_mix["Pct"], errors="coerce").fillna(0.0)
-            week_mix = week_mix.sort_values(
-                ["team", "period_date", "person", "CategoryOrder"]
-            ).copy()
-            week_mix["TruePct"] = week_mix["Pct"]
-            week_mix["CumPctBefore"] = (
-                week_mix
-                .groupby(["team", "period_date", "person"])["TruePct"]
-                .cumsum()
-                - week_mix["TruePct"]
-            )
-            week_mix["PlotPct"] = np.minimum(
-                week_mix["TruePct"],
-                (1.0 - week_mix["CumPctBefore"]).clip(lower=0.0),
-            ).clip(lower=0.0)
             week_mix["Hours"] = pd.to_numeric(week_mix["Hours"], errors="coerce").fillna(0.0)
             top_controls_left, top_controls_right = st.columns([1, 1])
             with top_controls_left:
@@ -3280,12 +1861,7 @@ with right2:
                 top_mix = top_mix.dropna(subset=["Pct"]).copy()
             top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
             top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
-            person_order = (
-                top_mix.groupby("person", as_index=False)["Hours"]
-                .sum()
-                .sort_values("Hours", ascending=False)["person"]
-                .tolist()
-            )
+            person_order = sorted(top_mix["person"].dropna().unique().tolist())
             label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
             label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
@@ -3297,16 +1873,16 @@ with right2:
                     sort=person_order,
                     axis=alt.Axis(
                         labelAngle=-90,
-                        labelLimit=180,
-                        labelOverlap=False, 
+                        labelLimit=200,
+                        labelOverlap=False,   # force all names to render
                     ),
                 ),
                 y=alt.Y(
-                    "PlotPct:Q",
+                    "Pct:Q",
                     title="% of Time" if not factor_out_ooo_top else "% of Non-OOO Time",
-                    stack="zero",
+                    stack="normalize",
                     axis=alt.Axis(format=".0%"),
-                    scale=alt.Scale(domain=[0, 1.08], nice=False, clamp=False),
+                    scale=alt.Scale(domain=[0, 1]),
                 ),
                 color=alt.Color(
                     "Category:N",
@@ -3329,7 +1905,7 @@ with right2:
                     alt.Tooltip("person:N", title="Person"),
                     alt.Tooltip("Category:N", title="Category"),
                     alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                    alt.Tooltip("TruePct:Q", title="% of Time", format=".1%"),
+                    alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
                     alt.Tooltip("period_date:T", title="Week"),
                 ],
             )
@@ -3349,15 +1925,21 @@ with right2:
                 detail="Category:N",
                 text=alt.Text("Pct:Q", format=".0%"),
             )
-            overflow_df = (
-                week_mix.groupby(["team", "period_date", "person"], as_index=False)
-                .agg(
-                    TotalPct=("TruePct", "sum"),
-                    TotalHours=("Hours", "sum"),
-                )
+            person_totals = (
+                week_mix.groupby("person", as_index=False)["Hours"]
+                .sum()
+                .rename(columns={"Hours": "TotalHours"})
             )
-            overflow_df = overflow_df[overflow_df["TotalPct"] > 1.0].copy()
-            overflow_df["y_pos"] = 1.025
+            if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
+                expected_hrs = wk_people_kpi[["person", "Expected Hours"]].copy()
+                expected_hrs["person"] = expected_hrs["person"].astype(str).str.strip()
+            else:
+                expected_hrs = pd.DataFrame({"person": person_totals["person"], "Expected Hours": 40.0})
+            person_totals["person"] = person_totals["person"].astype(str).str.strip()
+            person_totals = person_totals.merge(expected_hrs, on="person", how="left")
+            person_totals["Expected Hours"] = person_totals["Expected Hours"].fillna(40.0)
+            overflow_df = person_totals[person_totals["TotalHours"] > person_totals["Expected Hours"]].copy()
+            overflow_df["y_pos"] = 1.02  # just above the top of the 100% bar
             overflow_df["label"] = "⚠"
             overflow_layer = (
                 alt.Chart(overflow_df)
@@ -3369,20 +1951,16 @@ with right2:
                 )
                 .encode(
                     x=alt.X("person:N", sort=person_order),
-                    y=alt.Y(
-                        "y_pos:Q",
-                        scale=alt.Scale(domain=[0, 1.08], nice=False, clamp=False),
-                        axis=None,
-                    ),
-                    text="label:N",
+                    y=alt.Y("y_pos:Q", scale=alt.Scale(domain=[0, 1.12]), axis=None),
+                    text=alt.Text("label:N"),
                     tooltip=[
                         alt.Tooltip("person:N", title="Person"),
-                        alt.Tooltip("TotalHours:Q", title="Total Hours Worked", format=",.2f"),
-                        alt.Tooltip("TotalPct:Q", title="Total % of Time", format=".1%"),
+                        alt.Tooltip("TotalHours:Q", title="Total Hours", format=",.1f"),
+                        alt.Tooltip("Expected Hours:Q", title="Expected Hours", format=",.1f"),
                     ],
                 )
             )
-            top_chart = (bars + labels + overflow_layer).properties(height=420)
+            top_chart = (bars + labels + overflow_layer).properties(height=400)
             st.altair_chart(top_chart, width="stretch")
             st.markdown("##### Drill-down over time")
             people_for_drill = sorted(top_mix["person"].dropna().unique().tolist())
@@ -3482,9 +2060,9 @@ with right2:
                             y=alt.Y(
                                 "Pct:Q",
                                 title="% of Time" if not factor_out_ooo else "% of Non-OOO Time",
-                                stack="zero",
+                                stack="normalize",
                                 axis=alt.Axis(format=".0%"),
-                                scale=alt.Scale(domain=[0, 1.12], nice=False, clamp=False),
+                                scale=alt.Scale(domain=[0, 1]),
                             ),
                             color=alt.Color(
                                 "Category:N",
@@ -3507,7 +2085,7 @@ with right2:
                                 alt.Tooltip("period_date:T", title="Week"),
                                 alt.Tooltip("Category:N", title="Category"),
                                 alt.Tooltip("Hours:Q", title="Hours", format=",.2f"),
-                                alt.Tooltip("TruePct:Q", title="% of Time", format=".1%"),
+                                alt.Tooltip("Pct:Q", title="% of Time", format=".1%"),
                             ],
                         )
                     )
@@ -3532,96 +2110,24 @@ with right2:
                         .sum()
                         .rename(columns={"Hours": "TotalHours"})
                     )
-                    picked_person_key = person_key(picked_person_mix)
-                    PERSON_WEEKLY_HOURS = {
-                        "colm larkin": 30.2,
-                        "megan mulligan": 31.0,
-                        "roland simpson": 37.5,
-                        "kara housmann": 37.5,
-                        "sarah korthauer": 37.5,
-                        "kyle mai": 37.5,
-                    }
-                    PERSON_TEAM_WEEKLY_HOURS = {
-                        ("peter mchugh", "CDS"): 10.0,
-                        ("peter mchugh", "NI"): 27.75,
-                    }
-                    TEAM_WEEKLY_HOURS = {
-                        "CPT": 37.75,
-                        "CDS": 37.75,
-                        "NI": 37.75,
-                        "DS": 37.5,
-                        "LIT & LETTERS": 37.5,
-                    }
-                    if multi_team and chosen_mix_teams:
-                        teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
-                    elif "team_name" in locals() and team_name:
-                        teams_for_drill = {str(team_name).strip().upper()}
+                    person_name = normalize_person_name(str(picked_person_mix).strip())
+                    if (
+                        "wk_people_kpi" in dir()
+                        and not wk_people_kpi.empty
+                        and "person" in wk_people_kpi.columns
+                        and "Expected Hours" in wk_people_kpi.columns
+                    ):
+                        person_expected_match = wk_people_kpi.loc[
+                            wk_people_kpi["person"].astype(str).map(normalize_person_name) == person_name,
+                            "Expected Hours",
+                        ]
+                        if not person_expected_match.empty:
+                            drill_expected_hrs = float(person_expected_match.iloc[0])
+                        else:
+                            drill_expected_hrs = weekly_hours_for_person(person_name, 40.0)
                     else:
-                        teams_for_drill = set()
-                    default_drill_expected = (
-                        sum(TEAM_WEEKLY_HOURS.get(t, 40.0) for t in teams_for_drill)
-                        if teams_for_drill
-                        else 40.0
-                    )
-                    team_specific_expected = [
-                        PERSON_TEAM_WEEKLY_HOURS[(picked_person_key, t)]
-                        for t in teams_for_drill
-                        if (picked_person_key, t) in PERSON_TEAM_WEEKLY_HOURS
-                    ]
-                    if team_specific_expected:
-                        drill_expected_hrs = sum(team_specific_expected)
-                    else:
-                        drill_expected_hrs = PERSON_WEEKLY_HOURS.get(
-                            picked_person_key,
-                            default_drill_expected,
-                        )
+                        drill_expected_hrs = weekly_hours_for_person(person_name, 40.0)
                     drill_totals["ExpectedHours"] = drill_expected_hrs
-                    active_peter_teams = {"CDS", "NI"} & teams_for_drill
-                    if picked_person_key == "peter mchugh" and active_peter_teams:
-                        peter_avail = (
-                            explode_person_hours(df)
-                            .loc[
-                                lambda d: (
-                                    d["team"].astype(str).str.strip().str.upper().isin(active_peter_teams)
-                                    & d["person"].map(person_key).eq("peter mchugh")
-                                ),
-                                ["period_date", "Available Hours"],
-                            ]
-                            .copy()
-                        )
-                        if not peter_avail.empty:
-                            peter_avail["period_date"] = pd.to_datetime(
-                                peter_avail["period_date"],
-                                errors="coerce",
-                            ).dt.normalize()
-                            peter_avail["Available Hours"] = pd.to_numeric(
-                                peter_avail["Available Hours"],
-                                errors="coerce",
-                            )
-                            peter_avail = (
-                                peter_avail
-                                .dropna(subset=["period_date"])
-                                .groupby("period_date", as_index=False)["Available Hours"]
-                                .sum()
-                            )
-                            drill_totals["period_date"] = pd.to_datetime(
-                                drill_totals["period_date"],
-                                errors="coerce",
-                            ).dt.normalize()
-                            drill_totals = drill_totals.merge(
-                                peter_avail.rename(columns={"Available Hours": "PeterAvailableHours"}),
-                                on="period_date",
-                                how="left",
-                            )
-                            peter_fallback_expected = sum(
-                                PERSON_TEAM_WEEKLY_HOURS.get(("peter mchugh", t), TEAM_WEEKLY_HOURS.get(t, 40.0))
-                                for t in active_peter_teams
-                            )
-                            drill_totals["ExpectedHours"] = np.where(
-                                drill_totals["PeterAvailableHours"].notna(),
-                                drill_totals["ExpectedHours"] - peter_fallback_expected + drill_totals["PeterAvailableHours"],
-                                drill_totals["ExpectedHours"],
-                            )
                     drill_overflow_df = drill_totals[drill_totals["TotalHours"] > drill_totals["ExpectedHours"]].copy()
                     drill_overflow_df["y_pos"] = 1.02
                     drill_overflow_df["label"] = "⚠"
