@@ -1486,7 +1486,9 @@ ACTIVITY_MAP = {
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
     "scrum rpa collab":"Scrum & Action",
-    
+    "reading through heli-fx manual and document":"Reviewing Documents & Case Video",
+    "30 (tl meeting 90) (going through dhr/oem and opening correct task/ opening dhr tasks in files where dhr had not previously been opened":"Meeting",
+    "1:1 & lab meeting":"Meeting",
     "create srs for medwatch, collab with tachy team":"Collaboration",
     "geo id added to pe":"WIP/Event Review",
     "project surge oem":"Project Work",
