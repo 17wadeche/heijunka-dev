@@ -2313,24 +2313,6 @@ def kpi_vs_target(col, label, actual, target, fmt_val="{:,.2f}", help: str | Non
     diff = (float(actual) - float(target)) / float(target)
     delta_str = f"{diff:+.0%} vs target"
     col.metric(label, value_str, delta=delta_str, delta_color="normal", help=help)
-if has_dates and min_date and max_date:
-    st.markdown("#### Date Range")
-    date_col1, date_col2 = st.columns(2)
-    with date_col1:
-        st.date_input(
-            "Start",
-            min_value=min_date,
-            max_value=max_date,
-            key="ms_start_date",
-        )
-    with date_col2:
-        st.date_input(
-            "End",
-            min_value=min_date,
-            max_value=max_date,
-            key="ms_end_date",
-        )
-st.markdown("---")
 left, mid, right = st.columns(3)
 base = alt.Chart(f).transform_calculate(
     week="toDate(datum.period_date)"
