@@ -2340,37 +2340,8 @@ base = alt.Chart(f).transform_calculate(
 teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
-left2, mid2, right2 = st.columns(3) 
-with left2:
-    st.subheader("HC in WIP Trend")
-    if "HC in WIP" in f.columns and f["HC in WIP"].notna().any():
-        hc = f[["team", "period_date", "HC in WIP"]].dropna()
-        base_hc = alt.Chart(hc).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("HC in WIP:Q", title="HC in WIP"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("steelblue"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("HC in WIP:Q", format=",.0f")]
-        )
-        st.altair_chart(
-            base_hc.mark_line(point=True).properties(height=280),
-            width="stretch"
-        )
-    else:
-        st.info("No 'HC in WIP' data available in the selected range.")
+mid2, right2 = st.columns(2) 
 with mid2:
-    st.subheader("Actual HC used Trend")
-    if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
-        ahu = f[["team", "period_date", "Actual HC used"]].dropna()
-        base_ahu = alt.Chart(ahu).encode(
-            x=alt.X("period_date:T", title="Week"),
-            y=alt.Y("Actual HC used:Q", title="Actual HC used"),
-            color=alt.Color("team:N", title="Team") if len(teams_in_view) > 1 else alt.value("indianred"),
-            tooltip=["team:N", "period_date:T", alt.Tooltip("Actual HC used:Q", format=",.2f")]
-        )
-        st.altair_chart(
-            base_ahu.mark_line(point=True).properties(height=280),
-            width="stretch"
-        )
         if len(teams_in_view) == 1:
             team_name = teams_in_view[0]
             if 'ppl_hours' not in locals():
