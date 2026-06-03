@@ -1485,6 +1485,7 @@ ACTIVITY_MAP = {
     "ng st, event reviews/data review":"Next Gen",
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
+    "audit prep meeting/1-1 transfer of resp.":"Audit",
     "scrum rpa collab":"Scrum & Action",
     "reading through heli-fx manual and document":"Reviewing Documents & Case Video",
     "30 (tl meeting 90) (going through dhr/oem and opening correct task/ opening dhr tasks in files where dhr had not previously been opened":"Meeting",
