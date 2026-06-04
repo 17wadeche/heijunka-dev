@@ -818,6 +818,8 @@ ACTIVITY_MAP = {
     "reading training document": "Training/Mentoring",
     "shipping training from scott": "Training/Mentoring",
     "crm tour":"Admin",
+    "emails/admin collaboration training": "Training/Mentoring",
+    "clinical scrum":"Scrum & Action",
     "device list project":"Project Work",
     "deco training/shadowing": "Training/Mentoring",
     "training eoin s on advance (90)": "Training/Mentoring",
