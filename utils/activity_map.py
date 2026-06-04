@@ -2280,6 +2280,7 @@ ACTIVITY_MAP = {
     "aged gfe escalation to commercial org":"Escalations",
     "gpt rd":"MDTGPT Review",
     "bo report request":"Data Request/Review",
+    "scrum xx source appropraite pes":"Scrum & Action",
     "revalve data review":"Data Request/Review",
     "boxi/gch report":"Data Request/Review",
     "gch masterdata/tech mtg":"Data Request/Review",
