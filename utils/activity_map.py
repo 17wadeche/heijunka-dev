@@ -1517,6 +1517,7 @@ ACTIVITY_MAP = {
     "geo id added to pe":"WIP/Event Review",
     "project surge oem":"Project Work",
     "email&im":"Email & IM",
+    "email& im":"Email & IM",
     "email &im":"Email & IM",
     "ous tech/charter":"Project Work",
     "venaseal documentation/investigation reading":"Reading File/Document Information",
