@@ -739,6 +739,7 @@ ACTIVITY_MAP = {
     "emails, admin":"Email & IM",
     "code remediations, reportable pe to pe merge support, scrum, town hall":"Scrum & Action",
     "affera code request":"Coding/Code Gov",
+    "escalated call and prep":"Meeting",
     "lab cleaning":"Admin",
     "clinical doc review":"Clinical Review",
     "sh pmpa meeting":"PMPA",
