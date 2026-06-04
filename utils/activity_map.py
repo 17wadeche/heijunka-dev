@@ -744,6 +744,7 @@ ACTIVITY_MAP = {
     "sh pmpa meeting":"PMPA",
     "clinical review/support":"Clinical Review",
     "laptop forced restart (new update)": "IT Issue/Update",
+    "agile issue": "IT Issue/Update",
     "meeting (voyager fume hood)": "Meeting",
     "nellcor shipping":"Shipment",
     "meetings/emails/reg inquirie":"RI",
