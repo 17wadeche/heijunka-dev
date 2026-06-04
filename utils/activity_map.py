@@ -45,6 +45,7 @@ ACTIVITY_MAP = {
     "2b label":"Labels",
     "label":"Labels",
     "labels/review":"Labels",
+    "email; scrum":"Email & IM",
     "shadowing training with denise": "Training/Mentoring",
     "zoya's assessment file": "Training/Mentoring",
     "emails/training querie": "Training/Mentoring",
