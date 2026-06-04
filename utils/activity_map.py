@@ -2261,6 +2261,8 @@ ACTIVITY_MAP = {
     "meeting with manager on files/":"Meeting",
     "scrum / meeting / 1:1 / reg inquirie":"Scrum & Action",
     "dt meeting": "Meeting",
+    "bake sale":"Engagement",
+    "wip pulls/ assignment/ anomaly check": "Metrics & Schedule",
     "gfe training":"Training/Mentoring",
     "ri training; job aid update":"RI",
     "pvh aged file review":"WIP/Event Review",
