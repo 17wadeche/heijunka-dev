@@ -772,6 +772,7 @@ ACTIVITY_MAP = {
     "emails, admin, project":"Email & IM",
     "graduates clinic, cornerstone":"Cornerstone",
     "office hours/ stop & fix":"Meeting",
+    "ad hoc conversation/questions":"Collaboration",
     "office hours / stop & fix":"Meeting",
     "wip pulls/ assignment/ anomaly check":"Metrics & Schedule",
     "wip pulls / assignment / anomaly check":"Metrics & Schedule",
