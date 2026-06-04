@@ -2298,6 +2298,7 @@ ACTIVITY_MAP = {
     "escalation":"Escalations",
     "aged gfe escalation to commercial org":"Escalations",
     "gpt rd":"MDTGPT Review",
+    "email; training meeting":"Training/Mentoring",
     "pre long al admin/emails etc":"Admin",
     "bo report request":"Data Request/Review",
     "scrum xx source appropraite pes":"Scrum & Action",
