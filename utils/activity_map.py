@@ -771,6 +771,7 @@ ACTIVITY_MAP = {
     "live case videos, cornerstone":"Reviewing Documents & Case Video",
     "emails, admin, project":"Email & IM",
     "graduates clinic, cornerstone":"Cornerstone",
+    "office hours/ stop & fix":"Meeting",
     "wip pulls/ assignment/ anomaly check":"Metrics & Schedule",
     "wip pulls / assignment / anomaly check":"Metrics & Schedule",
     "pab":"Metrics & Schedule",
