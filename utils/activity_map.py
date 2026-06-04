@@ -65,6 +65,7 @@ ACTIVITY_MAP = {
     "a":"",
     "afr":"",
     "laptop restart":"IT Issue/Update",
+    "gch issue / it ticket":"IT Issue/Update",
     "software/export":"IT Issue/Update",
     "collaboration and communication with other groups (i.e. s&r, regions, pats)":"Collaboration",
     "collaboration email":"Collaboration",
