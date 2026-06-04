@@ -44,6 +44,7 @@ ACTIVITY_MAP = {
     "shadowing with densie": "Training/Mentoring",
     "2b label":"Label",
     "label":"Label",
+    "meeings: emails: iris: cathworks paa: tl activities:":"Meeting",
     "labels/review":"Label",
     "email; scrum":"Email & IM",
     "shadowing training with denise": "Training/Mentoring",
