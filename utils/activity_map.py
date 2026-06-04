@@ -739,6 +739,7 @@ ACTIVITY_MAP = {
     "affera code request":"Coding/Code Gov",
     "lab cleaning":"Admin",
     "clinical doc review":"Clinical Review",
+    "clinical review/support":"Clinical Review",
     "laptop forced restart (new update)": "IT Issue/Update",
     "meeting (voyager fume hood)": "Meeting",
     "nellcor shipping":"Shipment",
