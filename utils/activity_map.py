@@ -772,6 +772,7 @@ ACTIVITY_MAP = {
     "emails, admin, project":"Email & IM",
     "graduates clinic, cornerstone":"Cornerstone",
     "wip pulls/ assignment/ anomaly check":"Metrics & Schedule",
+    "wip pulls / assignment / anomaly check":"Metrics & Schedule",
     "pab":"Metrics & Schedule",
     "standard breaks (i.e. two 15 min per day)":"Break",
     "standard breaks (two 15 min per day)":"Break",
