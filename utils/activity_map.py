@@ -59,6 +59,7 @@ ACTIVITY_MAP = {
     "lookig at past analysis for heli-fx & manual":"WIP/Event Review",
     "gfe":"WIP/Event Review",
     "pe/file review":"WIP/Event Review",
+    "complaint wizard update":"IT Issue/Update",
     "capa online training":"CAPA",
     "charter lead":"Project Work",
     "onenote mgmt":"Notes",
