@@ -3274,6 +3274,7 @@ ACTIVITY_MAP = {
     "ai bootcamp": "Training/Mentoring",
     "workday feedback":"Career Development",
     "emails/query":"Email & IM",
+    "ms":"Email & IM",
     "nh training": "Training/Mentoring",
     "investigation for parker event": "WIP/Event Review",
     "parklife event": "WIP/Event Review",
