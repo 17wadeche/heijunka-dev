@@ -43,6 +43,7 @@ ACTIVITY_MAP = {
     "shadowing sith louise": "Training/Mentoring",
     "shadowing with densie": "Training/Mentoring",
     "2b label":"Labels",
+    "label":"Labels",
     "labels/review":"Labels",
     "shadowing training with denise": "Training/Mentoring",
     "zoya's assessment file": "Training/Mentoring",
