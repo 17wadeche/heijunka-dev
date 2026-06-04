@@ -816,6 +816,7 @@ ACTIVITY_MAP = {
     "lab meeting sorting cf": "Meeting",
     "meetings, calls, shipping device": "Meeting",
     "reading training document": "Training/Mentoring",
+    "shipping training from scott": "Training/Mentoring",
     "crm tour":"Admin",
     "device list project":"Project Work",
     "deco training/shadowing": "Training/Mentoring",
