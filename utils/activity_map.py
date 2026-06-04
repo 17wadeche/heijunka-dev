@@ -2257,6 +2257,8 @@ ACTIVITY_MAP = {
     "catching up emails etc": "Email & IM",
     "and rpa meeting":"RPA Meeting/Action",
     "walkaround training":"Training/Mentoring",
+    "meeting prep / meetings / collaboration / reg inquirie":"Meeting",
+    "scrum / meeting / 1:1 / reg inquirie":"Scrum & Action",
     "dt meeting": "Meeting",
     "gfe training":"Training/Mentoring",
     "ri training; job aid update":"RI",
