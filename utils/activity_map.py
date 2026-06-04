@@ -2258,6 +2258,7 @@ ACTIVITY_MAP = {
     "and rpa meeting":"RPA Meeting/Action",
     "walkaround training":"Training/Mentoring",
     "meeting prep / meetings / collaboration / reg inquirie":"Meeting",
+    "meeting with manager on files/":"Meeting",
     "scrum / meeting / 1:1 / reg inquirie":"Scrum & Action",
     "dt meeting": "Meeting",
     "gfe training":"Training/Mentoring",
