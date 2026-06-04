@@ -804,6 +804,7 @@ ACTIVITY_MAP = {
     "t":"Meeting",
     "pmq cr pre-meeting q review":"PMQ Meeting",
     "scrum, collaboration, practice event":"Scrum & Action",
+    "scrum xx source appropriate pes":"Scrum & Action",
     "fwt, it issues, training": "IT Issue/Update",
     "gch down/it": "IT Issue/Update",
     "email; training; meeting": "Training/Mentoring",
