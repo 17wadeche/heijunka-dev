@@ -2605,6 +2605,35 @@ elif page == "Non-WIP":
         st.info("No non-WIP activity CSVs found.")
         st.stop()
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
+    team_meta = _team_meta_lookup(org).copy()
+    if not team_meta.empty and "team" in source_raw.columns:
+        source_raw = source_raw.copy()
+        source_raw["team"] = source_raw["team"].astype(str).str.strip()
+        team_meta["team"] = team_meta["team"].astype(str).str.strip()
+        source_raw = source_raw.merge(
+            team_meta[["team", "portfolio"]].rename(columns={"portfolio": "_portfolio"}),
+            on="team",
+            how="left",
+        )
+        portfolio_options = sorted(
+            p
+            for p in source_raw["_portfolio"].dropna().astype(str).unique()
+            if p.strip()
+        )
+        selected_portfolio = st.selectbox(
+            "Portfolio",
+            options=["All portfolios", *portfolio_options],
+            index=0,
+            key="nonwip_portfolio_filter",
+            help="Filters only the Non-WIP page.",
+        )
+        if selected_portfolio != "All portfolios":
+            source_raw = source_raw[
+                source_raw["_portfolio"].astype(str).eq(selected_portfolio)
+            ].copy()
+        if source_raw.empty:
+            st.info("No Non-WIP activity data available for the selected portfolio.")
+            st.stop()
     parsed_nonwip = _prepare_nonwip_activity_source(source_raw)
     top_n = st.number_input(
         "Number of activities to show",
