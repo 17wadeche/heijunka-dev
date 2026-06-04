@@ -61,6 +61,7 @@ ACTIVITY_MAP = {
     "capa online training":"CAPA",
     "/":"",
     "a":"",
+    "afr":"",
     "laptop restart":"IT Issue/Update",
     "software/export":"IT Issue/Update",
     "collaboration and communication with other groups (i.e. s&r, regions, pats)":"Collaboration",
