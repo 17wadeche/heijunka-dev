@@ -2291,6 +2291,7 @@ ACTIVITY_MAP = {
     "event review":"WIP/Event Review",
     "aged wip review":"WIP/Event Review",
     "master data update":"Data Request/Review",
+    "reviewing matrix/ifu's":"Reportability Matrix",
     "master data":"Data Request/Review",
     "sap review & product return - lab esc.":"Escalations",
     "escalation tracker":"Escalations",
