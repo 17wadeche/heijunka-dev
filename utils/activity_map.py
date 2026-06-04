@@ -734,6 +734,8 @@ ACTIVITY_MAP = {
     "fda query meeting":"Question",
     "cornerstone xx shadowing 2b": "Training/Mentoring",
     "shadowing 2b": "Training/Mentoring",
+    "autolog reverse shadowing": "Training/Mentoring",
+    "self paced investigation training": "Training/Mentoring",
     "emails, admin":"Email & IM",
     "code remediations, reportable pe to pe merge support, scrum, town hall":"Scrum & Action",
     "affera code request":"Coding/Code Gov",
