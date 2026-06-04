@@ -2274,6 +2274,7 @@ ACTIVITY_MAP = {
     "master data update":"Data Request/Review",
     "master data":"Data Request/Review",
     "sap review & product return - lab esc.":"Escalations",
+    "escalation tracker":"Escalations",
     "ou weekly escalation":"Escalations",
     "escalation":"Escalations",
     "aged gfe escalation to commercial org":"Escalations",
