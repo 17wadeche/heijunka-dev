@@ -2252,6 +2252,7 @@ ACTIVITY_MAP = {
     "scrum, questions, collaboration, email":"Scrum & Action",
     "ng, meetings, collaboration/event reviews, email/admin":"Next Gen",
     "lit scrum metric":"Scrum & Action",
+    "qms/ procedure":"Admin",
     "sr/rd training":"Training/Mentoring",
     "tl meeting & lab meeting":"Meeting",
     "catching up emails etc": "Email & IM",
