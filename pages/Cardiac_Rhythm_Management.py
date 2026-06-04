@@ -795,8 +795,17 @@ def build_person_weekly_accounting(
         .merge(other_df.astype({"person": "string"}), on="person", how="left")
         .merge(acct_df.astype({"person": "string"}), on="person", how="left")
         .merge(ooo_df.astype({"person": "string"}), on="person", how="left")
-        .fillna(0.0)
     )
+    for c in [
+        "Non-WIP Hours",
+        "Completed Hours",
+        "Other Team WIP",
+        "Accounted Non-WIP",
+        "OOO Hours",
+    ]:
+        if c not in out.columns:
+            out[c] = 0.0
+        out[c] = pd.to_numeric(out[c], errors="coerce").fillna(0.0)
     out["person_key"] = out["person"].map(person_key)
     irl_people_norm = {person_key(x) for x in (irl_people or set())}
     base_expected = pd.Series(
@@ -818,7 +827,10 @@ def build_person_weekly_accounting(
         .combine_first(person_override_expected)
         .combine_first(base_expected)
     )
-    if team_key in {"CDS", "NI"}:
+    if team_key == "CPT" and "Available Hours" in out.columns:
+        available_hours = pd.to_numeric(out["Available Hours"], errors="coerce")
+        out.loc[available_hours.notna(), "Expected Hours"] = available_hours
+    elif team_key in {"CDS", "NI"} and "Available Hours" in out.columns:
         peter_available = pd.to_numeric(out["Available Hours"], errors="coerce")
         out.loc[
             out["person_key"].eq("peter mchugh") & peter_available.notna(),

@@ -1609,17 +1609,13 @@ def _weekly_team_export_df(
         elif team == "Lit & Letters":
             capacity_hours = _capacity_from_count_with_person_overrides(people_count, 37.5, wk_people)
         elif team == "CPT":
-            cpt_31_count = 2
-            cpt_30_2_count = 1
-            cpt_37_5_count = 4
-            assigned_count = cpt_31_count + cpt_30_2_count + cpt_37_5_count
-            remaining_count = max(float(people_count) - assigned_count, 0)
             capacity_hours = (
-                (cpt_31_count * 31.0)
-                + (cpt_30_2_count * 30.2)
-                + (cpt_37_5_count * 37.5)
-                + (remaining_count * 37.75)
+                float(pd.to_numeric(wk_people["Available Hours"], errors="coerce").fillna(0.0).sum())
+                if "Available Hours" in wk_people.columns
+                else 0.0
             )
+            if capacity_hours <= 0.0:
+                capacity_hours = float(wk_people["Expected Hours"].sum())
         elif team in {"CDS", "NI"}:
             peter_available = _person_available_hours_for_week(
                 person_hours=person_hours,

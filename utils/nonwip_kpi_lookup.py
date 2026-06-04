@@ -224,17 +224,9 @@ def enterprise_nonwip_kpi_lookup(
     elif team_name in {"DS", "Lit & Letters"}:
         capacity_hours = _capacity_from_count_with_person_overrides(count, 37.5, wk_people)
     elif team_name == "CPT":
-        cpt_31_count = 2
-        cpt_30_2_count = 1
-        cpt_37_5_count = 4
-        assigned_count = cpt_31_count + cpt_30_2_count + cpt_37_5_count
-        remaining_count = max(count - assigned_count, 0.0)
-        capacity_hours = (
-            (cpt_31_count * 31.0)
-            + (cpt_30_2_count * 30.2)
-            + (cpt_37_5_count * 37.5)
-            + (remaining_count * 37.75)
-        )
+        capacity_hours = _sum_col(wk_people, "Available Hours")
+        if capacity_hours <= 0.0:
+            capacity_hours = _sum_col(wk_people, "Expected Hours")
     elif team_name in {"CDS", "NI"}:
         if peter_available_hours is None or pd.isna(peter_available_hours):
             peter_available_hours = _person_available_hours_for_week(
