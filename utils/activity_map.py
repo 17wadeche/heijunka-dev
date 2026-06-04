@@ -735,6 +735,7 @@ ACTIVITY_MAP = {
     "emails/admin collaboration clinical meetings training": "Training/Mentoring",
     "late mdr":"WIP/Event Review",
     "ect letter":"WIP/Event Review",
+    "lael review":"Labels",
     "q3 town hall recording": "Meeting",
     "town hall meeting": "Meeting",
     "emails, dealing with issues from devices,dmaic":"Email & IM",
