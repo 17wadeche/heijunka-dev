@@ -24,6 +24,7 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB": "CPT",
     r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka": "NI",
     r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker": "NI & PM MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB":"PM-CTS",
 }
 EXCLUDED_FILES = {
     os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026\Not USED Week 20 Apr 2026 Heijunka & PAB.xlsm"),
@@ -31,6 +32,8 @@ EXCLUDED_FILES = {
     os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\(will be archived) DS_Schedule_PAS 6.5 V1.xlsx"),
     os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\CPT Event Support.xlsx"),
     os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\DS Production Analysis Sheet and Schedule.xlsx"),
+    os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB\Revised PM-CTS Template.xlsm"),
+    
 }
 TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
@@ -48,6 +51,7 @@ DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defib
 CPT_ROOT_HINT = _norm_cpt = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB")
 NI_ROOT_HINT = _norm_ni = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka")
 MEIC_ROOT_HINT = _norm_meic = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker")
+PM_CTS_ROOT_HINT = norm_pm_cts = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB")
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
 _PROD_PAT = re.compile(r"\b(production|product)\s+analysis\b", re.IGNORECASE)
 _MONTH_MAP = {
@@ -460,6 +464,8 @@ def team_for_source(path: str) -> str:
         return "NI"
     if np.startswith(MCS_ROOT_HINT):
         return "MCS"
+    if np.startswith(PM_CTS_ROOT_HINT):
+        return "PM-CTS"
     return TEAM_BY_BASENAME.get(base, "")
 NI_NEW_HOURS_START = _dt.date(2026, 4, 17)
 def _ni_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
@@ -488,6 +494,8 @@ def compute_period_date_ni(ws_metrics: Worksheet) -> Optional[_dt.date]:
     return d - _dt.timedelta(days=4)
 def compute_total_available_hours_ni(ws_wip_plan: Worksheet) -> Optional[float]:
     return _cell_number(ws_wip_plan["BS3"].value)
+def compute_total_available_hours_pm_cts(ws_perf: Worksheet) -> Optional[float]:
+    return _cell_number(ws_perf["T18"].value)
 def compute_completed_hours_ni(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
@@ -524,6 +532,22 @@ def compute_completed_hours_ni(
             people_in_wip.append(p)
     if total is None and _use_af_actual_hours(period):
         total = summed_actual
+    return total, actual_by_person, people_in_wip
+def compute_completed_hours_pm_cts(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    total = _cell_number(ws_perf["Q18"].value)
+    actual_by_person: Dict[str, float] = {}
+    people_in_wip: List[str] = []
+    seen = set()
+    for r in range(3, 16):
+        person = ws_perf[f"A{r}"].value
+        actual = _cell_number(ws_perf[f"Q{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or actual is None or actual == 0:
+            continue
+        actual_by_person[p] = actual_by_person.get(p, 0.0) + actual
+        if p not in seen:
+            seen.add(p)
+            people_in_wip.append(p)
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_ni(
     ws_perf: Worksheet,
@@ -650,6 +674,16 @@ def compute_person_available_hours_meic(ws_perf: Worksheet) -> Dict[str, float]:
     for r in range(5, 24):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"Q{r}"].value)
+        p = str(person).strip() if person is not None else ""
+        if not p or is_excluded_person(p) or available is None:
+            continue
+        out[p] = out.get(p, 0.0) + available
+    return out
+def compute_person_available_hours_pm_cts(ws_perf: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for r in range(3, 16):
+        person = ws_perf[f"A{r}"].value
+        available = _cell_number(ws_perf[f"T{r}"].value)
         p = str(person).strip() if person is not None else ""
         if not p or is_excluded_person(p) or available is None:
             continue
@@ -847,6 +881,84 @@ def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
             )
     except Exception as e:
         err_msgs.append(f"ni_parse_error: {e!r}")
+    target_uplh = safe_div(float(target_output or 0.0), float(completed_hours or 0.0))
+    actual_uplh = safe_div(float(actual_output or 0.0), float(completed_hours or 0.0))
+    hc_in_wip = len(people) if people else 0
+    actual_hc_used = safe_div(float(completed_hours or 0.0), 32.5)
+    return [{
+        "team": team,
+        "period_date": iso_date(period),
+        "source_file": path,
+        "Total Available Hours": float(total_available) if total_available is not None else "",
+        "Completed Hours": float(completed_hours) if completed_hours is not None else "",
+        "Target Output": float(target_output) if target_output is not None else "",
+        "Actual Output": float(actual_output) if actual_output is not None else "",
+        "Target UPLH": float(target_uplh) if target_uplh is not None else "",
+        "Actual UPLH": float(actual_uplh) if actual_uplh is not None else "",
+        "UPLH WP1": "",
+        "UPLH WP2": "",
+        "HC in WIP": hc_in_wip,
+        "Actual HC Used": float(actual_hc_used) if actual_hc_used is not None else "",
+        "People in WIP": dumps_json(people) if ws_perf is not None else "",
+        "Person Hours": build_person_hours_json(person_avail, actual_hours_by_person) if ws_perf is not None else "",
+        "Outputs by Person": dumps_json(outputs_by_person) if ws_pab is not None else "",
+        "Outputs by Cell/Station": dumps_json(outputs_by_station) if ws_pab is not None else "",
+        "Cell/Station Hours": dumps_json(station_hours) if ws_pab is not None else "",
+        "Hours by Cell/Station - by person": dumps_json(station_hours_by_person) if ws_pab is not None else "",
+        "Output by Cell/Station - by person": dumps_json(output_by_station_by_person) if ws_pab is not None else "",
+        "UPLH by Cell/Station - by person": dumps_json(uplh_by_station_by_person) if ws_pab is not None else "",
+        "error": "; ".join(err_msgs) if err_msgs else "",
+        "Closures": "",
+        "Opened": "",
+    }]
+def scrape_one_workbook_pm_cts(path: str) -> List[Dict[str, Any]]:
+    team = team_for_source(path)
+    wb = load_workbook(path, data_only=True)
+    err_msgs: List[str] = []
+    ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
+    ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
+    ws_perf = wb[_sheet_ci(wb, "#3 Performance WIP Time")] if _sheet_ci(wb, "#3 Performance WIP Time") else None
+    if ws_wip_plan is None:
+        err_msgs.append("missing_#1_wip_plan_sheet")
+    if ws_pab is None:
+        err_msgs.append("missing_#2_pab_sheet")
+    if ws_perf is None:
+        err_msgs.append("missing_#3_performance_wip_time_sheet")
+    period = None
+    if period is None:
+        period = parse_period_date_from_filename(path, default_year=2026)
+    if period is None:
+        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3_and_filename")
+    total_available = None
+    completed_hours = None
+    actual_hours_by_person: Dict[str, float] = {}
+    people: List[str] = []
+    person_avail: Dict[str, float] = {}
+    target_output = None
+    actual_output = None
+    outputs_by_person: Dict[str, Dict[str, float]] = {}
+    outputs_by_station: Dict[str, Dict[str, float]] = {}
+    station_hours: Dict[str, float] = {}
+    station_hours_by_person: Dict[str, Dict[str, float]] = {}
+    output_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
+    try:
+        if ws_wip_plan is not None:
+            total_available = compute_total_available_hours_pm_cts(ws_perf)
+        if ws_perf is not None:
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_pm_cts(ws_perf, period)
+            person_avail = compute_person_available_hours_pm_cts(ws_perf, period)
+        if ws_pab is not None:
+            target_output, actual_output = compute_target_actual_output_ni(ws_pab)
+            outputs_by_person = compute_outputs_by_person_ni(ws_pab)
+            outputs_by_station = compute_outputs_by_station_ni(ws_pab)
+            station_hours, station_hours_by_person = compute_station_hours_ni(ws_pab)
+            output_by_station_by_person = compute_output_by_station_by_person_ni(ws_pab)
+            uplh_by_station_by_person = compute_uplh_by_station_by_person(
+                output_by_station_by_person, station_hours_by_person
+            )
+    except Exception as e:
+        err_msgs.append(f"pm_cts_parse_error: {e!r}")
     target_uplh = safe_div(float(target_output or 0.0), float(completed_hours or 0.0))
     actual_uplh = safe_div(float(actual_output or 0.0), float(completed_hours or 0.0))
     hc_in_wip = len(people) if people else 0
@@ -1780,6 +1892,8 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             return scrape_one_workbook_ni(path)
         if team == "NI & PM MEIC":
             return scrape_one_workbook_meic(path)
+        if team == "PM-CTS":
+            return scrape_one_workbook_pm_cts(path)
         return [dict(blank_row_for_missing_file(path), error=f"unknown_team_for_source: {path}")]
     except FileNotFoundError:
         return [blank_row_for_missing_file(path)]
@@ -1864,6 +1978,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker",
         r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker\Archive",
+        r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB",
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")

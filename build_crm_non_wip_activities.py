@@ -20,6 +20,7 @@ NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - 
 NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\April 2026 - PAB"
 NI_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB"
 MEIC_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker"
+PM_CTS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB"
 TEAM_BY_SOURCE: Dict[str, str] = {
     os.path.normpath(MCS_DEFAULT_PATH): "MCS",
 }
@@ -34,6 +35,7 @@ EXCLUDED_FILES = {
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\(will be archived) DS_Schedule_PAS 6.5 V1.xlsx",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\CPT Event Support.xlsx",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\DS Production Analysis Sheet and Schedule.xlsx",
+        r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB\Revised PM-CTS Template.xlsm",
     ]
 }
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
@@ -70,6 +72,11 @@ LIT_LETTERS_PAB_SHEET = "#3 PAB"
 LIT_LETTERS_PERF_WIP_SHEET = "#6 Performance WIP Time"
 LIT_LETTERS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 LIT_LETTERS_PEOPLE_COUNT = 7
+PM_CTS_TEAM_NAME = "PM-CTS"
+PM_CTS_PAB_SHEET = "#2 PAB"
+PM_CTS_PERF_WIP_SHEET = "#3 Performance WIP Time"
+PM_CTS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
+PM_CTS_PEOPLE_COUNT = 14
 DS_PAB_SHEET = "#2 PAB"
 DS_WIP_PLAN_SHEET = "# 1 WIP plan"
 DS_PERF_WIP_SHEET = "#5 Performance WIP Time"
@@ -146,6 +153,9 @@ def team_for_source(path: str) -> str:
     cds_root = _norm_path(CDS_DEFAULT_DIR)
     if np.startswith(cds_root + os.sep) or np == cds_root:
         return "CDS"
+    pm_cts_root = _norm_path(PM_CTS_DEFAULT_DIR)
+    if np.startswith(pm_cts_root + os.sep) or np == pm_cts_root:
+        return "PM-CTS"
     ni_root = _norm_path(NI_DEFAULT_DIR)
     if np.startswith(ni_root + os.sep) or np == ni_root:
         return "NI"
@@ -166,6 +176,8 @@ def team_for_source(path: str) -> str:
         return "CDS"
     if "non implantables" in np_lower:
         return "NI"
+    if "pm-cts" in np_lower:
+        return "PM-CTS"
     if "crm cqxm reports - 1.9 heijunka tracker" in np_lower:
         return MEIC_TEAM_NAME
     return ""
@@ -221,6 +233,93 @@ def _is_lit_letters_summary_row(name: str) -> bool:
         or n.startswith("team ")
         or n.startswith("team%")
     )
+def iter_pm_cts_non_wip_rows(
+    ws_pab: Worksheet,
+    start_row: int = 2,
+) -> Iterable[Tuple[str, str, float]]:
+    for r in range(start_row, ws_pab.max_row + 1):
+        area = _norm_text(str(ws_pab[f"D{r}"].value or ""))
+        if area not in LIT_LETTERS_NON_WIP_TYPES:
+            continue
+        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
+        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or "")) or area.title()
+        mins = _cell_number(ws_pab[f"H{r}"].value)
+        if not person or is_excluded_person(person) or mins is None:
+            continue
+        yield person, activity, float(mins) / 60.0
+def compute_pm_cts_total_non_wip_hours(ws_pab: Worksheet) -> float:
+    return float(sum(hours for _, _, hours in iter_lit_letters_non_wip_rows(ws_pab)))
+def compute_pm_cts_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for person, _, hours in iter_lit_letters_non_wip_rows(ws_pab):
+        out[person] = out.get(person, 0.0) + float(hours)
+    return {person: float(total) for person, total in out.items() if total != 0}
+def compute_pm_cts_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
+    ooo_col = _find_header_col(ws_perf, "Total OOO hours") or ws_perf["S1"].column
+    out: Dict[str, float] = {}
+    for r in range(3, ws_perf.max_row + 1):
+        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+        if not raw_name:
+            continue
+        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+            continue
+        person = normalize_person_name(raw_name)
+        hours = _cell_number(ws_perf.cell(r, ooo_col).value)
+        if not person or hours is None or hours == 0:
+            continue
+        out[person] = out.get(person, 0.0) + float(hours)
+    return out
+def compute_pm_cts_total_ooo_hours(ws_perf: Worksheet) -> float:
+    summary_val = (
+        _find_number_right_of_label(ws_perf, "Team OOO hours")
+        or _find_number_right_of_label(ws_perf, "Total OOO hours")
+    )
+    if summary_val is not None:
+        return float(summary_val)
+    return float(sum(compute_pm_cts_ooo_by_person(ws_perf).values()))
+def compute_pm_cts_non_wip_activities(
+    ws_pab: Worksheet,
+    ws_perf: Worksheet,
+) -> List[Dict[str, Any]]:
+    agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in iter_pm_cts_non_wip_rows(ws_pab):
+        key = (person, activity)
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    for person, hours in compute_pm_cts_ooo_by_person(ws_perf).items():
+        key = (person, "OOO")
+        agg[key] = agg.get(key, 0.0) + float(hours)
+    return [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(
+            agg.items(),
+            key=lambda x: (x[0][0].lower(), x[0][1].lower()),
+        )
+        if hours != 0
+    ]
+def compute_pm_cts_wip_workers_ooo_hours(
+    ws_perf: Worksheet,
+    wip_workers: List[str],
+) -> float:
+    worker_keys = {normalize_person_key(x) for x in wip_workers if x}
+    if not worker_keys:
+        return 0.0
+    total = 0.0
+    for person, hours in compute_pm_cts_ooo_by_person(ws_perf).items():
+        if normalize_person_key(person) in worker_keys:
+            total += float(hours)
+    return float(total)
+def compute_pm_cts_people_count(ws_perf: Worksheet) -> int:
+    seen = set()
+    for r in range(3, ws_perf.max_row + 1):
+        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+        if not raw_name:
+            continue
+        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+            continue
+        key = normalize_person_key(raw_name)
+        if key:
+            seen.add(key)
+    return len(seen)
 def iter_lit_letters_non_wip_rows(
     ws_pab: Worksheet,
     start_row: int = 2,
@@ -697,6 +796,47 @@ def scrape_one_lit_letters_workbook(
         "team": team,
         "period_date": period_iso,
         "people_count": LIT_LETTERS_PEOPLE_COUNT,
+        "total_non_wip_hours": float(total_non_wip_hours),
+        "OOO Hours": float(ooo_hours),
+        "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
+        "non_wip_by_person": json.dumps(non_wip_by_person, ensure_ascii=False),
+        "non_wip_activities": json.dumps(non_wip_activities, ensure_ascii=False),
+        "wip_workers": json.dumps(wip_workers, ensure_ascii=False),
+        "wip_workers_count": int(wip_workers_count),
+        "wip_workers_ooo_hours": float(wip_workers_ooo_hours),
+    }
+    return [row]
+def scrape_one_pm_cts_workbook(
+    path: str,
+    people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
+) -> List[Dict[str, Any]]:
+    team = PM_CTS_TEAM_NAME
+    wb = load_workbook(path, data_only=True)
+    period = parse_period_date_from_filename(path)
+    if period is None:
+        period = parse_period_date_from_workbook_sheetnames(wb)
+    if period is None:
+        return []
+    period_iso = iso_date(period)
+    ws_pab = _get_required_sheet(wb, PM_CTS_PAB_SHEET)
+    ws_perf = _get_required_sheet(wb, PM_CTS_PERF_WIP_SHEET)
+    total_non_wip_hours = compute_pm_cts_total_non_wip_hours(ws_pab)
+    ooo_hours = compute_pm_cts_total_ooo_hours(ws_perf)
+    pct_in_wip = _find_number_right_of_label(ws_perf, "Team % WIP")
+    if pct_in_wip is None:
+        total_wip_hours = _find_number_right_of_label(ws_perf, "Total WIP Hours")
+        total_workable_hours = _find_number_right_of_label(ws_perf, "Total Team workable hours")
+        if total_wip_hours is not None and total_workable_hours is not None:
+            pct_in_wip = safe_div(float(total_wip_hours), float(total_workable_hours))
+    non_wip_by_person = compute_pm_cts_non_wip_by_person(ws_pab)
+    non_wip_activities = compute_pm_cts_non_wip_activities(ws_pab, ws_perf)
+    wip_workers = people_in_wip_lookup.get((team, period_iso), [])
+    wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
+    wip_workers_ooo_hours = compute_pm_cts_wip_workers_ooo_hours(ws_perf, wip_workers)
+    row = {
+        "team": team,
+        "period_date": period_iso,
+        "people_count": PM_CTS_PEOPLE_COUNT,
         "total_non_wip_hours": float(total_non_wip_hours),
         "OOO Hours": float(ooo_hours),
         "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
@@ -1196,6 +1336,7 @@ def main() -> int:
         NI_ARCHIVE_APRIL_2026_DIR,
         NI_ARCHIVE,
         MEIC_DEFAULT_DIR,
+        PM_CTS_DEFAULT_DIR
     ]
     files = expand_input_paths(inputs)
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
@@ -1206,6 +1347,8 @@ def main() -> int:
         try:
             if team == LIT_LETTERS_TEAM_NAME:
                 all_rows.extend(scrape_one_lit_letters_workbook(f, people_in_wip_lookup))
+            if team == PM_CTS_TEAM_NAME:
+                all_rows.extend(scrape_one_pm_cts_workbook(f, people_in_wip_lookup))
             elif team == "DS":
                 all_rows.extend(scrape_one_ds_workbook(f, people_in_wip_lookup))
             elif team == "CPT":
