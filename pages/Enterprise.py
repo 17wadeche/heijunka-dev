@@ -1500,6 +1500,33 @@ def _person_available_hours_for_week(
         errors="coerce",
     ).dropna()
     return float(vals.sum()) if not vals.empty else np.nan
+def _non_ooo_activity_hours_from_row(row: Any) -> float:
+    payload = row.get("non_wip_activities", "[]")
+    try:
+        activities = json.loads(payload) if isinstance(payload, str) else payload
+    except Exception:
+        activities = []
+    if not isinstance(activities, list) or not activities:
+        return np.nan
+    total = 0.0
+    saw_non_ooo = False
+    ooo_labels = {"OOO", "OUT OF OFFICE", "HOLIDAY"}
+    for item in activities:
+        if not isinstance(item, dict):
+            continue
+        raw_activity = str(
+            item.get("activity") or item.get("Activity") or item.get("type") or ""
+        ).strip()
+        activity = raw_activity.upper()
+        try:
+            hours = float(item.get("hours", item.get("Hours", 0)) or 0.0)
+        except Exception:
+            hours = 0.0
+        if hours <= 0 or activity in ooo_labels:
+            continue
+        total += hours
+        saw_non_ooo = True
+    return float(total) if saw_non_ooo else np.nan
 def _weekly_team_export_df(
     dfm: Optional[pd.DataFrame],
     dfnw: Optional[pd.DataFrame],
@@ -1663,6 +1690,10 @@ def _weekly_team_export_df(
             total_non_wip_hours = float(
                 pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0
             )
+        if team == "PM-CTS":
+            pm_cts_non_ooo_total = _non_ooo_activity_hours_from_row(nw_row)
+            if pd.notna(pm_cts_non_ooo_total):
+                total_non_wip_hours = float(pm_cts_non_ooo_total)
         if team == "PH-NM MEIC":
             non_wip_hours = max(total_non_wip_hours - other_team_wip_hours - ooo_hours, 0.0)
         else:
