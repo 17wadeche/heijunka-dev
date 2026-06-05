@@ -540,7 +540,7 @@ def compute_completed_hours_pm_cts(
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(3, 18):
+    for r in range(3, 17):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"Q{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -683,7 +683,7 @@ def compute_person_available_hours_meic(ws_perf: Worksheet) -> Dict[str, float]:
     return out
 def compute_person_available_hours_pm_cts(ws_perf: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for r in range(3, 18):
+    for r in range(3, 17):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"T{r}"].value)
         p = str(person).strip() if person is not None else ""

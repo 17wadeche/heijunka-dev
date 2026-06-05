@@ -480,3 +480,29 @@
 2026-06-05 12:20:41,999 | INFO | [ALL] drop period_date == 2023-11-06: 468 -> 468
 2026-06-05 12:20:41,999 | INFO | [ALL] drop period_date == 2026-09-07: 468 -> 468
 2026-06-05 12:20:42,062 | INFO | Wrote 468 rows to NS_DATA\NS_metrics.csv
+2026-06-05 12:49:47,058 | INFO | === NS Metrics Run START ===
+2026-06-05 12:49:47,064 | INFO | Selected team: all
+2026-06-05 12:49:47,065 | INFO | [TDD COS 1] START
+2026-06-05 12:50:07,169 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 13 | kept=10 | refreshed=3 | final=13
+2026-06-05 12:50:07,177 | INFO | [TDD COS 1] DONE | rows=13 | elapsed=0:00:20.112635
+2026-06-05 12:50:07,177 | INFO | [Spine] START
+2026-06-05 12:51:00,133 | INFO | [Spine] loaded cached rows from NS_metrics: 21 | kept=19 | refreshed=2 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-05 12:51:00,138 | INFO | [Spine] DONE | rows=21 | elapsed=0:00:52.960589
+2026-06-05 12:51:00,139 | INFO | [PH] START
+2026-06-05 12:53:23,525 | INFO | [PH] loaded cached PH rows from NS_metrics: 22 | kept=19 | refreshed=7 | final=22
+2026-06-05 12:53:23,525 | INFO | [PH] DONE | rows=22 | elapsed=0:02:23.386257
+2026-06-05 12:53:23,525 | INFO | [PH Cell 17] START
+2026-06-05 12:53:56,703 | INFO | [PH Cell 17] DONE | rows=10 | elapsed=0:00:33.177684
+2026-06-05 12:53:56,703 | INFO | [SCS Cell 1] START
+2026-06-05 12:54:20,433 | INFO | [SCS Cell 1] loaded cached rows from NS_metrics: 21 | kept=18 | refreshed=4 | final=21 | old_weeks=[] | new_weeks=['2026-05-18', '2026-05-25', '2026-06-01']
+2026-06-05 12:54:20,434 | INFO | [SCS Cell 1] DONE | rows=21 | elapsed=0:00:23.730752
+2026-06-05 12:54:20,436 | INFO | [MEIC PH] START
+2026-06-05 12:54:35,093 | INFO | [MEIC PH] loaded cached rows from NS_metrics: 22 | kept=19 | refreshed=3 | final=22
+2026-06-05 12:54:35,109 | INFO | [MEIC PH] DONE | rows=22 | elapsed=0:00:14.673206
+2026-06-05 12:54:35,109 | INFO | [DBS C13] START
+2026-06-05 12:55:28,554 | INFO | [DBS C13] DONE | rows=11 | elapsed=0:00:53.445240
+2026-06-05 12:55:28,554 | INFO | [DBS C13] filter >= 2025-07-07: 11 -> 11
+2026-06-05 12:55:28,556 | INFO | [DBS C14] START
+2026-06-05 12:56:39,879 | INFO | [DBS C14] DONE | rows=11 | elapsed=0:01:11.322988
+2026-06-05 12:56:39,879 | INFO | [DBS C14] filter >= 2025-07-07: 11 -> 11
+2026-06-05 12:56:39,879 | INFO | [NV] START
