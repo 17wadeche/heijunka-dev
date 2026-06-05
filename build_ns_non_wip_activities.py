@@ -20,6 +20,7 @@ TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
 PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
+ENT_REFRESH_WEEK_COUNT = 3
 PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
 )
@@ -3490,12 +3491,33 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
         return pd.DataFrame()
     sheets = pd.read_excel(xlsx_path, sheet_name=None, header=None, engine="openpyxl")
     out_rows: List[dict] = []
+    sheet_items: List[Tuple[pd.Timestamp, str, pd.DataFrame]] = []
     for sheet_name, ws in sheets.items():
         if team_src.week_from_sheet is None:
             continue
         week = team_src.week_from_sheet(sheet_name, ws)
         if week is None or pd.isna(week):
             continue
+        week = pd.Timestamp(week).normalize()
+        sheet_items.append((week, sheet_name, ws))
+    if team_src.team == "ENT":
+        today_cutoff = pd.Timestamp.today().normalize()
+        sheet_items = [
+            item for item in sheet_items
+            if pd.notna(item[0]) and item[0] <= today_cutoff
+        ]
+        sheet_items = sorted(
+            sheet_items,
+            key=lambda item: item[0],
+            reverse=True,
+        )[:ENT_REFRESH_WEEK_COUNT]
+        print(
+            "[ENT REFRESH] Pulling only latest "
+            f"{len(sheet_items)} weeks: "
+            + ", ".join(item[0].date().isoformat() for item in sheet_items),
+            flush=True,
+        )
+    for week, sheet_name, ws in sheet_items:
         if team_src.team in {"PSS US", "PSS MEIC"}:
             pss_min_date = pd.Timestamp("2026-02-01").normalize()
             pss_max_date = pd.Timestamp.today().normalize()
