@@ -2436,8 +2436,8 @@ def classify_activity(label: str) -> str:
     return "OTHER_NON_WIP"
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
-    PEOPLE_END   = 25
-    TOTAL_ROW    = 26
+    PEOPLE_END   = 21
+    TOTAL_ROW    = 22
     COL_B  = _col_letter_to_idx("B")
     COL_Y  = _col_letter_to_idx("Y")
     COL_Z  = _col_letter_to_idx("Z")
