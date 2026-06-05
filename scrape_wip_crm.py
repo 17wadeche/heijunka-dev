@@ -1075,6 +1075,7 @@ def is_excluded_person(person: str) -> bool:
     return p in {
         "do not use",
         "team tally",
+        "tally",
         "total wip hours",
         "total non-wip hours",
     }

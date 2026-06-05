@@ -224,6 +224,7 @@ def _is_lit_letters_summary_row(name: str) -> bool:
             "team tally",
             "total wip hours",
             "total non-wip hours",
+            "tally",
             "total team workable hours",
             "team ooo hours",
             "team % wip",
