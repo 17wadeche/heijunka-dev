@@ -21,6 +21,7 @@ ACTIVITY_MAP = {
     "collaboration, scrum, training video":"Training/Mentoring",
     "scrum, collaboration/questions, lates tracker":"Scrum & Action",
     "email/collaboration":"Email & IM",
+    "scrun":"Scrum & Action",
     "fca meeting":"FCA",
     "emails & gary fu":"Email & IM",
     "pull appropriate pes":"WIP/Event Review",
