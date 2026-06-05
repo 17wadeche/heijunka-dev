@@ -23,6 +23,8 @@ ACTIVITY_MAP = {
     "email/collaboration":"Email & IM",
     "fca meeting":"FCA",
     "emails & gary fu":"Email & IM",
+    "pull appropriate pes":"WIP/Event Review",
+    "heijunka: 20.":"Metrics & Schedule",
     "cannula fca":"FCA",
     "cornerstond":"Cornerstone",
     "meetings/mentoring": "Training/Mentoring",
