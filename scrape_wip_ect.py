@@ -24,6 +24,7 @@ AVAILABLE_ROWS = [7, 9, 11, 13, 15, 17, 19, 21, 23]
 AVAILABLE_COLS = ["C", "D", "E", "F", "G"]
 PROD_START_ROW = 7
 PROD_END_ROW = 200
+NON_WIP_ACTIVITY_TYPES = {"non-wip", "ooo", "other team wip"}
 OUTPUT_COLUMNS = [
     "team",
     "period_date",
@@ -137,6 +138,16 @@ def divide(numerator: float, denominator: float) -> float | None:
     if denominator == 0:
         return None
     return numerator / denominator
+def is_non_wip_activity(value: Any) -> bool:
+    return normalize_name(value).casefold() in NON_WIP_ACTIVITY_TYPES
+def has_wip_production_data(
+    person: str,
+    station: str,
+    target_minutes: float,
+    completed_minutes: float,
+    actual_output: float,
+) -> bool:
+    return bool(person or station) and any([target_minutes, completed_minutes, actual_output])
 def get_available_name_for_row(ws, row_num: int) -> str:
     candidates = [
         ws[f"A{row_num-1}"].value if row_num > 1 else None,
@@ -246,23 +257,31 @@ def process_workbook(
         target_minutes = safe_float(target_raw)
         completed_row_minutes = safe_float(completed_raw)
         actual_output_value = safe_float(actual_raw)
+        if is_non_wip_activity(station_raw):
+            continue
+        if not has_wip_production_data(
+            person,
+            station,
+            target_minutes,
+            completed_row_minutes,
+            actual_output_value,
+        ):
+            continue
         completed_minutes += completed_row_minutes
         target_output += target_minutes
         actual_output += actual_output_value
+        hours = completed_row_minutes / 60.0
         if person:
             unique_people.add(person)
-            hours = completed_row_minutes / 60.0
             actual_hours_by_person[person] += hours
             outputs_by_person[person]["target"] += target_minutes
             outputs_by_person[person]["output"] += actual_output_value
             person_hours.setdefault(person, {"actual": 0.0, "available": 0.0})
         if station:
-            hours = completed_row_minutes / 60.0
             outputs_by_station[station]["target"] += target_minutes
             outputs_by_station[station]["output"] += actual_output_value
             station_hours[station] += hours
         if station and person:
-            hours = completed_row_minutes / 60.0
             hours_by_station_person[station][person] += hours
             output_by_station_person[station][person]["target"] += target_minutes
             output_by_station_person[station][person]["output"] += actual_output_value
