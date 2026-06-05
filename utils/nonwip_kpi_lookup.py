@@ -10,7 +10,7 @@ FORTY_HOUR_TEAMS = {
     "PH-NM MEIC", "TCT",
 }
 ENTERPRISE_PEOPLE_COUNT_FROM_NW_TEAMS = {
-    "ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "SCS",
+    "ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "PSS", "SCS",
     "TDD", "ACM", "CPT", "DS", "CDS", "NI", "VSS", "Endoscopy",
     "Surgical AST-GST", "PH-NM MEIC", "TCT",
 }
