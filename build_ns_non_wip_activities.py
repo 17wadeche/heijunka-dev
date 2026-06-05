@@ -3825,7 +3825,10 @@ def main():
     log_weekly_ph_summary(final_combined, "POST-ROLLUP")
     if not final_combined.empty and "team" in final_combined.columns and "people_count" in final_combined.columns:
         final_combined["_team_key"] = final_combined["team"].astype(str).str.strip().str.casefold()
-        final_combined.loc[final_combined["_team_key"] == "dbs", "people_count"] = 10
+        dbs_mask = final_combined["_team_key"] == "dbs"
+        final_combined.loc[dbs_mask, "people_count"] = final_combined.loc[dbs_mask, "period_date"].apply(
+            get_dbs_people_count_for_week
+        )
         final_combined.loc[
             final_combined["_team_key"].isin({
                 "enabling tech",
