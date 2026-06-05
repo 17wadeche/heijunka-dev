@@ -54,6 +54,7 @@ ACTIVITY_MAP = {
     "labels/review":"Label",
     "email; scrum":"Email & IM",
     "visit to nurse for blood test":"Admin",
+    "meeting / collaboration / reg inquirie":"RI",
     "antibody assessment":"Admin",
     "booking issue":"Admin",
     "checking equipment calibration date":"WIP/Event Review",
