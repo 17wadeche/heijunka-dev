@@ -1162,6 +1162,13 @@ PSS_USER_DATA_NAME_COL = "F"      # User
 PSS_USER_DATA_ACTIVITY_START_COL = "S"
 PSS_USER_DATA_ACTIVITY_END_COL = "AL"
 PSS_USER_DATA_OOO_COL = "AM"
+PSS_US_USER_DATA_NAMES = {
+    "Abby",
+    "Claire",
+    "Gianna",
+    "Nick",
+    "Paige",
+}
 def _pss_team_aliases(team_name: str) -> list[str]:
     key = norm_name(team_name).casefold()
     if key in {"pss intern", "pss meic intern"}:
@@ -1332,10 +1339,13 @@ def build_pss_from_user_data(
                 continue
             grp = grp[grp[NAME_COL].map(lambda n: norm_name(n).casefold() in intern_names)].copy()
         elif team_key == "pss meic":
+            pss_us_names = {norm_name(n).casefold() for n in PSS_US_USER_DATA_NAMES}
             if intern_names:
                 grp = grp[~grp[NAME_COL].map(lambda n: norm_name(n).casefold() in intern_names)].copy()
             elif meic_names:
                 grp = grp[grp[NAME_COL].map(lambda n: norm_name(n).casefold() in meic_names)].copy()
+            if pss_us_names:
+                grp = grp[~grp[NAME_COL].map(lambda n: norm_name(n).casefold() in pss_us_names)].copy()
         else:
             team_names = _pss_known_names_for_week(team_name, week, wip_tmp, metrics_tmp)
             if team_names:
@@ -1717,9 +1727,6 @@ def get_people_count_from_wip(
         f"fallback={fallback!r}",
         flush=True,
     )
-    if team_key == "pss meic":
-        print(f"[PEOPLE COUNT HARDCODE HIT] PSS MEIC week={week_txt} returning=19", flush=True)
-        return 19
     if team_key == "dbs":
         print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=10", flush=True)
         return 10
