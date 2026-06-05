@@ -57,6 +57,7 @@ ACTIVITY_MAP = {
     "meeting / collaboration / reg inquirie":"RI",
     "reading documentation for pvh device":"Reviewing Documents & Case Video",
     "reading previous investigations for pvh device":"Reviewing Documents & Case Video",
+    "aortic device review":"Reviewing Documents & Case Video",
     "searching for device and sending mail":"Admin",
     "device reading":"Reviewing Documents & Case Video",
     "collecting school donation pc'":"IT Issue/Update",
