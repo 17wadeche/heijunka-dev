@@ -54,6 +54,7 @@ ACTIVITY_MAP = {
     "labels/review":"Label",
     "email; scrum":"Email & IM",
     "visit to nurse for blood test":"Admin",
+    "closurefast circuit board check with scott":"Admin",
     "meeting / collaboration / reg inquirie":"RI",
     "reading documentation for pvh device":"Reviewing Documents & Case Video",
     "reading previous investigations for pvh device":"Reviewing Documents & Case Video",
