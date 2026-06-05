@@ -42,6 +42,7 @@ ACTIVITY_MAP = {
     "integer meeting":"Meeting",
     "shadowing with conor": "Training/Mentoring",
     "shadowing with vuyo": "Training/Mentoring",
+    "tm meeting on file": "Training/Mentoring",
     "reverse shadowing with densie": "Training/Mentoring",
     "pmpa questions/consult":"PMPA",
     "shadowing sith louise": "Training/Mentoring",
