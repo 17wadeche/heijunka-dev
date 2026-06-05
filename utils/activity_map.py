@@ -59,7 +59,7 @@ ACTIVITY_MAP = {
     "reading previous investigations for pvh device":"Reviewing Documents & Case Video",
     "searching for device and sending mail":"Admin",
     "device reading":"Reviewing Documents & Case Video",
-    "collecting school donation pc'"
+    "collecting school donation pc'":"IT Issue/Update",
     "restart laptop":"IT Issue/Update",
     "antibody assessment":"Admin",
     "booking issue":"Admin",
