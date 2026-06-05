@@ -1704,6 +1704,14 @@ def split_meic_snapshot_into_teams(built: Dict) -> Dict[str, Dict]:
             "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
         }
     }
+DBS_PEOPLE_COUNT_EFFECTIVE_DATE = pd.Timestamp("2026-05-25")
+DBS_PEOPLE_COUNT_BEFORE_EFFECTIVE_DATE = 10
+DBS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 11
+def get_dbs_people_count_for_week(week: pd.Timestamp) -> int:
+    week_date = pd.to_datetime(week, errors="coerce")
+    if pd.notna(week_date) and week_date.normalize() >= DBS_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return DBS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return DBS_PEOPLE_COUNT_BEFORE_EFFECTIVE_DATE
 def get_people_count_from_wip(
     wip_df: pd.DataFrame,
     team: str,
@@ -1728,8 +1736,9 @@ def get_people_count_from_wip(
         flush=True,
     )
     if team_key == "dbs":
-        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning=10", flush=True)
-        return 10
+        people_count = get_dbs_people_count_for_week(week)
+        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning={people_count}", flush=True)
+        return people_count
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
         print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=33", flush=True)
         return 33
@@ -2168,9 +2177,9 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             elif parent_team == "PH":
                 people_count_final = 18
             elif parent_team == "DBS":
-                people_count_final = 10
+                people_count_final = get_dbs_people_count_for_week(period_date)
                 print(
-                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning=10",
+                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning={people_count_final}",
                     flush=True,
                 )
             elif parent_team == "SCS":
