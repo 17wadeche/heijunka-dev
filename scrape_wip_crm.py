@@ -460,12 +460,12 @@ def team_for_source(path: str) -> str:
         return "CDS"
     if np.startswith(MEIC_ROOT_HINT):
         return "NI & PM MEIC"
+    if np.startswith(PM_CTS_ROOT_HINT):
+        return "PM-CTS"
     if np.startswith(NI_ROOT_HINT):
         return "NI"
     if np.startswith(MCS_ROOT_HINT):
         return "MCS"
-    if np.startswith(PM_CTS_ROOT_HINT):
-        return "PM-CTS"
     return TEAM_BY_BASENAME.get(base, "")
 NI_NEW_HOURS_START = _dt.date(2026, 4, 17)
 def _ni_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
@@ -533,12 +533,14 @@ def compute_completed_hours_ni(
     if total is None and _use_af_actual_hours(period):
         total = summed_actual
     return total, actual_by_person, people_in_wip
-def compute_completed_hours_pm_cts(ws_perf: Worksheet) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+def compute_completed_hours_pm_cts(
+    ws_perf: Worksheet,
+) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     total = _cell_number(ws_perf["Q18"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(3, 16):
+    for r in range(3, 18):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"Q{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -681,7 +683,7 @@ def compute_person_available_hours_meic(ws_perf: Worksheet) -> Dict[str, float]:
     return out
 def compute_person_available_hours_pm_cts(ws_perf: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for r in range(3, 16):
+    for r in range(3, 18):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"T{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -924,11 +926,9 @@ def scrape_one_workbook_pm_cts(path: str) -> List[Dict[str, Any]]:
         err_msgs.append("missing_#2_pab_sheet")
     if ws_perf is None:
         err_msgs.append("missing_#3_performance_wip_time_sheet")
-    period = None
+    period = parse_period_date_from_filename(path, default_year=2026)
     if period is None:
-        period = parse_period_date_from_filename(path, default_year=2026)
-    if period is None:
-        err_msgs.append("missing_period_date_from_#4_performance_metrics_B3_and_filename")
+        err_msgs.append("missing_period_date_from_filename")
     total_available = None
     completed_hours = None
     actual_hours_by_person: Dict[str, float] = {}
@@ -943,11 +943,10 @@ def scrape_one_workbook_pm_cts(path: str) -> List[Dict[str, Any]]:
     output_by_station_by_person: Dict[str, Dict[str, float]] = {}
     uplh_by_station_by_person: Dict[str, Dict[str, float]] = {}
     try:
-        if ws_wip_plan is not None:
-            total_available = compute_total_available_hours_pm_cts(ws_perf)
         if ws_perf is not None:
-            completed_hours, actual_hours_by_person, people = compute_completed_hours_pm_cts(ws_perf, period)
-            person_avail = compute_person_available_hours_pm_cts(ws_perf, period)
+            total_available = compute_total_available_hours_pm_cts(ws_perf)
+            completed_hours, actual_hours_by_person, people = compute_completed_hours_pm_cts(ws_perf)
+            person_avail = compute_person_available_hours_pm_cts(ws_perf)
         if ws_pab is not None:
             target_output, actual_output = compute_target_actual_output_ni(ws_pab)
             outputs_by_person = compute_outputs_by_person_ni(ws_pab)
@@ -955,7 +954,8 @@ def scrape_one_workbook_pm_cts(path: str) -> List[Dict[str, Any]]:
             station_hours, station_hours_by_person = compute_station_hours_ni(ws_pab)
             output_by_station_by_person = compute_output_by_station_by_person_ni(ws_pab)
             uplh_by_station_by_person = compute_uplh_by_station_by_person(
-                output_by_station_by_person, station_hours_by_person
+                output_by_station_by_person,
+                station_hours_by_person,
             )
     except Exception as e:
         err_msgs.append(f"pm_cts_parse_error: {e!r}")
@@ -1926,7 +1926,7 @@ def iter_input_files(paths: List[str]) -> Iterable[str]:
                     continue
                 if np.startswith(CDS_ROOT_HINT) and "pab" not in lower:
                     continue
-                if np.startswith(NI_ROOT_HINT) and "pab" not in lower:
+                if np.startswith(NI_ROOT_HINT) and not np.startswith(PM_CTS_ROOT_HINT) and "pab" not in lower:
                     continue
                 if np.startswith(MEIC_ROOT_HINT) and "heijunka tracker" not in lower:
                     continue

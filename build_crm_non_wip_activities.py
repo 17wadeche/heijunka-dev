@@ -238,20 +238,27 @@ def iter_pm_cts_non_wip_rows(
     start_row: int = 2,
 ) -> Iterable[Tuple[str, str, float]]:
     for r in range(start_row, ws_pab.max_row + 1):
-        area = _norm_text(str(ws_pab[f"D{r}"].value or ""))
-        if area not in LIT_LETTERS_NON_WIP_TYPES:
+        category = _norm_text(str(ws_pab[f"C{r}"].value or ""))
+        if category not in PM_CTS_NON_WIP_TYPES:
             continue
-        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
-        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or "")) or area.title()
-        mins = _cell_number(ws_pab[f"H{r}"].value)
-        if not person or is_excluded_person(person) or mins is None:
+        person = normalize_person_name(str(ws_pab[f"B{r}"].value or ""))
+        activity = _collapse_ws(str(ws_pab[f"D{r}"].value or "")) or category.title()
+        hours = _cell_number(ws_pab[f"H{r}"].value)
+        if not person or is_excluded_person(person) or hours is None:
             continue
-        yield person, activity, float(mins) / 60.0
+        yield person, activity, float(hours)
 def compute_pm_cts_total_non_wip_hours(ws_pab: Worksheet) -> float:
-    return float(sum(hours for _, _, hours in iter_lit_letters_non_wip_rows(ws_pab)))
+    return float(sum(hours for _, _, hours in iter_pm_cts_non_wip_rows(ws_pab)))
 def compute_pm_cts_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
     out: Dict[str, float] = {}
-    for person, _, hours in iter_lit_letters_non_wip_rows(ws_pab):
+    for person, _, hours in iter_pm_cts_non_wip_rows(ws_pab):
+        out[person] = out.get(person, 0.0) + float(hours)
+    return {person: float(total) for person, total in out.items() if total != 0}
+def compute_pm_cts_total_non_wip_hours(ws_pab: Worksheet) -> float:
+    return float(sum(hours for _, _, hours in iter_pm_cts_non_wip_rows(ws_pab)))
+def compute_pm_cts_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for person, _, hours in iter_pm_cts_non_wip_rows(ws_pab):
         out[person] = out.get(person, 0.0) + float(hours)
     return {person: float(total) for person, total in out.items() if total != 0}
 def compute_pm_cts_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
