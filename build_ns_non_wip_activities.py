@@ -2161,8 +2161,11 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
             nonwip_by_person = _merge_person_hours_dicts(g.get("non_wip_by_person"))
             nonwip_activities = _merge_activities_lists(g.get("non_wip_activities"))
             wip_workers_union = _merge_workers_union(g.get("wip_workers"))
+            team_member_names_union = _merge_workers_union(g.get("team_member_names"))
             fallback_people_count = int(pd.to_numeric(g.get("people_count"), errors="coerce").fillna(0).sum())
-            if parent_team == "PH":
+            if parent_team == "PSS":
+                people_count_final = fallback_people_count
+            elif parent_team == "PH":
                 people_count_final = 18
             elif parent_team == "DBS":
                 people_count_final = 10
@@ -2190,8 +2193,9 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
                 "non_wip_by_person": json.dumps(nonwip_by_person, ensure_ascii=False),
                 "non_wip_activities": json.dumps(nonwip_activities, ensure_ascii=False),
                 "wip_workers": json.dumps(wip_workers_union, ensure_ascii=False),
-                "wip_workers_count": int(pd.to_numeric(g.get("wip_workers_count"), errors="coerce").fillna(0).sum()),
+                "wip_workers_count": int(len(wip_workers_union)),
                 "wip_workers_ooo_hours": float(pd.to_numeric(g.get("wip_workers_ooo_hours"), errors="coerce").fillna(0).sum()),
+                "team_member_names": json.dumps(team_member_names_union, ensure_ascii=False),
             })
     merged_df = pd.DataFrame(out_rows)
     for dfx in (rest, merged_df):
