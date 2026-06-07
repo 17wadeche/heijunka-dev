@@ -23,7 +23,7 @@ ACTIVITY_MAP = {
     "email/collaboration":"Email & IM",
     "scrun":"Scrum & Action",
     "geoff martha townhall":"Meeting",
-    "townhall/inspiris meetings/inv comp…":"Meeting",
+    "townhall/inspiris meetings/inv complaint rev meeting":"Meeting",
     "access email/teams page/on-boarding?":"Email & IM",
     "inbox/scheduling/1 mir":"RS Inbox",
     "fca meeting":"FCA",
