@@ -22,6 +22,10 @@ ACTIVITY_MAP = {
     "scrum, collaboration/questions, lates tracker":"Scrum & Action",
     "email/collaboration":"Email & IM",
     "scrun":"Scrum & Action",
+    "geoff martha townhall
+    Townhall/inspiris Meetings/inv Comp…
+    Access Email/teams Page/on-boarding?
+    Inbox/scheduling/1 Mir
     "fca meeting":"FCA",
     "emails & gary fu":"Email & IM",
     "pull appropriate pes":"WIP/Event Review",
