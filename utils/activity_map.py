@@ -92,6 +92,7 @@ ACTIVITY_MAP = {
     "email; scrum":"Email & IM",
     "visit to nurse for blood test":"Admin",
     "closurefast circuit board check with scott":"Admin",
+    "scrum / emails / reg inquirie":"Scrum & Action",
     "meeting / collaboration / reg inquirie":"RI",
     "reading documentation for pvh device":"Reviewing Documents & Case Video",
     "reading previous investigations for pvh device":"Reviewing Documents & Case Video",
