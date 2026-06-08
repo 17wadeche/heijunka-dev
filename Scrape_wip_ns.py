@@ -397,6 +397,7 @@ def load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
     cos_cfg: Dict[str, Any],
     logger: Optional[logging.Logger] = None,
     cos_new_cfg: Optional[Dict[str, Any]] = None,
+    cos_newer_cfg: Optional[Dict[str, Any]] = None,
 ) -> list[dict]:
     existing_rows = read_existing_metrics_rows(ns_metrics_path)
     weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
@@ -412,28 +413,32 @@ def load_tdd_cos1_from_existing_metrics_and_refresh_3_weeks(
     ]
 
     refreshed_cos_rows: list[dict] = []
-
+    layout_cfgs = [cos_cfg]
     if cos_new_cfg:
-        switch_date = safe_str(cos_new_cfg.get("min_period_date")) or "9999-12-31"
-        old_weeks = [w for w in weeks_to_refresh if w < switch_date]
-        new_weeks = [w for w in weeks_to_refresh if w >= switch_date]
+        layout_cfgs.append(cos_new_cfg)
+    if cos_newer_cfg:
+        layout_cfgs.append(cos_newer_cfg)
 
-        if old_weeks:
-            old_cfg = dict(cos_cfg)
-            old_cfg["min_period_date"] = min(old_weeks)
-            old_cfg["max_period_date"] = max(old_weeks)
-            refreshed_cos_rows.extend(scrape_workbook_with_config(cos_source_file, old_cfg))
+    layout_cfgs.sort(key=lambda cfg: safe_str(cfg.get("min_period_date")) or "0000-01-01")
 
-        if new_weeks:
-            new_cfg = dict(cos_new_cfg)
-            new_cfg["min_period_date"] = min(new_weeks)
-            new_cfg["max_period_date"] = max(new_weeks)
-            refreshed_cos_rows.extend(scrape_workbook_with_config(cos_source_file, new_cfg))
-    else:
-        cfg = dict(cos_cfg)
-        cfg["min_period_date"] = min(weeks_to_refresh)
-        cfg["max_period_date"] = max(weeks_to_refresh)
-        refreshed_cos_rows = scrape_workbook_with_config(cos_source_file, cfg)
+    for idx, layout_cfg in enumerate(layout_cfgs):
+        layout_start = safe_str(layout_cfg.get("min_period_date")) or "0000-01-01"
+        next_start = (
+            safe_str(layout_cfgs[idx + 1].get("min_period_date"))
+            if idx + 1 < len(layout_cfgs)
+            else ""
+        )
+        layout_weeks = [
+            w for w in weeks_to_refresh
+            if w >= layout_start and (not next_start or w < next_start)
+        ]
+        if not layout_weeks:
+            continue
+
+        cfg = dict(layout_cfg)
+        cfg["min_period_date"] = min(layout_weeks)
+        cfg["max_period_date"] = max(layout_weeks)
+        refreshed_cos_rows.extend(scrape_workbook_with_config(cos_source_file, cfg))
 
     refreshed_cos_rows = [
         r for r in refreshed_cos_rows
@@ -3986,6 +3991,17 @@ def main():
             "wp3_hours_sum_cells": ["T33", "T38", "T43", "T48", "T53"],
         },
     }
+    TDD_COS1_2026_06_CFG = {
+        **TDD_COS1_NEW_CFG,
+        "min_period_date": "2026-06-01",
+        "person_cols": ("B", "R"),
+        "cells": {
+            **TDD_COS1_NEW_CFG["cells"],
+            "total_available_hours": "T65",
+            "completed_hours": "S55",
+            "wp3_hours_sum_cells": ["S33", "S38", "S43", "S48", "S53"],
+        },
+    }
     rows: list[dict] = []
     selected_team = safe_str(args.team).lower()
     def should_run(team_name: str) -> bool:
@@ -4016,6 +4032,7 @@ def main():
                 TDD_COS1_OLD_CFG,
                 logger=logger,
                 cos_new_cfg=TDD_COS1_NEW_CFG,
+                cos_newer_cfg=TDD_COS1_2026_06_CFG,
             )
         )
         rows.extend(cos_rows)
