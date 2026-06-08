@@ -1066,3 +1066,6 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-06-08 11:59:54,506 | INFO | [ALL] drop period_date == 2023-11-06: 453 -> 453
 2026-06-08 11:59:54,512 | INFO | [ALL] drop period_date == 2026-09-07: 453 -> 453
 2026-06-08 11:59:54,668 | INFO | Wrote 453 rows to NS_DATA\NS_metrics.csv
+2026-06-08 12:34:12,743 | INFO | === NS Metrics Run START ===
+2026-06-08 12:34:12,743 | INFO | Selected team: all
+2026-06-08 12:34:12,743 | INFO | [TDD COS 1] START
