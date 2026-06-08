@@ -1270,8 +1270,11 @@ def _sheet_ci(wb, name: str) -> Optional[str]:
             return sheet_name
     return None
 DS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+DS_COMPLETED_HOURS_UP_ONE_ROW_START = _dt.date(2026, 6, 1)
 def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= DS_NEW_HOURS_START
+def _ds_completed_hours_up_one_row(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
 def _is_ds_excluded_category(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
@@ -1301,7 +1304,8 @@ def compute_completed_hours_ds(
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     if _ds_use_new_hours_layout(period):
-        total = _cell_number(ws_perf["C47"].value)
+        total_cell = "C46" if _ds_completed_hours_up_one_row(period) else "C47"
+        total = _cell_number(ws_perf[total_cell].value)
         actual_col = "W"
     else:
         use_r_layout = _ds_use_r_layout(ws_perf)
