@@ -3446,8 +3446,8 @@ ACTIVITY_MAP = {
     "rd conflict":"Reportability Matrix",
     "medical review sme":"Medical Review",
     "cst staff meeting":"Meeting",
-    "ous tech":""
-    "gch issue / compute "
+    "ous tech":"IT Issue/Update",
+    "gch issue / compute ":"IT Issue/Update",
     "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
     "capa / ri support":"CAPA",
