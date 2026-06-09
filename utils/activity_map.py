@@ -75,6 +75,8 @@ ACTIVITY_MAP = {
     "shadowing with densie": "Training/Mentoring",
     "review new hire resources on sharepoint": "Training/Mentoring",
     "to shadow if all cs is caught up": "Training/Mentoring",
+    "shadowing lousie": "Training/Mentoring",
+    "pmpa training":"PMPA",
     "2b label":"Label",
     "pmq cr pre-meeting q's call":"Meeting",
     "tourguide report":"Admin",
