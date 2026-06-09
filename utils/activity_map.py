@@ -3394,6 +3394,7 @@ ACTIVITY_MAP = {
     "training nhs": "Training/Mentoring",
     "training call with ruth": "Training/Mentoring",
     "email/im":"Email & IM",
+    "meetings, event reviews/collaboration, smart tree support, email/admin":"Project Work",
     "email.im":"Email & IM",
     "emails cornerstone":"Email & IM",
     "emal":"Email & IM",
