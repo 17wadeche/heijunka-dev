@@ -3444,8 +3444,14 @@ ACTIVITY_MAP = {
     "agile qch/reportability matrix":"Reportability Matrix",
     "precedent event/rd conflict":"Reportability Matrix",
     "rd conflict":"Reportability Matrix",
+    "medical review sme":"Medical Review",
+    "cst staff meeting":"Meeting",
+    "ous tech":""
+    "gch issue / compute "
     "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
+    "capa / ri support":"CAPA",
+    "emea/fsm escalation":"Escalation",
     "gpt rd training": "Training/Mentoring",
     "mdtgpt": "MDTGPT Review",
     "gpt review": "MDTGPT Review",
