@@ -251,19 +251,21 @@ def write_csv_wip(rows: list[dict], out_path: str) -> None:
                 os.remove(tmp_path)
             except OSError:
                 pass
-def setup_logging(log_path: str = "NS_DATA\\NS_metrics.log") -> logging.Logger:
-    logger = logging.getLogger("NS_DATA\ns_metrics")
+def setup_logging() -> logging.Logger:
+    logger = logging.getLogger("ns_metrics")
     logger.setLevel(logging.INFO)
+    logger.propagate = False
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
-    fh = logging.FileHandler(log_path, encoding="utf-8")
-    fh.setFormatter(fmt)
-    fh.setLevel(logging.INFO)
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        try:
+            handler.close()
+        except Exception:
+            pass
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(fmt)
     ch.setLevel(logging.INFO)
-    if not logger.handlers:
-        logger.addHandler(fh)
-        logger.addHandler(ch)
+    logger.addHandler(ch)
     return logger
 @contextmanager
 def heartbeat(logger: logging.Logger, label: str, every_seconds: int = 120):
@@ -3520,9 +3522,8 @@ def append_missing_placeholders_from_wip(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--team", default="all", help="Team to run (or 'all'). Example: --team PH")
-    parser.add_argument("--log", default="NS_DATA\\NS_metrics.log", help="Log file path")
     args = parser.parse_args()
-    logger = setup_logging(args.log)
+    logger = setup_logging()
     logger.info("=== NS Metrics Run START ===")
     logger.info(f"Selected team: {args.team}")
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
