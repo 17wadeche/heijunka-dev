@@ -2395,23 +2395,23 @@ with mid2:
                     else:
                         wk_people["Avg Daily Hours"] = (wk_people["Actual"] / 5.0)
                         wk_people["OverUnder"] = np.where(
-                            wk_people["Avg Daily Hours"] >= 6, "≥ 6 (Over)", "< 6 (Under)"
+                            wk_people["Avg Daily Hours"] >= 6.5, "≥ 6.5 (Over)", "< 6 (Under)"
                         )
-                        wk_people["Delta"] = wk_people["Avg Daily Hours"] - 6
+                        wk_people["Delta"] = wk_people["Avg Daily Hours"] - 6.5
                         wk_people["DeltaLabel"] = wk_people["Delta"].map(lambda x: f"{x:+.2f}")
                         vmax = float(pd.to_numeric(wk_people["Avg Daily Hours"], errors="coerce").max())
-                        pad  = max(0.3, (max(vmax, 6) * 0.12))  # a little headroom
+                        pad  = max(0.3, (max(vmax, 6.5) * 0.12))  # a little headroom
                         y_lo = 0.0
-                        y_hi = max(vmax, 6) + pad
+                        y_hi = max(vmax, 6.5) + pad
                         y_scale = alt.Scale(domain=[y_lo, y_hi], nice=False, clamp=False)
                         order_people = (
                             wk_people.sort_values("Avg Daily Hours", ascending=False)["person"].tolist()
                         )
                         color_enc = alt.Color(
                             "OverUnder:N",
-                            title="vs 6",
+                            title="vs 6.5",
                             scale=alt.Scale(
-                                domain=["≥ 6 (Over)", "< 6 (Under)"],
+                                domain=["≥ 6.5 (Over)", "< 6.5 (Under)"],
                                 range=["#22c55e", "#ef4444"]  # green / red
                             )
                         )
@@ -2427,7 +2427,7 @@ with mid2:
                                     "person:N",
                                     alt.Tooltip("Actual:Q", title="Actual Hours (week)", format=",.2f"),
                                     alt.Tooltip("Avg Daily Hours:Q", title="Avg Daily Hours", format=",.2f"),
-                                    alt.Tooltip("Delta:Q", title="Over/Under vs 6", format="+.2f"),
+                                    alt.Tooltip("Delta:Q", title="Over/Under vs 6.5", format="+.2f"),
                                 ],
                             )
                             .properties(height=280)
@@ -2444,13 +2444,13 @@ with mid2:
                                     "OverUnder:N",
                                     legend=None,
                                     scale=alt.Scale(
-                                        domain=["≥ 6 (Over)", "< 6 (Under)"],
+                                        domain=["≥ 6.5 (Over)", "< 6.5 (Under)"],
                                         range=["#22c55e", "#ef4444"]
                                     ),
                                 ),
                             )
                         )
-                        ref = alt.Chart(pd.DataFrame({"y": [6]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
+                        ref = alt.Chart(pd.DataFrame({"y": [6.5]})).mark_rule(strokeDash=[4, 3]).encode(y=alt.Y("y:Q", scale=y_scale))
                         st.altair_chart(bars + labels + ref, width="stretch")
         else:
             st.caption("Select exactly one team to drill into per-person daily hours.")
