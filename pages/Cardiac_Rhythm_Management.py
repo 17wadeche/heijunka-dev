@@ -1705,6 +1705,19 @@ base = alt.Chart(f).transform_calculate(
 teams_in_view = sorted([t for t in f["team"].dropna().unique()])
 multi_team = len(teams_in_view) > 1
 team_sel = alt.selection_point(fields=["team"], bind="legend")
+_nw = load_non_wip()
+TEAM_WEEKLY_HOURS = {
+    "CPT": 37.75,
+    "CDS": 37.75,
+    "NI": 37.75,
+    "DS": 37.5,
+    "LIT & LETTERS": 37.5,
+}
+def canonical_person_label(name: str) -> str:
+    s = normalize_person_name(name)
+    s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 with left:
     st.subheader("Actual WIP HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
@@ -1712,13 +1725,15 @@ with left:
             team_name = teams_in_view[0]
             trend_ppl_hours = explode_person_hours(f, include_zero_hours=True)
             team_people = trend_ppl_hours.loc[trend_ppl_hours["team"] == team_name].copy()
-            if team_people.empty:
+            team_nw = _nw.loc[_nw["team"] == team_name].copy()
+            all_weeks = sorted(
+                set(pd.to_datetime(team_people["period_date"].dropna()).tolist())
+                | set(pd.to_datetime(team_nw["period_date"].dropna()).tolist()),
+                reverse=True,
+            )
+            if not all_weeks:
                 st.info(f"No per-person data available for {team_name}.")
             else:
-                all_weeks = sorted(
-                    pd.to_datetime(team_people["period_date"].dropna().unique()),
-                    reverse=True
-                )
                 picked_week = st.selectbox(
                     f"Week:",
                     options=all_weeks,
@@ -1727,12 +1742,34 @@ with left:
                     key="ahu_week_select_anyteam",
                 )
                 picked_week = pd.to_datetime(picked_week).normalize()
-                wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
+                nw_week_rows = _nw.loc[
+                    (_nw["team"] == team_name)
+                    & (pd.to_datetime(_nw["period_date"], errors="coerce").dt.normalize() == picked_week)
+                ]
+                if nw_week_rows.empty:
+                    wk_people = team_people.loc[team_people["period_date"] == picked_week].copy()
+                    wk_people["Actual"] = pd.to_numeric(
+                        wk_people["Actual Hours"], errors="coerce"
+                    ).fillna(0.0)
+                else:
+                    weekly_accounting = build_person_weekly_accounting(
+                        team=team_name,
+                        week=picked_week,
+                        nw_row=nw_week_rows.iloc[0],
+                        metrics_frame=f,
+                        nw_frame=_nw,
+                        week_hours=TEAM_WEEKLY_HOURS.get(team_name.upper(), 40.0),
+                        irl_people=set(),
+                    )
+                    wk_people = weekly_accounting[["team", "period_date", "person", "Completed Hours"]].rename(
+                        columns={"Completed Hours": "Actual"}
+                    )
+                    wk_people["person"] = wk_people["person"].map(canonical_person_label)
                 if wk_people.empty:
                     st.info("No per-person data for the selected week.")
                 else:
                     wk_people["Actual"] = pd.to_numeric(
-                        wk_people["Actual Hours"], errors="coerce"
+                        wk_people["Actual"], errors="coerce"
                     ).fillna(0.0)
                     if wk_people.empty:
                         st.info("No people to show for the selected week.")
@@ -1760,20 +1797,21 @@ with left:
                                 range=["#22c55e", "#ef4444"]  # green / red
                             )
                         )
+                        person_x = alt.X(
+                            "person:N",
+                            title="Person",
+                            sort=order_people,
+                            axis=alt.Axis(
+                                labelAngle=-90,
+                                labelOverlap=False,
+                                labelLimit=0,
+                            ),
+                        )
                         bars = (
                             alt.Chart(wk_people)
                             .mark_bar()
                             .encode(
-                                x=alt.X(
-                                    "person:N",
-                                    title="Person",
-                                    sort=order_people,
-                                    axis=alt.Axis(
-                                        labelAngle=-90,
-                                        labelOverlap=False,
-                                        labelLimit=0,
-                                    ),
-                                ),
+                                x=person_x,
                                 y=alt.Y("Avg Daily Hours:Q", title="Avg Daily Hours (Actual/5)", scale=y_scale),
                                 color=color_enc,
                                 tooltip=[
@@ -1791,7 +1829,7 @@ with left:
                             alt.Chart(wk_people.assign(LabelY=lambda d: d["Avg Daily Hours"] + label_pad))
                             .mark_text(dy=-4)
                             .encode(
-                                x=alt.X("person:N", sort=order_people, axis=None),
+                                x=person_x,
                                 y=alt.Y("LabelY:Q", scale=y_scale),
                                 text="DeltaLabel:N",
                                 color=alt.Color(
@@ -1812,19 +1850,6 @@ with left:
         st.info("No 'Actual HC used' data available in the selected range.")
 with right:
     st.subheader("Hours Trend")
-    _nw = load_non_wip()
-    TEAM_WEEKLY_HOURS = {
-        "CPT": 37.75,
-        "CDS": 37.75,
-        "NI": 37.75,
-        "DS": 37.5,
-        "LIT & LETTERS": 37.5,
-    }
-    def canonical_person_label(name: str) -> str:
-        s = normalize_person_name(name)
-        s = re.sub(r"\s*\(\d+\)\s*$", "", str(s or "").strip())
-        s = re.sub(r"\s+", " ", s).strip()
-        return s
     mix_rows = []
     nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
     if not nw_sub.empty:
