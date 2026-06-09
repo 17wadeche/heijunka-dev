@@ -360,7 +360,13 @@ def _build_missing_team_weeks_df(
     ).to_frame(index=False)
     actual = pd.DataFrame(columns=["week_start", "team"])
     if team_export is not None and not team_export.empty:
-        actual = team_export.loc[:, ["week_start", "team"]].copy()
+        actual_cols = ["week_start", "team"]
+        if "missing_data" in team_export.columns:
+            actual_cols.append("missing_data")
+        actual = team_export.loc[:, actual_cols].copy()
+        if "missing_data" in actual.columns:
+            actual = actual[~actual["missing_data"].fillna(False).astype(bool)].copy()
+        actual = actual.loc[:, ["week_start", "team"]]
         actual["week_start"] = pd.to_datetime(actual["week_start"], errors="coerce").dt.normalize()
         actual["team"] = actual["team"].astype(str).str.strip()
         actual = actual[
@@ -1398,6 +1404,7 @@ def _unaccounted_only_team_rows(
                 "unaccounted_hours": capacity_hours,
                 "over_hours": 0.0,
                 "warning": str(meta.get("warning") or "Missing weekly data"),
+                "missing_data": True,
                 "wip_pct": 0.0,
                 "other_team_wip_pct": 0.0,
                 "non_wip_pct": 0.0,
@@ -1732,6 +1739,7 @@ def _weekly_team_export_df(
             "unaccounted_hours": unaccounted_hours,
             "over_hours": over_hours,
             "warning": warning,
+            "missing_data": False,
             "wip_pct": (completed_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "other_team_wip_pct": (other_team_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
             "non_wip_pct": (non_wip_hours / pct_denom) if pct_denom > 0 else pd.NA,
@@ -1770,6 +1778,7 @@ def _weekly_team_export_df(
             ooo_hours=("ooo_hours", "sum"),
             capacity_hours=("capacity_hours", "sum"),
             over_hours=("over_hours", "sum"),
+            missing_data=("missing_data", "all"),
         )
     )
     base["unaccounted_hours"] = (
