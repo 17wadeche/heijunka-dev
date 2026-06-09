@@ -7,8 +7,8 @@ import os
 import time
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
-from utils.workbook_loading import load_data_only_workbook
 from collections import defaultdict
 import json
 from typing import Any, Dict, List, Optional, Tuple
@@ -577,7 +577,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     err_msgs: List[str] = []
     load_start = time.perf_counter()
-    wb = load_data_only_workbook(path)
+    wb = load_workbook(path, data_only=True)
     log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     available_by_week: Dict[_dt.date, Dict[str, float]] = {}
     production_by_week: Dict[_dt.date, Dict[str, Any]] = {}
@@ -599,7 +599,6 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             err_msgs.append(f"production_parse_error: {e!r}")
     else:
         err_msgs.append(f"missing_sheet: {PRODUCTION_SHEET}")
-    wb.close()
     periods = sorted(set(available_by_week.keys()) | set(production_by_week.keys()))
     for period in periods:
         week_errors = list(err_msgs)
