@@ -3448,6 +3448,8 @@ ACTIVITY_MAP = {
     "cannula training with irena": "Training/Mentoring",
     "tj audit meeting":"Audit",
     "pvh reportabiliy":"Reportability Matrix",
+    "mfth":"Meeting",
+    "audit update":"Audit",
     "aortic matrix":"Reportability Matrix",
     "pvh matrix":"Reportability Matrix",
     "reportability matrix":"Reportability Matrix",
