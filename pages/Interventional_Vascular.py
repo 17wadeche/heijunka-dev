@@ -3031,7 +3031,7 @@ with left2:
     else:
         st.info("No 'HC in WIP' data available in the selected range.")
 with mid2:
-    st.subheader("Actual HC used Trend")
+    st.subheader("Actual WIP HC used Trend")
     if "Actual HC used" in f.columns and f["Actual HC used"].notna().any():
         ahu = f[["team", "period_date", "Actual HC used"]].dropna()
         base_ahu = alt.Chart(ahu).encode(
