@@ -888,19 +888,18 @@ def _dyn(obj):
         return win32com.client.dynamic.Dispatch(obj)
     except Exception:
         return obj
-def _try_unprotect_excel_object(obj, label: str = "") -> None:
+EXCEL_PROTECTION_PASSWORD = "disco"
+def _try_unprotect_excel_object(obj, label: str = "", password: str = EXCEL_PROTECTION_PASSWORD) -> None:
     if obj is None:
         return
-    try:
-        _com_call(lambda: obj.Unprotect(""), tries=3, sleep_s=0.1)
-        return
-    except Exception:
-        pass
-    try:
-        _com_call(lambda: obj.Unprotect(), tries=3, sleep_s=0.1)
-    except Exception as e:
-        if label:
-            print(f"[WARN] Could not unprotect {label}: {e}", flush=True)
+    for pwd in [password, ""]:
+        try:
+            _com_call(lambda pwd=pwd: obj.Unprotect(pwd), tries=3, sleep_s=0.1)
+            return
+        except Exception as e:
+            last_err = e
+    if label:
+        print(f"[WARN] Could not unprotect {label}: {last_err}", flush=True)
 def _read_excel_range_display_df(ws_com, range_addr: str) -> pd.DataFrame:
     rng = _dyn(ws_com.Range(range_addr))
     rows = int(getattr(rng.Rows, "Count", 0) or 0)
@@ -1792,6 +1791,8 @@ def build_meic_rows_from_team_tracker(
         shutil.copy2(xlsx_path, temp_xlsx)
         wb = excel.Workbooks.Open(str(temp_xlsx))
         ws_com = wb.Worksheets(TEAM_TRACKER_SHEET)
+        _try_unprotect_excel_object(wb, "MEIC tracker workbook")
+        _try_unprotect_excel_object(ws_com, f"MEIC tracker sheet '{TEAM_TRACKER_SHEET}'")
         excel.CalculateFullRebuild()
         all_dates = _resolve_validation_list_values(wb, ws_com, "B1")
         if not all_dates:
