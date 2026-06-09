@@ -1270,9 +1270,12 @@ def _sheet_ci(wb, name: str) -> Optional[str]:
             return sheet_name
     return None
 DS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+DS_Y_AD_HOURS_START = _dt.date(2026, 5, 4)
 DS_COMPLETED_HOURS_UP_ONE_ROW_START = _dt.date(2026, 6, 1)
 def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= DS_NEW_HOURS_START
+def _ds_use_y_ad_hours_layout(period: Optional[_dt.date]) -> bool:
+    return isinstance(period, _dt.date) and period > DS_Y_AD_HOURS_START
 def _ds_completed_hours_up_one_row(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
 def _is_ds_excluded_category(v: Any) -> bool:
@@ -1299,19 +1302,6 @@ def _ds_use_r_layout(ws_perf: Worksheet) -> bool:
         if _cell_number(ws_perf[f"AA{r}"].value) is not None:
             return False
     return True
-def _ds_column_sum(ws_perf: Worksheet, column: str) -> float:
-    return sum(
-        value
-        for r in range(5, 46)
-        if (value := _cell_number(ws_perf[f"{column}{r}"].value)) is not None
-    )
-def _ds_pick_actual_column(
-    ws_perf: Worksheet, candidates: Iterable[str], total: Optional[float]
-) -> str:
-    column_sums = {column: _ds_column_sum(ws_perf, column) for column in candidates}
-    if total is not None and total > 0:
-        return min(column_sums, key=lambda column: abs(column_sums[column] - total))
-    return max(column_sums, key=column_sums.get)
 def compute_completed_hours_ds(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
@@ -1319,7 +1309,7 @@ def compute_completed_hours_ds(
     if _ds_use_new_hours_layout(period):
         total_cell = "C46" if _ds_completed_hours_up_one_row(period) else "C47"
         total = _cell_number(ws_perf[total_cell].value)
-        actual_col = _ds_pick_actual_column(ws_perf, ("W", "AF"), total)
+        actual_col = "Y" if _ds_use_y_ad_hours_layout(period) else "W"
     else:
         use_r_layout = _ds_use_r_layout(ws_perf)
         total_col = "R" if use_r_layout else "AB"
@@ -1338,13 +1328,15 @@ def compute_completed_hours_ds(
         if p not in seen:
             seen.add(p)
             people_in_wip.append(p)
+    if total is None:
+        total = sum(actual_by_person.values())
     return total, actual_by_person, people_in_wip
 def compute_person_available_hours_ds(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
 ) -> Dict[str, float]:
     if _ds_use_new_hours_layout(period):
-        available_col = max(("AA", "AB"), key=lambda column: _ds_column_sum(ws_perf, column))
+        available_col = "AD" if _ds_use_y_ad_hours_layout(period) else "AB"
     else:
         use_r_layout = _ds_use_r_layout(ws_perf)
         available_col = "R" if use_r_layout else "AA"
