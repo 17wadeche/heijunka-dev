@@ -3433,6 +3433,7 @@ ACTIVITY_MAP = {
     "korea ri":"RI",
     "meeting & action": "Meeting",
     "cornerston":"Cornerstone",
+    "scrum xx cornerstone":"Scrum & Action",
     "team lead meeting & action": "Meeting",
     "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",     
     "reportability matrix update":"Reportability Matrix",
