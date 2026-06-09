@@ -31,6 +31,8 @@ ACTIVITY_MAP = {
     "fca meeting":"FCA",
     "complex event colaboration":"Collaboration",
     "team collobration":"Collaboration",
+    "cannula training": "Training/Mentoring",
+    "pmpatraining":"PMPA",
     "clinical study: sphere 9 vt efs csmpcp":"Study",
     "italy vig reporting recording": "Training/Mentoring",
     "meeting on files/italy vig rr": "Training/Mentoring",
