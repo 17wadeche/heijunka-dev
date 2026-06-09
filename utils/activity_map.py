@@ -102,6 +102,7 @@ ACTIVITY_MAP = {
     "email; scrum":"Email & IM",
     "email admin scrumber":"Email & IM",
     "jana onboarding": "Training/Mentoring",
+    "scrums / emails / teams messages / reg inquirie":"Scrum & Action",
     "meeting, admin/email":"Meeting",
     "lmr meeting":"Meeting",
     "death event review":"WIP/Event Review",
