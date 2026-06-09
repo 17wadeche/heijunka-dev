@@ -6,8 +6,8 @@ import json
 import os
 import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
-from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from utils.workbook_loading import load_data_only_workbook
 TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\CQXM RI-Heijunka live spreadsheet shared - Documents\WIP+Non-WIP Heijunka Template CQXM  VSS 2026 03.xlsm": "VSS",
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
@@ -469,10 +469,11 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
     display_team = team or os.path.basename(path)
     log_timing(f"Starting non-WIP scrape for team: {display_team}")
     load_start = time.perf_counter()
-    wb = load_workbook(path, data_only=True)
+    wb = load_data_only_workbook(path)
     log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     if AVAILABILITY_SHEET not in wb.sheetnames:
         log_timing(f"{display_team}: missing sheet {AVAILABILITY_SHEET}")
+        wb.close()
         return [{
             "team": team,
             "period_date": "",
@@ -489,6 +490,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
     parse_start = time.perf_counter()
     available_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
     log_timing(f"{display_team}: availability parse took {time.perf_counter() - parse_start:.2f}s")
+    wb.close()
     rows: List[Dict[str, Any]] = []
     for period in sorted(available_by_week.keys()):
         av = available_by_week[period]
