@@ -2220,7 +2220,7 @@ def build_training_mentoring_export(
     source_raw: pd.DataFrame,
     before_date: Any,
 ) -> pd.DataFrame:
-    columns = ["Team", "Training/Mentoring Hours"]
+    columns = ["Team", "Week Start", "Training/Mentoring Hours"]
     if source_raw is None or source_raw.empty:
         return pd.DataFrame(columns=columns)
     source_df = _normalize_df_columns(source_raw.copy())
@@ -2233,11 +2233,16 @@ def build_training_mentoring_export(
     cutoff = pd.Timestamp(before_date).normalize()
     source_df = source_df.dropna(subset=[date_col]).copy()
     source_df = source_df[source_df[date_col].dt.normalize().lt(cutoff)].copy()
+    source_df["_week_start"] = _weekly_start(source_df[date_col])
     source_df["_team"] = source_df[team_col].astype(str).str.strip()
     source_df = source_df[source_df["_team"].ne("")].copy()
     if source_df.empty:
         return pd.DataFrame(columns=columns)
-    teams = source_df[["_team"]].drop_duplicates().rename(columns={"_team": "Team"})
+    team_weeks = (
+        source_df[["_team", "_week_start"]]
+        .drop_duplicates()
+        .rename(columns={"_team": "Team", "_week_start": "Week Start"})
+    )
     activity_rows: list[dict[str, Any]] = []
     for _, row in source_df.iterrows():
         payload = _loads_json_maybe(row[json_col])
@@ -2257,6 +2262,7 @@ def build_training_mentoring_export(
             activity_rows.append(
                 {
                     "Team": row["_team"],
+                    "Week Start": row["_week_start"],
                     "Activity": str(activity).strip(),
                     "Hours": hours,
                 }
@@ -2264,7 +2270,7 @@ def build_training_mentoring_export(
     training_rows: list[dict[str, Any]] = []
     if activity_rows:
         activities = pd.DataFrame(activity_rows)
-        for team, group in activities.groupby("Team"):
+        for (team, week_start), group in activities.groupby(["Team", "Week Start"]):
             split_activities = split_nonwip_activity_minutes(group[["Activity", "Hours"]])
             training_hours = pd.to_numeric(
                 split_activities.loc[
@@ -2276,19 +2282,20 @@ def build_training_mentoring_export(
             training_rows.append(
                 {
                     "Team": team,
+                    "Week Start": week_start,
                     "Training/Mentoring Hours": float(training_hours),
                 }
             )
     if training_rows:
         totals = pd.DataFrame(training_rows)
-        export_df = teams.merge(totals, on="Team", how="left")
+        export_df = team_weeks.merge(totals, on=["Team", "Week Start"], how="left")
     else:
-        export_df = teams.copy()
+        export_df = team_weeks.copy()
         export_df["Training/Mentoring Hours"] = 0.0
     export_df["Training/Mentoring Hours"] = (
         pd.to_numeric(export_df["Training/Mentoring Hours"], errors="coerce").fillna(0.0).round(2)
     )
-    return export_df.loc[:, columns].sort_values("Team").reset_index(drop=True)
+    return export_df.loc[:, columns].sort_values(["Week Start", "Team"]).reset_index(drop=True)
 if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
@@ -2993,11 +3000,11 @@ elif page == "Non-WIP":
     st.download_button(
         label="Export Training",
         data=training_export.to_csv(index=False).encode("utf-8"),
-        file_name="enterprise_training_mentoring_by_team.csv",
+        file_name="enterprise_training_mentoring_by_team_week.csv",
         mime="text/csv",
         key="export_training_mentoring",
         help=(
-            "Exports each team's combined Training/Mentoring hours from weeks before "
+            "Exports each team's combined Training/Mentoring hours for every week before "
             "today in the selected portfolio."
         ),
     )
