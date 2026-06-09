@@ -1382,6 +1382,7 @@ SURGICAL_ROLLUPS = {
 SURGICAL_ROLLUP_FALLBACKS = {
     "Surgical US": {"people_count": 19.0, "capacity_hours": 760.0},
     "Surgical MEIC": {"people_count": 25.0, "capacity_hours": 1000.0},
+    "Surgical CTS": {"people_count": 26.0, "capacity_hours": 1040.0},
 }
 def _build_rollup_kpi(
     rollup_name: str,
