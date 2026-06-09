@@ -683,7 +683,7 @@ def explode_people_in_wip(df: pd.DataFrame) -> pd.DataFrame:
     out = _filter_excluded_people_frame(out)
     return out
 @st.cache_data(show_spinner=False, ttl=15 * 60)
-def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
+def explode_person_hours(df: pd.DataFrame, include_zero_hours: bool = False) -> pd.DataFrame:
     if df.empty or "Person Hours" not in df.columns:
         return pd.DataFrame(columns=[
             "team","period_date","person","Actual Hours","Available Hours","Utilization"
@@ -710,7 +710,7 @@ def explode_person_hours(df: pd.DataFrame) -> pd.DataFrame:
             t = pd.to_numeric((vals or {}).get("available"), errors="coerce")
             a = float(a) if pd.notna(a) else 0.0
             t = float(t) if pd.notna(t) else 0.0
-            if (a == 0.0) and (t == 0.0):
+            if (a == 0.0) and (t == 0.0) and not include_zero_hours:
                 continue
             util = (a / t) if t not in (0, 0.0) else np.nan
             rows.append({
@@ -1610,9 +1610,8 @@ with left:
         )
         if len(teams_in_view) == 1:
             team_name = teams_in_view[0]
-            if 'ppl_hours' not in locals():
-                ppl_hours = explode_person_hours(f)
-            team_people = ppl_hours.loc[ppl_hours["team"] == team_name].copy()
+            trend_ppl_hours = explode_person_hours(f, include_zero_hours=True)
+            team_people = trend_ppl_hours.loc[trend_ppl_hours["team"] == team_name].copy()
             if team_people.empty:
                 st.info(f"No per-person data available for {team_name}.")
             else:
@@ -1632,10 +1631,11 @@ with left:
                 if wk_people.empty:
                     st.info("No per-person data for the selected week.")
                 else:
-                    wk_people["Actual"] = pd.to_numeric(wk_people["Actual Hours"], errors="coerce")
-                    wk_people = wk_people.loc[wk_people["Actual"].fillna(0) > 0].copy()
+                    wk_people["Actual"] = pd.to_numeric(
+                        wk_people["Actual Hours"], errors="coerce"
+                    ).fillna(0.0)
                     if wk_people.empty:
-                        st.info("Nobody to show after filtering zero-hour entries.")
+                        st.info("No people to show for the selected week.")
                     else:
                         wk_people["Avg Daily Hours"] = (wk_people["Actual"] / 5.0)
                         wk_people["OverUnder"] = np.where(
@@ -1648,8 +1648,9 @@ with left:
                         y_lo = 0.0
                         y_hi = max(vmax, 6.5) + pad
                         y_scale = alt.Scale(domain=[y_lo, y_hi], nice=False, clamp=False)
-                        order_people = (
-                            wk_people.sort_values("Avg Daily Hours", ascending=False)["person"].tolist()
+                        order_people = sorted(
+                            wk_people["person"].dropna().astype(str).unique().tolist(),
+                            key=str.casefold,
                         )
                         color_enc = alt.Color(
                             "OverUnder:N",
