@@ -2213,6 +2213,84 @@ def _get_export_lookup_bundle(
 EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "nan", "", "break", "other team wip", "extra wip", "see commercial tab","other (hours)", "used other", "used the other", "export"}
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
+def _is_training_or_mentoring_activity(val: Any) -> bool:
+    return bool(re.search(r"\b(?:train\w*|mentor\w*)\b", str(val), flags=re.IGNORECASE))
+@st.cache_data(show_spinner=False)
+def build_training_mentoring_export(source_raw: pd.DataFrame) -> pd.DataFrame:
+    columns = ["Team", "Week Start", "Training/Mentoring Hours"]
+    if source_raw is None or source_raw.empty:
+        return pd.DataFrame(columns=columns)
+    source_df = _normalize_df_columns(source_raw.copy())
+    team_col = _get_team_col(source_df)
+    date_col = _get_date_col(source_df)
+    json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
+    if not (team_col and date_col and json_col):
+        return pd.DataFrame(columns=columns)
+    source_df[date_col] = _safe_to_datetime(source_df, date_col)
+    source_df = source_df.dropna(subset=[date_col]).copy()
+    source_df["_week_start"] = _weekly_start(source_df[date_col])
+    source_df["_team"] = source_df[team_col].astype(str).str.strip()
+    source_df = source_df[source_df["_team"].ne("")].copy()
+    if source_df.empty:
+        return pd.DataFrame(columns=columns)
+    team_weeks = (
+        source_df[["_team", "_week_start"]]
+        .drop_duplicates()
+        .rename(columns={"_team": "Team", "_week_start": "Week Start"})
+    )
+    activity_rows: list[dict[str, Any]] = []
+    for _, row in source_df.iterrows():
+        payload = _loads_json_maybe(row[json_col])
+        if isinstance(payload, dict):
+            payload = [payload]
+        if not isinstance(payload, list):
+            continue
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            activity = item.get("activity") or item.get("Activity") or item.get("type")
+            hours = item.get("hours") or item.get("Hours")
+            if activity is None or hours is None:
+                continue
+            if not _is_training_or_mentoring_activity(activity):
+                continue
+            activity_rows.append(
+                {
+                    "Team": row["_team"],
+                    "Week Start": row["_week_start"],
+                    "Activity": str(activity).strip(),
+                    "Hours": hours,
+                }
+            )
+    training_rows: list[dict[str, Any]] = []
+    if activity_rows:
+        activities = pd.DataFrame(activity_rows)
+        for (team, week_start), group in activities.groupby(["Team", "Week Start"]):
+            split_activities = split_nonwip_activity_minutes(group[["Activity", "Hours"]])
+            training_hours = pd.to_numeric(
+                split_activities.loc[
+                    split_activities["Activity"].map(_is_training_or_mentoring_activity),
+                    "Hours",
+                ],
+                errors="coerce",
+            ).sum()
+            training_rows.append(
+                {
+                    "Team": team,
+                    "Week Start": week_start,
+                    "Training/Mentoring Hours": float(training_hours),
+                }
+            )
+    if training_rows:
+        totals = pd.DataFrame(training_rows)
+        export_df = team_weeks.merge(totals, on=["Team", "Week Start"], how="left")
+    else:
+        export_df = team_weeks.copy()
+        export_df["Training/Mentoring Hours"] = 0.0
+    export_df["Training/Mentoring Hours"] = (
+        pd.to_numeric(export_df["Training/Mentoring Hours"], errors="coerce").fillna(0.0).round(2)
+    )
+    return export_df.loc[:, columns].sort_values(["Week Start", "Team"]).reset_index(drop=True)
 if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
@@ -2909,6 +2987,19 @@ elif page == "Non-WIP":
     )
     ax.axis("equal")
     st.pyplot(fig)
+    st.divider()
+    training_export = build_training_mentoring_export(source_df)
+    st.download_button(
+        label="Export Training",
+        data=training_export.to_csv(index=False).encode("utf-8"),
+        file_name="enterprise_training_mentoring_by_team_week.csv",
+        mime="text/csv",
+        key="export_training_mentoring",
+        help=(
+            "Exports Training/Mentoring hours for each team and week in the selected "
+            "portfolio and Non-WIP date range."
+        ),
+    )
 elif page == "Export":
     st.subheader("Export")
     team_export, ou_export, portfolio_export, enterprise_export = _get_export_lookup_bundle(
