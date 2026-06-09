@@ -100,6 +100,7 @@ ACTIVITY_MAP = {
     "meeings: emails: iris: cathworks paa: tl activities:":"Meeting",
     "labels/review":"Label",
     "email; scrum":"Email & IM",
+    "email training a":"Email & IM",
     "visit to nurse for blood test":"Admin",
     "closurefast circuit board check with scott":"Admin",
     "scrum / emails / reg inquirie":"Scrum & Action",
