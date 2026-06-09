@@ -11,7 +11,6 @@ import json
 import unicodedata
 import re
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
 apply_global_styles()
 NON_WIP_DEFAULT_PATH = Path(r"C:\heijunka-dev\CRM_DATA\crm_non_wip_activities.csv")
@@ -422,9 +421,6 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         if re.fullmatch(r"email(s)?(&|and|/)?im", compact):
             return "Email & IM"
         key = lower
-        explicit_map = ACTIVITY_MAP
-        if key in explicit_map:
-            return explicit_map[key]
         acronym_tokens = {
             "im", "wip", "ooo", "sla", "qa", "hc", "pe", "wfh", "pto",
             "ri", "capa",
