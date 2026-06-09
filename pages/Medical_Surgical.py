@@ -2624,11 +2624,9 @@ with right2:
             top_mix = top_mix[~top_mix["person"].isin(exclude_people)].copy()
             top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
             top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
-            person_order = (
-                top_mix.groupby("person", as_index=False)["Hours"]
-                .sum()
-                .sort_values("Hours", ascending=False)["person"]
-                .tolist()
+            person_order = sorted(
+                top_mix["person"].dropna().unique().tolist(),
+                key=str.casefold,
             )
             label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()

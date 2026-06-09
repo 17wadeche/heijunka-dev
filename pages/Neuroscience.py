@@ -1862,7 +1862,10 @@ with right:
                 top_mix = top_mix.dropna(subset=["Pct"]).copy()
             top_categories = [c for c in category_domain if (not factor_out_ooo_top or c != "OOO")]
             top_colors = [category_colors[category_domain.index(c)] for c in top_categories]
-            person_order = sorted(top_mix["person"].dropna().unique().tolist())
+            person_order = sorted(
+                top_mix["person"].dropna().unique().tolist(),
+                key=str.casefold,
+            )
             label_src = top_mix.sort_values(["person", "CategoryOrder"]).copy()
             label_src["cum_pct"] = label_src.groupby("person")["Pct"].cumsum()
             label_src["y_mid"] = label_src["cum_pct"] - (label_src["Pct"] / 2.0)
