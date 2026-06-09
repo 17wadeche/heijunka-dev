@@ -1384,6 +1384,32 @@ SURGICAL_ROLLUP_FALLBACKS = {
     "Surgical MEIC": {"people_count": 25.0, "capacity_hours": 1000.0},
     "Surgical CTS": {"people_count": 26.0, "capacity_hours": 1040.0},
 }
+SURGICAL_FISCAL_MONTHS = {
+    "May '27":       ("2026-04-27", "2026-05-25"),
+    "June '27":      ("2026-05-25", "2026-06-22"),
+    "July '27":      ("2026-06-22", "2026-07-27"),
+    "August '27":    ("2026-07-27", "2026-08-24"),
+    "September '27": ("2026-08-24", "2026-09-21"),
+    "October '27":   ("2026-09-21", "2026-10-26"),
+    "November '27":  ("2026-10-26", "2026-11-23"),
+    "December '27":  ("2026-11-23", "2026-12-21"),
+    "January '28":   ("2026-12-21", "2027-01-25"),
+    "February '28":  ("2027-01-25", "2027-02-22"),
+    "March '28":     ("2027-02-22", "2027-03-22"),
+    "April '28":     ("2027-03-22", "2027-04-26"),
+}
+SURGICAL_FISCAL_MONTHS = {
+    label: (pd.Timestamp(start).normalize(), pd.Timestamp(end).normalize())
+    for label, (start, end) in SURGICAL_FISCAL_MONTHS.items()
+}
+def _weeks_between(week_options, start_ts, end_ts) -> list[pd.Timestamp]:
+    start_ts = pd.Timestamp(start_ts).normalize()
+    end_ts = pd.Timestamp(end_ts).normalize()
+    return [
+        pd.Timestamp(week).normalize()
+        for week in week_options
+        if start_ts <= pd.Timestamp(week).normalize() <= end_ts
+    ]
 def _build_rollup_kpi(
     rollup_name: str,
     rollup_parts: list[tuple[str, str]],
@@ -1471,6 +1497,49 @@ def _build_rollup_kpi(
         "unaccounted_pct": (unaccounted_hours / pct_denom) if pd.notna(unaccounted_hours) and pd.notna(pct_denom) and pct_denom > 0 else np.nan,
     })
     return kpi
+def _build_multiweek_rollup_kpi(
+    rollup_name: str,
+    rollup_parts: list[tuple[str, str]],
+    weeks: list[pd.Timestamp],
+    nw_group_frame: pd.DataFrame,
+    wip_group_frame: pd.DataFrame,
+    include_ooo_in_kpi_pct: bool,
+) -> dict:
+    weekly_kpis = [
+        _build_rollup_kpi(
+            rollup_name=rollup_name,
+            rollup_parts=rollup_parts,
+            week=pd.Timestamp(week).normalize(),
+            nw_group_frame=nw_group_frame,
+            wip_group_frame=wip_group_frame,
+            include_ooo_in_kpi_pct=include_ooo_in_kpi_pct,
+        )
+        for week in weeks
+    ]
+    weekly_kpis = [kpi for kpi in weekly_kpis if kpi]
+    if not weekly_kpis:
+        return {}
+    summed_fields = [
+        "capacity_hours",
+        "completed_hours",
+        "non_wip_hours",
+        "ooo_hours",
+        "unaccounted_hours",
+        "pct_denom",
+    ]
+    combined = {
+        field: sum(float(kpi.get(field, 0.0)) for kpi in weekly_kpis if pd.notna(kpi.get(field)))
+        for field in summed_fields
+    }
+    combined["people_count"] = sum(float(kpi.get("people_count", 0.0)) for kpi in weekly_kpis)
+    pct_denom = combined["pct_denom"]
+    combined.update({
+        "wip_pct": combined["completed_hours"] / pct_denom if pct_denom > 0 else np.nan,
+        "non_wip_pct": combined["non_wip_hours"] / pct_denom if pct_denom > 0 else np.nan,
+        "ooo_pct": combined["ooo_hours"] / pct_denom if include_ooo_in_kpi_pct and pct_denom > 0 else 0.0,
+        "unaccounted_pct": combined["unaccounted_hours"] / pct_denom if pct_denom > 0 else np.nan,
+    })
+    return combined
 st.markdown("<h1 style='text-align: center;'>MS Heijunka Metrics Dashboard</h1>", unsafe_allow_html=True)
 label = "Show WIP view" if st.session_state.get("nonwip_mode", False) else "Show Non-WIP view"
 nonwip_mode = st.toggle(
@@ -1757,19 +1826,76 @@ if nonwip_mode:
     if team_nw in SURGICAL_OVERVIEW_TRIGGER_TEAMS:
         with st.popover("Get Regional Surgical Breakdown", use_container_width=False):
             st.markdown("### Regional Surgical Breakdown")
-            st.caption(f"Week: {week_nw.date().isoformat()}")
+            regional_week_options = sorted(
+                {
+                    pd.Timestamp(week).normalize()
+                    for frame in (nonwip_group_df, wip_group_df)
+                    if "period_date" in frame.columns
+                    for week in pd.to_datetime(frame["period_date"], errors="coerce").dropna().unique()
+                    if pd.Timestamp(week).normalize() <= today_nw
+                },
+                reverse=True,
+            )
+            regional_weeks_key = "regional_surgical_selected_weeks"
+            valid_regional_weeks = set(regional_week_options)
+            default_regional_weeks = (
+                [week_nw] if week_nw in valid_regional_weeks else regional_week_options[:1]
+            )
+            if regional_weeks_key not in st.session_state:
+                st.session_state[regional_weeks_key] = default_regional_weeks
+            else:
+                st.session_state[regional_weeks_key] = [
+                    pd.Timestamp(week).normalize()
+                    for week in st.session_state[regional_weeks_key]
+                    if pd.Timestamp(week).normalize() in valid_regional_weeks
+                ]
+            @st.dialog("Choose regional fiscal month")
+            def _regional_fiscal_month_dialog():
+                fiscal_month = st.selectbox(
+                    "Fiscal month",
+                    options=list(SURGICAL_FISCAL_MONTHS.keys()),
+                    key="regional_surgical_fiscal_month_choice",
+                )
+                start_ts, end_ts = SURGICAL_FISCAL_MONTHS[fiscal_month]
+                st.caption(
+                    f"{fiscal_month}: {start_ts.strftime('%Y-%m-%d')} through "
+                    f"{end_ts.strftime('%Y-%m-%d')}"
+                )
+                if st.button("Apply", type="primary", key="regional_surgical_apply_fiscal_month"):
+                    st.session_state[regional_weeks_key] = _weeks_between(
+                        regional_week_options,
+                        start_ts,
+                        end_ts,
+                    )
+                    st.rerun()
+            if st.button("Fiscal month", key="regional_surgical_fiscal_month_btn"):
+                _regional_fiscal_month_dialog()
+            selected_regional_weeks = st.multiselect(
+                "Weeks",
+                options=regional_week_options,
+                format_func=lambda week: pd.Timestamp(week).strftime("%Y-%m-%d"),
+                key=regional_weeks_key,
+                placeholder="Select one or more weeks",
+            )
+            if not selected_regional_weeks:
+                st.info("Select at least one week to show the regional breakdown.")
+            else:
+                st.caption(
+                    f"Showing {len(selected_regional_weeks)} selected week"
+                    f"{'s' if len(selected_regional_weeks) != 1 else ''}."
+                )
             for rollup_name, rollup_parts in SURGICAL_ROLLUPS.items():
-                rollup_kpi = _build_rollup_kpi(
+                rollup_kpi = _build_multiweek_rollup_kpi(
                     rollup_name=rollup_name,
                     rollup_parts=rollup_parts,
-                    week=week_nw,
+                    weeks=selected_regional_weeks,
                     nw_group_frame=nonwip_group_df,
                     wip_group_frame=wip_group_df,
                     include_ooo_in_kpi_pct=include_ooo_in_kpi_pct,
                 )
                 st.markdown(f"#### {rollup_name}")
                 if not rollup_kpi:
-                    st.info("No data available for this week.")
+                    st.info("No data available for the selected weeks.")
                     continue
                 r1, r2, r3, r4 = st.columns(4)
                 kpi_card(
