@@ -2339,13 +2339,17 @@ if page == "Overview":
                 ],
                 reverse=True,
             )
+            valid_weeks = set(week_options)
             if "overview_selected_weeks" in st.session_state:
-                valid_weeks = set(week_options)
                 st.session_state["overview_selected_weeks"] = [
                     pd.Timestamp(w).normalize()
                     for w in st.session_state["overview_selected_weeks"]
                     if pd.Timestamp(w).normalize() in valid_weeks
                 ]
+            else:
+                st.session_state["overview_selected_weeks"] = (
+                    week_options[:8] if len(week_options) > 8 else week_options
+                )
             @st.dialog("Choose fiscal month")
             def _overview_fiscal_month_dialog():
                 fiscal_month = st.selectbox(
@@ -2374,7 +2378,6 @@ if page == "Overview":
             selected_weeks = control_cols[0].multiselect(
                 "Weeks",
                 options=week_options,
-                default=week_options[:8] if len(week_options) > 8 else week_options,
                 format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
                 key="overview_selected_weeks",
                 placeholder="Select one or more weeks",
