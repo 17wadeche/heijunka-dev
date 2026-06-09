@@ -1375,6 +1375,9 @@ SURGICAL_ROLLUPS = {
         ("Surgical Robotics", "MEIC"),
         ("Surgical AST-GST", "MEIC"),
     ],
+    "Surgical CTS": [
+        ("Surgical AST-GST", "CTS"),  # CTS-SINH and CTS-SIBO
+    ],
 }
 SURGICAL_ROLLUP_FALLBACKS = {
     "Surgical US": {"people_count": 19.0, "capacity_hours": 760.0},
