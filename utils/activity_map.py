@@ -92,6 +92,7 @@ ACTIVITY_MAP = {
     "meeting with jyn on nextgen and clinical trial":"Meeting",
     "scrum, email, work tool aes":"Scrum & Action",
     "meals from the heart prep":"Engagement",
+    "meal packing":"Engagement",
     "ropened file":"WIP/Event Review",
     "checking valve label":"Label",
     "looking for lost devices in lab, doing up lost device memo":"Admin",
