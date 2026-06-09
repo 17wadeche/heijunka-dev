@@ -25,6 +25,8 @@ ACTIVITY_MAP = {
     "geoff martha townhall":"Meeting",
     "townhall/inspiris meetings/inv complaint rev meeting":"Meeting",
     "access email/teams page/on-boarding?":"Email & IM",
+    "escalation excel":"Escalation",
+    "adding file to escalation tracker":"Escalation",
     "inbox/scheduling/1 mir":"RS Inbox",
     "fca meeting":"FCA",
     "complex event colaboration":"Collaboration",
