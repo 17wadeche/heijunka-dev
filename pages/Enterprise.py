@@ -2296,6 +2296,22 @@ def build_training_mentoring_export(
         pd.to_numeric(export_df["Training/Mentoring Hours"], errors="coerce").fillna(0.0).round(2)
     )
     return export_df.loc[:, columns].sort_values(["Week Start", "Team"]).reset_index(drop=True)
+def build_training_mentoring_totals_export(training_export: pd.DataFrame) -> pd.DataFrame:
+    columns = ["Team", "Training/Mentoring Hours"]
+    if training_export is None or training_export.empty:
+        return pd.DataFrame(columns=columns)
+    totals = training_export.copy()
+    totals["Training/Mentoring Hours"] = pd.to_numeric(
+        totals["Training/Mentoring Hours"], errors="coerce"
+    ).fillna(0.0)
+    totals = (
+        totals.groupby("Team", as_index=False)["Training/Mentoring Hours"]
+        .sum()
+        .sort_values("Team")
+        .reset_index(drop=True)
+    )
+    totals["Training/Mentoring Hours"] = totals["Training/Mentoring Hours"].round(2)
+    return totals.loc[:, columns]
 if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
@@ -2997,15 +3013,22 @@ elif page == "Non-WIP":
         source_raw,
         before_date=datetime.now(ZoneInfo("America/Chicago")).date(),
     )
+    training_totals_export = build_training_mentoring_totals_export(training_export)
+    training_export_bytes = _cached_custom_excel_bytes(
+        (
+            ("Team Weekly", training_export),
+            ("Team Totals", training_totals_export),
+        )
+    )
     st.download_button(
         label="Export Training",
-        data=training_export.to_csv(index=False).encode("utf-8"),
-        file_name="enterprise_training_mentoring_by_team_week.csv",
-        mime="text/csv",
+        data=training_export_bytes,
+        file_name="enterprise_training_mentoring_by_team.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         key="export_training_mentoring",
         help=(
             "Exports each team's combined Training/Mentoring hours for every week before "
-            "today in the selected portfolio."
+            "today in the selected portfolio, plus a Team Totals tab that sums all weeks."
         ),
     )
 elif page == "Export":
