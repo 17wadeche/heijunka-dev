@@ -1764,7 +1764,16 @@ with left:
                             alt.Chart(wk_people)
                             .mark_bar()
                             .encode(
-                                x=alt.X("person:N", title="Person", sort=order_people),
+                                x=alt.X(
+                                    "person:N",
+                                    title="Person",
+                                    sort=order_people,
+                                    axis=alt.Axis(
+                                        labelAngle=-90,
+                                        labelOverlap=False,
+                                        labelLimit=0,
+                                    ),
+                                ),
                                 y=alt.Y("Avg Daily Hours:Q", title="Avg Daily Hours (Actual/5)", scale=y_scale),
                                 color=color_enc,
                                 tooltip=[
@@ -1782,7 +1791,7 @@ with left:
                             alt.Chart(wk_people.assign(LabelY=lambda d: d["Avg Daily Hours"] + label_pad))
                             .mark_text(dy=-4)
                             .encode(
-                                x="person:N",
+                                x=alt.X("person:N", sort=order_people, axis=None),
                                 y=alt.Y("LabelY:Q", scale=y_scale),
                                 text="DeltaLabel:N",
                                 color=alt.Color(
