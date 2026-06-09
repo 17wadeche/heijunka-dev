@@ -1150,3 +1150,12 @@ FileNotFoundError: File not found on disk: C:\Users\wadec8\Medtronic PLC\PSS Sha
 2026-06-08 20:56:17,441 | INFO | [PH Cell 17] START
 2026-06-08 20:56:42,074 | INFO | [PH Cell 17] DONE | rows=11 | elapsed=0:00:24.633208
 2026-06-08 20:56:42,074 | INFO | [SCS Cell 1] START
+2026-06-08 20:57:13,816 | INFO | === NS Metrics Run START ===
+2026-06-08 20:57:13,816 | INFO | Selected team: all
+2026-06-08 20:57:13,816 | INFO | [TDD COS 1] START
+2026-06-08 20:57:46,006 | INFO | [TDD COS 1] loaded cached rows from NS_metrics: 14 | kept=11 | refreshed=3 | final=14
+2026-06-08 20:57:46,006 | INFO | [TDD COS 1] DONE | rows=14 | elapsed=0:00:32.189907
+2026-06-08 20:57:46,006 | INFO | [Spine] START
+2026-06-08 20:58:45,178 | INFO | [Spine] loaded cached rows from NS_metrics: 22 | kept=20 | refreshed=2 | final=22 | old_weeks=[] | new_weeks=['2026-05-25', '2026-06-01', '2026-06-08']
+2026-06-08 20:58:45,178 | INFO | [Spine] DONE | rows=22 | elapsed=0:00:59.171256
+2026-06-08 20:58:45,178 | INFO | [PH] START
