@@ -570,6 +570,7 @@ ACTIVITY_MAP = {
     "aged file/metrics review":"WIP/Event Review",
     "issue impact event":"WIP/Event Review",
     "pulling appropriate pe'":"WIP/Event Review",
+    "projecct work":"Project Work",
     "creating lit sr 609089969":"WIP/Event Review",
     "review training file": "Training/Mentoring",
     "onboarding": "Training/Mentoring",
