@@ -568,6 +568,7 @@ ACTIVITY_MAP = {
     "emails/team":"Email & IM",
     "qa collaboration":"QA",
     "aged file/metrics review":"WIP/Event Review",
+    "issue impact event":"WIP/Event Review",
     "creating lit sr 609089969":"WIP/Event Review",
     "review training file": "Training/Mentoring",
     "onboarding": "Training/Mentoring",
