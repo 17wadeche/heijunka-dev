@@ -571,6 +571,7 @@ ACTIVITY_MAP = {
     "creating lit sr 609089969":"WIP/Event Review",
     "review training file": "Training/Mentoring",
     "onboarding": "Training/Mentoring",
+    "meeting prep / meetings / emails / reg inquirie":"Meeting",
     "mfth (75)":"Meeting",
     "ng access/prep/email":"Next Gen",
     "training check-in": "Training/Mentoring",
