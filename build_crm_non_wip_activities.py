@@ -83,6 +83,12 @@ DS_WIP_PLAN_SHEET = "# 1 WIP plan"
 DS_PERF_WIP_SHEET = "#5 Performance WIP Time"
 DS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 DS_PEOPLE_COUNT = 41
+DS_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 6, 1)
+DS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 40
+def ds_people_count_for_period(period: _dt.date) -> int:
+    if period >= DS_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return DS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return DS_PEOPLE_COUNT
 CPT_PAB_SHEET = "#3 PAB"
 CPT_WIP_PLAN_SHEET = "# 1 WIP plan"
 CPT_PERF_WIP_SHEET = "#6 Performance WIP Time"
@@ -1184,7 +1190,7 @@ def scrape_one_ds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str]
         ooo_total_cell="EF2",
         ooo_name_col="DL",
         ooo_hours_col="EF",
-        people_count=DS_PEOPLE_COUNT,
+        people_count=ds_people_count_for_period,
         non_wip_types=DS_NON_WIP_TYPES,
     )
 def scrape_one_cpt_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
