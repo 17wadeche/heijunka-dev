@@ -175,6 +175,7 @@ ACTIVITY_MAP = {
     "camera detail research":"Project Work",
     "intern project meeting":"Meeting",
     "crdn post mrket call":"Meeting",
+    "pending rd":"WIP/Event Review",
     "tergazyme order issue with maria":"Ordering",
     "liberant issue with daniel":"Ordering",
     "risk assessment capa training":"CAPA",
