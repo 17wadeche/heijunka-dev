@@ -161,6 +161,8 @@ ACTIVITY_MAP = {
     "shipping devices to nellcor":"Shipment",
     "closurefast san diego shipment issue":"Shipment",
     "collaboration event reviews meeting":"WIP/Event Review",
+    "coding project meeting":"Project Work",
+    "tl activities/meeting with monica":"Meeting",
     "checking equipment cal. date":"WIP/Event Review",
     "additional info":"Shipment",
     "rewriting a file":"WIP/Event Review",
