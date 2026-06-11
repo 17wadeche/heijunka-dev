@@ -170,6 +170,7 @@ ACTIVITY_MAP = {
     "rewriting a file":"WIP/Event Review",
     "packing the device":"Shipment",
     "finding info required for a closed file":"WIP/Event Review",
+    "value stream mapping":"Problem Solving",
     "assisting": "Training/Mentoring",
     "camera detail research":"Project Work",
     "risk assessment capa training":"CAPA",
