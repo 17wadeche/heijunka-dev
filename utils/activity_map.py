@@ -172,6 +172,7 @@ ACTIVITY_MAP = {
     "finding info required for a closed file":"WIP/Event Review",
     "assisting": "Training/Mentoring",
     "camera detail research":"Project Work",
+    "coding project":"Project Work",
     "scrum / a3 meeting / reg inquirie":"Project Work",
     "emails/training querie": "Training/Mentoring",
     "ohs group":"Engagement",
