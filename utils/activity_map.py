@@ -179,6 +179,8 @@ ACTIVITY_MAP = {
     "sh mfg tip guide review":"Admin",
     "meeting - rdn manufacturing test discussion & demo":"Meeting",
     "live video":"Reviewing Documents & Case Video",
+    "placement report":"Team Report",
+    "co-op placement meeting":"Meeting",
     "lookig at past analysis for heli-fx & manual":"WIP/Event Review",
     "gfe":"WIP/Event Review",
     "pe/file review":"WIP/Event Review",
