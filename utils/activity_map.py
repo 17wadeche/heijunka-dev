@@ -160,6 +160,7 @@ ACTIVITY_MAP = {
     "zoya's assessment file": "Training/Mentoring",
     "shipping devices to nellcor":"Shipment",
     "closurefast san diego shipment issue":"Shipment",
+    "collaboration event reviews meeting":"WIP/Event Review",
     "checking equipment cal. date":"WIP/Event Review",
     "additional info":"Shipment",
     "rewriting a file":"WIP/Event Review",
