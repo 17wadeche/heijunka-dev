@@ -166,6 +166,7 @@ ACTIVITY_MAP = {
     "scrum xx pulling appropriate pe'":"Scrum & Action",
     "checking equipment cal. date":"WIP/Event Review",
     "additional info":"Shipment",
+    "new hire shadowing, collaboration, scrum": "Training/Mentoring",
     "rewriting a file":"WIP/Event Review",
     "packing the device":"Shipment",
     "finding info required for a closed file":"WIP/Event Review",
