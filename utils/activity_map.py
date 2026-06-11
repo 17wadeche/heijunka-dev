@@ -163,6 +163,7 @@ ACTIVITY_MAP = {
     "collaboration event reviews meeting":"WIP/Event Review",
     "coding project meeting":"Project Work",
     "tl activities/meeting with monica":"Meeting",
+    "scrum xx pulling appropriate pe'":"Scrum & Action",
     "checking equipment cal. date":"WIP/Event Review",
     "additional info":"Shipment",
     "rewriting a file":"WIP/Event Review",
