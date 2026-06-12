@@ -188,6 +188,7 @@ ACTIVITY_MAP = {
     "risk assessment capa training":"CAPA",
     "meeting and follow up r/t inaccurate delivery occurrence incr.":"Meeting",
     "risk doc meeting":"Meeting",
+    "other pvh device reading":"Reviewing Documents & Case Video",
     "in-person collaboration / reg inquirie":"RI",
     "email; meetings; training review":"Training/Mentoring",
     "fax training":"Training/Mentoring",
