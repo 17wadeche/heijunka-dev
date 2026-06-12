@@ -174,9 +174,22 @@ ACTIVITY_MAP = {
     "assisting": "Training/Mentoring",
     "camera detail research":"Project Work",
     "intern project meeting":"Meeting",
+    "ng coding testing meetings collabor…
+    Ng Coding Testing meetings, collabor…
+    In Office Distractions And Chitty Chatt…
+    Ng, Meetings, Collaboration, Event Re…
+    Next Gen Train/docs/test
+    Training/letter Review
+    Fcc Breach Meeting
+    Collaboration/team
+    Scrun(15) Collbaoration
+    PE To PE Merge Training & Follow-up
+    Help With Nj Yellowbelt
+    Eu Remediation - Italy
     "crdn post mrket call":"Meeting",
     "pending rd":"WIP/Event Review",
     "tergazyme order issue with maria":"Ordering",
+    "fu std q's project meeting":"Project Work",
     "liberant issue with daniel":"Ordering",
     "risk assessment capa training":"CAPA",
     "risk doc meeting":"Meeting",
