@@ -186,6 +186,7 @@ ACTIVITY_MAP = {
     "fu std q's project meeting":"Project Work",
     "liberant issue with daniel":"Ordering",
     "risk assessment capa training":"CAPA",
+    "meeting and follow up r/t inaccurate delivery occurrence incr.":"Meeting",
     "risk doc meeting":"Meeting",
     "in-person collaboration / reg inquirie":"RI",
     "email; meetings; training review":"Training/Mentoring",
