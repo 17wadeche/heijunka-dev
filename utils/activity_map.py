@@ -193,6 +193,7 @@ ACTIVITY_MAP = {
     "valve and aortic shipment":"Shipment",
     "bagging":"Admin",
     "scrum xx pulling appropriate pes":"Scrum & Action",
+    "review safety plan":"Admin",
     "meeting clinical":"Meeting",
     "submitting expense":"Admin",
     "next gen train/docs/test":"Next Gen",
