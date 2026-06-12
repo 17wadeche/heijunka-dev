@@ -175,7 +175,7 @@ ACTIVITY_MAP = {
     "camera detail research":"Project Work",
     "intern project meeting":"Meeting",
     "ng coding testing meetings collaboration event review":"Next Gen",
-    "ng coding testing meetings, collabor…":"Next Gen",
+    "ng coding testing meetings, collaboration, event reviews, smart trees, email/admin":"Next Gen",
     "in office distractions and chitty chatt…":"Engagement",
     "crdn post mrket call":"Meeting",
     "pending rd":"WIP/Event Review",
