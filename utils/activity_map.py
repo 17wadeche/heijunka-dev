@@ -317,6 +317,7 @@ ACTIVITY_MAP = {
     "natalie yellow belt":"Yellow Belt",
     "natalie's yellowbelt":"Yellow Belt",
     "training on hold": "Training/Mentoring",
+    "next gen doc/demos/pre-testing":"Next Gen",
     "eu/guidance meeting/rd guidance":"Meeting",
     "late mdr meeting/scheduling":"Meeting",
     "worked on closure":"WIP/Event Review",
