@@ -313,6 +313,7 @@ ACTIVITY_MAP = {
     "training actvitie": "Training/Mentoring",
     "training prep & review event": "Training/Mentoring",
     "scrum (20)":"Scrum & Action",
+    "safety plan":"Admin",
     "monthly precedent event meeting":"Precedent Event",
     "monthly precedent events review":"Precedent Event",
     "potential precedent events monthly review":"Precedent Event",
