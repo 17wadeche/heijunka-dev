@@ -309,6 +309,7 @@ ACTIVITY_MAP = {
     "meeting with jyn - reg report":"Meeting",
     "shadowing new hire": "Training/Mentoring",
     "handover doc create":"Admin",
+    "clinical study reviewed - safety and And performance assessment of the affera sphere-9tm ablation catheter and system for the mapping and ablation of vt":"Clinical Study",
     "meeting with sarah - literature & drafted the procedure":"Meeting",
     "scrum, collaboration":"Scrum & Action",
     "training, ng, meetings, collaboration": "Training/Mentoring",
