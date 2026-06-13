@@ -307,6 +307,9 @@ ACTIVITY_MAP = {
     "aortic rpa": "RPA Meeting/Action",
     "final eu vig training with sean": "Training/Mentoring",
     "meeting with jyn - reg report":"Meeting",
+    Shadowing New Hire
+`Handover Doc Create
+Clinical Study Reviewed - Safety And`
     "meeting with sarah - literature & drafted the procedure":"Meeting",
     "scrum, collaboration":"Scrum & Action",
     "training, ng, meetings, collaboration": "Training/Mentoring",
