@@ -318,6 +318,7 @@ ACTIVITY_MAP = {
     "natalie's yellowbelt":"Yellow Belt",
     "safety plan":"Admin",
     "monthly precedent event meeting":"Precedent Event",
+    "reg inquiries see commercial tab for":"RI",
     "monthly precedent events review":"Precedent Event",
     "potential precedent events monthly review":"Precedent Event",
     "monthly precedent event review":"Precedent Event",
