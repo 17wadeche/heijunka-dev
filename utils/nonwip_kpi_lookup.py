@@ -219,7 +219,9 @@ def enterprise_nonwip_kpi_lookup(
                 count = 0.0
     if count <= 0 and not wk_people.empty and "person" in wk_people.columns:
         count = float(wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique())
-    if team_name in FORTY_HOUR_TEAMS:
+    if team_name == "ECT":
+        capacity_hours = count * 39.0
+    elif team_name in FORTY_HOUR_TEAMS:
         capacity_hours = _capacity_from_count_with_person_overrides(count, 40.0, wk_people)
     elif team_name in {"DS", "Lit & Letters"}:
         capacity_hours = _capacity_from_count_with_person_overrides(count, 37.5, wk_people)

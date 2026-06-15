@@ -1618,7 +1618,7 @@ def _weekly_team_export_df(
             nw_row=nw_row,
             long_nw=long_nw,
             person_hours=person_hours,
-            week_hours=40.0,
+            week_hours=39.0 if team == "ECT" else 40.0,
             irl_people=team_irl_people,
         )
         if wk_people.empty:
@@ -1638,7 +1638,9 @@ def _weekly_team_export_df(
             people_count = float(
                 wk_people["person"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()
             )
-        if team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC", "TCT"}:
+        if team == "ECT":
+            capacity_hours = float(people_count) * 39.0
+        elif team in {"SVT", "PVH","NV", "Enabling Technologies", "DBS", "PH", "Spine", "PSS", "SCS", "TDD","ACM","ACM","VSS","Endoscopy","Surgical AST-GST", "PH-NM MEIC", "TCT"}:
             capacity_hours = _capacity_from_count_with_person_overrides(people_count, 40.0, wk_people)
         elif team == "DS":
             capacity_hours = _capacity_from_count_with_person_overrides(people_count, 37.5, wk_people)
