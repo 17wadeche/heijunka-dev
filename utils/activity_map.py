@@ -308,6 +308,8 @@ ACTIVITY_MAP = {
     "final eu vig training with sean": "Training/Mentoring",
     "meeting with jyn - reg report":"Meeting",
     "shadowing new hire": "Training/Mentoring",
+    "next gen uat training":"Next Gen",
+    "next gen uat":"Next Gen",
     "handover doc create":"Admin",
     "clinical study reviewed - safety and performance assessment of the affera sphere-9tm ablation catheter and system for the mapping and ablation of vt":"Clinical Study",
     "meeting with sarah - literature & drafted the procedure":"Meeting",
