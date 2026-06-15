@@ -745,8 +745,9 @@ def build_person_weekly_accounting(
             df_ = df_[df_["person"] != ""]
     if people.empty:
         return pd.DataFrame(columns=[
-            "person", "Non-WIP Hours", "Completed Hours", "Other Team WIP",
-            "Accounted Non-WIP", "OOO Hours", "Expected Hours"
+            "team", "period_date", "person", "Non-WIP Hours", "Completed Hours", 
+            "Other Team WIP", "Accounted Non-WIP", "OOO Hours", "Expected Hours",
+            "Unaccounted", "Total Used",
         ])
     out = (
         people.merge(nw_people, on="person", how="left")
