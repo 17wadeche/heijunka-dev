@@ -12,7 +12,7 @@ FORTY_HOUR_TEAMS = {
 ENTERPRISE_PEOPLE_COUNT_FROM_NW_TEAMS = {
     "ENT", "DBS", "NV", "Enabling Technologies", "Spine", "PH", "PSS", "SCS",
     "TDD", "ACM", "CPT", "DS", "CDS", "NI", "VSS", "Endoscopy",
-    "Surgical AST-GST", "PH-NM MEIC", "TCT",
+    "Surgical AST-GST", "PH-NM MEIC", "TCT", "RPA Lab",
 }
 PERSON_CAPACITY_OVERRIDES = {
     "chelsey": 16.0,
