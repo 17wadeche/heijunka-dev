@@ -403,7 +403,7 @@ BAD_NAMES = {
     "none", "None", "tm", "TM", "Totals", "TOTALS",
     "Team Hours Available", "TEAM HOURS AVAILABLE",
     "Mazor Hours Available", "MAZOR HOURS AVAILABLE",
-    "Team 1 Hours Available", "Team Member"
+    "Team 1 Hours Available", "Team Member", "Open", "OPEN"
 }
 def _com_call(fn, tries: int = 30, sleep_s: float = 0.25):
     for _ in range(tries):
