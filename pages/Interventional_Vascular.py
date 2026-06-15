@@ -304,7 +304,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
     if not isinstance(activities, list) or not activities:
         return {}, {}
     import re
-    other_team_key = "OTHERTEAMWIP"
+    other_team_keys = {"OTHERTEAMWIP", "OTHERTEAMSWIP"}
     accounted_other: dict[str, float] = {}
     accounted_nonother: dict[str, float] = {}
     for d in activities:
@@ -321,7 +321,7 @@ def accounted_nonwip_by_person_from_row(row) -> tuple[dict[str, float], dict[str
             hrs = 0.0
         if hrs <= 0:
             continue
-        if act_key == other_team_key:
+        if act_key in other_team_keys:
             accounted_other[name] = accounted_other.get(name, 0.0) + hrs
         else:
             accounted_nonother[name] = accounted_nonother.get(name, 0.0) + hrs

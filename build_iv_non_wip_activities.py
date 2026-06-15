@@ -172,7 +172,16 @@ def parse_prod_analysis(
     COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
     COL_HOURS_F = 5
     nonwip_flags = {"non wip", "non-wip"}
-    other_team_wip_flags = {"other team wip", "other-team-wip", "otherteamwip", "other team's wip"}
+    other_team_wip_flags = {
+        "other team wip",
+        "other teams wip",
+        "other-team-wip",
+        "other-teams-wip",
+        "otherteamwip",
+        "otherteamswip",
+        "other team's wip",
+        "other teams' wip",
+    }
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "ooo_hours": 0.0,
         "ooo_by_person": defaultdict(float),
@@ -208,7 +217,7 @@ def parse_prod_analysis(
         act_key = "".join(ch for ch in act.upper() if ch.isalnum())
         is_other_team_wip = (
             flag in other_team_wip_flags
-            or act_key == "OTHERTEAMWIP"
+            or act_key in {"OTHERTEAMWIP", "OTHERTEAMSWIP"}
         )
         if flag in nonwip_flags or is_other_team_wip:
             hrs: float = 0.0
