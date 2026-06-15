@@ -614,7 +614,7 @@ def merged_people_count_for_week(
     long_nw: pd.DataFrame | None = None,
 ) -> int:
     wk = pd.to_datetime(week, errors="coerce").normalize()
-    if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS", "NV", "Enabling Technologies", "Lit & Letters", "Spine", "PSS", "PH", "SCS", "TDD", "ACM","CPT","DS","CDS","NI", "VSS","Endoscopy","Surgical AST-GST","PH-NM MEIC","TCT", , "RPA Lab"}:
+    if nw_frame is not None and not nw_frame.empty and team in {"ENT", "DBS", "NV", "Enabling Technologies", "Lit & Letters", "Spine", "PSS", "PH", "SCS", "TDD", "ACM","CPT","DS","CDS","NI", "VSS","Endoscopy","Surgical AST-GST","PH-NM MEIC","TCT", "RPA Lab"}:
         raw_nw = nw_frame.copy()
         if "period_date" in raw_nw.columns:
             raw_nw["period_date"] = pd.to_datetime(raw_nw["period_date"], errors="coerce").dt.normalize()
