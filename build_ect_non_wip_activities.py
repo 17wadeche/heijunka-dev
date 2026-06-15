@@ -269,10 +269,12 @@ def process_workbook(path: Path) -> dict[str, Any]:
                 }
             )
         elif normalized_activity == "other team wip":
+            total_non_wip_minutes += minutes
+            non_wip_by_person[person] += hours
             non_wip_activities.append(
                 {
                     "name": person,
-                    "activity": activity_detail if activity_detail else "Other Team WIP",
+                    "activity": "Other Team WIP",
                     "hours": round_hours(hours),
                 }
             )

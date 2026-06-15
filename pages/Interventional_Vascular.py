@@ -56,6 +56,7 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     return {str(x).strip() for x in raw if str(x).strip()}
 TEAM_WEEKLY_HOURS_OVERRIDES = {
     "CRDN": 39.0,
+    "ECT": 39.0,
 }
 def weekly_hours_for_team(team: str, default: float = 40.0) -> float:
     return float(TEAM_WEEKLY_HOURS_OVERRIDES.get(str(team).strip(), default))
