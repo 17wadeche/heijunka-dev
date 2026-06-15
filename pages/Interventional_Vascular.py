@@ -154,6 +154,8 @@ def merged_people_count_for_week(
     person_hours: pd.DataFrame,
     people_in_wip: pd.DataFrame,
 ) -> int:
+    if str(team).strip().upper() == "ECT":
+        return 9
     wk = pd.to_datetime(week, errors="coerce").normalize()
     if nw_frame is not None and not nw_frame.empty:
         raw_nw = nw_frame.copy()
