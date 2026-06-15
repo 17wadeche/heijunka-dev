@@ -1703,7 +1703,7 @@ def split_meic_snapshot_into_teams(built: Dict) -> Dict[str, Dict]:
             "ooo_map": {r["name"]: float(r["OOO"]) for r in people_rows},
         }
     }
-DBS_PEOPLE_COUNT_EFFECTIVE_DATE = pd.Timestamp("2026-05-25")
+DBS_PEOPLE_COUNT_EFFECTIVE_DATE = pd.Timestamp("2027-05-25")
 DBS_PEOPLE_COUNT_BEFORE_EFFECTIVE_DATE = 10
 DBS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 11
 def get_dbs_people_count_for_week(week: pd.Timestamp) -> int:
