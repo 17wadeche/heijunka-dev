@@ -575,6 +575,8 @@ ACTIVITY_MAP = {
     "technical issue (s drive)": "IT Issue/Update",
     "man. assessment with qa team":"QA",
     "tm support/meeting on file":"Collaboration",
+    "device documentation/case reading":"Reading File/Document Information",
+    "grad project report out":"Admin",
     "cqxm aem": "Meeting",
     "cqcm aem": "Meeting",
     "call with tm x": "Meeting",
