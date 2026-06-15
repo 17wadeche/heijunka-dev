@@ -1277,7 +1277,10 @@ def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
 def _ds_use_y_ad_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period > DS_Y_AD_HOURS_START
 def _ds_completed_hours_up_one_row(period: Optional[_dt.date]) -> bool:
-    return isinstance(period, _dt.date) and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
+    return (
+        isinstance(period, _dt.date)
+        and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
+    )
 def _is_ds_excluded_category(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
