@@ -2921,6 +2921,32 @@ def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd
         include_rows=list(range(22, 27)),  # Excel rows 23:27; these are skipped by ET US
         people_count=5,
     )
+def _reconstruct_et_archive_snapshot(week_rows: pd.DataFrame, header_row: List) -> pd.DataFrame:
+    column_count = 30
+    data_row_count = 28
+    reconstructed = pd.DataFrame(
+        [[""] * column_count for _ in range(30)],
+        dtype=object,
+    )
+    for c, val in enumerate(header_row[:column_count]):
+        reconstructed.iat[1, c] = val
+    data_block = week_rows.iloc[:, 1:].reset_index(drop=True)
+    if len(data_block) == 1 and data_block.shape[1] >= column_count * data_row_count:
+        flattened = data_block.iloc[0, :column_count * data_row_count].tolist()
+        data_block = pd.DataFrame(
+            [
+                flattened[offset:offset + column_count]
+                for offset in range(0, len(flattened), column_count)
+            ]
+        )
+    else:
+        data_block = data_block.iloc[:, :column_count]
+    max_rows = min(len(data_block), data_row_count)
+    max_cols = min(data_block.shape[1], column_count)
+    for r in range(max_rows):
+        for c in range(max_cols):
+            reconstructed.iat[2 + r, c] = data_block.iat[r, c]
+    return reconstructed
 def _build_et_us_rows_from_archive_sheet(
     archive_ws_com,
     current_ws_com,
@@ -2965,15 +2991,7 @@ def _build_et_us_rows_from_archive_sheet(
             week_rows = archive_df.loc[week_mask].reset_index(drop=True)
             if week_rows.empty:
                 continue
-            reconstructed = pd.DataFrame([[""] * 30 for _ in range(30)])
-            for c, val in enumerate(header_row[:30]):
-                reconstructed.iat[1, c] = val
-            data_block = week_rows.iloc[:, 1:31].reset_index(drop=True)
-            max_rows = min(len(data_block), 28)
-            max_cols = min(data_block.shape[1], 30)
-            for r in range(max_rows):
-                for c in range(max_cols):
-                    reconstructed.iat[2 + r, c] = data_block.iat[r, c]
+            reconstructed = _reconstruct_et_archive_snapshot(week_rows, header_row)
             builder = team_src.custom_builder or build_et_us_snapshot
             built = builder(team_name, reconstructed, week)
             people_names = _unique_people_names_from_people_rows(built.get("people_rows", []))
