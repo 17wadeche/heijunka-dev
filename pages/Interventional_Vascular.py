@@ -3202,6 +3202,9 @@ with right2:
             wk_people["Non-WIP"] = pd.to_numeric(wk_people["Accounted Non-WIP"], errors="coerce").fillna(0.0)
             wk_people["OOO"] = pd.to_numeric(wk_people["OOO Hours"], errors="coerce").fillna(0.0)
             wk_people["Unaccounted"] = pd.to_numeric(wk_people["Unaccounted"], errors="coerce").fillna(0.0)
+            wk_people["Expected Hours"] = pd.to_numeric(
+                wk_people["Expected Hours"], errors="coerce"
+            ).fillna(40.0)
             wk_people["Denom"] = (
                 wk_people["WIP"]
                 + wk_people["Other Team WIP"]
@@ -3210,7 +3213,7 @@ with right2:
                 + wk_people["Unaccounted"]
             )
             long_df = wk_people.melt(
-                id_vars=["team", "period_date", "person", "Denom"],
+                id_vars=["team", "period_date", "person", "Denom", "Expected Hours"],
                 value_vars=[
                     "WIP",
                     "Other Team WIP",
@@ -3227,7 +3230,17 @@ with right2:
                 np.nan,
             )
             mix_rows.append(
-                long_df[["team", "period_date", "person", "Category", "Hours", "Pct"]]
+                long_df[
+                    [
+                        "team",
+                        "period_date",
+                        "person",
+                        "Category",
+                        "Hours",
+                        "Pct",
+                        "Expected Hours",
+                    ]
+                ]
             )
     person_mix = (
         pd.concat(mix_rows, ignore_index=True)
@@ -3400,18 +3413,10 @@ with right2:
                 text=alt.Text("Pct:Q", format=".0%"),
             )
             person_totals = (
-                week_mix.groupby("person", as_index=False)["Hours"]
-                .sum()
+                week_mix.groupby("person", as_index=False)
+                .agg({"Hours": "sum", "Expected Hours": "max"})
                 .rename(columns={"Hours": "TotalHours"})
             )
-            if "wk_people_kpi" in dir() and not wk_people_kpi.empty and "person" in wk_people_kpi.columns and "Expected Hours" in wk_people_kpi.columns:
-                expected_hrs = wk_people_kpi[["person", "Expected Hours"]].copy()
-                expected_hrs["person"] = expected_hrs["person"].astype(str).str.strip()
-            else:
-                expected_hrs = pd.DataFrame({"person": person_totals["person"], "Expected Hours": 40.0})
-            person_totals["person"] = person_totals["person"].astype(str).str.strip()
-            person_totals = person_totals.merge(expected_hrs, on="person", how="left")
-            person_totals["Expected Hours"] = person_totals["Expected Hours"].fillna(40.0)
             overflow_df = person_totals[person_totals["TotalHours"] > person_totals["Expected Hours"]].copy()
             overflow_df["y_pos"] = 1.02  # just above the top of the 100% bar
             overflow_df["label"] = "⚠"
