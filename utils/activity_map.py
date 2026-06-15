@@ -571,6 +571,7 @@ ACTIVITY_MAP = {
     "pending rd/internet issue": "IT Issue/Update",
     "reading through updated closurefast document":"Reading File/Document Information",
     "co-op onboarding": "Training/Mentoring",
+    "email & im 20l cornerstone":"Email & IM",
     "grad report out 2":"Admin",
     "biohazard kit acc mgmt":"Admin",
     "job aid update":"Admin",
