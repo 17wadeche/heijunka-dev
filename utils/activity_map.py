@@ -605,6 +605,8 @@ ACTIVITY_MAP = {
     "looking over past file":"WIP/Event Review",
     "looking at the communications on aged files to see if we have enough informatino to clsoe them":"WIP/Event Review",
     "sap bo/similar incidents data pull":"WIP/Event Review",
+    "training, meetings, testing, event reviews, emails/admin":"Training/Mentoring",
+    "training, auditing and collaboration":"Audit",
     "ri, collaboration, scrum":"RI",
     "1:1 and verso meeting": "Meeting",
     "complete computer redownloads --followed by issue of new computer--very frusturating":"IT Issue/Update",
