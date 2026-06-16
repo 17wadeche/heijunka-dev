@@ -604,6 +604,8 @@ ACTIVITY_MAP = {
     "lab tour, med safety pvh":"Admin",
     "med safety tour":"Admin",
     "audit report update":"Audit",
+    "eu refresh training, collaboration, guidence review":"Training/Mentoring",
+    "iv aem": "Meeting",
     "corenerstone":"Cornerstone",
     "pvh report check":"Team Report",
     "points.":"Admin",
