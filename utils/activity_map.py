@@ -615,6 +615,7 @@ ACTIVITY_MAP = {
     "emails & admin":"Email & IM",
     "reading crdn document": "Reading File/Document Information",
     "looking over past file":"WIP/Event Review",
+    "pull relevant pe file":"WIP/Event Review",
     "looking at the communications on aged files to see if we have enough informatino to clsoe them":"WIP/Event Review",
     "sap bo/similar incidents data pull":"WIP/Event Review",
     "training, meetings, testing, event reviews, emails/admin":"Training/Mentoring",
