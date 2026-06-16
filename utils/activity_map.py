@@ -621,6 +621,7 @@ ACTIVITY_MAP = {
     "relabelling archived device":"Admin",
     "self-study, scrum, collaboration, training meeting, cornerstone":"Scrum & Action",
     "training activities (reviewing letters, locating wip), performance review work, email": "Training/Mentoring",
+    "inv training/fax training": "Training/Mentoring",
     "scrum, ceid re-coding, collaboration":"Scrum & Action",
     "training - cornerstone": "Training/Mentoring",
     "desk set up":"Admin",
