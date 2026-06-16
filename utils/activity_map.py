@@ -600,6 +600,8 @@ ACTIVITY_MAP = {
     "reg query follow-up":"Question",
     "cleaning new desk and set up, admin":"Admin",
     "gemba slide prep and gemba":"Gemba",
+    "medsafety meeting": "Meeting",
+    "scrum xx pull relevant pe file":"Scrum & Action",
     "emails & admin":"Email & IM",
     "reading crdn document": "Reading File/Document Information",
     "looking over past file":"WIP/Event Review",
