@@ -609,7 +609,7 @@ ACTIVITY_MAP = {
     "1:1 and verso meeting": "Meeting",
     "complete computer redownloads --followed by issue of new computer--very frusturating":"IT Issue/Update",
     "tijuana audit":"Audit",
-    "scrums / collaboration / teams messages /reg inquirie":"Scrum & Action",
+    "scrums / collaboration / teams messages / reg inquirie":"Scrum & Action",
     "scrum and townhall": "Meeting",
     "setting up in new desk":"Admin",
     "looking over dmaic training note":"Problem Solving",
