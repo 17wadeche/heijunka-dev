@@ -121,6 +121,7 @@ ACTIVITY_MAP = {
     "ml rd gap review":"Gap Report",
     "transcarotid access overview":"Admin",
     "prepartion of list of clinical studies for jyn for nextgen":"Next Gen",
+    "pulling relevant pe file":"WIP/Event Review",
     "scrum, collboration, one on one":"Scrum & Action",
     "meeting with jyn on nextgen and clinical trial":"Meeting",
     "tm meeting x":"Meeting",
