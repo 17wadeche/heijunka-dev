@@ -2337,18 +2337,26 @@ def build_nonwip_item_totals_export(
         if pd.notna(week)
     }
     selected_team_set = {
-        str(team).strip()
+        str(team).strip().casefold()
         for team in selected_teams
         if str(team).strip()
     }
-    source_df["_week_start"] = _weekly_start(_safe_to_datetime(source_df, date_col))
+    source_dates = pd.Series(pd.NaT, index=source_df.index, dtype="datetime64[ns]")
+    for candidate in ["week", "period_date", "date", "day", "as_of", "timestamp"]:
+        candidate_col = _first_col(source_df, [candidate])
+        if candidate_col:
+            source_dates = source_dates.fillna(
+                pd.to_datetime(source_df[candidate_col], errors="coerce")
+            )
+    source_df["_week_start"] = _weekly_start(source_dates)
     source_df["_team"] = source_df[team_col].astype(str).str.strip()
+    source_df["_team_key"] = source_df["_team"].str.casefold()
     source_df = source_df[
         source_df["_week_start"].isin(selected_week_set)
-        & source_df["_team"].isin(selected_team_set)
+        & source_df["_team_key"].isin(selected_team_set)
     ].copy()
     source_df = source_df.drop_duplicates(
-        subset=["_team", "_week_start"],
+        subset=["_team_key", "_week_start", json_col],
         keep="first",
     )
     activity_rows: list[dict[str, Any]] = []
@@ -3252,7 +3260,7 @@ elif page == "Export":
             file_name="team_non_wip_item_totals.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key="export_nonwip_item_totals",
-            disabled=nonwip_item_totals.empty,
+            disabled=not (export_selected_weeks and selected_nonwip_teams),
             help=(
                 "Exports one row per team and Non-WIP item, with hours combined across "
                 "the selected weeks and current Enterprise, Portfolio, OU, or Team filter."
