@@ -2316,6 +2316,86 @@ def build_training_mentoring_totals_export(training_export: pd.DataFrame) -> pd.
     )
     totals["Training/Mentoring Hours"] = totals["Training/Mentoring Hours"].round(2)
     return totals.loc[:, columns]
+@st.cache_data(show_spinner=False)
+def build_nonwip_item_totals_export(
+    source_raw: pd.DataFrame,
+    selected_weeks: tuple[Any, ...],
+    selected_teams: tuple[str, ...],
+) -> pd.DataFrame:
+    columns = ["Team", "Non-WIP Item", "Total Hours"]
+    if source_raw is None or source_raw.empty or not selected_weeks or not selected_teams:
+        return pd.DataFrame(columns=columns)
+    source_df = _normalize_df_columns(source_raw.copy())
+    team_col = _get_team_col(source_df)
+    date_col = _get_date_col(source_df)
+    json_col = _first_col(source_df, ["non_wip_activities", "non-wip_activities"])
+    if not (team_col and date_col and json_col):
+        return pd.DataFrame(columns=columns)
+    selected_week_set = {
+        pd.Timestamp(week).normalize()
+        for week in selected_weeks
+        if pd.notna(week)
+    }
+    selected_team_set = {
+        str(team).strip()
+        for team in selected_teams
+        if str(team).strip()
+    }
+    source_df["_week_start"] = _weekly_start(_safe_to_datetime(source_df, date_col))
+    source_df["_team"] = source_df[team_col].astype(str).str.strip()
+    source_df = source_df[
+        source_df["_week_start"].isin(selected_week_set)
+        & source_df["_team"].isin(selected_team_set)
+    ].copy()
+    source_df = source_df.drop_duplicates(
+        subset=["_team", "_week_start"],
+        keep="first",
+    )
+    activity_rows: list[dict[str, Any]] = []
+    for _, row in source_df.iterrows():
+        payload = _loads_json_maybe(row[json_col])
+        if isinstance(payload, dict):
+            payload = [payload]
+        if not isinstance(payload, list):
+            continue
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            activity = item.get("activity") or item.get("Activity") or item.get("type")
+            hours = item.get("hours") or item.get("Hours")
+            if activity is None or hours is None:
+                continue
+            activity_rows.append(
+                {
+                    "Team": row["_team"],
+                    "Activity": str(activity).strip(),
+                    "Hours": hours,
+                }
+            )
+    if not activity_rows:
+        return pd.DataFrame(columns=columns)
+    split_rows: list[pd.DataFrame] = []
+    for team, group in pd.DataFrame(activity_rows).groupby("Team", sort=True):
+        activities = split_nonwip_activity_minutes(
+            group[["Activity", "Hours"]]
+        )
+        activities["Team"] = team
+        split_rows.append(activities)
+    totals = pd.concat(split_rows, ignore_index=True)
+    totals["activity_norm"] = totals["Activity"].map(_norm_activity_name)
+    totals = totals[~totals["activity_norm"].isin(EXCLUDED_NON_WIP)].copy()
+    if totals.empty:
+        return pd.DataFrame(columns=columns)
+    totals["Hours"] = pd.to_numeric(totals["Hours"], errors="coerce").fillna(0.0)
+    totals = (
+        totals.groupby(["Team", "Activity"], as_index=False)["Hours"]
+        .sum()
+        .rename(columns={"Activity": "Non-WIP Item", "Hours": "Total Hours"})
+        .sort_values(["Team", "Total Hours", "Non-WIP Item"], ascending=[True, False, True])
+        .reset_index(drop=True)
+    )
+    totals["Total Hours"] = totals["Total Hours"].round(2)
+    return totals.loc[:, columns]
 if page == "Overview":
     st.subheader("Summary")
     overview_team_export, overview_ou_export, overview_portfolio_export, overview_enterprise_export = _get_export_lookup_bundle(
@@ -3125,6 +3205,54 @@ elif page == "Export":
                 ].copy()
         else:
             export_scope_df = export_scope_df.iloc[0:0].copy()
+        selected_nonwip_teams: list[str] = []
+        if export_selected_weeks and export_selected_values:
+            selected_team_rows = team_export.copy()
+            selected_team_rows["week_start"] = pd.to_datetime(
+                selected_team_rows["week_start"], errors="coerce"
+            ).dt.normalize()
+            selected_team_rows = selected_team_rows[
+                selected_team_rows["week_start"].isin(selected_week_set)
+            ]
+            if export_filter_level == "Portfolio":
+                selected_team_rows = selected_team_rows[
+                    selected_team_rows["portfolio"].astype(str).isin(export_selected_values)
+                ]
+            elif export_filter_level == "OU":
+                selected_team_rows = selected_team_rows[
+                    selected_team_rows["ou"].astype(str).isin(export_selected_values)
+                ]
+            elif export_filter_level == "Team":
+                selected_team_rows = selected_team_rows[
+                    selected_team_rows["team"].astype(str).isin(export_selected_values)
+                ]
+            selected_nonwip_teams = sorted(
+                selected_team_rows["team"].dropna().astype(str).str.strip().unique()
+            )
+        nonwip_item_totals = build_nonwip_item_totals_export(
+            shared_nonwip_df,
+            tuple(pd.Timestamp(week).normalize() for week in export_selected_weeks),
+            tuple(selected_nonwip_teams),
+        )
+        nonwip_export_bytes = _cached_custom_excel_bytes(
+            (("Team Non-WIP Totals", nonwip_item_totals),)
+        )
+        export_filter_card.download_button(
+            label="Export combined Non-WIP item totals",
+            data=nonwip_export_bytes,
+            file_name="team_non_wip_item_totals.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="export_nonwip_item_totals",
+            disabled=nonwip_item_totals.empty,
+            help=(
+                "Exports one row per team and Non-WIP item, with hours combined across "
+                "the selected weeks and current Enterprise, Portfolio, OU, or Team filter."
+            ),
+        )
+        if export_selected_weeks and export_selected_values and nonwip_item_totals.empty:
+            export_filter_card.caption(
+                "No Non-WIP item activity was found for the selected weeks and filter."
+            )
     missing_teams_display = _build_missing_team_weeks_df(
         team_export=team_export,
         org=org,
