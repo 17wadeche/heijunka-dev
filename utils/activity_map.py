@@ -123,6 +123,7 @@ ACTIVITY_MAP = {
     "prepartion of list of clinical studies for jyn for nextgen":"Next Gen",
     "scrum, collboration, one on one":"Scrum & Action",
     "meeting with jyn on nextgen and clinical trial":"Meeting",
+    "tm meeting x":"Meeting",
     "wip/ri check":"RI",
     "meetings, event reviews, collaboration, testing, email/admin":"Meeting",
     "meetings, testing, event reviews, collaboration, cornerstone, email/admin":"Meeting",
