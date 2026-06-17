@@ -73,9 +73,9 @@ DEFAULT_FILES: List[str] = [
 ]
 NAME_COL = 12          # L
 ACTIVITY_START_COL = 13  # M
-ACTIVITY_END_COL = 21    # U
-OOO_COL = 22             # V
-NON_D2D_COL = 23  
+ACTIVITY_END_COL = 22    # V
+OOO_COL = 23             # W
+NON_D2D_COL = 24         # X
 CSV_COLUMNS = [
     "team",
     "period_date",
