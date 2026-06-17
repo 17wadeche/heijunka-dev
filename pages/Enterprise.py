@@ -3135,17 +3135,26 @@ elif page == "Export":
         with export_filter_card:
             st.markdown("#### Export filters")
             export_cols = st.columns([1.15, 1.0, 1.4])
-            export_week_options = sorted(
-                team_export["week_start"].dropna().unique(),
-                reverse=True,
-            )
+            export_week_options = [
+                pd.Timestamp(week).strftime("%Y-%m-%d")
+                for week in sorted(
+                    pd.to_datetime(
+                        team_export["week_start"], errors="coerce"
+                    ).dropna().dt.normalize().unique(),
+                    reverse=True,
+                )
+            ]
             export_selected_weeks = export_cols[0].multiselect(
                 "Weeks",
                 options=export_week_options,
                 default=export_week_options[:8] if len(export_week_options) > 8 else export_week_options,
-                format_func=lambda x: pd.Timestamp(x).strftime("%Y-%m-%d"),
                 key="export_selected_weeks",
                 placeholder="Select one or more weeks",
+                help="Select any number of weeks. The Non-WIP export combines all selected weeks.",
+            )
+            export_cols[0].caption(
+                f"{len(export_selected_weeks)} week"
+                f"{'' if len(export_selected_weeks) == 1 else 's'} selected"
             )
             export_filter_level = export_cols[1].radio(
                 "Filter by",
