@@ -116,6 +116,7 @@ ACTIVITY_MAP = {
     "merge":"WIP/Event Review",
     "1:1 (30) lap top crashed (30)":"IT Issue/Update",
     "radiant viewer job aid":"Admin",
+    "pulling relevant pe'":"Metrics & Schedule",
     "soe call":"Meeting",
     "self assigned cornerstone training":"Cornerstone",
     "dt invoice":"Ordering",
