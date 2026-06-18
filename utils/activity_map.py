@@ -123,6 +123,7 @@ ACTIVITY_MAP = {
     "rpa/capa meeting":"CAPA",
     "wip check":"WIP/Event Review",
     "label":"Label",
+    "rdn clinical events meeting":"Meeting",
     "bloodborne pathogen ehs training (60)": "Training/Mentoring",
     "018 xl discusssion and complex file discussion":"Collaboration",
     "jt onboarding": "Training/Mentoring",
