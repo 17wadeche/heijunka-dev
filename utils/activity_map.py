@@ -108,6 +108,7 @@ ACTIVITY_MAP = {
     "shadowing lousie": "Training/Mentoring",
     "pmpa training":"PMPA",
     "2b label":"Label",
+    "scrum / meetings / collaboration / req inquirie":"Scrum & Action",
     "pmq cr pre-meeting q's call":"Meeting",
     "tourguide report":"Admin",
     "reading through heli-fx document":"Reviewing Documents & Case Video",
