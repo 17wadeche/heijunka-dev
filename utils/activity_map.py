@@ -117,6 +117,7 @@ ACTIVITY_MAP = {
     "dt invoice":"Ordering",
     "installing heli-fx software":"IT Issue/Update",
     "envair meeting":"Meeting",
+    "ng sprint testing/meeting":"Next Gen",
     "it ticket for jt's badge access":"IT Issue/Update",
     "code review":"Coding/Code Gov",
     "pmq coding":"Coding/Code Gov",
