@@ -116,6 +116,7 @@ ACTIVITY_MAP = {
     "1:1 (30) lap top crashed (30)":"IT Issue/Update",
     "radiant viewer job aid":"Admin",
     "soe call":"Meeting",
+    "self assigned cornerstone training":"Cornerstone",
     "dt invoice":"Ordering",
     "installing heli-fx software":"IT Issue/Update",
     "envair meeting":"Meeting",
