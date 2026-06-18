@@ -121,6 +121,7 @@ ACTIVITY_MAP = {
     "envair meeting":"Meeting",
     "ng sprint testing/meeting":"Next Gen",
     "it ticket for jt's badge access":"IT Issue/Update",
+    "packing up dt equipment":"Admin",
     "code review":"Coding/Code Gov",
     "pmq coding":"Coding/Code Gov",
     "rpa/capa meeting":"CAPA",
