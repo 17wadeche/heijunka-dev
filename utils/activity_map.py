@@ -126,7 +126,7 @@ ACTIVITY_MAP = {
     "bloodborne pathogen ehs training (60)": "Training/Mentoring",
     "018 xl discusssion and complex file discussion":"Collaboration",
     "jt onboarding": "Training/Mentoring",
-    "teading through past heli-fx file":"Reviewing Documents & Case Video",
+    "reading through past heli-fx file":"Reviewing Documents & Case Video",
     "delivery of school pcs":"Admin",
     "sending liberant to b2":"Ordering",
     "prep":"Admin",
