@@ -113,6 +113,7 @@ ACTIVITY_MAP = {
     "tourguide report":"Admin",
     "reading through heli-fx document":"Reviewing Documents & Case Video",
     "018 xl discusssion and comlex file discussion":"WIP/Event Review",
+    "merge":"WIP/Event Review",
     "1:1 (30) lap top crashed (30)":"IT Issue/Update",
     "radiant viewer job aid":"Admin",
     "soe call":"Meeting",
