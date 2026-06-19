@@ -15,9 +15,9 @@ FOLDERS = [
 ]
 START_DATE = date(2026, 1, 4)
 SCRIPT_DIR = Path(__file__).resolve().parent
-OUTPUT_CSV = SCRIPT_DIR / f"IV_DATA\\{TEAM.lower()}_heijunka_extract.csv"
+OUTPUT_CSV = SCRIPT_DIR / "IV_DATA" / f"{TEAM.lower()}_heijunka_extract.csv"
 CLOSURES_CSV = SCRIPT_DIR / "closures.csv"
-METRICS_AGGREGATE_CSV = SCRIPT_DIR / "IV_DATA\\metrics_aggregate_dev.csv"
+METRICS_AGGREGATE_CSV = SCRIPT_DIR / "IV_DATA" / "metrics_aggregate_dev.csv"
 AVAILABLE_SHEET = "Available WIP Hours"
 PRODUCTION_SHEET = "#12 Production Analysis"
 AVAILABLE_ROWS = [7, 9, 11, 13, 15, 17, 19, 21, 23]
@@ -328,8 +328,6 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
     seen: set[Path] = set()
     files: list[Path] = []
     for folder in folders:
-        print(f"Checking folder: {folder}")
-        print(f"Exists? {folder.exists()}")
         if not folder.exists():
             continue
         matches = list(folder.rglob(f"{TEAM} Future Heijunka *.xls*"))
@@ -337,9 +335,6 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
             path for path in matches
             if "(update template)" not in path.name.casefold()
         ]
-        print(f"Matches found: {len(matches)}")
-        for match in matches:
-            print(f"  {match}")
         for path in sorted(matches):
             resolved = path.resolve()
             if resolved in seen:
@@ -392,47 +387,30 @@ def ensure_fieldnames(existing_fieldnames: list[str], required_fieldnames: list[
             final.append(col)
     return final
 def write_csv_rows(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> None:
-    watch_dates = {"2026-05-11", "2026-05-18"}
-    print("PRE date_floor:", [
-        (r.get("period_date"), r.get("source_file"), r.get("error"))
-        for r in rows
-        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
-    ])
+    path.parent.mkdir(parents=True, exist_ok=True)
     rows = filter_period_rows(rows)
-    print("POST date_floor:", [
-        (r.get("period_date"), r.get("source_file"), r.get("error"))
-        for r in rows
-        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
-    ])
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
             normalized_row = {col: row.get(col, "") for col in fieldnames}
             writer.writerow(normalized_row)
+def push_rows_to_metrics_aggregate(rows: list[dict[str, Any]]) -> None:
+    existing_fieldnames, existing_rows = read_csv_rows(METRICS_AGGREGATE_CSV)
+    fieldnames = ensure_fieldnames(existing_fieldnames, OUTPUT_COLUMNS)
+    merged_rows = merge_rows_by_team_period(existing_rows, rows)
+    write_csv_rows(METRICS_AGGREGATE_CSV, fieldnames, merged_rows)
 def main() -> None:
     files = find_candidate_files(FOLDERS)
-    for f in files[:10]:
-        print("  ", f)
     if not files:
         searched = ", ".join(str(f) for f in FOLDERS)
         raise FileNotFoundError(f"No matching files found in: {searched}")
     closures_lookup = load_closures_lookup(CLOSURES_CSV)
     rows: list[dict[str, Any]] = []
-    watch_dates = {"2026-05-11", "2026-05-18"}
     for path in files:
         parsed = parse_date_from_filename(path)
-        if parsed and parsed.isoformat() in watch_dates:
-            print(f"FOUND WATCH FILE: filename_date={parsed} path={path}")
         try:
             row = process_workbook(path, closures_lookup)
-            if any(d in str(path) for d in ["11 May 2026", "18 May 2026"]):
-                print(
-                    "PROCESSED WATCH FILE:",
-                    "path=", path,
-                    "period_date=", row.get("period_date"),
-                    "error=", row.get("error"),
-                )
             period = row.get("period_date")
             if period:
                 period_date = datetime.strptime(period, "%Y-%m-%d").date()
@@ -440,7 +418,6 @@ def main() -> None:
                     continue
             rows.append(row)
         except Exception as exc:
-            print(f"ERROR WATCH? path={path} exc={exc}")
             parsed = parse_date_from_filename(path)
             rows.append(
                 {
@@ -451,12 +428,8 @@ def main() -> None:
                     "error": str(exc),
                 }
             )
-    print("BEFORE filter_period_rows:", [
-        (r.get("period_date"), r.get("source_file"), r.get("error"))
-        for r in rows
-        if r.get("period_date") in watch_dates or "May 2026" in str(r.get("source_file"))
-    ])
     rows = sort_rows_by_date(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
+    push_rows_to_metrics_aggregate(rows)
 if __name__ == "__main__":
     main()

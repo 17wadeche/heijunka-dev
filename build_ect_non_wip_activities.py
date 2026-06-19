@@ -441,7 +441,6 @@ def main() -> None:
                     "Week": parsed.isoformat() if parsed else "",
                 }
             )
-            print(f"Error processing {path}: {exc}")
     rows = dedupe_rows_by_team_week(rows)
     write_csv_rows(OUTPUT_CSV, OUTPUT_COLUMNS, rows)
     existing_fieldnames_non_wip, existing_rows_non_wip = read_csv_rows(NON_WIP_CSV)
@@ -460,8 +459,5 @@ def main() -> None:
         final_fieldnames_activities,
         merged_rows_activities,
     )
-    print(f"Wrote {len(rows)} rows to {OUTPUT_CSV}")
-    print(f"Merged into {NON_WIP_CSV} with {len(merged_rows_non_wip)} total rows")
-    print(f"Merged into {NON_WIP_ACTIVITIES_CSV} with {len(merged_rows_activities)} total rows")
 if __name__ == "__main__":
     main()
