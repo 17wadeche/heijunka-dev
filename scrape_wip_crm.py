@@ -1047,13 +1047,38 @@ def parse_period_date_from_text(text: str, *, default_year: Optional[int] = None
             return _dt.date(year, month, day)
         except ValueError:
             return None
-
     return None
 def parse_period_date_from_sheetname(sheet_name: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
     return parse_period_date_from_text(sheet_name, default_year=default_year)
 def parse_period_date_from_filename(path: str, *, default_year: Optional[int] = None) -> Optional[_dt.date]:
     name = os.path.splitext(os.path.basename(path))[0]
     return parse_period_date_from_text(name, default_year=default_year)
+def monday_of_week(d: _dt.date) -> _dt.date:
+    return d - _dt.timedelta(days=d.weekday())
+def iso_monday_weeks_back(today: Optional[_dt.date] = None, weeks_back: int = 3) -> List[str]:
+    if today is None:
+        today = _dt.date.today()
+    start = monday_of_week(today)
+    return [(start - _dt.timedelta(days=7 * i)).isoformat() for i in range(weeks_back + 1)]
+def filter_rows_to_recent_weeks(rows: List[Dict[str, Any]], weeks_back: int = 3) -> List[Dict[str, Any]]:
+    keep_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
+    return [r for r in rows if _norm_period_date(str(r.get("period_date", ""))) in keep_weeks]
+def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
+    if not path or not os.path.exists(path):
+        return []
+    with open(path, "r", newline="", encoding="utf-8-sig") as fp:
+        return list(csv.DictReader(fp))
+def merge_existing_with_recent_rows(
+    existing_rows: List[Dict[str, Any]],
+    recent_rows: List[Dict[str, Any]],
+    weeks_back: int = 3,
+) -> List[Dict[str, Any]]:
+    refresh_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
+    frozen_rows = [
+        r for r in existing_rows
+        if _norm_period_date(str(r.get("period_date", ""))) not in refresh_weeks
+    ]
+    return frozen_rows + recent_rows
 def iso_date(d: Optional[_dt.date]) -> str:
     return d.isoformat() if isinstance(d, _dt.date) else ""
 def _cell_number(v: Any) -> Optional[float]:
@@ -1997,6 +2022,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")
     ap.add_argument("--out", default="CRM_DATA\\CRM_WIP.csv", help="Output CSV path (default: CRM_WIP.csv).")
+    ap.add_argument(
+        "--weeks-back",
+        type=int,
+        default=3,
+        help="Number of prior weeks to include in addition to the current week (default: 3).",
+    )
     args = ap.parse_args()
     inputs = args.files or default_paths
     all_rows: List[Dict[str, Any]] = []
@@ -2005,6 +2036,12 @@ def main() -> int:
             all_rows.append(blank_row_for_missing_file(f))
             continue
         all_rows.extend(scrape_one_workbook(f))
+    recent_rows = filter_rows_to_recent_weeks(all_rows, weeks_back=args.weeks_back)
+    all_rows = merge_existing_with_recent_rows(
+        load_existing_csv_rows(args.out),
+        recent_rows,
+        weeks_back=args.weeks_back,
+    )
     all_rows.sort(key=lambda r: ((r.get("team") or ""), (r.get("period_date") or "")))
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
