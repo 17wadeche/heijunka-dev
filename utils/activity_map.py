@@ -111,6 +111,8 @@ ACTIVITY_MAP = {
     "tm meeting on file": "Training/Mentoring",
     "tm call to train on expenses reporting": "Training/Mentoring",
     "review assessment files - dis new info":"WIP/Event Review",
+    "reviewing procedure":"Admin",
+    "submitting report":"WIP/Event Review",
     "updating file":"WIP/Event Review",
     "elaine & yoga work session review of files completed": "Training/Mentoring",
     "query meeting":"Meeting",
