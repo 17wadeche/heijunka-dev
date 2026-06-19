@@ -852,6 +852,7 @@ ACTIVITY_MAP = {
     "training files meeting": "Training/Mentoring",
     "ifu/email":"Email & IM",
     "email/amdin":"Email & IM",
+    "ng, testing, meetings, collaboration, event reviews, email/admin":"Next Gen",
     "other, detail":"Other",
     "other quality":"Other",
     "training, workshop": "Training/Mentoring",
