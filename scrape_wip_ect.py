@@ -333,6 +333,10 @@ def find_candidate_files(folders: list[Path]) -> list[Path]:
         if not folder.exists():
             continue
         matches = list(folder.rglob(f"{TEAM} Future Heijunka *.xls*"))
+        matches = [
+            path for path in matches
+            if "(update template)" not in path.name.casefold()
+        ]
         print(f"Matches found: {len(matches)}")
         for match in matches:
             print(f"  {match}")
