@@ -826,6 +826,7 @@ ACTIVITY_MAP = {
     "next gen rd review":"Next Gen",
     "pvh reportability versa":"Reportability Matrix",
     "rd report":"Reportability Matrix",
+    "updates to potential precedent event file":"Precedent Event",
     "rd report review":"Reportability Matrix",
     "pending rds/japan rd'":"Reportability Matrix",
     "malf matrix update":"Reportability Matrix",
