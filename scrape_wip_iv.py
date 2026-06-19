@@ -735,7 +735,6 @@ def main():
     if not getattr(args, "closures", None):
         args.closures = os.path.join(base_dir, "closures.csv")
     if args.team and not args.config:
-        print("Provide --config or place teams.json in the current folder.", file=sys.stderr)
         sys.exit(2)
     jobs: List[Tuple[str, str, List[str], str, Dict[str, List[Dict[str, Any]]]]] = []
     default_prod = "Prod Analysis"
@@ -745,20 +744,17 @@ def main():
             with open(args.config, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception as e:
-            print(f"Failed to read config '{args.config}': {e}", file=sys.stderr)
             sys.exit(2)
         chosen = list(cfg.keys()) if args.all else args.team
         for team in chosen:
             if team not in cfg:
-                print(f"Team '{team}' not found in {args.config}. Available: {', '.join(cfg.keys())}", file=sys.stderr)
                 sys.exit(2)
             entry = cfg[team]
             wb = entry.get("workbook")
             if not wb:
-                print(f"Config for team '{team}' must include 'workbook'.", file=sys.stderr)
                 sys.exit(2)
             if args.prod_sheet:
-                prod_hints = list(args.prod_sheet)                     # from repeated --prod-sheet
+                prod_hints = list(args.prod_sheet)              
             else:
                 prod_cfg = entry.get("prod_sheets") or entry.get("prod_sheet") or default_prod
                 prod_hints = prod_cfg if isinstance(prod_cfg, list) else [prod_cfg]
@@ -776,12 +772,10 @@ def main():
         prod_hints = prod_cfg if isinstance(prod_cfg, list) else ([prod_cfg] if args.prod_sheet else [default_prod])
         jobs.append((team_label, args.workbook, prod_hints, args.avail_sheet or default_avail, {}))
     else:
-        print("Provide either --config with --all/--team, or a positional WORKBOOK path.", file=sys.stderr)
         sys.exit(2)
     all_rows: List[Dict[str, Any]] = []
     for team_label, path, prod_hints, avail_hint, week_anchors in jobs:
         if not os.path.exists(path):
-            print(f"[{team_label}] Workbook not found: {path}", file=sys.stderr)
             sys.exit(2)
         try:
             rows = build_weekly_metrics_from_file(
@@ -793,19 +787,14 @@ def main():
             for r in rows:
                 r_with_team = {"Team": team_label, **r}
                 all_rows.append(r_with_team)
-            print(f"[{team_label}] OK: {len(rows)} weekly rows (prod sheets: {prod_hints})")
         except Exception as e:
-            print(f"[{team_label}] Error while building metrics: {e}", file=sys.stderr)
             sys.exit(1)
             for r in rows:
                 r_with_team = {"Team": team_label, **r}
                 all_rows.append(r_with_team)
-            print(f"[{team_label}] OK: {len(rows)} weekly rows")
         except Exception as e:
-            print(f"[{team_label}] Error while building metrics: {e}", file=sys.stderr)
             sys.exit(1)
     if not all_rows:
-        print("No data found (check sheet names/column placements).", file=sys.stderr)
         sys.exit(1)
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
     merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
@@ -824,9 +813,9 @@ def main():
             value_hint="opened",
         )
     if closures_map:
-        _apply_aux_column(merged_rows, merged_cols, closures_map, "Closures")  # force name
+        _apply_aux_column(merged_rows, merged_cols, closures_map, "Closures")
     if opened_map:
-        _apply_aux_column(merged_rows, merged_cols, opened_map, "Opened")      # NEW
+        _apply_aux_column(merged_rows, merged_cols, opened_map, "Opened")
     out_dir = os.path.dirname(args.out)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)

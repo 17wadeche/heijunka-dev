@@ -103,11 +103,6 @@ def _freeze_missing_past_weeks(
         merged = merged[merged["period_date"].notna()].copy()
     merged = merged.drop_duplicates(subset=key_cols, keep="last")
     merged = merged.sort_values(key_cols).reset_index(drop=True)
-    print(
-        f"[CACHE FREEZE] {cache_path.name}: "
-        f"fresh_rows={len(fresh_df)} merged_rows={len(merged)}",
-        flush=True,
-    )
     return merged
 SPLIT_EXCLUDED_TEAMS = {
     "Enabling Tech",
@@ -298,14 +293,6 @@ def build_meic_rows_from_non_d2d_log(
         .reset_index()
         .sort_values(["period_date", "team"])
     )
-    for _, r in dbg.iterrows():
-        print(
-            f"[DEBUG][MEIC LOG GROUPED] "
-            f"team={r['team']} "
-            f"week={pd.Timestamp(r['period_date']).date().isoformat()} "
-            f"hours={float(r['hours']):.2f}",
-            flush=True,
-        )
     out_rows: List[dict] = []
     for (team_name, week), grp in raw.groupby(["team", "period_date"], dropna=False):
         week = pd.Timestamp(week).normalize()
@@ -1300,11 +1287,6 @@ def build_pss_from_user_data(
     OOO_IDX = _col_letter_to_idx(PSS_USER_DATA_OOO_COL)
     required_max_idx = max(DATE_IDX, NAME_IDX, ACTIVITY_END_IDX, OOO_IDX)
     if ws.shape[1] <= required_max_idx:
-        print(
-            f"[WARN][{team_name}] User Data sheet does not have enough columns. "
-            f"Expected through {PSS_USER_DATA_OOO_COL}, found {ws.shape[1]} columns.",
-            flush=True,
-        )
         return pd.DataFrame()
     DATE_COL = ws.columns[DATE_IDX]
     NAME_COL = ws.columns[NAME_IDX]
@@ -1468,15 +1450,6 @@ def log_weekly_ph_summary(df: pd.DataFrame, label: str) -> None:
     if tmp.empty:
         return
     tmp = tmp.sort_values(["period_date", "team"])
-    for _, r in tmp.iterrows():
-        print(
-            f"[DEBUG][{label}] "
-            f"week={pd.Timestamp(r['period_date']).date().isoformat()} "
-            f"team={r['team']} "
-            f"non_wip={float(r['total_non_wip_hours']):.2f} "
-            f"ooo={float(r['OOO Hours']):.2f}",
-            flush=True,
-        )
 def week_from_pss_meic_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timestamp]:
     s = str(sheet_name).strip()
     s_lower = s.lower()
@@ -1736,10 +1709,8 @@ def get_people_count_from_wip(
     )
     if team_key == "dbs":
         people_count = get_dbs_people_count_for_week(week)
-        print(f"[PEOPLE COUNT HARDCODE HIT] DBS week={week_txt} returning={people_count}", flush=True)
         return people_count
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
-        print(f"[PEOPLE COUNT HARDCODE HIT] Enabling Tech week={week_txt} returning=33", flush=True)
         return 33
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
@@ -2179,10 +2150,6 @@ def combine_meic_parent_teams(df: pd.DataFrame, wip_df: pd.DataFrame) -> pd.Data
                 people_count_final = 18
             elif parent_team == "DBS":
                 people_count_final = get_dbs_people_count_for_week(period_date)
-                print(
-                    f"[PEOPLE COUNT HARDCODE HIT][ROLLUP] DBS week={pd.Timestamp(period_date).date().isoformat()} returning={people_count_final}",
-                    flush=True,
-                )
             elif parent_team == "SCS":
                 people_count_final = fallback_people_count
             else:
@@ -3550,12 +3517,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
             key=lambda item: item[0],
             reverse=True,
         )[:ENT_REFRESH_WEEK_COUNT]
-        print(
-            "[ENT REFRESH] Pulling only latest "
-            f"{len(sheet_items)} weeks: "
-            + ", ".join(item[0].date().isoformat() for item in sheet_items),
-            flush=True,
-        )
     for week, sheet_name, ws in sheet_items:
         if team_src.team in {"PSS US", "PSS MEIC"}:
             pss_min_date = pd.Timestamp("2026-02-01").normalize()
@@ -3586,12 +3547,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
                 if 0 <= forced_totals_row < ws.shape[0]:
                     actual_totals_row = forced_totals_row
                 else:
-                    print(
-                        f"[WARN] {team_src.team} sheet={sheet_name!r}: "
-                        f"forced totals_row={forced_totals_row} is outside worksheet shape={ws.shape}. "
-                        f"Skipping sheet.",
-                        flush=True,
-                    )
                     continue
             else:
                 actual_totals_row = find_total_row_optional(
@@ -3605,12 +3560,6 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
                     else:
                         actual_totals_row = cfg.totals_row
                 if not (0 <= actual_totals_row < ws.shape[0]):
-                    print(
-                        f"[WARN] {team_src.team} sheet={sheet_name!r}: "
-                        f"totals_row={actual_totals_row} is outside worksheet shape={ws.shape}. "
-                        f"Skipping sheet.",
-                        flush=True,
-                    )
                     continue          
             people_rows = read_people_block(
                 ws,
@@ -3838,9 +3787,6 @@ def main():
         final_combined = final_combined.drop_duplicates(subset=["team", "period_date"], keep="last")
         final_combined = final_combined.sort_values(["team", "period_date"]).reset_index(drop=True)
         dupes = final_combined[final_combined.duplicated(subset=["team", "period_date"], keep=False)].copy()
-        if not dupes.empty:
-            print("\n[DEBUG] DUPLICATE team/week rows before write:")
-            print(dupes[["team", "period_date"]].to_string(index=False), flush=True)
     log_weekly_ph_summary(final_combined, "POST-ROLLUP")
     if not final_combined.empty and "team" in final_combined.columns and "people_count" in final_combined.columns:
         final_combined["_team_key"] = final_combined["team"].astype(str).str.strip().str.casefold()
@@ -3856,19 +3802,6 @@ def main():
             }),
             "people_count"
         ] = 33
-        print(
-            "[FINAL PEOPLE COUNT OVERRIDE CHECK]\n"
-            + final_combined.loc[
-                final_combined["_team_key"].isin({
-                    "dbs",
-                    "enabling tech",
-                    "enabling technology",
-                    "enabling technologies",
-                }),
-                ["team", "period_date", "people_count"]
-            ].to_string(index=False),
-            flush=True,
-        )
         final_combined = final_combined.drop(columns=["_team_key"])
     final_combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
