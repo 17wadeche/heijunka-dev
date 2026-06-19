@@ -11,6 +11,7 @@ ACTIVITY_MAP = {
     "pmq liberant tour of lab":"Admin",
     "liberant lab tour":"Admin",
     "issues converting dicom folder":"IT Issue/Update",
+    "service map update":"IT Issue/Update",
     "liberant tour prep":"Admin",
     "ng sprint training":"Next Gen",
     "training,collaboration": "Training/Mentoring",
