@@ -837,6 +837,8 @@ ACTIVITY_MAP = {
     "+ update": "IT Issue/Update",
     "tfw":"Meeting",
     "plis and creating":"WIP/Event Review",
+    "select parker sample complaint":"WIP/Event Review",
+    "adding mfg & exp dates from lisa":"WIP/Event Review",
     "event":"WIP/Event Review",
     "safety communciation":"Admin",
     "pli pe":"WIP/Event Review",
