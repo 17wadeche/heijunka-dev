@@ -1,7 +1,5 @@
 from __future__ import annotations
 import argparse
-from concurrent.futures import ProcessPoolExecutor
-from concurrent.futures.process import BrokenProcessPool
 import csv
 import datetime as _dt
 import json
@@ -13,7 +11,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
 LIT_LETTERS_TEAM = "Lit & Letters"
 def _load_workbook_data(path: str):
-    return load_workbook(path, data_only=True, read_only=True)
+    return load_workbook(path, data_only=True)
 def _is_lit_letters_path(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
     return (
@@ -1067,6 +1065,14 @@ def iso_monday_weeks_back(today: Optional[_dt.date] = None, weeks_back: int = 3)
 def filter_rows_to_recent_weeks(rows: List[Dict[str, Any]], weeks_back: int = 3) -> List[Dict[str, Any]]:
     keep_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
     return [r for r in rows if _norm_period_date(str(r.get("period_date", ""))) in keep_weeks]
+def filter_input_files_to_recent_weeks(files: List[str], weeks_back: int = 3) -> List[str]:
+    keep_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
+    recent_files: List[str] = []
+    for f in files:
+        period = parse_period_date_from_filename(f, default_year=_dt.date.today().year)
+        if period is None or monday_of_week(period).isoformat() in keep_weeks:
+            recent_files.append(f)
+    return recent_files
 def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
     if not path or not os.path.exists(path):
         return []
@@ -1982,20 +1988,10 @@ def scrape_input_file(f: str) -> List[Dict[str, Any]]:
     if not os.path.exists(f):
         return [blank_row_for_missing_file(f)]
     return scrape_one_workbook(f)
-def scrape_input_files(files: List[str], *, jobs: int) -> List[Dict[str, Any]]:
-    if jobs <= 1 or len(files) <= 1:
-        rows: List[Dict[str, Any]] = []
-        for f in files:
-            rows.extend(scrape_input_file(f))
-        return rows
-    rows = []
-    try:
-        with ProcessPoolExecutor(max_workers=jobs) as executor:
-            for workbook_rows in executor.map(scrape_input_file, files):
-                rows.extend(workbook_rows)
-    except (BrokenProcessPool, ConnectionError, OSError):
-        for f in files:
-            rows.extend(scrape_input_file(f))
+def scrape_input_files(files: List[str]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for f in files:
+        rows.extend(scrape_input_file(f))
     return rows
 def blank_row_for_missing_file(f: str) -> Dict[str, Any]:
     return {
@@ -2052,15 +2048,16 @@ def main() -> int:
         help="Number of prior weeks to include in addition to the current week (default: 3).",
     )
     ap.add_argument(
-        "--jobs",
-        type=int,
-        default=min(4, os.cpu_count() or 1),
-        help="Number of workbooks to scrape in parallel (default: min(4, CPU count)). Use 1 for serial mode.",
+        "--scan-all",
+        action="store_true",
+        help="Scrape every discovered workbook instead of skipping files whose filename date is outside --weeks-back.",
     )
     args = ap.parse_args()
     inputs = args.files or default_paths
     input_files = list(iter_input_files(inputs))
-    all_rows = scrape_input_files(input_files, jobs=max(1, args.jobs))
+    if not args.scan_all:
+        input_files = filter_input_files_to_recent_weeks(input_files, weeks_back=args.weeks_back)
+    all_rows = scrape_input_files(input_files)
     recent_rows = filter_rows_to_recent_weeks(all_rows, weeks_back=args.weeks_back)
     all_rows = merge_existing_with_recent_rows(
         load_existing_csv_rows(args.out),
