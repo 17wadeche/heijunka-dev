@@ -864,7 +864,7 @@ ACTIVITY_MAP = {
     "scrum & weekly check in":"Scrum & Action",
     "hypercare":"Project Work",
     "prism 2 reverse shadowing event": "Training/Mentoring",
-    "training - see line 127": "Training/Mentoring",d
+    "training - see line 127": "Training/Mentoring",
     "complex event collaboration":"WIP/Event Review",
     "escalated call & prep":"Meeting",
     "escalated call; change order":"Meeting",
