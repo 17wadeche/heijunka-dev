@@ -112,6 +112,7 @@ ACTIVITY_MAP = {
     "pmpa training":"PMPA",
     "2b label":"Label",
     "scrum / meetings / collaboration / reg inquirie":"Scrum & Action",
+    "colllaboration":"Collaboration",
     "pmq cr pre-meeting q's call":"Meeting",
     "tourguide report":"Admin",
     "reading through heli-fx document":"Reviewing Documents & Case Video",
