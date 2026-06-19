@@ -1,5 +1,7 @@
 from __future__ import annotations
 import argparse
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 import csv
 import datetime as _dt
 import json
@@ -10,6 +12,8 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
 LIT_LETTERS_TEAM = "Lit & Letters"
+def _load_workbook_data(path: str):
+    return load_workbook(path, data_only=True, read_only=True)
 def _is_lit_letters_path(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
     return (
@@ -234,7 +238,7 @@ def compute_output_by_station_by_person_lit(ws_pab: Worksheet) -> Dict[str, Dict
     return out
 def scrape_one_workbook_lit_letters(path: str) -> List[Dict[str, Any]]:
     team = LIT_LETTERS_TEAM
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_pab = wb[_sheet_ci(wb, "#3 PAB")] if _sheet_ci(wb, "#3 PAB") else None
     ws_perf = wb[_sheet_ci(wb, "#6 Performance WIP Time")] if _sheet_ci(wb, "#6 Performance WIP Time") else None
@@ -758,7 +762,7 @@ def compute_output_by_station_by_person_meic(ws_pab: Worksheet) -> Dict[str, Dic
     return out
 def scrape_one_workbook_meic(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
     ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
@@ -832,7 +836,7 @@ def scrape_one_workbook_meic(path: str) -> List[Dict[str, Any]]:
     }]
 def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_metrics = wb[_sheet_ci(wb, "#4 Performance Metrics")] if _sheet_ci(wb, "#4 Performance Metrics") else None
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
@@ -915,7 +919,7 @@ def scrape_one_workbook_ni(path: str) -> List[Dict[str, Any]]:
     }]
 def scrape_one_workbook_pm_cts(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
     ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
@@ -1589,7 +1593,7 @@ def compute_output_by_station_by_person_cpt(ws_pab: Worksheet) -> Dict[str, Dict
     return out
 def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
     ws_pab = wb[_sheet_ci(wb, "#3 PAB")] if _sheet_ci(wb, "#3 PAB") else None
@@ -1664,7 +1668,7 @@ def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     }]
 def scrape_one_workbook_ds(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
     ws_pab = wb[_sheet_ci(wb, "#2 PAB")] if _sheet_ci(wb, "#2 PAB") else None
@@ -1755,7 +1759,7 @@ def safe_div(n: float, d: float) -> Optional[float]:
     return n / d
 def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
     periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
@@ -1832,7 +1836,7 @@ def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
     return rows
 def scrape_one_workbook_cds(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = _load_workbook_data(path)
     err_msgs: List[str] = []
     ws_metrics = wb[_sheet_ci(wb, "#4 Performance Metrics")] if _sheet_ci(wb, "#4 Performance Metrics") else None
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
@@ -1974,6 +1978,25 @@ def iter_input_files(paths: List[str]) -> Iterable[str]:
             if full_path in EXCLUDED_FILES:
                 continue
             yield full_path
+def scrape_input_file(f: str) -> List[Dict[str, Any]]:
+    if not os.path.exists(f):
+        return [blank_row_for_missing_file(f)]
+    return scrape_one_workbook(f)
+def scrape_input_files(files: List[str], *, jobs: int) -> List[Dict[str, Any]]:
+    if jobs <= 1 or len(files) <= 1:
+        rows: List[Dict[str, Any]] = []
+        for f in files:
+            rows.extend(scrape_input_file(f))
+        return rows
+    rows = []
+    try:
+        with ProcessPoolExecutor(max_workers=jobs) as executor:
+            for workbook_rows in executor.map(scrape_input_file, files):
+                rows.extend(workbook_rows)
+    except (BrokenProcessPool, ConnectionError, OSError):
+        for f in files:
+            rows.extend(scrape_input_file(f))
+    return rows
 def blank_row_for_missing_file(f: str) -> Dict[str, Any]:
     return {
         "team": team_for_source(f),
@@ -2028,14 +2051,16 @@ def main() -> int:
         default=3,
         help="Number of prior weeks to include in addition to the current week (default: 3).",
     )
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=min(4, os.cpu_count() or 1),
+        help="Number of workbooks to scrape in parallel (default: min(4, CPU count)). Use 1 for serial mode.",
+    )
     args = ap.parse_args()
     inputs = args.files or default_paths
-    all_rows: List[Dict[str, Any]] = []
-    for f in iter_input_files(inputs):
-        if not os.path.exists(f):
-            all_rows.append(blank_row_for_missing_file(f))
-            continue
-        all_rows.extend(scrape_one_workbook(f))
+    input_files = list(iter_input_files(inputs))
+    all_rows = scrape_input_files(input_files, jobs=max(1, args.jobs))
     recent_rows = filter_rows_to_recent_weeks(all_rows, weeks_back=args.weeks_back)
     all_rows = merge_existing_with_recent_rows(
         load_existing_csv_rows(args.out),
