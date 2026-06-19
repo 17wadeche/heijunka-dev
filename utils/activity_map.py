@@ -839,6 +839,7 @@ ACTIVITY_MAP = {
     "plis and creating":"WIP/Event Review",
     "select parker sample complaint":"WIP/Event Review",
     "adding mfg & exp dates from lisa":"WIP/Event Review",
+    "mfg & exp dates from last week":"WIP/Event Review",
     "event":"WIP/Event Review",
     "safety communciation":"Admin",
     "pli pe":"WIP/Event Review",
