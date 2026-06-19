@@ -859,6 +859,8 @@ ACTIVITY_MAP = {
     "training review/collaboration": "Training/Mentoring",
     "training prep/onenote tech. issues/email": "Training/Mentoring",
     "scrum, 360ide hypercare, collaboration":"Scrum & Action",
+    "daily scrums and weekly check in":"Scrum & Action",
+    "scrum & weekly check in":"Scrum & Action",
     "hypercare":"Project Work",
     "prism 2 reverse shadowing event": "Training/Mentoring",
     "complex event collaboration":"WIP/Event Review",
