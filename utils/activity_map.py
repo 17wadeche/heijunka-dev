@@ -108,6 +108,7 @@ ACTIVITY_MAP = {
     "inv training meeting": "Training/Mentoring",
     "review new hire resources on sharepoint": "Training/Mentoring",
     "to shadow if all cs is caught up": "Training/Mentoring",
+    "emails call with tl":"Email & IM",
     "shadowing lousie": "Training/Mentoring",
     "pmpa training":"PMPA",
     "2b label":"Label",
