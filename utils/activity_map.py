@@ -100,7 +100,7 @@ ACTIVITY_MAP = {
     "lunch":"Break",
     "updating files & creating smdrs for mfg/exp date":"WIP/Event Review",
     "shadowing with denise": "Training/Mentoring",
-    "raci":"Problem Solving",
+    "raci":"Admin",
     "collaboration/event reviews, meetings, training, scoping":"Collaboration",
     "scrum, town hall":"Meeting",
     "training activitie": "Training/Mentoring",
