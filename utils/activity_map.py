@@ -93,6 +93,7 @@ ACTIVITY_MAP = {
     "reverse shadowing new hire": "Training/Mentoring",
     "report":"Team Report",
     "emails: meetings: tl activities: cathworks:":"Email & IM",
+    "eap":"Admin",
     "self paced investigation module": "Training/Mentoring",
     "updating files & creating smdrs for mfg/exp date":"WIP/Event Review",
     "shadowing with denise": "Training/Mentoring",
