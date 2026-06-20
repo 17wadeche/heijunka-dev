@@ -848,6 +848,8 @@ ACTIVITY_MAP = {
     "updating file with mfg/exp dates for":"WIP/Event Review",
     "ng testing & meeting collaboration":"Next Gen",
     "training, meetings, event reviews, collaboration":"Training/Mentoring",
+    "ad hoc emails/qs from team or other":"Email & IM",
+    "sr and rd":"WIP/Event Review",
     "ae work tool training": "Training/Mentoring",
     "late mdr'":"WIP/Event Review",
     "global town hall meeting":"Meeting",
