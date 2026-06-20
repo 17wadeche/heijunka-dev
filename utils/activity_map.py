@@ -852,6 +852,8 @@ ACTIVITY_MAP = {
     "sr and rd":"WIP/Event Review",
     "ae work tool training": "Training/Mentoring",
     "late mdr'":"WIP/Event Review",
+    "emails / reg inquirie":"RI",
+    "discussion/collaboration":"Collaboration",
     "global town hall meeting":"Meeting",
     "files review meeting":"Meeting",
     "call with mfg & action":"Meeting",
