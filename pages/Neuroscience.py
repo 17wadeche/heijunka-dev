@@ -1375,6 +1375,17 @@ if nonwip_mode:
             "Unaccounted": "Unaccounted",
         }
         stack["CategoryLabel"] = stack["Category"].map(label_map)
+        stack["FillCategory"] = stack["CategoryLabel"]
+        stack.loc[
+            (stack["CategoryLabel"] == "Accounted Non-WIP")
+            & (pd.to_numeric(stack["Accounted_NonOther"], errors="coerce").fillna(0.0) > 8),
+            "FillCategory",
+        ] = "Accounted Non-WIP (>8)"
+        stack.loc[
+            (stack["CategoryLabel"] == "Accounted Non-WIP")
+            & (pd.to_numeric(stack["Accounted_NonOther"], errors="coerce").fillna(0.0) <= 8),
+            "FillCategory",
+        ] = "Accounted Non-WIP (<=8)"
         wk_people["StackTotal"] = (
             wk_people["OOO Hours"].fillna(0)
             + wk_people["Accounted_Other"].fillna(0)
@@ -1427,11 +1438,17 @@ if nonwip_mode:
                     scale=y_scale,
                 ),
                 color=alt.Color(
-                    "CategoryLabel:N",
+                    "FillCategory:N",
                     title="Legend",
                     scale=alt.Scale(
-                        domain=["OOO", "Other Team WIP", "Accounted Non-WIP", "Unaccounted"],
-                        range=["#a855f7", "#2563eb", "#22c55e", "#9ca3af"],
+                        domain=[
+                            "OOO",
+                            "Other Team WIP",
+                            "Accounted Non-WIP (<=8)",
+                            "Accounted Non-WIP (>8)",
+                            "Unaccounted",
+                        ],
+                        range=["#a855f7", "#2563eb", "#22c55e", "#ef4444", "#9ca3af"],
                     ),
                 ),
                 tooltip=[
