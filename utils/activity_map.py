@@ -870,6 +870,7 @@ ACTIVITY_MAP = {
     "event call":"Meeting",
     "cqxm online meeting":"Meeting",
     "ifu/email":"Email & IM",
+    "emaiils admin townhall/aem":"Email & IM",
     "email/amdin":"Email & IM",
     "ng, testing, meetings, collaboration, event reviews, email/admin":"Next Gen",
     "other, detail":"Other",
