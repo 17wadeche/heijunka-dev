@@ -854,6 +854,8 @@ ACTIVITY_MAP = {
     "late mdr'":"WIP/Event Review",
     "emails / reg inquirie":"RI",
     "discussion/collaboration":"Collaboration",
+    "for washkit- made reportable and used":"Admin",
+    "added pli":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "review of pe":"WIP/Event Review",
     "quality meeting/ review":"Meeting",
