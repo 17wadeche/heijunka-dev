@@ -855,6 +855,7 @@ ACTIVITY_MAP = {
     "emails / reg inquirie":"RI",
     "discussion/collaboration":"Collaboration",
     "for washkit- made reportable and used":"Admin",
+    "may as aware date. aem":"Meeting",
     "added pli":"WIP/Event Review",
     "global town hall meeting":"Meeting",
     "review of pe":"WIP/Event Review",
