@@ -855,6 +855,8 @@ ACTIVITY_MAP = {
     "emails / reg inquirie":"RI",
     "discussion/collaboration":"Collaboration",
     "global town hall meeting":"Meeting",
+    "review of pe":"WIP/Event Review",
+    "quality meeting/ review":"Meeting",
     "files review meeting":"Meeting",
     "call with mfg & action":"Meeting",
     "fu ques post meeting review":"Question",
