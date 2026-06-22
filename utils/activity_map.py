@@ -868,6 +868,7 @@ ACTIVITY_MAP = {
     "training files meeting": "Training/Mentoring",
     "fax training, rd guidance": "Training/Mentoring",
     "event call":"Meeting",
+    "cqxm online meeting":"Meeting",
     "ifu/email":"Email & IM",
     "email/amdin":"Email & IM",
     "ng, testing, meetings, collaboration, event reviews, email/admin":"Next Gen",
