@@ -866,6 +866,7 @@ ACTIVITY_MAP = {
     "fu ques post meeting review":"Question",
     "soe update for follow up":"RFAI",
     "training files meeting": "Training/Mentoring",
+    "fax training, rd guidance": "Training/Mentoring",
     "ifu/email":"Email & IM",
     "email/amdin":"Email & IM",
     "ng, testing, meetings, collaboration, event reviews, email/admin":"Next Gen",
