@@ -73,6 +73,12 @@ LIT_LETTERS_PAB_SHEET = "#3 PAB"
 LIT_LETTERS_PERF_WIP_SHEET = "#6 Performance WIP Time"
 LIT_LETTERS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 LIT_LETTERS_PEOPLE_COUNT = 7
+LIT_LETTERS_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 6, 8)
+LIT_LETTERS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 8
+def lit_letters_people_count_for_period(period: _dt.date) -> int:
+    if period >= LIT_LETTERS_PEOPLE_COUNT_EFFECTIVE_DATE:
+        return LIT_LETTERS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
+    return LIT_LETTERS_PEOPLE_COUNT
 PM_CTS_TEAM_NAME = "PM-CTS"
 PM_CTS_PAB_SHEET = "#2 PAB"
 PM_CTS_PERF_WIP_SHEET = "#3 Performance WIP Time"
@@ -840,7 +846,7 @@ def scrape_one_lit_letters_workbook(
     row = {
         "team": team,
         "period_date": period_iso,
-        "people_count": LIT_LETTERS_PEOPLE_COUNT,
+        "people_count": lit_letters_people_count_for_period(period),
         "total_non_wip_hours": float(total_non_wip_hours),
         "OOO Hours": float(ooo_hours),
         "% in WIP": float(pct_in_wip) if pct_in_wip is not None else "",
