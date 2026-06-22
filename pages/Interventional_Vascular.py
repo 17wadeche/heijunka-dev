@@ -1500,7 +1500,7 @@ if nonwip_mode:
         totals = (
             wk_people[["person", "period_date", "StackTotal"]]
             .rename(columns={"StackTotal": "Total"})
-            .assign(Status=lambda d: np.where(d["Total"] <= 7.5, "Good (≤7.5)", "Over (>7.5)"))
+            .assign(Status=lambda d: np.where(d["Total"] <= 8, "Good (≤8)", "Over (>8)"))
         )
         outline = (
             alt.Chart(totals)
@@ -1510,9 +1510,9 @@ if nonwip_mode:
                 y=alt.Y("Total:Q", scale=y_scale),
                 stroke=alt.Color(
                     "Status:N",
-                    title="Total vs 7.5",
+                    title="Total vs 8",
                     scale=alt.Scale(
-                        domain=["Good (≤7.5)", "Over (>7.5)"],
+                        domain=["Good (≤8)", "Over (>8)"],
                         range=["#22c55e", "#ef4444"],
                     ),
                 ),
