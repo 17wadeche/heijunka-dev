@@ -993,6 +993,7 @@ ACTIVITY_MAP = {
     "data check":"Data Request/Review",
     "qa assessment query":"QA",
     "boxi report":"Data Request/Review",
+    "helping with pe query":"Question",
     "ops report scrum":"Data Request/Review",
     "workshop, event review, collaboration":"Next Gen",
     "scrum, training prep, training":"Scrum & Action",
