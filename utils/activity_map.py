@@ -1951,6 +1951,7 @@ ACTIVITY_MAP = {
     "arterial cannula training":"Training/Mentoring",
     "summary reporting":"Team Report",
     "nextgen support":"Next Gen",
+    "it comm":"Project Work",
     "with monica":"Meeting",
     "emails/tl check":"Email & IM",
     "audit prep meeting/1-1 transfer of resp.":"Audit",
