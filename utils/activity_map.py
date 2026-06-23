@@ -864,6 +864,8 @@ ACTIVITY_MAP = {
     "emaiils admin":"Admin",
     "added pli":"WIP/Event Review",
     "global town hall meeting":"Meeting",
+    "pvh open review":"Team Report",
+    "aortic mfg report":"Team Report",
     "aem meeting":"Meeting",
     "review of pe":"WIP/Event Review",
     "quality meeting/ review":"Meeting",
