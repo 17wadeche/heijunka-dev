@@ -981,6 +981,7 @@ ACTIVITY_MAP = {
     "aortic coding meeting":"Coding/Code Gov",
     "ops boxi report":"Data Request/Review",
     "launcher data request":"Data Request/Review",
+    "see commercial tab":"",
     "data check":"Data Request/Review",
     "qa assessment query":"QA",
     "boxi report":"Data Request/Review",
