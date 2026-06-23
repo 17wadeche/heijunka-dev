@@ -980,6 +980,8 @@ ACTIVITY_MAP = {
     "next gen doc comment":"Next Gen",
     "aortic coding meeting":"Coding/Code Gov",
     "ops boxi report":"Data Request/Review",
+    "launcher data request":"Data Request/Review",
+    "data check":"Data Request/Review",
     "qa assessment query":"QA",
     "boxi report":"Data Request/Review",
     "ops report scrum":"Data Request/Review",
