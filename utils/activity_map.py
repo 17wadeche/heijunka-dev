@@ -977,6 +977,7 @@ ACTIVITY_MAP = {
     "fu q's meeting":"Question",
     "pmq call/action":"PMQ Meeting",
     "fda audit support":"Audit",
+    "lael update":"Label",
     "next gen doc comment":"Next Gen",
     "aortic coding meeting":"Coding/Code Gov",
     "ops boxi report":"Data Request/Review",
