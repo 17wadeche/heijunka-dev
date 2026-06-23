@@ -1938,6 +1938,7 @@ ACTIVITY_MAP = {
     "scrum collaboration audit june":"Audit",
     "analysis report":"Team Report",
     "rev d updates/scheduling/eu team member training prep, ooo catch up":"Admin",
+    "sent rr/reviewed completed faxes for team member training":"Training/Mentoring",
     "audit support - dhr review":"Audit",
     "pmpa questoins/update":"PMPA",
     "1 on 1's":"Meeting",
