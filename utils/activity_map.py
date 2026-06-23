@@ -1933,6 +1933,7 @@ ACTIVITY_MAP = {
     "job aid updates; email":"Admin",
     "ml/ai gap review":"Data Request/Review",
     "ad hoc question":"Question",
+    "emails / meetings / in-person collaboration / reg inquirie":"RI",
     "smart tree scoping, coding support, meetings, collaboration, event/reviews, emails/admin":"Project Work",
     "collab/meeting":"Collaboration",
     "scrum collaboration audit june":"Audit",
