@@ -1953,6 +1953,7 @@ ACTIVITY_MAP = {
     "training: yoga, japan, canada, australia: review files with question":"Training/Mentoring",
     "review training and note":"Training/Mentoring",
     "training with rodrigo sr/rd":"Training/Mentoring",
+    "scrum / food truck event / reg inquirie":"Scrum & Action",
     "hypercare mtg":"Project Work",
     "rpa teams/email": "RPA Meeting/Action",
     "alison aem":"Meeting",
