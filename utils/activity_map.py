@@ -1958,6 +1958,8 @@ ACTIVITY_MAP = {
     "hypercare collab":"Project Work",
     "organization":"Admin",
     "severe weather drill":"Admin",
+    "filtering through workable file":"WIP/Event Review",
+    "tier 2 sh & crdn":"Meeting",
     "drill":"Admin",
     "emails town hall meeting":"Email & IM",
     "tm call on file":"Meeting",
