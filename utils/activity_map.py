@@ -1966,6 +1966,8 @@ ACTIVITY_MAP = {
     "fy26q":"Question",
     "meeting on complex file":"Meeting",
     "training lidiane on vig rr":"Training/Mentoring",
+    "eu training":"Training/Mentoring",
+    "06/24:scrum/email/faxes/reviewing event":"Scrum & Action",
     "1 on 1's":"Meeting",
     "consult event consult":"WIP/Event Review",
     "customer letter":"WIP/Event Review",
