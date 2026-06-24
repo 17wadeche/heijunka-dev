@@ -1972,6 +1972,7 @@ ACTIVITY_MAP = {
     "metrics / scrums / meeting / reg inquirie":"Metrics & Schedule",
     "dhr reviews/audit 30":"Audit",
     "review uk files from zoya":"Training/Mentoring",
+    "rr training and event review, collaboration":"Training/Mentoring",
     "iris data analysi":"Project Work",
     "arterial cannula training":"Training/Mentoring",
     "training support":"Training/Mentoring",
