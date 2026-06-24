@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
+MCS_PULL_START = _dt.date(2026, 6, 22)
 LIT_LETTERS_TEAM = "Lit & Letters"
 def _load_workbook_data(path: str):
     return load_workbook(path, data_only=True)
@@ -1086,7 +1087,10 @@ def merge_existing_with_recent_rows(
     refresh_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
     frozen_rows = [
         r for r in existing_rows
-        if _norm_period_date(str(r.get("period_date", ""))) not in refresh_weeks
+        if (
+            _norm_period_date(str(r.get("period_date", ""))) not in refresh_weeks
+            or _is_mcs_before_pull_start(r)
+        )
     ]
     return frozen_rows + recent_rows
 def iso_date(d: Optional[_dt.date]) -> str:
@@ -1127,6 +1131,15 @@ def read_merged_value(ws: Worksheet, top_left_cell: str) -> str:
     return str(v).strip() if v is not None else ""
 def _norm_team(s: str) -> str:
     return (s or "").strip().upper()
+def _is_mcs_before_pull_start(row: Dict[str, Any]) -> bool:
+    if _norm_team(row.get("team", "")) != "MCS":
+        return False
+    period_s = _norm_period_date(str(row.get("period_date", "")))
+    try:
+        period = _dt.date.fromisoformat(period_s)
+    except ValueError:
+        return False
+    return period < MCS_PULL_START
 def _norm_period_date(s: str) -> str:
     ss = (s or "").strip()
     if not ss:
@@ -1771,6 +1784,8 @@ def scrape_one_workbook_mcs(path: str) -> List[Dict[str, Any]]:
     periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
     rows: List[Dict[str, Any]] = []
     for period in periods:
+        if period < MCS_PULL_START:
+            continue
         err_msgs: List[str] = []
         ws_av = wb[avail_sheets[period]] if period in avail_sheets else None
         ws_prod = wb[prod_sheets[period]] if period in prod_sheets else None
