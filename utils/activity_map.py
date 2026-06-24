@@ -1958,6 +1958,7 @@ ACTIVITY_MAP = {
     "alison aem":"Meeting",
     "alison's meeting":"Meeting",
     "weather drill":"Admin",
+    "cornerstone training and setup":"Cornerstone",
     "hypercare collab":"Project Work",
     "nextgen 480":"Next Gen",
     "scrum, team meeting, training":"Scrum & Action",
