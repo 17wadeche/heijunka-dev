@@ -1964,6 +1964,8 @@ ACTIVITY_MAP = {
     "emails town hall meeting":"Email & IM",
     "tm call on file":"Meeting",
     "fy26q":"Question",
+    "meeting on complex file":"Meeting",
+    "training lidiane on vig rr":"Training/Mentoring",
     "1 on 1's":"Meeting",
     "consult event consult":"WIP/Event Review",
     "customer letter":"WIP/Event Review",
