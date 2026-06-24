@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
+MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
@@ -534,6 +535,29 @@ def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
         return []
     with open(path, "r", newline="", encoding="utf-8-sig") as fp:
         return list(csv.DictReader(fp))
+def _parse_iso_date(value: Any) -> Optional[_dt.date]:
+    s = str(value or "").strip()
+    if not s:
+        return None
+    try:
+        return _dt.date.fromisoformat(s)
+    except ValueError:
+        return None
+def should_refresh_existing_row(row: Dict[str, Any], refresh_weeks: set[str]) -> bool:
+    team = (row.get("team") or "").strip()
+    period_iso = (row.get("period_date") or "").strip()
+    if period_iso not in refresh_weeks:
+        return False
+    period = _parse_iso_date(period_iso)
+    if team == "MCS" and period is not None and period < MCS_REFRESH_MIN_PERIOD:
+        return False
+    return True
+def should_include_recent_row(row: Dict[str, Any]) -> bool:
+    team = (row.get("team") or "").strip()
+    period = _parse_iso_date(row.get("period_date"))
+    if team == "MCS" and period is not None and period < MCS_REFRESH_MIN_PERIOD:
+        return False
+    return True
 def merge_existing_with_recent_rows(
     existing_rows: List[Dict[str, Any]],
     recent_rows: List[Dict[str, Any]],
@@ -542,7 +566,7 @@ def merge_existing_with_recent_rows(
     refresh_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
     frozen_rows = [
         r for r in existing_rows
-        if (r.get("period_date") or "").strip() not in refresh_weeks
+        if not should_refresh_existing_row(r, refresh_weeks)
     ]
     return frozen_rows + recent_rows
 def iso_date(d: Optional[_dt.date]) -> str:
@@ -1421,7 +1445,10 @@ def main() -> int:
                 all_rows.extend(scrape_one_workbook(f, completed_hours_lookup))
         except Exception as exc:
             print(f"Skipping {f}: {exc}")
-    recent_rows = filter_rows_to_recent_weeks(all_rows, weeks_back=args.weeks_back)
+    recent_rows = [
+        r for r in filter_rows_to_recent_weeks(all_rows, weeks_back=args.weeks_back)
+        if should_include_recent_row(r)
+    ]
     all_rows = merge_existing_with_recent_rows(
         load_existing_csv_rows(args.out),
         recent_rows,
