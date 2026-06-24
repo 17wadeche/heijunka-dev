@@ -1972,6 +1972,7 @@ ACTIVITY_MAP = {
     "review uk files from zoya":"Training/Mentoring",
     "iris data analysi":"Project Work",
     "arterial cannula training":"Training/Mentoring",
+    "training support":"Training/Mentoring",
     "summary reporting":"Team Report",
     "nextgen support":"Next Gen",
     "it comm":"Project Work",
