@@ -3963,6 +3963,7 @@ ACTIVITY_MAP = {
     "gch issue / computer issue":"IT Issue/Update",
     "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
+    "training, collaboration, flexed closure": "Training/Mentoring",
     "capa / ri support":"CAPA",
     "emea/fsm escalation":"Escalation",
     "gpt rd training": "Training/Mentoring",
