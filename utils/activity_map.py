@@ -3958,6 +3958,7 @@ ACTIVITY_MAP = {
     "cst staff meeting":"Meeting",
     "rework":"Admin",
     "th":"Meeting",
+    "feedback meeting on rrs with new tm":"Meeting",
     "*":"",
     "ous tech":"IT Issue/Update",
     "escalation tracker update":"Escalation",
