@@ -1584,6 +1584,7 @@ ACTIVITY_MAP = {
     "review feedback": "Feedback",
     "contego hypercare meeting": "Project Work",
     "hypercare meeting": "Project Work",
+    "tl call on exception":"Meeting",
     "rpa visit":"RPA Meeting/Action",
     "updating available hours for next week, training tasks, team collaboration":"Admin",
     "reivew of csmpcp sphere":"Csmpcp Sphere",
