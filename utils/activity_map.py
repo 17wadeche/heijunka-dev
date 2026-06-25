@@ -3141,6 +3141,7 @@ ACTIVITY_MAP = {
     "other training": "Training/Mentoring",
     "rfr event":"Coding/Code Gov",
     "review of affera ftq":"Project Work",
+    "preliminary uat testing":"Project Work",
     "code request":"Coding/Code Gov",
     "pvh report update":"Team Report",
     "pvh contego report":"Team Report",
