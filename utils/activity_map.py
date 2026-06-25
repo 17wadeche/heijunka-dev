@@ -3143,6 +3143,8 @@ ACTIVITY_MAP = {
     "mdt global online event":"Meeting",
     "ster report": "Team Report",
     "mfg complaints report": "Team Report",
+    "other report": "Team Report",
+    "risk mgmt meeting" :"Meeting",
     "sh report": "Team Report",
     "pvh report": "Team Report",
     "60 minute training meeting w ruth": "Training/Mentoring",
