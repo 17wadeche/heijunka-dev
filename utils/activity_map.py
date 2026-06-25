@@ -3058,6 +3058,7 @@ ACTIVITY_MAP = {
     "redoing analysis for device":"Analysis",
     "getting device from archive":"Archive",
     "mfg compaints review":"WIP/Event Review",
+    "spyral screening meeting with mfg":"Meeting",
     "liberant setup":"Set Up",
     "investigation/analysis correction":"Analysis",
     "observing harmony pa":"Analysis",
