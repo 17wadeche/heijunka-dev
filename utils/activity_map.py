@@ -2315,7 +2315,7 @@ ACTIVITY_MAP = {
     "sorting work journal for uni":"Reading File/Document Information",
     "updating the list of sh valve":"Reading File/Document Information",
     "uat 'sign-off'":"Project Work",
-    "uat shiperp session - product complaint":"UAT",
+    "uat shiperp session - product complaint":"Project Work",
     "reading through endurant ifu":"Reading File/Document Information",
     "inpact 018 x1 meeting":"Meeting",
     "on line training inpact 018 x1":"Training/Mentoring",
