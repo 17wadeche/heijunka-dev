@@ -1628,6 +1628,7 @@ ACTIVITY_MAP = {
     "1to": "Meeting",
     "audit report":"Audit",
     "open file review": "WIP/Event Review",
+    "event held": "WIP/Event Review",
     "corrections/review file": "WIP/Event Review",
     "tl support":"Collaboration",
     "tm support":"Collaboration",
