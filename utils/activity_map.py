@@ -1585,6 +1585,7 @@ ACTIVITY_MAP = {
     "contego hypercare meeting": "Project Work",
     "hypercare meeting": "Project Work",
     "tl call on exception":"Meeting",
+    "fu std q meeting":"Meeting",
     "rpa visit":"RPA Meeting/Action",
     "requesting access for jt":"IT Issue/Update",
     "updating available hours for next week, training tasks, team collaboration":"Admin",
