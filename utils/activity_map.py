@@ -2904,6 +2904,7 @@ ACTIVITY_MAP = {
     "exception meeting with tl":"Meeting",
     "gch crashing": "IT Issue/Update",
     "+ time to update precedent event collaboration":"Precedent Event",
+    "precendent events review":"Precedent Event",
     "meetings / reg inquirie":"RI",
     "software update": "IT Issue/Update",
     "gch crashe": "IT Issue/Update",
