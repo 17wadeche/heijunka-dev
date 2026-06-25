@@ -1576,6 +1576,8 @@ ACTIVITY_MAP = {
     "aged events review":"WIP/Event Review",
     "aging files review":"WIP/Event Review",
     "sha qa review": "QA",
+    "review of potential precedent event":"Precedent Event",
+    "inaccurate delivery discussion":"Collaboration",
     "clinical task training" : "Clinical Task",
     "training meeting": "Training/Mentoring",
     "problem solving meeting":"Problem Solving",
