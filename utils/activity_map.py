@@ -1586,6 +1586,7 @@ ACTIVITY_MAP = {
     "hypercare meeting": "Project Work",
     "tl call on exception":"Meeting",
     "rpa visit":"RPA Meeting/Action",
+    "requesting access for jt":"IT Issue/Update",
     "updating available hours for next week, training tasks, team collaboration":"Admin",
     "reivew of csmpcp sphere":"Csmpcp Sphere",
     "paf china study approval":"Study",
