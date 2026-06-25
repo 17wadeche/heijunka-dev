@@ -3960,6 +3960,7 @@ ACTIVITY_MAP = {
     "th":"Meeting",
     "*":"",
     "ous tech":"IT Issue/Update",
+    "escalation tracker update":"Escalation",
     "gch issue / computer issue":"IT Issue/Update",
     "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
