@@ -3050,6 +3050,7 @@ ACTIVITY_MAP = {
     "lab shadowing deco": "Training/Mentoring",
     "dcb set up":"Set Up",
     "mfg compaints review":"WIP/Event Review",
+    "liberant setup":"Set Up",
     "meeting crdn pst-market re launcher curve":"Meeting",
     "issues with shipments/dt shipment":"Shipment",
     "shipments + pick-up issue":"Shipment",
