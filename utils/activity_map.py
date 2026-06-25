@@ -2912,6 +2912,7 @@ ACTIVITY_MAP = {
     "gch slow and crashing": "IT Issue/Update",
     "late mdr/enterprise qa, rca":"WIP/Event Review",
     "late report follow up item":"WIP/Event Review",
+    "doc update":"Admin",
     "call with tl on file":"Meeting",
     "tl call on file":"Meeting",
     "it issues/restart": "IT Issue/Update",
