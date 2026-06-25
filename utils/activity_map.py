@@ -3941,6 +3941,7 @@ ACTIVITY_MAP = {
     "pmq cr pre-meeting q's review & pre-meeting call":"PMQ Meeting",     
     "reportability matrix update":"Reportability Matrix",
     "cannula training with dave": "Training/Mentoring",
+    "meetings / teams messages / in-person collaboration / reg inquirie":"RI",
     "australian rd overview":"Reportability Matrix",
     "cannula training with irena": "Training/Mentoring",
     "tj audit meeting":"Audit",
