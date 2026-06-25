@@ -3053,6 +3053,7 @@ ACTIVITY_MAP = {
     "rdn device x-ray b2":"Admin",
     "sorting dhrs for closurefast npr":"Admin",
     "rch clean up and re-submission":"Admin",
+    "oasis recall and prep":"Admin",
     "ehs moveable table":"Admin",
     "redoing analysis for device":"Analysis",
     "getting device from archive":"Archive",
