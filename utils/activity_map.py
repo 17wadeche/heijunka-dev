@@ -3957,6 +3957,7 @@ ACTIVITY_MAP = {
     "medical review sme":"Medical Review",
     "cst staff meeting":"Meeting",
     "rework":"Admin",
+    "th":"Meeting",
     "*":"",
     "ous tech":"IT Issue/Update",
     "gch issue / computer issue":"IT Issue/Update",
