@@ -3945,6 +3945,7 @@ ACTIVITY_MAP = {
     "/scrum/cornerstone+":"Scrum & Action",
     "finalising and submitting placement":"Admin",
     "fu std ques meeting": "Meeting",
+    "email; touchbase meeting; metrics; collaboration":"Email & IM",
     "std work & sharepoint":"Admin",
     "std work q's project":"Project Work",
     "pvh versa report update":"Team Report",
