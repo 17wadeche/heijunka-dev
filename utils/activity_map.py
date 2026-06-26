@@ -3935,6 +3935,8 @@ ACTIVITY_MAP = {
     "vs oem/cm form":"Admin",
     "uploaded":"Data Request/Review",
     "meeting & action": "Meeting",
+    "rr training / feedback": "Training/Mentoring",
+    "work tool training": "Training/Mentoring",
     "fu std ques meeting": "Meeting",
     "std work & sharepoint":"Admin",
     "std work q's project":"Project Work",
