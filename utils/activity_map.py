@@ -3941,6 +3941,8 @@ ACTIVITY_MAP = {
     "liberant with dan and aidan":"Project Work",
     "reading through ifu and dfmea for liberant thrombectomy system":"Reviewing Documents & Case Video",
     "bagged deco device":"Bagging",
+    "scrum/cornerstone/inbox/2 rrs":"Scrum & Action",
+    "/scrum/cornerstone":"Scrum & Action",
     "finalising and submitting placement":"Admin",
     "fu std ques meeting": "Meeting",
     "std work & sharepoint":"Admin",
