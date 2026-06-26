@@ -3942,6 +3942,7 @@ ACTIVITY_MAP = {
     "reading through ifu and dfmea for liberant thrombectomy system":"Reviewing Documents & Case Video",
     "bagged deco device":"Bagging",
     "scrum/cornerstone/inbox/2 rrs":"Scrum & Action",
+    "work tool training , scrum , colloboration": "Training/Mentoring",
     "/scrum/cornerstone+":"Scrum & Action",
     "finalising and submitting placement":"Admin",
     "fu std ques meeting": "Meeting",
