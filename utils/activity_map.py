@@ -3941,6 +3941,7 @@ ACTIVITY_MAP = {
     "aem, scrum, training":"Meeting",
     "rr training / feedback": "Training/Mentoring",
     "inbox bolu":"RS Inbox",
+    "meetings / emails / teams messages / reg inquirie":"RI",
     "work tool training": "Training/Mentoring",
     "dcb device document reading":"Reviewing Documents & Case Video",
     "liberant with dan and aidan":"Project Work",
