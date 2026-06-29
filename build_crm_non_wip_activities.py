@@ -1424,6 +1424,108 @@ def default_inputs_for_team(team: Optional[str]) -> List[str]:
         inputs.extend(team_inputs)
     return inputs
 
+
+def recent_week_starts(weeks_back: int) -> set[str]:
+    return set(iso_monday_weeks_back(weeks_back=weeks_back))
+
+
+def recent_months(weeks_back: int) -> set[Tuple[int, int]]:
+    months: set[Tuple[int, int]] = set()
+    for week_start_iso in recent_week_starts(weeks_back):
+        week_start = _dt.date.fromisoformat(week_start_iso)
+        for day_offset in range(7):
+            d = week_start + _dt.timedelta(days=day_offset)
+            months.add((d.year, d.month))
+    return months
+
+
+def parse_month_year_from_path(path: str) -> Optional[Tuple[int, int]]:
+    """Find folder names like '4. April 2026' or 'June 2026'."""
+    parts = re.split(r"[\\/]+", _norm_path(path))
+    for part in reversed(parts):
+        s = part.strip().lower()
+        m = re.search(r"(?:\d+\.\s*)?([a-z]{3,9})\s+(20\d{2})", s)
+        if not m:
+            continue
+        mon_raw = m.group(1)
+        if mon_raw not in _MONTH_MAP:
+            continue
+        return int(m.group(2)), _MONTH_MAP[mon_raw]
+    return None
+
+
+def file_looks_recent_enough(path: str, *, weeks_back: int) -> bool:
+    """Return False only when the path clearly identifies an older/newer week.
+
+    This prevents slow teams like CPT from opening old archive workbooks just to
+    discard their rows later. If neither the filename nor parent folders expose a
+    date, keep the file so current multi-sheet workbooks, such as MCS, still work.
+    """
+    period = parse_period_date_from_filename(path)
+    if period is not None:
+        return monday_of_week(period).isoformat() in recent_week_starts(weeks_back)
+    month_year = parse_month_year_from_path(path)
+    if month_year is not None:
+        return month_year in recent_months(weeks_back)
+    return True
+
+
+def filter_files_to_recent_weeks(files: List[str], *, weeks_back: int) -> List[str]:
+    return [f for f in files if file_looks_recent_enough(f, weeks_back=weeks_back)]
+
+
+def lit_letters_search_roots() -> List[str]:
+    """Likely roots for Lit & Letters when no explicit path is supplied."""
+    roots = [
+        NI_DEFAULT_DIR,
+        PM_CTS_DEFAULT_DIR,
+        MEIC_DEFAULT_DIR,
+        DS_DEFAULT_DIR,
+        CPT_DEFAULT_DIR,
+        CDS_DEFAULT_DIR,
+    ]
+    out: List[str] = []
+    seen = set()
+    for root in roots:
+        nr = _norm_path(root)
+        if nr in seen:
+            continue
+        seen.add(nr)
+        out.append(nr)
+    return out
+
+
+def discover_lit_letters_files(*, weeks_back: int) -> List[str]:
+    """Find Lit & Letters workbooks by filename under the likely team folders."""
+    out: List[str] = []
+    seen = set()
+    for root in lit_letters_search_roots():
+        if not os.path.isdir(root):
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            # Avoid Office/OneDrive temporary folders and hidden/system folders.
+            dirnames[:] = [
+                d for d in dirnames
+                if not d.startswith("~") and not d.startswith(".")
+            ]
+            for name in filenames:
+                if name.startswith("~$"):
+                    continue
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in {".xlsx", ".xlsm"}:
+                    continue
+                fp = _norm_path(os.path.join(dirpath, name))
+                if fp in seen or fp in EXCLUDED_FILES:
+                    continue
+                if not is_lit_letters_path(fp):
+                    continue
+                if not file_looks_recent_enough(fp, weeks_back=weeks_back):
+                    continue
+                seen.add(fp)
+                out.append(fp)
+    return sorted(out)
+
+
 def expand_input_paths(paths: List[str]) -> List[str]:
     out: List[str] = []
     seen = set()
@@ -1480,18 +1582,45 @@ def main() -> int:
         selected_team = normalize_team_arg(args.team)
     except ValueError as exc:
         ap.error(str(exc))
-    inputs = args.files or default_inputs_for_team(selected_team)
-    if selected_team and not inputs:
-        ap.error(
-            f"No default input path is configured for {selected_team!r}. "
-            "Pass the workbook or folder path after the script name."
-        )
-    files = expand_input_paths(inputs)
+    if args.files:
+        inputs = args.files
+        files = expand_input_paths(inputs)
+    elif selected_team == LIT_LETTERS_TEAM_NAME:
+        inputs = []
+        files = discover_lit_letters_files(weeks_back=args.weeks_back)
+        if not files:
+            roots = "; ".join(lit_letters_search_roots())
+            ap.error(
+                "No Lit & Letters workbook was found in the default search roots. "
+                "Pass the workbook or folder path after the script name. "
+                f"Searched: {roots}"
+            )
+    else:
+        inputs = default_inputs_for_team(selected_team)
+        if selected_team and not inputs:
+            ap.error(
+                f"No default input path is configured for {selected_team!r}. "
+                "Pass the workbook or folder path after the script name."
+            )
+        files = expand_input_paths(inputs)
+
     if selected_team:
         files = [f for f in files if team_for_source(f) == selected_team]
-        print(f"Scraping team {selected_team}: {len(files)} file(s) found")
+
+    before_recent_filter = len(files)
+    files = filter_files_to_recent_weeks(files, weeks_back=args.weeks_back)
+    skipped_by_date = before_recent_filter - len(files)
+
+    if selected_team:
+        print(
+            f"Scraping team {selected_team}: {len(files)} file(s) found"
+            + (f" ({skipped_by_date} older/newer dated file(s) skipped)" if skipped_by_date else "")
+        )
     else:
-        print(f"Scraping all configured teams: {len(files)} file(s) found")
+        print(
+            f"Scraping all configured teams: {len(files)} file(s) found"
+            + (f" ({skipped_by_date} older/newer dated file(s) skipped)" if skipped_by_date else "")
+        )
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
     people_in_wip_lookup = load_people_in_wip_from_crm_wip(args.crm_wip)
     all_rows: List[Dict[str, Any]] = []
