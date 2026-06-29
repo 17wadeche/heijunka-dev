@@ -852,7 +852,7 @@ def scrape_one_lit_letters_workbook(
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
 ) -> List[Dict[str, Any]]:
     team = LIT_LETTERS_TEAM_NAME
-    wb = load_workbook(path, data_only=True)
+    wb = load_workbook(path, data_only=True, keep_links=False)
     period = parse_period_date_from_filename(path)
     if period is None:
         period = parse_period_date_from_workbook_sheetnames(wb)
@@ -893,7 +893,7 @@ def scrape_one_pm_cts_workbook(
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
 ) -> List[Dict[str, Any]]:
     team = PM_CTS_TEAM_NAME
-    wb = load_workbook(path, data_only=True)
+    wb = load_workbook(path, data_only=True, keep_links=False)
     period = parse_period_date_from_filename(path)
     if period is None:
         period = parse_period_date_from_workbook_sheetnames(wb)
@@ -931,7 +931,7 @@ def scrape_one_pm_cts_workbook(
     return [row]
 def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str], float]) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True)
+    wb = load_workbook(path, data_only=True, keep_links=False)
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
     periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
@@ -1069,24 +1069,73 @@ def compute_cpt_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[
         if val is not None:
             total += float(val)
     return float(total)
-def iter_team_non_wip_rows(ws_pab: Worksheet, non_wip_types: set[str], start_row: int = 2) -> Iterable[Tuple[str, str, float]]:
+MAX_TRAILING_BLANK_ROWS = 50
+
+def iter_team_non_wip_rows(
+    ws_pab: Worksheet,
+    non_wip_types: set[str],
+    start_row: int = 2,
+    *,
+    max_trailing_blank_rows: int = MAX_TRAILING_BLANK_ROWS,
+) -> Iterable[Tuple[str, str, float]]:
+    """Yield mapped-team non-WIP rows without walking thousands of formatted blanks.
+
+    CPT workbooks can have a very large ws.max_row because of formatting/formulas.
+    Stop after a sustained blank run instead of scanning to Excel's perceived end.
+    """
+    blank_run = 0
     for r in range(start_row, ws_pab.max_row + 1):
-        category = _norm_text(str(ws_pab[f"D{r}"].value or ""))
+        raw_person = ws_pab[f"C{r}"].value
+        raw_category = ws_pab[f"D{r}"].value
+        raw_activity = ws_pab[f"E{r}"].value
+        raw_hours = ws_pab[f"I{r}"].value
+        hours = _cell_number(raw_hours)
+
+        if (
+            not str(raw_person or "").strip()
+            and not str(raw_category or "").strip()
+            and not str(raw_activity or "").strip()
+            and (hours is None or hours == 0)
+        ):
+            blank_run += 1
+            if blank_run >= max_trailing_blank_rows:
+                break
+            continue
+
+        blank_run = 0
+        category = _norm_text(str(raw_category or ""))
         if category not in non_wip_types:
             continue
-        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
-        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or ""))
-        hours = _cell_number(ws_pab[f"I{r}"].value)
+        person = normalize_person_name(str(raw_person or ""))
+        activity = _collapse_ws(str(raw_activity or ""))
         if not person or hours is None:
             continue
         yield person, activity, float(hours)
-def compute_ooo_by_person_from_wip_plan(ws_wip_plan: Worksheet, name_col: str, hours_col: str, start_row: int = 3) -> Dict[str, float]:
+
+def compute_ooo_by_person_from_wip_plan(
+    ws_wip_plan: Worksheet,
+    name_col: str,
+    hours_col: str,
+    start_row: int = 3,
+    *,
+    max_trailing_blank_rows: int = MAX_TRAILING_BLANK_ROWS,
+) -> Dict[str, float]:
+    """Read OOO by person without scanning formatted blank rows to ws.max_row."""
     out: Dict[str, float] = {}
+    blank_run = 0
     for r in range(start_row, ws_wip_plan.max_row + 1):
-        person = normalize_person_name(str(ws_wip_plan[f"{name_col}{r}"].value or ""))
+        raw_name = ws_wip_plan[f"{name_col}{r}"].value
+        hours = _cell_number(ws_wip_plan[f"{hours_col}{r}"].value)
+        if not str(raw_name or "").strip() and (hours is None or hours == 0):
+            blank_run += 1
+            if blank_run >= max_trailing_blank_rows:
+                break
+            continue
+
+        blank_run = 0
+        person = normalize_person_name(str(raw_name or ""))
         if not person or is_excluded_person(person):
             continue
-        hours = _cell_number(ws_wip_plan[f"{hours_col}{r}"].value)
         if hours is None or hours == 0:
             continue
         out[person] = out.get(person, 0.0) + float(hours)
@@ -1199,7 +1248,7 @@ def scrape_one_mapped_workbook(
     non_wip_types: set[str],
     period_date_offset_days: int = 0,
 ) -> List[Dict[str, Any]]:
-    wb = load_workbook(path, data_only=True)
+    wb = load_workbook(path, data_only=True, keep_links=False)
     period: Optional[_dt.date] = None
     if perf_metrics_sheet and perf_metrics_date_cell:
         ws_perf_metrics = _get_required_sheet(wb, perf_metrics_sheet)
@@ -1216,14 +1265,34 @@ def scrape_one_mapped_workbook(
     ws_pab = _get_required_sheet(wb, pab_sheet)
     ws_wip_plan = _get_required_sheet(wb, wip_plan_sheet)
     ws_perf = _get_required_sheet(wb, perf_wip_sheet)
-    total_non_wip_hours = compute_team_total_non_wip_hours(ws_pab, non_wip_types)
+    pab_rows = list(iter_team_non_wip_rows(ws_pab, non_wip_types))
+    total_non_wip_hours = float(sum(hours for _, _, hours in pab_rows))
     ooo_hours = float(_cell_number(ws_wip_plan[ooo_total_cell].value) or 0.0)
     pct_in_wip = _cell_number(ws_perf[pct_in_wip_cell].value)
-    non_wip_by_person = compute_team_non_wip_by_person(ws_pab, non_wip_types)
-    non_wip_activities = compute_team_non_wip_activities(ws_pab, ws_wip_plan, non_wip_types, ooo_name_col, ooo_hours_col)
+
+    non_wip_by_person: Dict[str, float] = {}
+    activity_agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in pab_rows:
+        non_wip_by_person[person] = non_wip_by_person.get(person, 0.0) + float(hours)
+        key = (person, activity)
+        activity_agg[key] = activity_agg.get(key, 0.0) + float(hours)
+    non_wip_by_person = {person: float(total) for person, total in non_wip_by_person.items() if total != 0}
+
+    ooo_by_person = compute_ooo_by_person_from_wip_plan(ws_wip_plan, ooo_name_col, ooo_hours_col)
+    for person, hours in ooo_by_person.items():
+        key = (person, "OOO")
+        activity_agg[key] = activity_agg.get(key, 0.0) + float(hours)
+    non_wip_activities = [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(
+            activity_agg.items(), key=lambda x: (x[0][0].lower(), x[0][1].lower())
+        )
+        if hours != 0
+    ]
+
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
-    wip_workers_ooo_hours = compute_team_wip_workers_ooo_hours(ws_wip_plan, wip_workers, ooo_name_col, ooo_hours_col)
+    wip_workers_ooo_hours = compute_wip_workers_ooo_hours_from_ooo_by_person(ooo_by_person, wip_workers)
     effective_people_count = (
         people_count(period)
         if callable(people_count)
@@ -1297,7 +1366,7 @@ def scrape_one_cds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
     )
 def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
     team = "NI"
-    wb = load_workbook(path, data_only=True)
+    wb = load_workbook(path, data_only=True, keep_links=False)
     period: Optional[_dt.date] = None
     ws_perf_metrics = _get_required_sheet(wb, NI_PERF_METRICS_SHEET)
     period = parse_period_date_from_perf_metrics_cell(ws_perf_metrics, "B3")
@@ -1542,7 +1611,12 @@ def expand_input_paths(paths: List[str]) -> List[str]:
             return
         team = team_for_source(np)
         base = os.path.basename(np)
-        if team in {"CDS", "NI"} and "pab" not in base.lower():
+        base_lower = base.lower()
+        if base.startswith("~$"):
+            return
+        if team in {"CDS", "NI"} and "pab" not in base_lower:
+            return
+        if team == "CPT" and not any(token in base_lower for token in ("pab", "heijunka")):
             return
         seen.add(np)
         out.append(np)
