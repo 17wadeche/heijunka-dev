@@ -71,6 +71,7 @@ ACTIVITY_MAP = {
     "new hire presentation": "Training/Mentoring",
     "test method review":"Test Method",
     "emails & gary fu":"Email & IM",
+    "email/im scrum training meeting": "Training/Mentoring",
     "pull appropriate pes":"WIP/Event Review",
     "source appropriate pes":"WIP/Event Review",
     "pulling appropraite pe file":"WIP/Event Review",
