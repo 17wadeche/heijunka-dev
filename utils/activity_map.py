@@ -3949,6 +3949,7 @@ ACTIVITY_MAP = {
     "work tool training , scrum , colloboration": "Training/Mentoring",
     "/scrum/cornerstone+":"Scrum & Action",
     "finalising and submitting placement":"Admin",
+    "reviewed assessment event and went trhough all notes with training sme": "Training/Mentoring",
     "fu std ques meeting": "Meeting",
     "email; touchbase meeting; metrics; collaboration":"Email & IM",
     "std work & sharepoint":"Admin",
