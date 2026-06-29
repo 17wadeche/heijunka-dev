@@ -11,8 +11,10 @@ from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
 MCS_PULL_START = _dt.date(2026, 6, 22)
 LIT_LETTERS_TEAM = "Lit & Letters"
-def _load_workbook_data(path: str):
-    return load_workbook(path, data_only=True)
+def _load_workbook_data(path: str, *, read_only: bool = False):
+    # read_only is important for files with a bad Excel dimension/used range.
+    # Keep the default False so non-CPT layouts continue to behave exactly as before.
+    return load_workbook(path, data_only=True, read_only=read_only)
 def _is_lit_letters_path(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
     return (
@@ -474,6 +476,8 @@ def team_for_source(path: str) -> str:
     if np.startswith(DS_ROOT_HINT):
         return "DS"
     if np.startswith(CPT_ROOT_HINT):
+        return "CPT"
+    if "cpt" in base.lower() and "pab" in base.lower():
         return "CPT"
     if np.startswith(CDS_ROOT_HINT):
         return "CDS"
@@ -1525,20 +1529,68 @@ def compute_output_by_station_by_person_ds(ws_pab: Worksheet) -> Dict[str, Dict[
         out.setdefault(cell_station, {})
         out[cell_station][person] = out[cell_station].get(person, 0.0) + hours_i
     return out
-def _iter_rows_cpt_pab(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float], Optional[float]]]:
-    for r in range(start_row, ws_pab.max_row + 1):
-        person = ws_pab[f"C{r}"].value
-        category = ws_pab[f"D{r}"].value
-        cell_station = ws_pab[f"E{r}"].value
-        target = _cell_number(ws_pab[f"G{r}"].value)
-        hours_i = _cell_number(ws_pab[f"I{r}"].value)
-        actual_j = _cell_number(ws_pab[f"J{r}"].value)
+def _iter_rows_cpt_pab(
+    ws_pab: Worksheet,
+    start_row: int = 2,
+    *,
+    max_scan_row: int = 5000,
+    blank_run_stop: int = 200,
+) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float], Optional[float]]]:
+    """Iterate CPT PAB rows without trusting ws.max_row.
+
+    Some CPT workbooks have a stray used cell at Excel's last row
+    (for example A1048576). That makes openpyxl report max_row as
+    1,048,576 even though the real PAB data ends near row 1200.
+    Looping to ws.max_row makes scraping appear to hang.
+
+    Only columns C:J are needed, so stream those columns and cap the scan.
+    The blank-run stop lets the loop finish early if the template grows less
+    than max_scan_row.
+    """
+    sheet_max = ws_pab.max_row or max_scan_row
+    # If Excel/openpyxl reports the worksheet bottom row, treat it as a corrupt
+    # used-range marker rather than real data.
+    if sheet_max >= 1_048_576:
+        scan_to = max_scan_row
+    else:
+        scan_to = min(sheet_max, max_scan_row)
+
+    seen_data = False
+    blank_run = 0
+
+    for r, vals in enumerate(
+        ws_pab.iter_rows(
+            min_row=start_row,
+            max_row=scan_to,
+            min_col=3,
+            max_col=10,
+            values_only=True,
+        ),
+        start=start_row,
+    ):
+        # C,D,E,F,G,H,I,J
+        vals = tuple(vals or ())
+        vals = vals + (None,) * (8 - len(vals))
+        person, category, cell_station, _unused_f, target_v, _unused_h, hours_v, actual_v = vals[:8]
+
+        target = _cell_number(target_v)
+        hours_i = _cell_number(hours_v)
+        actual_j = _cell_number(actual_v)
         p = str(person).strip() if person is not None else ""
         cat = str(category).strip() if category is not None else ""
         cs = str(cell_station).strip() if cell_station is not None else ""
+
         if p == "" and cat == "" and cs == "" and target is None and hours_i is None and actual_j is None:
+            if seen_data:
+                blank_run += 1
+                if blank_run >= blank_run_stop:
+                    break
             continue
+
+        seen_data = True
+        blank_run = 0
         yield (r, p, cat, cs, target, hours_i, actual_j)
+
 CPT_NEW_HOURS_START = _dt.date(2026, 5, 4)
 def _cpt_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= CPT_NEW_HOURS_START
@@ -1655,32 +1707,33 @@ def compute_outputs_by_station_cpt(ws_pab: Worksheet) -> Dict[str, Dict[str, flo
 def compute_station_hours_cpt(ws_pab: Worksheet) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
     station_hours: Dict[str, float] = {}
     station_hours_by_person: Dict[str, Dict[str, float]] = {}
-    for _, person, category, cell_station, _, hours_i, actual_j in _iter_rows_cpt_pab(ws_pab):
+    for _, person, category, cell_station, _, hours_i, _ in _iter_rows_cpt_pab(ws_pab):
         if not cell_station or _is_ds_excluded_category(category):
             continue
         if hours_i is not None:
             station_hours[cell_station] = station_hours.get(cell_station, 0.0) + hours_i
-        if not person or is_excluded_person(person):
-            continue
-        hours_by_person_val = actual_j
-        if hours_by_person_val is None:
+        if not person or is_excluded_person(person) or hours_i is None:
             continue
         station_hours_by_person.setdefault(cell_station, {})
-        station_hours_by_person[cell_station][person] = station_hours_by_person[cell_station].get(person, 0.0) + hours_by_person_val
+        station_hours_by_person[cell_station][person] = (
+            station_hours_by_person[cell_station].get(person, 0.0) + hours_i
+        )
     return station_hours, station_hours_by_person
 def compute_output_by_station_by_person_cpt(ws_pab: Worksheet) -> Dict[str, Dict[str, float]]:
     out: Dict[str, Dict[str, float]] = {}
-    for _, person, category, cell_station, _, hours_i, _ in _iter_rows_cpt_pab(ws_pab):
+    for _, person, category, cell_station, _, _, actual_j in _iter_rows_cpt_pab(ws_pab):
         if not person or not cell_station or is_excluded_person(person) or _is_ds_excluded_category(category):
             continue
-        if hours_i is None:
+        if actual_j is None:
             continue
         out.setdefault(cell_station, {})
-        out[cell_station][person] = out[cell_station].get(person, 0.0) + hours_i
+        out[cell_station][person] = out[cell_station].get(person, 0.0) + actual_j
     return out
 def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = _load_workbook_data(path)
+    # CPT PAB files can have a bad used range on #3 PAB (A1:M1048576).
+    # read_only avoids openpyxl materializing the whole worksheet.
+    wb = _load_workbook_data(path, read_only=True)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
     ws_pab = wb[_sheet_ci(wb, "#3 PAB")] if _sheet_ci(wb, "#3 PAB") else None
