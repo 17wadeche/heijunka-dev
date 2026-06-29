@@ -543,8 +543,14 @@ def _parse_iso_date(value: Any) -> Optional[_dt.date]:
         return _dt.date.fromisoformat(s)
     except ValueError:
         return None
-def should_refresh_existing_row(row: Dict[str, Any], refresh_weeks: set[str]) -> bool:
+def should_refresh_existing_row(
+    row: Dict[str, Any],
+    refresh_weeks: set[str],
+    refresh_team: Optional[str] = None,
+) -> bool:
     team = (row.get("team") or "").strip()
+    if refresh_team is not None and team != refresh_team:
+        return False
     period_iso = (row.get("period_date") or "").strip()
     if period_iso not in refresh_weeks:
         return False
@@ -562,11 +568,12 @@ def merge_existing_with_recent_rows(
     existing_rows: List[Dict[str, Any]],
     recent_rows: List[Dict[str, Any]],
     weeks_back: int = 3,
+    refresh_team: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     refresh_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
     frozen_rows = [
         r for r in existing_rows
-        if not should_refresh_existing_row(r, refresh_weeks)
+        if not should_refresh_existing_row(r, refresh_weeks, refresh_team=refresh_team)
     ]
     return frozen_rows + recent_rows
 def iso_date(d: Optional[_dt.date]) -> str:
@@ -1360,6 +1367,63 @@ def scrape_one_meic_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, st
         people_count=MEIC_PEOPLE_COUNT,
         non_wip_types=MEIC_NON_WIP_TYPES,
     )
+
+TEAM_ALIASES: Dict[str, str] = {
+    "mcs": "MCS",
+    "ds": "DS",
+    "defibrillation solutions": "DS",
+    "cpt": "CPT",
+    "cardiac pacing therapies": "CPT",
+    "cds": "CDS",
+    "diagnostics": "CDS",
+    "diagnostics mdr": "CDS",
+    "ni": "NI",
+    "non implantables": "NI",
+    "non-implantables": "NI",
+    "pm-cts": PM_CTS_TEAM_NAME,
+    "pm cts": PM_CTS_TEAM_NAME,
+    "pm_cts": PM_CTS_TEAM_NAME,
+    "meic": MEIC_TEAM_NAME,
+    "ni & pm meic": MEIC_TEAM_NAME,
+    "ni and pm meic": MEIC_TEAM_NAME,
+    "lit": LIT_LETTERS_TEAM_NAME,
+    "lit & letters": LIT_LETTERS_TEAM_NAME,
+    "lit and letters": LIT_LETTERS_TEAM_NAME,
+}
+
+TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
+    "MCS": [MCS_DEFAULT_PATH],
+    "DS": [DS_DEFAULT_DIR, DS_ARCHIVE],
+    "CPT": [CPT_DEFAULT_DIR, CPT_ARCHIVE_PAB_DIR, CPT_ARCHIVE_PAB_DIR2, CPT_ARCHIVE_PAB_DIR3],
+    "CDS": [CDS_DEFAULT_DIR, CDS_ARCHIVE_PAB_DIR],
+    "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE],
+    MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
+    PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR],
+    # Lit & Letters is supported when a matching workbook/file path is supplied.
+    # Add a default folder here if you have one.
+    LIT_LETTERS_TEAM_NAME: [],
+}
+
+
+def normalize_team_arg(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    key = _norm_text(value).replace("_", " ")
+    team = TEAM_ALIASES.get(key)
+    if team:
+        return team
+    valid = sorted(TEAM_DEFAULT_INPUTS)
+    raise ValueError(f"Unknown team {value!r}. Valid teams: {', '.join(valid)}")
+
+
+def default_inputs_for_team(team: Optional[str]) -> List[str]:
+    if team:
+        return list(TEAM_DEFAULT_INPUTS.get(team, []))
+    inputs: List[str] = []
+    for team_inputs in TEAM_DEFAULT_INPUTS.values():
+        inputs.extend(team_inputs)
+    return inputs
+
 def expand_input_paths(paths: List[str]) -> List[str]:
     out: List[str] = []
     seen = set()
@@ -1403,24 +1467,31 @@ def main() -> int:
         default=3,
         help="Number of prior weeks to include in addition to the current week (default: 3).",
     )
+    ap.add_argument(
+        "--team",
+        default=None,
+        help=(
+            "Optional team to scrape. Examples: MCS, DS, CPT, CDS, NI, PM-CTS, "
+            "MEIC, 'Lit & Letters'. If omitted, all configured teams are scraped."
+        ),
+    )
     args = ap.parse_args()
-    inputs = args.files or [
-        MCS_DEFAULT_PATH,
-        DS_DEFAULT_DIR,
-        DS_ARCHIVE,
-        CPT_DEFAULT_DIR,
-        CPT_ARCHIVE_PAB_DIR,
-        CPT_ARCHIVE_PAB_DIR2,
-        CPT_ARCHIVE_PAB_DIR3,
-        CDS_DEFAULT_DIR,
-        CDS_ARCHIVE_PAB_DIR,
-        NI_DEFAULT_DIR,
-        NI_ARCHIVE_APRIL_2026_DIR,
-        NI_ARCHIVE,
-        MEIC_DEFAULT_DIR,
-        PM_CTS_DEFAULT_DIR
-    ]
+    try:
+        selected_team = normalize_team_arg(args.team)
+    except ValueError as exc:
+        ap.error(str(exc))
+    inputs = args.files or default_inputs_for_team(selected_team)
+    if selected_team and not inputs:
+        ap.error(
+            f"No default input path is configured for {selected_team!r}. "
+            "Pass the workbook or folder path after the script name."
+        )
     files = expand_input_paths(inputs)
+    if selected_team:
+        files = [f for f in files if team_for_source(f) == selected_team]
+        print(f"Scraping team {selected_team}: {len(files)} file(s) found")
+    else:
+        print(f"Scraping all configured teams: {len(files)} file(s) found")
     completed_hours_lookup = load_completed_hours_from_crm_wip(args.crm_wip)
     people_in_wip_lookup = load_people_in_wip_from_crm_wip(args.crm_wip)
     all_rows: List[Dict[str, Any]] = []
@@ -1429,7 +1500,7 @@ def main() -> int:
         try:
             if team == LIT_LETTERS_TEAM_NAME:
                 all_rows.extend(scrape_one_lit_letters_workbook(f, people_in_wip_lookup))
-            if team == PM_CTS_TEAM_NAME:
+            elif team == PM_CTS_TEAM_NAME:
                 all_rows.extend(scrape_one_pm_cts_workbook(f, people_in_wip_lookup))
             elif team == "DS":
                 all_rows.extend(scrape_one_ds_workbook(f, people_in_wip_lookup))
@@ -1453,6 +1524,7 @@ def main() -> int:
         load_existing_csv_rows(args.out),
         recent_rows,
         weeks_back=args.weeks_back,
+        refresh_team=selected_team,
     )
     all_rows.sort(key=lambda r: (str(r.get("team", "")), str(r.get("period_date", ""))))
     with open(args.out, "w", newline="", encoding="utf-8") as fp:
