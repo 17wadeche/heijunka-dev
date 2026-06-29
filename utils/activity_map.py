@@ -75,6 +75,7 @@ ACTIVITY_MAP = {
     "source appropriate pes":"WIP/Event Review",
     "pulling appropraite pe file":"WIP/Event Review",
     "heijunka: 20.":"Metrics & Schedule",
+    "metrics/xcrum/schedule":"Metrics & Schedule",
     "cannula fca":"FCA",
     "cornerstond":"Cornerstone",
     "meetings/mentoring": "Training/Mentoring",
