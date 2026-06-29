@@ -79,6 +79,8 @@ ACTIVITY_MAP = {
     "scrum2o parklife 30":"Scrum & Action",
     "pull appropriate pes":"WIP/Event Review",
     "source appropriate pes":"WIP/Event Review",
+    "pmpa requests, emails,":"PMPA",
+    "emails, ad hoc question":"Emails & IM",
     "pulling appropraite pe file":"WIP/Event Review",
     "heijunka: 20.":"Metrics & Schedule",
     "metrics/xcrum/schedule":"Metrics & Schedule",
