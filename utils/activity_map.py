@@ -3936,6 +3936,8 @@ ACTIVITY_MAP = {
     "uploaded":"Data Request/Review",
     "meeting & action": "Meeting",
     "performance review, next gen":"Next Gen",
+    "meetings and scrum":"Meeting",
+    "team lead activitie":"Admin",
     "aem, scrum, training":"Meeting",
     "rr training / feedback": "Training/Mentoring",
     "work tool training": "Training/Mentoring",
