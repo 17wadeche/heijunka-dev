@@ -3935,6 +3935,8 @@ ACTIVITY_MAP = {
     "vs oem/cm form":"Admin",
     "uploaded":"Data Request/Review",
     "meeting & action": "Meeting",
+    "performance review, next gen":"Next Gen",
+    "aem, scrum, training":"Meeting",
     "rr training / feedback": "Training/Mentoring",
     "work tool training": "Training/Mentoring",
     "dcb device document reading":"Reviewing Documents & Case Video",
