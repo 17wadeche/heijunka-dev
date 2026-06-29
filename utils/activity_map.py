@@ -3940,6 +3940,7 @@ ACTIVITY_MAP = {
     "team lead activitie":"Admin",
     "aem, scrum, training":"Meeting",
     "rr training / feedback": "Training/Mentoring",
+    "inbox bolu":"RS Inbox",
     "work tool training": "Training/Mentoring",
     "dcb device document reading":"Reviewing Documents & Case Video",
     "liberant with dan and aidan":"Project Work",
