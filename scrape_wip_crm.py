@@ -42,12 +42,20 @@ TEAM_BY_BASENAME: Dict[str, str] = {
     "Heijunka Current.xlsm": "MCS",
 }
 CDS_NEW_HOURS_START = _dt.date(2026, 4, 24)
-CDS_NEW_HOURS_START = _dt.date(2026, 4, 24)
+CDS_SIX_PERSON_LAYOUT_START = _dt.date(2026, 6, 22)
 AF_ACTUAL_HOURS_START = _dt.date(2026, 4, 24)
 def _use_af_actual_hours(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period > AF_ACTUAL_HOURS_START
 def _cds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= CDS_NEW_HOURS_START
+def _cds_summary_row(period: Optional[_dt.date]) -> int:
+    if isinstance(period, _dt.date) and period >= CDS_SIX_PERSON_LAYOUT_START:
+        return 11
+    return 10
+def _cds_people_row_stop(period: Optional[_dt.date]) -> int:
+    # The range end is exclusive. Summary row 10 means people rows 5-9;
+    # summary row 11 means people rows 5-10.
+    return _cds_summary_row(period)
 MCS_ROOT_HINT = _norm_mcs = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling")
 CDS_ROOT_HINT = _norm_cds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis")
 DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB")
@@ -341,22 +349,26 @@ def compute_completed_hours_cds(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
+    row_stop = _cds_people_row_stop(period)
+
     if _use_af_actual_hours(period):
-        total = _cell_number(ws_perf["AF10"].value)
+        total = _cell_number(ws_perf[f"AF{_cds_summary_row(period)}"].value)
         actual_col = "AF"
     elif _cds_use_new_hours_layout(period):
-        total = _cell_number(ws_perf["W10"].value)
+        total = _cell_number(ws_perf[f"W{_cds_summary_row(period)}"].value)
         actual_col = "W"
     else:
         use_r_layout = _cds_use_r_layout(ws_perf)
         total_col = "AB" if not use_r_layout else "R"
         actual_col = "AB" if not use_r_layout else "R"
         total = _cell_number(ws_perf[f"{total_col}11"].value)
+        row_stop = 11
+
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
     summed_actual = 0.0
-    for r in range(5, 11):
+    for r in range(5, row_stop):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -374,13 +386,17 @@ def compute_person_available_hours_cds(
     ws_perf: Worksheet,
     period: Optional[_dt.date] = None,
 ) -> Dict[str, float]:
+    row_stop = _cds_people_row_stop(period)
+
     if _cds_use_new_hours_layout(period):
         available_col = "AA"
     else:
         use_r_layout = _cds_use_r_layout(ws_perf)
         available_col = "AA" if not use_r_layout else "R"
+        row_stop = 11
+
     out: Dict[str, float] = {}
-    for r in range(5, 11):
+    for r in range(5, row_stop):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"{available_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
