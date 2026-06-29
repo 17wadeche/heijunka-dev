@@ -8,6 +8,8 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+def _load_workbook_for_scraping(path: str):
+    return load_workbook(path, data_only=True, keep_links=False, read_only=True)
 MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm"
 MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
@@ -185,8 +187,11 @@ def team_for_source(path: str) -> str:
     if np.startswith(meic_root + os.sep) or np == meic_root:
         return MEIC_TEAM_NAME
     base = os.path.basename(np)
+    base_lower = base.lower()
     if base in TEAM_BY_BASENAME:
         return TEAM_BY_BASENAME[base]
+    if "cpt" in base_lower and "pab" in base_lower:
+        return "CPT"
     np_lower = np.lower()
     if "pab for letters" in np_lower and "lit" in np_lower and "principals" in np_lower:
         return LIT_LETTERS_TEAM_NAME
@@ -203,6 +208,12 @@ def team_for_source(path: str) -> str:
     if "crm cqxm reports - 1.9 heijunka tracker" in np_lower:
         return MEIC_TEAM_NAME
     return ""
+def _col_idx(col: str) -> int:
+    n = 0
+    for ch in col.upper():
+        if "A" <= ch <= "Z":
+            n = n * 26 + (ord(ch) - ord("A") + 1)
+    return n
 def _norm_text(x: str) -> str:
     return re.sub(r"\s+", " ", (x or "").strip()).lower()
 def _collapse_ws(x: str) -> str:
@@ -800,16 +811,7 @@ def compute_ds_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> 
         if hours != 0
     ]
 def compute_cpt_ooo_by_person(ws_wip_plan: Worksheet) -> Dict[str, float]:
-    out: Dict[str, float] = {}
-    for r in range(3, ws_wip_plan.max_row + 1):
-        person = normalize_person_name(str(ws_wip_plan[f"DB{r}"].value or ""))
-        if not person or is_excluded_person(person):
-            continue
-        hours = _cell_number(ws_wip_plan[f"DT{r}"].value)
-        if hours is None or hours == 0:
-            continue
-        out[person] = out.get(person, 0.0) + float(hours)
-    return out
+    return compute_ooo_by_person_from_wip_plan(ws_wip_plan, "DB", "DT")
 def compute_cpt_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) -> List[Dict[str, Any]]:
     agg: Dict[Tuple[str, str], float] = {}
     for person, activity, hours in iter_cpt_non_wip_rows(ws_pab):
@@ -856,7 +858,7 @@ def scrape_one_lit_letters_workbook(
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
 ) -> List[Dict[str, Any]]:
     team = LIT_LETTERS_TEAM_NAME
-    wb = load_workbook(path, data_only=True, keep_links=False)
+    wb = _load_workbook_for_scraping(path)
     period = parse_period_date_from_filename(path)
     if period is None:
         period = parse_period_date_from_workbook_sheetnames(wb)
@@ -897,7 +899,7 @@ def scrape_one_pm_cts_workbook(
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
 ) -> List[Dict[str, Any]]:
     team = PM_CTS_TEAM_NAME
-    wb = load_workbook(path, data_only=True, keep_links=False)
+    wb = _load_workbook_for_scraping(path)
     period = parse_period_date_from_filename(path)
     if period is None:
         period = parse_period_date_from_workbook_sheetnames(wb)
@@ -935,7 +937,7 @@ def scrape_one_pm_cts_workbook(
     return [row]
 def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str], float]) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    wb = load_workbook(path, data_only=True, keep_links=False)
+    wb = _load_workbook_for_scraping(path)
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
     periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
@@ -1026,16 +1028,7 @@ def compute_ds_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[s
             total += float(val)
     return float(total)
 def iter_cpt_non_wip_rows(ws_pab: Worksheet, start_row: int = 2) -> Iterable[Tuple[str, str, float]]:
-    for r in range(start_row, ws_pab.max_row + 1):
-        category = _norm_text(str(ws_pab[f"D{r}"].value or ""))
-        if category not in CPT_NON_WIP_TYPES:
-            continue
-        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
-        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or ""))
-        hours = _cell_number(ws_pab[f"I{r}"].value)
-        if not person or hours is None:
-            continue
-        yield person, activity, float(hours)
+    yield from iter_team_non_wip_rows(ws_pab, CPT_NON_WIP_TYPES, start_row=start_row)
 def compute_cpt_total_non_wip_hours(ws_pab: Worksheet) -> float:
     return float(sum(hours for _, _, hours in iter_cpt_non_wip_rows(ws_pab)))
 def compute_cpt_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
@@ -1059,20 +1052,10 @@ def compute_cpt_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet) ->
         if hours != 0
     ]
 def compute_cpt_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[str]) -> float:
-    worker_keys = {normalize_person_key(x) for x in wip_workers if x}
-    if not worker_keys:
-        return 0.0
-    total = 0.0
-    for r in range(1, ws_wip_plan.max_row + 1):
-        name = str(ws_wip_plan[f"DB{r}"].value or "").strip()
-        if not name:
-            continue
-        if normalize_person_key(name) not in worker_keys:
-            continue
-        val = _cell_number(ws_wip_plan[f"DT{r}"].value)
-        if val is not None:
-            total += float(val)
-    return float(total)
+    return compute_wip_workers_ooo_hours_from_ooo_by_person(
+        compute_cpt_ooo_by_person(ws_wip_plan),
+        wip_workers,
+    )
 MAX_TRAILING_BLANK_ROWS = 50
 
 def iter_team_non_wip_rows(
@@ -1082,17 +1065,17 @@ def iter_team_non_wip_rows(
     *,
     max_trailing_blank_rows: int = MAX_TRAILING_BLANK_ROWS,
 ) -> Iterable[Tuple[str, str, float]]:
-    """Yield mapped-team non-WIP rows without walking thousands of formatted blanks.
-
-    CPT workbooks can have a very large ws.max_row because of formatting/formulas.
-    Stop after a sustained blank run instead of scanning to Excel's perceived end.
-    """
     blank_run = 0
-    for r in range(start_row, ws_pab.max_row + 1):
-        raw_person = ws_pab[f"C{r}"].value
-        raw_category = ws_pab[f"D{r}"].value
-        raw_activity = ws_pab[f"E{r}"].value
-        raw_hours = ws_pab[f"I{r}"].value
+    for row in ws_pab.iter_rows(
+        min_row=start_row,
+        min_col=3,   # C: person
+        max_col=9,   # I: hours
+        values_only=True,
+    ):
+        raw_person = row[0] if len(row) > 0 else None
+        raw_category = row[1] if len(row) > 1 else None
+        raw_activity = row[2] if len(row) > 2 else None
+        raw_hours = row[6] if len(row) > 6 else None
         hours = _cell_number(raw_hours)
 
         if (
@@ -1126,10 +1109,21 @@ def compute_ooo_by_person_from_wip_plan(
 ) -> Dict[str, float]:
     """Read OOO by person without scanning formatted blank rows to ws.max_row."""
     out: Dict[str, float] = {}
+    name_idx = _col_idx(name_col)
+    hours_idx = _col_idx(hours_col)
+    min_col = min(name_idx, hours_idx)
+    max_col = max(name_idx, hours_idx)
+    name_offset = name_idx - min_col
+    hours_offset = hours_idx - min_col
     blank_run = 0
-    for r in range(start_row, ws_wip_plan.max_row + 1):
-        raw_name = ws_wip_plan[f"{name_col}{r}"].value
-        hours = _cell_number(ws_wip_plan[f"{hours_col}{r}"].value)
+    for row in ws_wip_plan.iter_rows(
+        min_row=start_row,
+        min_col=min_col,
+        max_col=max_col,
+        values_only=True,
+    ):
+        raw_name = row[name_offset] if len(row) > name_offset else None
+        hours = _cell_number(row[hours_offset] if len(row) > hours_offset else None)
         if not str(raw_name or "").strip() and (hours is None or hours == 0):
             blank_run += 1
             if blank_run >= max_trailing_blank_rows:
@@ -1220,20 +1214,10 @@ def compute_team_non_wip_activities(ws_pab: Worksheet, ws_wip_plan: Worksheet, n
         compute_ooo_by_person_from_wip_plan(ws_wip_plan, ooo_name_col, ooo_hours_col),
     )
 def compute_team_wip_workers_ooo_hours(ws_wip_plan: Worksheet, wip_workers: List[str], name_col: str, hours_col: str) -> float:
-    worker_keys = {normalize_person_key(x) for x in wip_workers if x}
-    if not worker_keys:
-        return 0.0
-    total = 0.0
-    for r in range(1, ws_wip_plan.max_row + 1):
-        name = str(ws_wip_plan[f"{name_col}{r}"].value or "").strip()
-        if not name:
-            continue
-        if normalize_person_key(name) not in worker_keys:
-            continue
-        val = _cell_number(ws_wip_plan[f"{hours_col}{r}"].value)
-        if val is not None:
-            total += float(val)
-    return float(total)
+    return compute_wip_workers_ooo_hours_from_ooo_by_person(
+        compute_ooo_by_person_from_wip_plan(ws_wip_plan, name_col, hours_col, start_row=1),
+        wip_workers,
+    )
 def scrape_one_mapped_workbook(
     path: str,
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
@@ -1252,7 +1236,7 @@ def scrape_one_mapped_workbook(
     non_wip_types: set[str],
     period_date_offset_days: int = 0,
 ) -> List[Dict[str, Any]]:
-    wb = load_workbook(path, data_only=True, keep_links=False)
+    wb = _load_workbook_for_scraping(path)
     period: Optional[_dt.date] = None
     if perf_metrics_sheet and perf_metrics_date_cell:
         ws_perf_metrics = _get_required_sheet(wb, perf_metrics_sheet)
@@ -1343,7 +1327,7 @@ def scrape_one_cpt_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
         perf_metrics_sheet=None,
         perf_metrics_date_cell=None,
         perf_wip_sheet=CPT_PERF_WIP_SHEET,
-        pct_in_wip_cell="J2",
+        pct_in_wip_cell="G2",
         ooo_total_cell="DT2",
         ooo_name_col="DB",
         ooo_hours_col="DT",
@@ -1370,7 +1354,7 @@ def scrape_one_cds_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str
     )
 def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str], List[str]]) -> List[Dict[str, Any]]:
     team = "NI"
-    wb = load_workbook(path, data_only=True, keep_links=False)
+    wb = _load_workbook_for_scraping(path)
     period: Optional[_dt.date] = None
     ws_perf_metrics = _get_required_sheet(wb, NI_PERF_METRICS_SHEET)
     period = parse_period_date_from_perf_metrics_cell(ws_perf_metrics, "B3")
