@@ -1074,6 +1074,10 @@ def filter_input_files_to_recent_weeks(files: List[str], weeks_back: int = 3) ->
         if period is None or monday_of_week(period).isoformat() in keep_weeks:
             recent_files.append(f)
     return recent_files
+def filter_input_files_to_teams(files: List[str], teams: set[str]) -> List[str]:
+    """Keep only files whose source path maps to one of the selected teams."""
+    return [f for f in files if _norm_team(team_for_source(f)) in teams]
+
 def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
     if not path or not os.path.exists(path):
         return []
@@ -1083,15 +1087,21 @@ def merge_existing_with_recent_rows(
     existing_rows: List[Dict[str, Any]],
     recent_rows: List[Dict[str, Any]],
     weeks_back: int = 3,
+    refresh_teams: Optional[set[str]] = None,
 ) -> List[Dict[str, Any]]:
     refresh_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
-    frozen_rows = [
-        r for r in existing_rows
-        if (
-            _norm_period_date(str(r.get("period_date", ""))) not in refresh_weeks
-            or _is_mcs_before_pull_start(r)
-        )
-    ]
+
+    def should_refresh_existing_row(row: Dict[str, Any]) -> bool:
+        period = _norm_period_date(str(row.get("period_date", "")))
+        if period not in refresh_weeks:
+            return False
+        if _is_mcs_before_pull_start(row):
+            return False
+        if refresh_teams is not None and _norm_team(row.get("team", "")) not in refresh_teams:
+            return False
+        return True
+
+    frozen_rows = [r for r in existing_rows if not should_refresh_existing_row(r)]
     return frozen_rows + recent_rows
 def iso_date(d: Optional[_dt.date]) -> str:
     return d.isoformat() if isinstance(d, _dt.date) else ""
@@ -1131,6 +1141,48 @@ def read_merged_value(ws: Worksheet, top_left_cell: str) -> str:
     return str(v).strip() if v is not None else ""
 def _norm_team(s: str) -> str:
     return (s or "").strip().upper()
+
+def _team_arg_key(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").replace("_", " ").strip().upper())
+
+TEAM_ARG_ALIASES: Dict[str, str] = {
+    "MCS": "MCS",
+    "CDS": "CDS",
+    "DS": "DS",
+    "CPT": "CPT",
+    "NI": "NI",
+    "NI & PM MEIC": "NI & PM MEIC",
+    "NI AND PM MEIC": "NI & PM MEIC",
+    "MEIC": "NI & PM MEIC",
+    "PM-CTS": "PM-CTS",
+    "PM CTS": "PM-CTS",
+    "LIT & LETTERS": LIT_LETTERS_TEAM,
+    "LIT AND LETTERS": LIT_LETTERS_TEAM,
+    "LIT LETTERS": LIT_LETTERS_TEAM,
+}
+
+def parse_team_filter(values: Optional[List[str]]) -> Optional[set[str]]:
+    """Parse --team values. Supports repeated args and comma/semicolon lists."""
+    if not values:
+        return None
+
+    selected: set[str] = set()
+    bad: List[str] = []
+    for value in values:
+        for raw in re.split(r"[,;]", value):
+            key = _team_arg_key(raw)
+            if not key:
+                continue
+            team = TEAM_ARG_ALIASES.get(key)
+            if team is None:
+                bad.append(raw.strip())
+            else:
+                selected.add(_norm_team(team))
+
+    if bad:
+        valid = ", ".join(sorted(set(TEAM_ARG_ALIASES.values())))
+        raise ValueError(f"unknown team(s): {', '.join(bad)}. Valid teams: {valid}")
+    return selected or None
 def _is_mcs_before_pull_start(row: Dict[str, Any]) -> bool:
     if _norm_team(row.get("team", "")) != "MCS":
         return False
@@ -2067,9 +2119,24 @@ def main() -> int:
         action="store_true",
         help="Scrape every discovered workbook instead of skipping files whose filename date is outside --weeks-back.",
     )
+    ap.add_argument(
+        "--team",
+        action="append",
+        help=(
+            "Scrape only the selected team. Can be repeated or comma-separated. "
+            'Examples: --team MCS, --team CDS, --team "NI & PM MEIC", --team PM-CTS.'
+        ),
+    )
     args = ap.parse_args()
+    try:
+        selected_teams = parse_team_filter(args.team)
+    except ValueError as e:
+        ap.error(str(e))
+
     inputs = args.files or default_paths
     input_files = list(iter_input_files(inputs))
+    if selected_teams is not None:
+        input_files = filter_input_files_to_teams(input_files, selected_teams)
     if not args.scan_all:
         input_files = filter_input_files_to_recent_weeks(input_files, weeks_back=args.weeks_back)
     all_rows = scrape_input_files(input_files)
@@ -2078,6 +2145,7 @@ def main() -> int:
         load_existing_csv_rows(args.out),
         recent_rows,
         weeks_back=args.weeks_back,
+        refresh_teams=selected_teams,
     )
     all_rows.sort(key=lambda r: ((r.get("team") or ""), (r.get("period_date") or "")))
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
