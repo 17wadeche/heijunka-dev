@@ -42,7 +42,7 @@ commands = [
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "DS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters"],
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters", "--weeks-back", "1"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI & PM MEIC"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CPT", "--weeks-back", "1"],
