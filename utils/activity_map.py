@@ -412,6 +412,8 @@ ACTIVITY_MAP = {
     "pmpa date request":"PMPA",
     "firmware upgrade":"IT Issue/Update",
     "eu training/reviweing events/sending faxes/scrum": "Training/Mentoring",
+    "emails, consult, collaboration":"Email & IM",
+    "training/inbox": "Training/Mentoring",
     "late meeting":"Meeting",
     "pmpa qs/ad hoc email":"PMPA",
     "sorting deco complaint":"Admin",
