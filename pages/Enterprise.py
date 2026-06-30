@@ -3254,18 +3254,18 @@ elif page == "Export":
         nonwip_export_bytes = _cached_custom_excel_bytes(
             (("Team Non-WIP Totals", nonwip_item_totals),)
         )
-#        export_filter_card.download_button(
-#            label="Export combined Non-WIP item totals",
-#            data=nonwip_export_bytes,
-#            file_name="team_non_wip_item_totals.xlsx",
-#            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#            key="export_nonwip_item_totals",
-#            disabled=not (export_selected_weeks and selected_nonwip_teams),
-#            help=(
-#                "Exports one row per team and Non-WIP item, with hours combined across "
-#                "the selected weeks and current Enterprise, Portfolio, OU, or Team filter."
-#            ),
-#        )
+        export_filter_card.download_button(
+            label="Export combined Non-WIP item totals",
+            data=nonwip_export_bytes,
+            file_name="team_non_wip_item_totals.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="export_nonwip_item_totals",
+            disabled=not (export_selected_weeks and selected_nonwip_teams),
+            help=(
+                "Exports one row per team and Non-WIP item, with hours combined across "
+                "the selected weeks and current Enterprise, Portfolio, OU, or Team filter."
+            ),
+        )
         if export_selected_weeks and export_selected_values and nonwip_item_totals.empty:
             export_filter_card.caption(
                 "No Non-WIP item activity was found for the selected weeks and filter."
