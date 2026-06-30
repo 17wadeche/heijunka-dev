@@ -410,6 +410,7 @@ ACTIVITY_MAP = {
     "meterics, scrum, schedule": "Metrics & Schedule",
     "": "Metrics & Schedule",
     "weekly schedule & scrum": "Metrics & Schedule",
+    "eu training/reviewing events/sending faxes/scrum": "Training/Mentoring",
     "weekly scheudle & daily scrum": "Metrics & Schedule",
     "ask from management(eg. data collection , ppt, monthly slide update etc)":"Asks From Management",
     "ask from management(eg.data collection , ppt, monthly slide update etc)":"Asks From Management",
