@@ -99,6 +99,8 @@ ACTIVITY_MAP = {
     "ri's france and mhra":"RI",
     "meetings ans scrum":"Scrum & Action",
     "tm support call":"Collaboration",
+    "fu questions review":"Question",
+    "redline review":"Redline",
     "email/im scrum":"Email & IM",
     "cannula fca":"FCA",
     "cornerstond":"Cornerstone",
