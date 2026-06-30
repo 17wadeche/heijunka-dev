@@ -410,6 +410,8 @@ ACTIVITY_MAP = {
     "end of year discuss":"Career Development",
     "scrum & ri meeting for update":"Scrum & Action",
     "pmpa date request":"PMPA",
+    "firmware upgrade":"IT Issue/Update",
+    "sorting deco complaint":"Admin",
     "(investigaion training spider)":"Training/Mentoring",
     "skills lab":"Training/Mentoring",
     "quality-day prep meeting": "Meeting",
