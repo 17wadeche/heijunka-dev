@@ -417,6 +417,7 @@ ACTIVITY_MAP = {
     "scrum & ri meeting for update":"Scrum & Action",
     "pmpa date request":"PMPA",
     "firmware upgrade":"IT Issue/Update",
+    "teams call re wizard":"IT Issue/Update",
     "eu training/reviweing events/sending faxes/scrum": "Training/Mentoring",
     "emails, consult, collaboration":"Email & IM",
     "training/inbox": "Training/Mentoring",
