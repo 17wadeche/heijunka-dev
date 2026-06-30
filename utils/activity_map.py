@@ -407,6 +407,7 @@ ACTIVITY_MAP = {
     "fyw tool": "Metrics & Schedule",
     "weekly schedule": "Metrics & Schedule",
     "career fair launch event cic building":"Career Development",
+    "end of year discuss":"Career Development",
     "scrum & ri meeting for update":"Scrum & Action",
     "pmpa date request":"PMPA",
     "(investigaion training spider)":"Training/Mentoring",
