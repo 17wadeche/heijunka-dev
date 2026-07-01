@@ -626,7 +626,7 @@ ACTIVITY_MAP = {
     "email replies and review":"Email & IM",
     "performance review":"Career Development",
     "japanese duplicate event":"Admin",
-    "creating and sending faxes/reviewing worked event":"RFAI"
+    "creating and sending faxes/reviewing worked event":"RFAI",
     "crnerstone":"Cornerstone",
     "graduate finance meeting":"Meeting",
     "ict tier 2":"Meeting",
