@@ -444,7 +444,7 @@ ACTIVITY_MAP = {
     "pmpa date request":"PMPA",
     "firmware upgrade":"IT Issue/Update",
     "shadowing for inbox":"Training/Mentoring",
-    "tms supports":"Collaboration",
+    "tms support":"Collaboration",
     "corner stone and email":"Cornerstone",
     "teams call re wizard":"IT Issue/Update",
     "eu training/reviweing events/sending faxes/scrum": "Training/Mentoring",
