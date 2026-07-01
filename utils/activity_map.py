@@ -430,7 +430,7 @@ ACTIVITY_MAP = {
     "email & im matrix redline update":"Email & IM",
     "eu training/ad hoc team qs/reviewing events/pmpa emails for old task":"Training/Mentoring",
     "as hoc emails to pmpa/ou":"PMPA",
-    "scrum, lunch, attaching faxes receiv":"Admin",
+    "scrum, lunch, attaching faxes received/reply email":"Admin",
     "ng":"Next Gen",
     "ri review/fu":"RI",
     "scrum & ri meeting for update":"Scrum & Action",
