@@ -434,6 +434,8 @@ ACTIVITY_MAP = {
     "emails, consult, collaboration":"Email & IM",
     "training/inbox": "Training/Mentoring",
     "late meeting":"Meeting",
+    "cf meeting":"Meeting",
+    "performance meeting":"Career Development",
     "pmpa qs/ad hoc email":"PMPA",
     "sorting deco complaint":"Admin",
     "(investigaion training spider)":"Training/Mentoring",
