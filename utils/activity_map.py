@@ -450,6 +450,7 @@ ACTIVITY_MAP = {
     "late meeting":"Meeting",
     "cf meeting":"Meeting",
     "performance meeting":"Career Development",
+    "end of year converstion":"Career Development",
     "pmpa qs/ad hoc email":"PMPA",
     "sorting deco complaint":"Admin",
     "(investigaion training spider)":"Training/Mentoring",
