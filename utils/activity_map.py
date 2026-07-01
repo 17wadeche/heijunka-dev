@@ -431,6 +431,7 @@ ACTIVITY_MAP = {
     "eu training/ad hoc team qs/reviewin":"",
     "as hoc emails to pmpa/ou":"PMPA",
     "scrum, lunch, attaching faxes receiv":"Admin",
+    "ng":"Next Gen",
     "ri review/fu":"RI",
     "scrum & ri meeting for update":"Scrum & Action",
     "pmpa date request":"PMPA",
