@@ -422,6 +422,7 @@ ACTIVITY_MAP = {
     "career fair launch event cic building":"Career Development",
     "end of year discuss":"Career Development",
     "cfn issue report/review":"Team Report",
+    "scrum , clinical/ rr training": "Training/Mentoring",
     "stent graft id job aid update":"Admin",
     "fu questions project review":"Project Work",
     "matrix redline update":"Redline",
