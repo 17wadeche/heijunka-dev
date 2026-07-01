@@ -428,7 +428,7 @@ ACTIVITY_MAP = {
     "cf meeting with julio":"Meeting",
     "lab gemba":"Gemba",
     "email & im matrix redline update":"Email & IM",
-    "eu training/ad hoc team qs/reviewin":"",
+    "eu training/ad hoc team qs/reviewing events/pmpa emails for old task":"Training/Mentoring",
     "as hoc emails to pmpa/ou":"PMPA",
     "scrum, lunch, attaching faxes receiv":"Admin",
     "ng":"Next Gen",
