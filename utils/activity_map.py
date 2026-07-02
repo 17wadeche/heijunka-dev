@@ -622,6 +622,8 @@ ACTIVITY_MAP = {
     "event reviews, collaboration, lates, meetings, email/admin":"WIP/Event Review",
     "affera training 30": "Training/Mentoring",
     "workday tm review":"Career Development",
+    "testing, coding, meetings, collaboration/event review":"Project Work",
+    "training prep team collaboration":"Training/Mentoring",
     "fywt & schedule":"Metrics & Schedule",
     "email replies and review":"Email & IM",
     "performance review":"Career Development",
