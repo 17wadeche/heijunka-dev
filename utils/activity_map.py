@@ -626,6 +626,7 @@ ACTIVITY_MAP = {
     "training prep team collaboration":"Training/Mentoring",
     "fywt & schedule":"Metrics & Schedule",
     "email replies and review":"Email & IM",
+    "ri support meeting":"RI",
     "performance review":"Career Development",
     "japanese duplicate event":"Admin",
     "creating and sending faxes/reviewing worked event":"RFAI",
