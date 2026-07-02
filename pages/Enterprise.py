@@ -2865,7 +2865,7 @@ elif page == "Non-WIP":
         if source_raw.empty:
             st.info("No Non-WIP activity data available for the selected portfolio.")
             st.stop()
-    apply_nonwip_activity_map = selected_portfolio in ("All portfolios", "CRM")
+    apply_nonwip_activity_map = selected_portfolio != "CRM"
     parsed_nonwip = _prepare_nonwip_activity_source(source_raw)
     top_n = st.number_input(
         "Number of activities to show",
