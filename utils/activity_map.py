@@ -625,6 +625,7 @@ ACTIVITY_MAP = {
     "testing, coding, meetings, collaboration/event review":"Project Work",
     "training prep team collaboration":"Training/Mentoring",
     "fywt & schedule":"Metrics & Schedule",
+    "breakie":"Break",
     "email replies and review":"Email & IM",
     "ri support meeting":"RI",
     "performance review":"Career Development",
