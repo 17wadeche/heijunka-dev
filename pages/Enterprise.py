@@ -1023,7 +1023,7 @@ def _loads_json_maybe(v: Any) -> Any:
         except Exception:
             return None
     return None
-def _canon_activity(label: str) -> str:
+def _canon_activity(label: str, apply_activity_map: bool = True) -> str:
     s_orig = str(label or "").strip()
     if not s_orig:
         return s_orig
@@ -1033,7 +1033,7 @@ def _canon_activity(label: str) -> str:
     if not s:
         return s
     lower = s.lower()
-    explicit_map = ACTIVITY_MAP
+    explicit_map = ACTIVITY_MAP if apply_activity_map else {}
     if lower in explicit_map:
         return explicit_map[lower]
     acronym_tokens = {
@@ -1080,7 +1080,7 @@ def _normalize_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=drop_cols)
     df = df.rename(columns={c: v for c, v in rename.items() if v is not None})
     return df
-def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
+def split_nonwip_activity_minutes(cat: pd.DataFrame, apply_activity_map: bool = True) -> pd.DataFrame:
     import numpy as np
     if cat.empty:
         return cat
@@ -1092,7 +1092,7 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
         s = activity_text.replace(";", " ").replace(",", " ").replace(":", " ")
         s = re.sub(r"\s+", " ", s).strip()
         if not s:
-            rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+            rows.append({"Activity": _canon_activity(activity_text, apply_activity_map=apply_activity_map), "Hours": total_hours})
             continue
         pattern = re.compile(
             r"(?P<num>\d+)\s*(?P<unit>h|hr|hrs|hour|hours|m|min|mins|minute|minutes)?\b",
@@ -1114,13 +1114,13 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
             label = re.sub(r"[:\-–—]+$", "", label)
             label = label.strip(" ,;:()[]-–—")
             label = re.sub(r"\s+", " ", label).strip()
-            label = _canon_activity(label)
+            label = _canon_activity(label, apply_activity_map=apply_activity_map)
             if label and mins > 0:
                 sub_acts.append((label, mins))
         if sub_acts:
             has_delims = bool(re.search(r"[;,]", activity_text))
             if len(sub_acts) == 1 and not has_delims:
-                rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+                rows.append({"Activity": _canon_activity(activity_text, apply_activity_map=apply_activity_map), "Hours": total_hours})
                 continue
             total_minutes = sum(m for _, m in sub_acts)
             if total_hours <= 0 and total_minutes > 0:
@@ -1130,14 +1130,14 @@ def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
                     h_sub = total_hours * (mins / total_minutes)
                     rows.append({"Activity": label, "Hours": h_sub})
             else:
-                rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+                rows.append({"Activity": _canon_activity(activity_text, apply_activity_map=apply_activity_map), "Hours": total_hours})
         else:
-            rows.append({"Activity": _canon_activity(activity_text), "Hours": total_hours})
+            rows.append({"Activity": _canon_activity(activity_text, apply_activity_map=apply_activity_map), "Hours": total_hours})
     import numpy as np
     out = pd.DataFrame(rows)
     if out.empty:
         return cat
-    out["Activity"] = out["Activity"].map(_canon_activity)
+    out["Activity"] = out["Activity"].map(lambda activity: _canon_activity(activity, apply_activity_map=apply_activity_map))
     return out.groupby("Activity", as_index=False)["Hours"].sum()
 st.set_page_config(page_title="Enterprise Dashboard", layout="wide")
 with st.sidebar:
@@ -2836,6 +2836,7 @@ elif page == "Non-WIP":
         st.stop()
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
     team_meta = _team_meta_lookup(org).copy()
+    selected_portfolio = "All portfolios"
     if not team_meta.empty and "team" in source_raw.columns:
         source_raw = source_raw.copy()
         source_raw["team"] = source_raw["team"].astype(str).str.strip()
@@ -2864,6 +2865,7 @@ elif page == "Non-WIP":
         if source_raw.empty:
             st.info("No Non-WIP activity data available for the selected portfolio.")
             st.stop()
+    apply_nonwip_activity_map = selected_portfolio in ("All portfolios", "CRM")
     parsed_nonwip = _prepare_nonwip_activity_source(source_raw)
     top_n = st.number_input(
         "Number of activities to show",
@@ -2959,7 +2961,7 @@ elif page == "Non-WIP":
     normalised_chunks: List[pd.DataFrame] = []
     for wk_val, grp in weekly_raw.groupby("week_start"):
         cat = grp[["activity", "hours"]].rename(columns={"activity": "Activity", "hours": "Hours"})
-        cat_norm = split_nonwip_activity_minutes(cat)
+        cat_norm = split_nonwip_activity_minutes(cat, apply_activity_map=apply_nonwip_activity_map)
         cat_norm["week_start"] = wk_val
         normalised_chunks.append(cat_norm)
     if not normalised_chunks:
@@ -3084,7 +3086,7 @@ elif page == "Non-WIP":
         st.stop()
     pie_act_df = pd.DataFrame(pie_rows)
     pie_cat = pie_act_df.rename(columns={"activity": "Activity", "hours": "Hours"})
-    pie_cat_norm = split_nonwip_activity_minutes(pie_cat)
+    pie_cat_norm = split_nonwip_activity_minutes(pie_cat, apply_activity_map=apply_nonwip_activity_map)
     pie_rolled = pie_cat_norm.rename(columns={"Activity": "activity", "Hours": "hours"})
     pie_rolled = pie_rolled.groupby("activity", as_index=False).agg(hours=("hours", "sum"))
     pie_rolled = pie_rolled[
