@@ -37,7 +37,8 @@ EXCLUDED_CELLS = {
     "OTHER TEAM WIP", "OTHER TEAM'S WIP", "OTHER_TEAM_WIP", "OTHERTEAMWIP"
 }
 def _is_excluded_cell(cell: str) -> bool:
-    return (cell or "").strip().upper() in EXCLUDED_CELLS
+    normalized = (cell or "").strip().upper()
+    return normalized in EXCLUDED_CELLS or "NEXT GEN" in normalized
 def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
     if not anchors:
         return None

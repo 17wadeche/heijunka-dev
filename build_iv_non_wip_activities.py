@@ -219,7 +219,8 @@ def parse_prod_analysis(
             flag in other_team_wip_flags
             or act_key in {"OTHERTEAMWIP", "OTHERTEAMSWIP"}
         )
-        if flag in nonwip_flags or is_other_team_wip:
+        is_next_gen = "next gen" in flag
+        if flag in nonwip_flags or is_other_team_wip or is_next_gen:
             hrs: float = 0.0
             if mins > 0:
                 hrs = mins / 60.0
@@ -251,7 +252,7 @@ def parse_prod_analysis(
                 else:
                     if name:
                         b["non_wip_by_person"][name] += hrs
-                    label = "Other Team WIP" if is_other_team_wip else (act or "Non-WIP")
+                    label = "Other Team WIP" if is_other_team_wip else ("Next Gen" if is_next_gen else (act or "Non-WIP"))
                     b["non_wip_activities"].append({
                         "name": name,
                         "activity": label,
