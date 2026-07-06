@@ -2880,6 +2880,7 @@ ACTIVITY_MAP = {
     "it ticked":"IT Issue/Update",
     "tms support call":"Collaboration",
     "create/submit smdrs for mfg/exp date":"Admin",
+    "call for file query":"Question",
     "capa review meeting":"CAPA",
     "vital flow device cfn and image":"Admin",
     "dt meeting": "Meeting",
