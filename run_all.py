@@ -50,6 +50,7 @@ commands = [
     [PYTHON_BIN, "build_ms_non_wip_activities.py"], # 1:44
     [PYTHON_BIN, "build_ns_non_wip_activities.py"], # 1:36
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS IND"],
     [PYTHON_BIN, "Scrape_wip_ns.py"], # 14:17
 ]
 def run(cmd, *, cwd=None):
