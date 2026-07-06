@@ -44,7 +44,7 @@ commands = [
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI & PM MEIC"],
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS"],
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "1"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS IND"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CPT", "--weeks-back", "1"],
     [PYTHON_BIN, "scrape_wip_ms.py"], # 1:38
