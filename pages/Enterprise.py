@@ -1701,7 +1701,7 @@ def _weekly_team_export_df(
             total_non_wip_hours = float(
                 pd.to_numeric(nw_row.get("non_wip_hours", 0.0), errors="coerce") or 0.0
             )
-        if team == "PM-CTS":
+        if team in {"PM-CTS", "PM-CTS IND"}:
             pm_cts_non_ooo_total = _non_ooo_activity_hours_from_row(nw_row)
             if pd.notna(pm_cts_non_ooo_total):
                 total_non_wip_hours = float(pm_cts_non_ooo_total)

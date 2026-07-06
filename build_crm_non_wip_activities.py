@@ -83,6 +83,8 @@ def lit_letters_people_count_for_period(period: _dt.date) -> int:
         return LIT_LETTERS_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
     return LIT_LETTERS_PEOPLE_COUNT
 PM_CTS_TEAM_NAME = "PM-CTS"
+PM_CTS_IND_TEAM_NAME = "PM-CTS IND"
+PM_CTS_IND_START = _dt.date(2026, 6, 29)
 PM_CTS_PAB_SHEET = "#2 PAB"
 PM_CTS_PERF_WIP_SHEET = "#3 Performance WIP Time"
 PM_CTS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
@@ -162,10 +164,16 @@ def is_lit_letters_path(path: str) -> bool:
         and "lit" in base
         and "principals" in base
     )
+def _is_pm_cts_ind_file(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    period = parse_period_date_from_filename(path)
+    return "pm-cts ind" in base and (period is None or period >= PM_CTS_IND_START)
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
     if is_lit_letters_path(np):
         return LIT_LETTERS_TEAM_NAME
+    if _is_pm_cts_ind_file(np):
+        return PM_CTS_IND_TEAM_NAME
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     ds_root = _norm_path(DS_DEFAULT_DIR)
@@ -203,8 +211,10 @@ def team_for_source(path: str) -> str:
         return "CDS"
     if "non implantables" in np_lower:
         return "NI"
+    if "pm-cts ind" in np_lower:
+        return PM_CTS_IND_TEAM_NAME
     if "pm-cts" in np_lower:
-        return "PM-CTS"
+        return PM_CTS_TEAM_NAME
     if "crm cqxm reports - 1.9 heijunka tracker" in np_lower:
         return MEIC_TEAM_NAME
     return ""
@@ -898,7 +908,7 @@ def scrape_one_pm_cts_workbook(
     path: str,
     people_in_wip_lookup: Dict[Tuple[str, str], List[str]],
 ) -> List[Dict[str, Any]]:
-    team = PM_CTS_TEAM_NAME
+    team = team_for_source(path) or PM_CTS_TEAM_NAME
     wb = _load_workbook_for_scraping(path)
     period = parse_period_date_from_filename(path)
     if period is None:
@@ -1440,6 +1450,9 @@ TEAM_ALIASES: Dict[str, str] = {
     "pm-cts": PM_CTS_TEAM_NAME,
     "pm cts": PM_CTS_TEAM_NAME,
     "pm_cts": PM_CTS_TEAM_NAME,
+    "pm-cts ind": PM_CTS_IND_TEAM_NAME,
+    "pm cts ind": PM_CTS_IND_TEAM_NAME,
+    "pm_cts_ind": PM_CTS_IND_TEAM_NAME,
     "meic": MEIC_TEAM_NAME,
     "ni & pm meic": MEIC_TEAM_NAME,
     "ni and pm meic": MEIC_TEAM_NAME,
@@ -1456,8 +1469,7 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE],
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
     PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR],
-    # Lit & Letters is supported when a matching workbook/file path is supplied.
-    # Add a default folder here if you have one.
+    PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR],
     LIT_LETTERS_TEAM_NAME: [],
 }
 
@@ -1635,7 +1647,7 @@ def main() -> int:
         "--team",
         default=None,
         help=(
-            "Optional team to scrape. Examples: MCS, DS, CPT, CDS, NI, PM-CTS, "
+            "Optional team to scrape. Examples: MCS, DS, CPT, CDS, NI, PM-CTS, PM-CTS IND, "
             "MEIC, 'Lit & Letters'. If omitted, all configured teams are scraped."
         ),
     )
@@ -1691,7 +1703,7 @@ def main() -> int:
         try:
             if team == LIT_LETTERS_TEAM_NAME:
                 all_rows.extend(scrape_one_lit_letters_workbook(f, people_in_wip_lookup))
-            elif team == PM_CTS_TEAM_NAME:
+            elif team in {PM_CTS_TEAM_NAME, PM_CTS_IND_TEAM_NAME}:
                 all_rows.extend(scrape_one_pm_cts_workbook(f, people_in_wip_lookup))
             elif team == "DS":
                 all_rows.extend(scrape_one_ds_workbook(f, people_in_wip_lookup))

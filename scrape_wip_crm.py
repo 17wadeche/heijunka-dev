@@ -11,9 +11,10 @@ from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
 MCS_PULL_START = _dt.date(2026, 6, 22)
 LIT_LETTERS_TEAM = "Lit & Letters"
+PM_CTS_TEAM = "PM-CTS"
+PM_CTS_IND_TEAM = "PM-CTS IND"
+PM_CTS_IND_START = _dt.date(2026, 6, 29)
 def _load_workbook_data(path: str, *, read_only: bool = False):
-    # read_only is important for files with a bad Excel dimension/used range.
-    # Keep the default False so non-CPT layouts continue to behave exactly as before.
     return load_workbook(path, data_only=True, read_only=read_only)
 def _is_lit_letters_path(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
@@ -466,11 +467,17 @@ def compute_output_by_station_by_person_cds(ws_pab: Worksheet) -> Dict[str, Dict
     return out
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
+def _is_pm_cts_ind_file(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    period = parse_period_date_from_filename(path, default_year=2026)
+    return "pm-cts ind" in base and (period is None or period >= PM_CTS_IND_START)
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
     base = os.path.basename(np)
     if _is_lit_letters_path(np):
         return LIT_LETTERS_TEAM
+    if _is_pm_cts_ind_file(np):
+        return PM_CTS_IND_TEAM
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     if np.startswith(DS_ROOT_HINT):
@@ -484,7 +491,7 @@ def team_for_source(path: str) -> str:
     if np.startswith(MEIC_ROOT_HINT):
         return "NI & PM MEIC"
     if np.startswith(PM_CTS_ROOT_HINT):
-        return "PM-CTS"
+        return PM_CTS_TEAM
     if np.startswith(NI_ROOT_HINT):
         return "NI"
     if np.startswith(MCS_ROOT_HINT):
@@ -1174,8 +1181,10 @@ TEAM_ARG_ALIASES: Dict[str, str] = {
     "NI & PM MEIC": "NI & PM MEIC",
     "NI AND PM MEIC": "NI & PM MEIC",
     "MEIC": "NI & PM MEIC",
-    "PM-CTS": "PM-CTS",
-    "PM CTS": "PM-CTS",
+    "PM-CTS": PM_CTS_TEAM,
+    "PM CTS": PM_CTS_TEAM,
+    "PM-CTS IND": PM_CTS_IND_TEAM,
+    "PM CTS IND": PM_CTS_IND_TEAM,
     "LIT & LETTERS": LIT_LETTERS_TEAM,
     "LIT AND LETTERS": LIT_LETTERS_TEAM,
     "LIT LETTERS": LIT_LETTERS_TEAM,
@@ -2076,7 +2085,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             return scrape_one_workbook_ni(path)
         if team == "NI & PM MEIC":
             return scrape_one_workbook_meic(path)
-        if team == "PM-CTS":
+        if team in {PM_CTS_TEAM, PM_CTS_IND_TEAM}:
             return scrape_one_workbook_pm_cts(path)
         return [dict(blank_row_for_missing_file(path), error=f"unknown_team_for_source: {path}")]
     except FileNotFoundError:
@@ -2193,7 +2202,7 @@ def main() -> int:
         action="append",
         help=(
             "Scrape only the selected team. Can be repeated or comma-separated. "
-            'Examples: --team MCS, --team CDS, --team "NI & PM MEIC", --team PM-CTS.'
+            'Examples: --team MCS, --team CDS, --team "NI & PM MEIC", --team PM-CTS, --team "PM-CTS IND".'
         ),
     )
     args = ap.parse_args()
