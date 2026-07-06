@@ -2882,6 +2882,7 @@ ACTIVITY_MAP = {
     "create/submit smdrs for mfg/exp date":"Admin",
     "call for file query":"Question",
     "researching deco method":"Admin",
+    "fer call":"Meeting",
     "fedex account change":"Shipment",
     "faxes & escalation":"Escalation",
     "fy 27 goals roll out":"Career Development",
