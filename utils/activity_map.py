@@ -2875,6 +2875,7 @@ ACTIVITY_MAP = {
     "ime needed for assessment/review":"Coding/Code Gov",
     "tm non reportable assessment & non assessment file":"Admin",
     "eu training/creating & re-sending faxes/reading work inst. for eu training":"Training/Mentoring",
+    "self paced training module":"Training/Mentoring",
     "faxe":"RFAI",
     "inv training":"Training/Mentoring",
     "it ticked":"IT Issue/Update",
