@@ -2883,6 +2883,7 @@ ACTIVITY_MAP = {
     "call for file query":"Question",
     "researching deco method":"Admin",
     "fedex account change":"Shipment",
+    "faxes & escalation":"Escalation",
     "it for laptop issue":"IT Issue/Update",
     "calibration form corrections and send out":"Calibration",
     "voyager ehs meeting":"Meeting",
