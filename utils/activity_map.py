@@ -2869,6 +2869,8 @@ ACTIVITY_MAP = {
     "walkaround training":"Training/Mentoring",
     "meeting prep / meetings / collaboration / reg inquirie":"Meeting",
     "meeting with manager on files/":"Meeting",
+    "dcb training":"Training/Mentoring",
+    "looking at past pa for sentrant sheath":"Reviewing Documents & Case Video",
     "iris review":"Project Work",
     "providing general overview to nicola":"Admin",
     "helping file querie":"Question",
