@@ -2873,6 +2873,8 @@ ACTIVITY_MAP = {
     "looking at past pa for sentrant sheath":"Reviewing Documents & Case Video",
     "iris review":"Project Work",
     "providing general overview to nicola":"Admin",
+    "pvh contego capa":"CAPA",
+    "pmq coding meeting":"Coding/Code Gov",
     "helping file querie":"Question",
     "heijunka issue":"Metrics & Schedule",
     "review of heijunka":"Metrics & Schedule",
