@@ -2880,6 +2880,8 @@ ACTIVITY_MAP = {
     "pull aes email": "Email & IM",
     "pvh contego capa":"CAPA",
     "pmq coding meeting":"Coding/Code Gov",
+    "it call for inc":"IT Issue/Update",
+    "hr meeting":"Meeting",
     "helping file querie":"Question",
     "heijunka issue":"Metrics & Schedule",
     "review of heijunka":"Metrics & Schedule",
