@@ -2866,6 +2866,7 @@ ACTIVITY_MAP = {
     "tl meeting & lab meeting":"Meeting",
     "catching up emails etc": "Email & IM",
     "and rpa meeting":"RPA Meeting/Action",
+    "email; metric": "Email & IM",
     "walkaround training":"Training/Mentoring",
     "meeting prep / meetings / collaboration / reg inquirie":"Meeting",
     "meeting with manager on files/":"Meeting",
