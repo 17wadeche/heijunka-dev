@@ -2871,6 +2871,7 @@ ACTIVITY_MAP = {
     "strategy meeting":"Meeting",
     "emails/doubt": "Email & IM",
     "grand rapids meeting":"Meeting",
+    "fy27 strategy discussion":"Meeting",
     "strategy":"Meeting",
     "and rpa meeting":"RPA Meeting/Action",
     "email; metric": "Email & IM",
