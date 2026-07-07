@@ -2869,7 +2869,7 @@ ACTIVITY_MAP = {
     "collaboration / supp rr training":"Training/Mentoring",
     "collab (15 mins)":"Collaboration",
     "strategy meeting":"Meeting",
-    "adding the additional information needed to ship the dt equiptment into rice creek.":"Shipment",
+    "adding the additional information needed to ship the dt equipment into rice creek.":"Shipment",
     "checking archived boxes to be scrapped":"Archive",
     "report out feedback":"Team Report",
     "emails/doubt": "Email & IM",
