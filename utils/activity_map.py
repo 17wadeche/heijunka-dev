@@ -2879,6 +2879,7 @@ ACTIVITY_MAP = {
     "and rpa meeting":"RPA Meeting/Action",
     "email; metric": "Email & IM",
     "walkaround training":"Training/Mentoring",
+    "emails admin collaboration clinical metrics/schedule/wip mgmt":"Email & IM",
     "meeting prep / meetings / collaboration / reg inquirie":"Meeting",
     "meeting with manager on files/":"Meeting",
     "dcb training":"Training/Mentoring",
