@@ -2885,7 +2885,7 @@ ACTIVITY_MAP = {
     "and rpa meeting":"RPA Meeting/Action",
     "checking archive boxes for scrapping":"Archive",
     "searching for replacment fixture & filling out calibration sheet":"Calibration",
-    "creating and populating a new pro forma invoice for dt equiptment for custom":"Proforma",
+    "creating and populating a new pro forma invoice for dt equipment for custom":"Proforma",
     "getting access":"IT Issue/Update",
     "getting jt access":"IT Issue/Update",
     "helping simon with pulling an entrust report":"Team Report",
