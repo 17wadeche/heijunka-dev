@@ -2919,6 +2919,7 @@ ACTIVITY_MAP = {
     "it call for inc":"IT Issue/Update",
     "hr meeting":"Meeting",
     "helping file querie":"Question",
+    "ad hoc processing question":"Question",
     "heijunka issue":"Metrics & Schedule",
     "review of heijunka":"Metrics & Schedule",
     "scrum / meeting / 1:1 / reg inquirie":"Scrum & Action",
