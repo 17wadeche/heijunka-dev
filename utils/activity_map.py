@@ -2883,6 +2883,15 @@ ACTIVITY_MAP = {
     "pulling aes":"Team Report",
     "strategy":"Meeting",
     "and rpa meeting":"RPA Meeting/Action",
+    "checking archive boxes for scrapping
+    "searching for replacment fixture & filling out calibration sheet
+    "creating and populating a new pro forma invoice for dt equiptment for custom
+    "getting access
+    "getting jt access
+    "helping simon with pulling an entrus…
+    "report out feedback meeting
+    "compulsory computer restart
+    "system update
     "email; metric": "Email & IM",
     "email/im pvh report": "Email & IM",
     "phone call for pe":"RFAI",
