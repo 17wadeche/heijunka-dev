@@ -4139,6 +4139,7 @@ ACTIVITY_MAP = {
     "team lead activitie":"Admin",
     "aem, scrum, training":"Meeting",
     "rr training / feedback": "Training/Mentoring",
+    "reportable closure training": "Training/Mentoring",
     "inbox bolu":"RS Inbox",
     "hypercare action item":"Project Work",
     "update sphere vt clinical safety management and potential complaint plan":"Admin",
