@@ -4127,6 +4127,7 @@ ACTIVITY_MAP = {
     "heat map,":"Data Request/Review",
     "chemical check with scott":"Admin",
     "requesting bi launchapd access and sap reactivation access":"Data Request/Review",
+    "complete and schedule bo report cpt":"Data Request/Review",
     "prepping pallets for ssl":"Admin",
     "vs oem/cm form":"Admin",
     "uploaded":"Data Request/Review",
