@@ -4121,6 +4121,7 @@ ACTIVITY_MAP = {
     "next gen call":"Next Gen",
     "korea ri":"RI",
     "finishing up verifying archive boxes and training how to make pallet":"Training/Mentoring",
+    "email meeting collaboration a":"Email & IM",
     "bi launchpad files+cornerstone":"Data Request/Review",
     "oem/cm form":"Admin",
     "pulling adhesive batch number":"Admin",
