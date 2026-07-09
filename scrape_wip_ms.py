@@ -5,6 +5,7 @@ import datetime as _dt
 import json
 import os
 import time
+from zipfile import BadZipFile
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from openpyxl import load_workbook
@@ -569,6 +570,10 @@ def blank_row_for_missing_file(path: str) -> Dict[str, Any]:
         "Closures": "",
         "Opened": "",
     }
+def blank_row_for_workbook_error(path: str, error: str) -> Dict[str, Any]:
+    row = blank_row_for_missing_file(path)
+    row["error"] = error
+    return row
 def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
     workbook_start = time.perf_counter()
@@ -577,7 +582,18 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     err_msgs: List[str] = []
     load_start = time.perf_counter()
-    wb = load_workbook(path, data_only=True)
+    try:
+        wb = load_workbook(path, data_only=True)
+    except BadZipFile as e:
+        elapsed = time.perf_counter() - load_start
+        error = f"invalid_workbook: {e}"
+        log_timing(f"{display_team}: workbook open failed after {elapsed:.2f}s ({error})")
+        return [blank_row_for_workbook_error(path, error)]
+    except OSError as e:
+        elapsed = time.perf_counter() - load_start
+        error = f"workbook_open_error: {e}"
+        log_timing(f"{display_team}: workbook open failed after {elapsed:.2f}s ({error})")
+        return [blank_row_for_workbook_error(path, error)]
     log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     available_by_week: Dict[_dt.date, Dict[str, float]] = {}
     production_by_week: Dict[_dt.date, Dict[str, Any]] = {}
