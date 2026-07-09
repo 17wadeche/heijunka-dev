@@ -139,7 +139,11 @@ NI_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
 NI_PEOPLE_COUNT = 8
 NI_PEOPLE_COUNT_EFFECTIVE_DATE = _dt.date(2026, 4, 17)
 NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE = 7
+NI_PEOPLE_COUNT_SECOND_EFFECTIVE_DATE = _dt.date(2026, 6, 29)
+NI_PEOPLE_COUNT_FROM_SECOND_EFFECTIVE_DATE = 6
 def ni_people_count_for_period(period: _dt.date) -> int:
+    if period >= NI_PEOPLE_COUNT_SECOND_EFFECTIVE_DATE:
+        return NI_PEOPLE_COUNT_FROM_SECOND_EFFECTIVE_DATE
     if period >= NI_PEOPLE_COUNT_EFFECTIVE_DATE:
         return NI_PEOPLE_COUNT_FROM_EFFECTIVE_DATE
     return NI_PEOPLE_COUNT
@@ -260,7 +264,7 @@ def _find_number_right_of_label(
                     if n is not None:
                         return n
     return None
-def _is_lit_letters_summary_row(name: str) -> bool:
+def _is_summary_person_row(name: str) -> bool:
     n = _norm_text(name)
     return (
         n in {
@@ -312,7 +316,7 @@ def compute_pm_cts_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
         raw_name = str(ws_perf[f"A{r}"].value or "").strip()
         if not raw_name:
             continue
-        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+        if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         person = normalize_person_name(raw_name)
         hours = _cell_number(ws_perf.cell(r, ooo_col).value)
@@ -365,7 +369,7 @@ def compute_pm_cts_people_count(ws_perf: Worksheet) -> int:
         raw_name = str(ws_perf[f"A{r}"].value or "").strip()
         if not raw_name:
             continue
-        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+        if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         key = normalize_person_key(raw_name)
         if key:
@@ -399,7 +403,7 @@ def compute_lit_letters_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
         raw_name = str(ws_perf[f"A{r}"].value or "").strip()
         if not raw_name:
             continue
-        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+        if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         person = normalize_person_name(raw_name)
         hours = _cell_number(ws_perf.cell(r, ooo_col).value)
@@ -452,7 +456,7 @@ def compute_lit_letters_people_count(ws_perf: Worksheet) -> int:
         raw_name = str(ws_perf[f"A{r}"].value or "").strip()
         if not raw_name:
             continue
-        if is_excluded_person(raw_name) or _is_lit_letters_summary_row(raw_name):
+        if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         key = normalize_person_key(raw_name)
         if key:
@@ -1105,10 +1109,9 @@ def iter_team_non_wip_rows(
             continue
         person = normalize_person_name(str(raw_person or ""))
         activity = _collapse_ws(str(raw_activity or ""))
-        if not person or hours is None:
+        if not person or is_excluded_person(person) or _is_summary_person_row(person) or hours is None:
             continue
         yield person, activity, float(hours)
-
 def compute_ooo_by_person_from_wip_plan(
     ws_wip_plan: Worksheet,
     name_col: str,
@@ -1117,7 +1120,6 @@ def compute_ooo_by_person_from_wip_plan(
     *,
     max_trailing_blank_rows: int = MAX_TRAILING_BLANK_ROWS,
 ) -> Dict[str, float]:
-    """Read OOO by person without scanning formatted blank rows to ws.max_row."""
     out: Dict[str, float] = {}
     name_idx = _col_idx(name_col)
     hours_idx = _col_idx(hours_col)
@@ -1142,7 +1144,7 @@ def compute_ooo_by_person_from_wip_plan(
 
         blank_run = 0
         person = normalize_person_name(str(raw_name or ""))
-        if not person or is_excluded_person(person):
+        if not person or is_excluded_person(person) or _is_summary_person_row(person):
             continue
         if hours is None or hours == 0:
             continue
@@ -1159,7 +1161,7 @@ def compute_ooo_by_person_from_fixed_rows(
     out: Dict[str, float] = {}
     for r in range(start_row, min(ws.max_row, end_row) + 1):
         person = normalize_person_name(str(ws[f"{name_col}{r}"].value or ""))
-        if not person or is_excluded_person(person):
+        if not person or is_excluded_person(person) or _is_summary_person_row(person):
             continue
         hours = _cell_number(ws[f"{hours_col}{r}"].value)
         if hours is None or hours == 0:
