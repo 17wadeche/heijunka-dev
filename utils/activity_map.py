@@ -4144,6 +4144,7 @@ ACTIVITY_MAP = {
     "update sphere vt clinical safety management and potential complaint plan":"Admin",
     "training prep and event review": "Training/Mentoring",
     "meetings / emails / teams messages / reg inquirie":"RI",
+    "review studies drafts ohcs cas safety reporting requirements v":"Admin",
     "work tool training": "Training/Mentoring",
     "dcb device document reading":"Reviewing Documents & Case Video",
     "liberant with dan and aidan":"Project Work",
