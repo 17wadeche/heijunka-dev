@@ -4126,6 +4126,8 @@ ACTIVITY_MAP = {
     "meeting w/ new hire":"Training/Mentoring",
     "biohazard kit approval":"Admin",
     "biohazard kit order approval":"Admin",
+    "email training collaboration a":"Email & IM",
+    "0.04236111111111111":"",
     "oem/cm form":"Admin",
     "pulling adhesive batch number":"Admin",
     "heat map,":"Data Request/Review",
