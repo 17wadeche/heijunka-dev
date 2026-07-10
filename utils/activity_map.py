@@ -4099,6 +4099,7 @@ ACTIVITY_MAP = {
     "call after scrum":"Scrum & Action",
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
+    "scrum (15 mins)":"Scrum & Action",
     "daily scrum & monthly problem solving  meeting":"Scrum & Action",
     "training, ng, gb, event review, meetings, email/admin":"Training/Mentoring",
     "collaboration w/lab, training prep":"Collaboration",
