@@ -4093,6 +4093,7 @@ ACTIVITY_MAP = {
     "aortic knowledge share meeting":"Meeting",
     "heat map":"Data Request/Review",
     "std fuq":"Question",
+    "1:1 performance review & meeting":"Career Development",
     "r&d stedi review":"Data Request/Review",
     "scrum/meeting with tl":"Meeting",
     "with manager":"Meeting",
