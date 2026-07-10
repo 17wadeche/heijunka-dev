@@ -1,0 +1,14 @@
+[project]
+name = "heijunka-dev"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+  "streamlit>=1.52.0",
+  "pyarrow>=22.0.0",
+  "pandas>=2.3.0",
+  "matplotlib>=3.10.0",
+  "openpyxl>=3.1.5",
+  "XlsxWriter>=3.2.0",
+  "msal>=1.32.0",
+  "requests>=2.32.0",
+]
