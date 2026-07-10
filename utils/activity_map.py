@@ -4100,6 +4100,7 @@ ACTIVITY_MAP = {
     "global town hall":"Meeting",
     "restore lsh bridge review":"LSH Bridge",
     "scrum (15 mins)":"Scrum & Action",
+    "wicq":"Admin",
     "daily scrum & monthly problem solving  meeting":"Scrum & Action",
     "training, ng, gb, event review, meetings, email/admin":"Training/Mentoring",
     "collaboration w/lab, training prep":"Collaboration",
