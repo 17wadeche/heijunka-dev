@@ -4129,6 +4129,7 @@ ACTIVITY_MAP = {
     "email training collaboration a":"Email & IM",
     "0.04236111111111111":"",
     "organising student visit":"Admin",
+    "escalated call and update":"Escalation",
     "reviewing pending file": "WIP/Event Review",
     "older pending reports submitted": "WIP/Event Review",
     "call with rodrigo": "Meeting",
