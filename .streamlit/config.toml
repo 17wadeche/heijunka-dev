@@ -2,3 +2,4 @@
 showSidebarNavigation = true
 [server]
 fileWatcherType = "none"
+runOnSave = false
