@@ -1,7 +1,7 @@
-streamlit
-pandas
-matplotlib
-openpyxl
-XlsxWriter
-msal
-requests
+streamlit==1.37.1
+pandas==2.2.2
+matplotlib==3.9.2
+openpyxl==3.1.5
+XlsxWriter==3.2.0
+msal==1.30.0
+requests==2.32.3
