@@ -4135,6 +4135,7 @@ ACTIVITY_MAP = {
     "oem/cm form":"Admin",
     "pulling adhesive batch number":"Admin",
     "heat map,":"Data Request/Review",
+    "review and refresh bo report for cpt":"Data Request/Review",
     "chemical check with scott":"Admin",
     "requesting bi launchapd access and sap reactivation access":"Data Request/Review",
     "complete and schedule bo report cpt":"Data Request/Review",
