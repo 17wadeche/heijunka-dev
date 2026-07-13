@@ -1527,15 +1527,7 @@ def parse_month_year_from_path(path: str) -> Optional[Tuple[int, int]]:
             continue
         return int(m.group(2)), _MONTH_MAP[mon_raw]
     return None
-
-
 def file_looks_recent_enough(path: str, *, weeks_back: int) -> bool:
-    """Return False only when the path clearly identifies an older/newer week.
-
-    This prevents slow teams like CPT from opening old archive workbooks just to
-    discard their rows later. If neither the filename nor parent folders expose a
-    date, keep the file so current multi-sheet workbooks, such as MCS, still work.
-    """
     period = parse_period_date_from_filename(path)
     if period is not None:
         return monday_of_week(period).isoformat() in recent_week_starts(weeks_back)
@@ -1543,14 +1535,9 @@ def file_looks_recent_enough(path: str, *, weeks_back: int) -> bool:
     if month_year is not None:
         return month_year in recent_months(weeks_back)
     return True
-
-
 def filter_files_to_recent_weeks(files: List[str], *, weeks_back: int) -> List[str]:
     return [f for f in files if file_looks_recent_enough(f, weeks_back=weeks_back)]
-
-
 def lit_letters_search_roots() -> List[str]:
-    """Likely roots for Lit & Letters when no explicit path is supplied."""
     roots = [
         NI_DEFAULT_DIR,
         PM_CTS_DEFAULT_DIR,
