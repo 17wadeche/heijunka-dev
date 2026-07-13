@@ -41,11 +41,11 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-07-13"],
     [PYTHON_BIN, "scrape_wip_crm.py"], # 4:00
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CDS"],
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CPT", "--weeks-back", "1"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "DS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI & PM MEIC"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "1"],
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CPT", "--weeks-back", "1"],
     [PYTHON_BIN, "scrape_wip_ms.py"], # 1:38
     [PYTHON_BIN, "build_ms_non_wip_activities.py"], # 1:44
     [PYTHON_BIN, "build_ns_non_wip_activities.py"], # 1:36
