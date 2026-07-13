@@ -3548,12 +3548,11 @@ def main():
     other_meic_csv = r"C:\Users\wadec8\OneDrive - Medtronic PLC\Other MEIC\Other_MEIC_Data.csv"
     ph_cell17_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Cell 17\Cell 17 New Heijunka.xlsx"
     out_file = "NS_DATA\\NS_metrics.csv"
-    if not os.path.exists(ph_source_file):
-        raise FileNotFoundError(f"Input file not found: {ph_source_file}")
-    if not os.path.exists(meic_source_file):
-        raise FileNotFoundError(f"Input file not found: {meic_source_file}")
-    if not os.path.exists(scs_source_file):
-        raise FileNotFoundError(f"Input file not found: {scs_source_file}")
+    os.makedirs(os.path.dirname(out_file) or ".", exist_ok=True)
+    existing_metrics_rows = read_existing_metrics_rows(out_file)
+    logger.info(
+        f"Loaded {len(existing_metrics_rows)} existing rows from {out_file}"
+    )
     SPINE_CFG = {
         "team": "Spine",
         "person_cols": ("B", "O"),
@@ -4091,32 +4090,40 @@ def main():
         )
         rows.extend(meic_rows)
     cutoff_dbs = "2025-07-07"
-    dbs_c13_rows = run_team(
-        logger,
-        "DBS C13",
-        lambda: scrape_dbs_dated_tabs_xlsx(
-            dbs_c13_source_file,
+    if should_run("DBS C13"):
+        dbs_c13_rows = run_team(
+            logger,
             "DBS C13",
-            min_period_date="2025-06-02",
-        ),
-    )
-    before = len(dbs_c13_rows)
-    dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
-    logger.info(f"[DBS C13] filter >= {cutoff_dbs}: {before} -> {len(dbs_c13_rows)}")
-    rows.extend(dbs_c13_rows)
-    dbs_c14_rows = run_team(
-        logger,
-        "DBS C14",
-        lambda: scrape_dbs_dated_tabs_xlsx(
-            dbs_c14_source_file,
+            lambda: scrape_dbs_dated_tabs_xlsx(
+                dbs_c13_source_file,
+                "DBS C13",
+                min_period_date="2025-06-02",
+            ),
+        )
+        before = len(dbs_c13_rows)
+        dbs_c13_rows = filter_rows_on_or_after(dbs_c13_rows, cutoff_dbs)
+        logger.info(
+            f"[DBS C13] filter >= {cutoff_dbs}: "
+            f"{before} -> {len(dbs_c13_rows)}"
+        )
+        rows.extend(dbs_c13_rows)
+    if should_run("DBS C14"):
+        dbs_c14_rows = run_team(
+            logger,
             "DBS C14",
-            min_period_date="2025-06-02",
-        ),
-    )
-    before = len(dbs_c14_rows)
-    dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
-    logger.info(f"[DBS C14] filter >= {cutoff_dbs}: {before} -> {len(dbs_c14_rows)}")
-    rows.extend(dbs_c14_rows)
+            lambda: scrape_dbs_dated_tabs_xlsx(
+                dbs_c14_source_file,
+                "DBS C14",
+                min_period_date="2025-06-02",
+            ),
+        )
+        before = len(dbs_c14_rows)
+        dbs_c14_rows = filter_rows_on_or_after(dbs_c14_rows, cutoff_dbs)
+        logger.info(
+            f"[DBS C14] filter >= {cutoff_dbs}: "
+            f"{before} -> {len(dbs_c14_rows)}"
+        )
+        rows.extend(dbs_c14_rows)
     if should_run("NV"):
         nv_rows = run_team(
             logger,
@@ -4240,18 +4247,37 @@ def main():
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell): {before} -> {len(rows)}")
     for bad in ("2023-11-06", "2026-09-07"):
         before = len(rows)
-        rows = [r for r in rows if safe_str(r.get("period_date")) != bad]
-        logger.info(f"[ALL] drop period_date == {bad}: {before} -> {len(rows)}")
+        rows = [
+            r for r in rows
+            if safe_str(r.get("period_date")) != bad
+        ]
+        logger.info(
+            f"[CURRENT RUN] drop period_date == {bad}: "
+            f"{before} -> {len(rows)}"
+        )
+    updated_row_count = len(rows)
+    rows = merge_rows_by_team_period(
+        existing_metrics_rows + rows
+    )
+    logger.info(
+        f"[MERGE] existing={len(existing_metrics_rows)} | "
+        f"current_run={updated_row_count} | final={len(rows)}"
+    )
     def sort_key(r: dict) -> tuple:
         team = safe_str(r.get("team")).lower()
         d = safe_str(r.get("period_date"))
-        date_key = d if (len(d) == 10 and d[4] == "-" and d[7] == "-") else "9999-12-31"
-        return (team, date_key)
+        date_key = (
+            d
+            if len(d) == 10 and d[4] == "-" and d[7] == "-"
+            else "9999-12-31"
+        )
+        return team, date_key
     rows.sort(key=sort_key)
-    write_csv(rows, out_file)
+    write_rows_csv(rows, out_file, HEADERS)
     logger.info(f"Wrote {len(rows)} rows to {out_file}")
     wip_rows = build_ns_wip_rows(rows)
     wip_out_file = "NS_DATA\\NS_WIP.csv"
     write_csv_wip(wip_rows, wip_out_file)
+    logger.info(f"Wrote {len(wip_rows)} rows to {wip_out_file}")
 if __name__ == "__main__":
     main()
