@@ -4128,6 +4128,7 @@ ACTIVITY_MAP = {
     "daily scrum & mfg/exp date updates":"Scrum & Action",
     "cornerstore":"Cornerstone",
     "event review rr submission, collaboration":"Collaboration",
+    "email meetings collaboration a":"Email & IM",
     "rr audit/ collaboration":"Audit",
     "rs inbox":"RS Inbox",
     "ng, training, coding, collaboration/event reviews, email/admin":"Next Gen",
