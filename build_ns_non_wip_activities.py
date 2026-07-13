@@ -3208,19 +3208,48 @@ def build_tdd_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         "nonwip_activities": activities,
         "ooo_map": ooo_map,
     }
+_ET_CAPACITY_ROWS_CACHE: Dict[str, pd.DataFrame] = {}
+
+
 def build_et_us_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
     metrics_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    # PSS US and ET US are two row selections from the same workbook.  Opening
+    # and releasing that macro-enabled workbook twice in one process can leave
+    # the second Excel COM server blocked during proxy destruction.  Build and
+    # cache both team results during the first open instead.
+    cached = _ET_CAPACITY_ROWS_CACHE.get(team_src.team)
+    if cached is not None:
+        print(
+            f"[CACHE] {team_src.team}: reused shared ET capacity workbook snapshot",
+            flush=True,
+        )
+        return cached.copy(deep=True)
+
     xlsx_path = team_src.xlsx
     if not xlsx_path.exists():
         return pd.DataFrame()
-    out_rows: List[dict] = []
+
+    requested_team = team_src.team
+    team_sources = [
+        TEAM_SOURCES[name]
+        for name in ("PSS US", "ET US")
+        if name in TEAM_SOURCES
+    ]
+    if not team_sources:
+        team_sources = [team_src]
+
+    results: Dict[str, pd.DataFrame] = {}
     pythoncom.CoInitialize()
     excel = None
     wb = None
     temp_dir = None
+    workbooks = None
+    current_ws_com = None
+    archive_ws_com = None
+    week_viewer_ws_com = None
     try:
         excel = _dyn(_start_excel_app())
         excel.Visible = False
@@ -3246,9 +3275,6 @@ def build_et_us_rows_from_capacity_workbook(
             CorruptLoad=0,
         )))
         _try_unprotect_excel_object(wb, "ET US workbook")
-        current_ws_com = None
-        archive_ws_com = None
-        week_viewer_ws_com = None
         try:
             current_ws_com = _dyn(_get_matching_worksheet(wb, ET_US_CURRENT_WEEK_SHEET))
             _try_unprotect_excel_object(current_ws_com, f"ET US sheet '{ET_US_CURRENT_WEEK_SHEET}'")
@@ -3268,47 +3294,77 @@ def build_et_us_rows_from_capacity_workbook(
             _com_call(lambda: excel.CalculateFullRebuild(), tries=10, sleep_s=0.3)
         except Exception:
             pass
-        historical_rows: List[dict] = []
-        if archive_ws_com is not None and current_ws_com is not None:
-            historical_rows.extend(_build_et_us_rows_from_archive_sheet(
-                archive_ws_com,
-                current_ws_com,
-                team_src=team_src,
-                team_name=team_src.team,
-            ))
-        if not historical_rows and week_viewer_ws_com is not None:
-            date_values = _resolve_validation_list_values(wb, week_viewer_ws_com, "B1")
-            current_dt = _excel_date_to_timestamp(week_viewer_ws_com.Range("B1").Value)
-            if not date_values and current_dt is not None:
-                date_values = [current_dt]
-            historical_rows.extend(_build_et_us_rows_from_sheet(
-                wb,
-                excel,
-                week_viewer_ws_com,
-                team_src=team_src,
-                team_name=team_src.team,
-                sheet_name=ET_US_WEEK_VIEWER_SHEET,
-                date_values=date_values,
-            ))
-        out_rows.extend(historical_rows)
-        if current_ws_com is not None:
-            current_dt = _excel_date_to_timestamp(current_ws_com.Range("B1").Value)
-            current_date_values = [current_dt] if current_dt is not None else []
-            out_rows.extend(_build_et_us_rows_from_sheet(
-                wb,
-                excel,
-                current_ws_com,
-                team_src=team_src,
-                team_name=team_src.team,
-                sheet_name=ET_US_CURRENT_WEEK_SHEET,
-                date_values=current_date_values,
-            ))
-        df = pd.DataFrame(out_rows)
-        if not df.empty:
-            df["period_date"] = pd.to_datetime(df["period_date"], errors="coerce").dt.normalize()
-            df = df.drop_duplicates(subset=["team", "period_date"], keep="last")
-            df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
-        return df
+
+        for active_src in team_sources:
+            out_rows: List[dict] = []
+            historical_rows: List[dict] = []
+
+            if archive_ws_com is not None and current_ws_com is not None:
+                historical_rows.extend(_build_et_us_rows_from_archive_sheet(
+                    archive_ws_com,
+                    current_ws_com,
+                    team_src=active_src,
+                    team_name=active_src.team,
+                ))
+
+            if not historical_rows and week_viewer_ws_com is not None:
+                date_values = _resolve_validation_list_values(
+                    wb, week_viewer_ws_com, "B1"
+                )
+                current_dt = _excel_date_to_timestamp(
+                    week_viewer_ws_com.Range("B1").Value
+                )
+                if not date_values and current_dt is not None:
+                    date_values = [current_dt]
+                historical_rows.extend(_build_et_us_rows_from_sheet(
+                    wb,
+                    excel,
+                    week_viewer_ws_com,
+                    team_src=active_src,
+                    team_name=active_src.team,
+                    sheet_name=ET_US_WEEK_VIEWER_SHEET,
+                    date_values=date_values,
+                ))
+
+            out_rows.extend(historical_rows)
+
+            if current_ws_com is not None:
+                current_dt = _excel_date_to_timestamp(
+                    current_ws_com.Range("B1").Value
+                )
+                current_date_values = (
+                    [current_dt] if current_dt is not None else []
+                )
+                out_rows.extend(_build_et_us_rows_from_sheet(
+                    wb,
+                    excel,
+                    current_ws_com,
+                    team_src=active_src,
+                    team_name=active_src.team,
+                    sheet_name=ET_US_CURRENT_WEEK_SHEET,
+                    date_values=current_date_values,
+                ))
+
+            df = pd.DataFrame(out_rows)
+            if not df.empty:
+                df["period_date"] = pd.to_datetime(
+                    df["period_date"], errors="coerce"
+                ).dt.normalize()
+                df = df.drop_duplicates(
+                    subset=["team", "period_date"], keep="last"
+                )
+                df = df.sort_values(
+                    ["team", "period_date"]
+                ).reset_index(drop=True)
+            results[active_src.team] = df
+
+        # Store ordinary pandas objects only; no COM objects enter the cache.
+        _ET_CAPACITY_ROWS_CACHE.update(
+            {name: frame.copy(deep=True) for name, frame in results.items()}
+        )
+        return _ET_CAPACITY_ROWS_CACHE.get(
+            requested_team, pd.DataFrame()
+        ).copy(deep=True)
     finally:
         current_ws_com = None
         archive_ws_com = None
