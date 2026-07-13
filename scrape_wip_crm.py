@@ -1545,28 +1545,13 @@ def _iter_rows_cpt_pab(
     max_scan_row: int = 5000,
     blank_run_stop: int = 200,
 ) -> Iterable[Tuple[int, str, str, str, Optional[float], Optional[float], Optional[float]]]:
-    """Iterate CPT PAB rows without trusting ws.max_row.
-
-    Some CPT workbooks have a stray used cell at Excel's last row
-    (for example A1048576). That makes openpyxl report max_row as
-    1,048,576 even though the real PAB data ends near row 1200.
-    Looping to ws.max_row makes scraping appear to hang.
-
-    Only columns C:J are needed, so stream those columns and cap the scan.
-    The blank-run stop lets the loop finish early if the template grows less
-    than max_scan_row.
-    """
     sheet_max = ws_pab.max_row or max_scan_row
-    # If Excel/openpyxl reports the worksheet bottom row, treat it as a corrupt
-    # used-range marker rather than real data.
     if sheet_max >= 1_048_576:
         scan_to = max_scan_row
     else:
         scan_to = min(sheet_max, max_scan_row)
-
     seen_data = False
     blank_run = 0
-
     for r, vals in enumerate(
         ws_pab.iter_rows(
             min_row=start_row,
@@ -1577,29 +1562,24 @@ def _iter_rows_cpt_pab(
         ),
         start=start_row,
     ):
-        # C,D,E,F,G,H,I,J
         vals = tuple(vals or ())
         vals = vals + (None,) * (8 - len(vals))
         person, category, cell_station, _unused_f, target_v, _unused_h, hours_v, actual_v = vals[:8]
-
         target = _cell_number(target_v)
         hours_i = _cell_number(hours_v)
         actual_j = _cell_number(actual_v)
         p = str(person).strip() if person is not None else ""
         cat = str(category).strip() if category is not None else ""
         cs = str(cell_station).strip() if cell_station is not None else ""
-
         if p == "" and cat == "" and cs == "" and target is None and hours_i is None and actual_j is None:
             if seen_data:
                 blank_run += 1
                 if blank_run >= blank_run_stop:
                     break
             continue
-
         seen_data = True
         blank_run = 0
         yield (r, p, cat, cs, target, hours_i, actual_j)
-
 CPT_NEW_HOURS_START = _dt.date(2026, 5, 4)
 def _cpt_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= CPT_NEW_HOURS_START
