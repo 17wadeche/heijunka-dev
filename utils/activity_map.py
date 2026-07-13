@@ -4123,6 +4123,8 @@ ACTIVITY_MAP = {
     "training, ng, gb, event review, meetings, email/admin":"Training/Mentoring",
     "collaboration w/lab, training prep":"Collaboration",
     "rerd training, scrum":"Training/Mentoring",
+    "updating finding work tool, emails, admin":"Metrics & Schedule",
+    "pulling relevant pes":"Metrics & Schedule",
     "daily scrum & mfg/exp date updates":"Scrum & Action",
     "cornerstore":"Cornerstone",
     "event review rr submission, collaboration":"Collaboration",
