@@ -448,35 +448,48 @@ def find_next_week_row(starts: List[Tuple[int, _dt.date]], idx: int, max_row: in
     return max_row
 def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, float]]:
     result: Dict[_dt.date, Dict[str, float]] = {}
-    starts = list(iter_available_blocks(ws))
-    for idx, (start_row, week_date) in enumerate(starts):
-        end_row = find_next_week_row(starts, idx, ws.max_row)
-        people_avail: Dict[str, float] = {}
-        current_person = ""
-        row = start_row + 1
-        while row <= end_row:
-            person_cell = _as_text(ws.cell(row=row, column=3).value)
-            category = _as_text(ws.cell(row=row, column=4).value)
-            if person_cell:
-                current_person = person_cell
-            if is_valid_name(current_person) and category.lower() == "available wip":
-                total = 0.0
-                for col in range(5, 10):  # E:I
-                    total += _cell_number(ws.cell(row=row, column=col).value) or 0.0
-                people_avail[current_person] = total
-            row += 1
+    week_date: Optional[_dt.date] = None
+    people_avail: Dict[str, float] = {}
+    current_person = ""
+    for values in ws.iter_rows(min_row=1, max_col=9, values_only=True):
+        label = _as_text(values[0])
+        if label.lower() == "week starting:":
+            next_week_date = _as_date(values[1])
+            if next_week_date is None:
+                continue
+            if week_date is not None:
+                result[week_date] = people_avail
+            week_date = next_week_date
+            people_avail = {}
+            current_person = ""
+            continue
+
+        if week_date is None:
+            continue
+        person_cell = _as_text(values[2])
+        category = _as_text(values[3])
+        if person_cell:
+            current_person = person_cell
+        if is_valid_name(current_person) and category.lower() == "available wip":
+            people_avail[current_person] = sum(
+                (_cell_number(value) or 0.0) for value in values[4:9]
+            )
+
+    if week_date is not None:
         result[week_date] = people_avail
     return result
 def iter_production_rows(ws: Worksheet, start_row: int = 3) -> Iterable[Tuple[_dt.date, str, str, float, float, float]]:
-    for row in range(start_row, ws.max_row + 1):
-        date_val = _as_date(ws.cell(row=row, column=1).value)
+    # Stream A:H once. This avoids allocating the entire workbook and avoids
+    # thousands of random cell lookups.
+    for values in ws.iter_rows(min_row=start_row, max_col=8, values_only=True):
+        date_val = _as_date(values[0])
         if date_val is None:
             continue
-        person = _as_text(ws.cell(row=row, column=2).value)
-        station = _as_text(ws.cell(row=row, column=3).value)
-        mins = _cell_number(ws.cell(row=row, column=5).value) or 0.0
-        actual_output = _cell_number(ws.cell(row=row, column=6).value) or 0.0
-        target_output = _cell_number(ws.cell(row=row, column=8).value) or 0.0
+        person = _as_text(values[1])
+        station = _as_text(values[2])
+        mins = _cell_number(values[4]) or 0.0
+        actual_output = _cell_number(values[5]) or 0.0
+        target_output = _cell_number(values[7]) or 0.0
         yield (date_val, person, station, mins, actual_output, target_output)
 def nested_float_dict() -> defaultdict:
     return defaultdict(float)
@@ -583,7 +596,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
     err_msgs: List[str] = []
     load_start = time.perf_counter()
     try:
-        wb = load_workbook(path, data_only=True)
+        wb = load_workbook(path, data_only=True, read_only=True)
     except BadZipFile as e:
         elapsed = time.perf_counter() - load_start
         error = f"invalid_workbook: {e}"
@@ -615,6 +628,7 @@ def scrape_one_workbook(path: str) -> List[Dict[str, Any]]:
             err_msgs.append(f"production_parse_error: {e!r}")
     else:
         err_msgs.append(f"missing_sheet: {PRODUCTION_SHEET}")
+    wb.close()
     periods = sorted(set(available_by_week.keys()) | set(production_by_week.keys()))
     for period in periods:
         week_errors = list(err_msgs)

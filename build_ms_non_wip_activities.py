@@ -328,10 +328,40 @@ def find_column_by_header(ws: Worksheet, header_row: int, header_name: str, star
     return None
 def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
     results: Dict[_dt.date, Dict[str, Any]] = {}
-    starts = list(iter_available_blocks(ws))
+    sheet_rows = list(ws.iter_rows(min_row=1, max_col=NON_D2D_COL, values_only=True))
+
+    def value(row: int, col: int) -> Any:
+        return sheet_rows[row - 1][col - 1]
+
+    starts: List[Tuple[int, _dt.date]] = []
+    for row, values in enumerate(sheet_rows, start=1):
+        if _as_text(values[0]).lower() == "week starting:":
+            week_date = _as_date(values[1])
+            if week_date is not None:
+                starts.append((row, week_date))
     for idx, (start_row, week_date) in enumerate(starts):
-        end_row = find_next_week_row(starts, idx, ws.max_row)
-        week_people = parse_week_people_from_left_table(ws, start_row, end_row)
+        end_row = find_next_week_row(starts, idx, len(sheet_rows))
+        week_people: List[str] = []
+        seen_people = set()
+        current_person = ""
+        for row in range(start_row + 1, end_row + 1):
+            person_cell = _as_text(value(row, 3))
+            if person_cell:
+                current_person = person_cell
+            if not current_person:
+                continue
+            norm = _norm_name(current_person)
+            if norm in {
+                "X", "0", "USER1", "USER2", "USER3", "USER4",
+                "USER10", "USER11", "TM1", "TM2", "TM3", "TM4",
+                "TM5", "TM6", "TM7", "TM8", "TM9", "TM10", "TM11",
+                "TM12", "TM13", "TM14", "TM15", "TM16",
+            }:
+                continue
+            if norm not in seen_people:
+                seen_people.add(norm)
+                week_people.append(current_person.strip())
+
         non_wip_by_person: Dict[str, float] = {}
         non_wip_activities: List[Dict[str, Any]] = []
         ooo_by_person: Dict[str, float] = {}
@@ -339,9 +369,9 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
         total_ooo_hours = 0.0
         header_row = None
         for row in range(start_row, end_row + 1):
-            m_val = _as_text(ws.cell(row=row, column=ACTIVITY_START_COL).value).strip().lower()
-            u_val = _as_text(ws.cell(row=row, column=OOO_COL).value).strip().lower()
-            v_val = _as_text(ws.cell(row=row, column=NON_D2D_COL).value).strip().lower()
+            m_val = _as_text(value(row, ACTIVITY_START_COL)).strip().lower()
+            u_val = _as_text(value(row, OOO_COL)).strip().lower()
+            v_val = _as_text(value(row, NON_D2D_COL)).strip().lower()
             if m_val == "audit" and u_val == "ooo" and ("non" in v_val):
                 header_row = row
                 break
@@ -356,7 +386,7 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             }
             continue
         for row in range(header_row + 1, end_row + 1):
-            name = _as_text(ws.cell(row=row, column=NAME_COL).value)
+            name = _as_text(value(row, NAME_COL))
             clean_name = name.strip()
             lower_name = clean_name.lower()
             if (
@@ -366,19 +396,19 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
                 continue
             lower_name = name.strip().lower()
             if lower_name == "total":
-                total_non_wip_hours = (_cell_number(ws.cell(row=row, column=NON_D2D_COL).value) or 0.0) / 60.0
-                total_ooo_hours = (_cell_number(ws.cell(row=row, column=OOO_COL).value) or 0.0) / 60.0
+                total_non_wip_hours = (_cell_number(value(row, NON_D2D_COL)) or 0.0) / 60.0
+                total_ooo_hours = (_cell_number(value(row, OOO_COL)) or 0.0) / 60.0
                 continue
             if lower_name == "x":
                 continue
-            person_non_wip = (_cell_number(ws.cell(row=row, column=NON_D2D_COL).value) or 0.0) / 60.0
-            person_ooo = (_cell_number(ws.cell(row=row, column=OOO_COL).value) or 0.0) / 60.0
+            person_non_wip = (_cell_number(value(row, NON_D2D_COL)) or 0.0) / 60.0
+            person_ooo = (_cell_number(value(row, OOO_COL)) or 0.0) / 60.0
             clean_name = name.strip()
             non_wip_by_person[clean_name] = person_non_wip
             ooo_by_person[clean_name] = person_ooo
             for col in range(ACTIVITY_START_COL, ACTIVITY_END_COL + 1):
-                activity = _as_text(ws.cell(row=header_row, column=col).value).strip()
-                mins = _cell_number(ws.cell(row=row, column=col).value) or 0.0
+                activity = _as_text(value(header_row, col)).strip()
+                mins = _cell_number(value(row, col)) or 0.0
                 hours = mins / 60.0
                 if hours > 0:
                     non_wip_activities.append({
@@ -475,7 +505,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
     log_timing(f"Starting non-WIP scrape for team: {display_team}")
     load_start = time.perf_counter()
     try:
-        wb = load_workbook(path, data_only=True)
+        wb = load_workbook(path, data_only=True, read_only=True)
     except BadZipFile as e:
         elapsed = time.perf_counter() - load_start
         error = f"invalid_workbook: {e}"
@@ -489,6 +519,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
     log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
     if AVAILABILITY_SHEET not in wb.sheetnames:
         log_timing(f"{display_team}: missing sheet {AVAILABILITY_SHEET}")
+        wb.close()
         return [{
             "team": team,
             "period_date": "",
@@ -504,6 +535,7 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
         }]
     parse_start = time.perf_counter()
     available_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
+    wb.close()
     log_timing(f"{display_team}: availability parse took {time.perf_counter() - parse_start:.2f}s")
     rows: List[Dict[str, Any]] = []
     for period in sorted(available_by_week.keys()):
