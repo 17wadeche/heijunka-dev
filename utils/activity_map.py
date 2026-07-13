@@ -4129,7 +4129,7 @@ ACTIVITY_MAP = {
     "ng, meetings, coding, collaboration/event review, email/admin":"Next Gen",
     "email meetings collaboration a"
     "scrum, training activities, emails/admin.":"Training/Mentoring",
-    "email,task":"Email & IM",:"Email & IM",
+    "email,task":"Email & IM",
     "aortic ri report":"RI",
     "looking through wait investigations and open dhr": "WIP/Event Review",
     "reviewing files that need dhr.": "WIP/Event Review",
