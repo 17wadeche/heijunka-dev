@@ -14,6 +14,10 @@ from tempfile import mkdtemp
 import shutil
 import warnings
 from pathlib import Path
+import faulthandler
+faulthandler.enable()
+import gc
+faulthandler.dump_traceback_later(300, repeat=False)
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
@@ -40,6 +44,27 @@ ET_US_SOURCE_FILE = Path(
 ET_US_WEEK_VIEWER_SHEET = "Week Viewer"
 ET_US_CURRENT_WEEK_SHEET = "Current Week"
 ET_US_ARCHIVE_SHEET = "Archive"
+TRACE_PEOPLE_COUNTS = False
+_EXCEL_SHEET_CACHE: Dict[Tuple[str, str, int, int], pd.DataFrame] = {}
+def _read_excel_sheet_cached(
+    path: Path,
+    *,
+    sheet_name: str,
+    header=0,
+) -> pd.DataFrame:
+    stat = path.stat()
+    key = (str(path.resolve()), str(sheet_name), stat.st_mtime_ns, stat.st_size)
+    cached = _EXCEL_SHEET_CACHE.get(key)
+    if cached is None:
+        cached = pd.read_excel(
+            path,
+            sheet_name=sheet_name,
+            header=header,
+            engine="openpyxl",
+        )
+        _EXCEL_SHEET_CACHE.clear()
+        _EXCEL_SHEET_CACHE[key] = cached
+    return cached.copy(deep=True)
 def _week_start_monday(dt_series: pd.Series) -> pd.Series:
     dt = pd.to_datetime(dt_series, errors="coerce").dt.normalize()
     return dt - pd.to_timedelta(dt.dt.dayofweek, unit="D")
@@ -859,16 +884,12 @@ def _start_excel_app():
         return win32com.client.DispatchEx("Excel.Application")
     except AttributeError as e:
         msg = str(e)
-        if ("CLSIDToClassMap" not in msg) and ("CLSIDToPackageMap" not in msg):
+        if "CLSIDToClassMap" not in msg and "CLSIDToPackageMap" not in msg:
             raise
-        try:
-            gen_path = win32com.client.gencache.GetGeneratePath()
-            if gen_path and os.path.isdir(gen_path):
-                shutil.rmtree(gen_path, ignore_errors=True)
-                print(f"[WARN] Cleared win32com cache at: {gen_path}", flush=True)
-        except Exception as cleanup_err:
-            print(f"[WARN] Could not clear win32com cache: {cleanup_err}", flush=True)
-        return win32com.client.dynamic.Dispatch("Excel.Application")
+        gen_path = win32com.client.gencache.GetGeneratePath()
+        if gen_path and os.path.isdir(gen_path):
+            shutil.rmtree(gen_path, ignore_errors=True)
+        return win32com.client.DispatchEx("Excel.Application")
 def _dyn(obj):
     if obj is None:
         return None
@@ -890,25 +911,26 @@ def _try_unprotect_excel_object(obj, label: str = "", password: str = EXCEL_PROT
         print(f"[WARN] Could not unprotect {label}: {last_err}", flush=True)
 def _read_excel_range_display_df(ws_com, range_addr: str) -> pd.DataFrame:
     rng = _dyn(ws_com.Range(range_addr))
-    rows = int(getattr(rng.Rows, "Count", 0) or 0)
-    cols = int(getattr(rng.Columns, "Count", 0) or 0)
-    data: List[List[object]] = []
-    for r in range(1, rows + 1):
-        row_vals: List[object] = []
-        for c in range(1, cols + 1):
-            cell = _dyn(rng.Cells(r, c))
-            try:
-                val = cell.Text
-            except Exception:
-                try:
-                    val = cell.Value
-                except Exception:
-                    val = None
-            row_vals.append(val)
-        data.append(row_vals)
-    return pd.DataFrame(data)
-
-
+    try:
+        raw = rng.Value2
+    except Exception:
+        raw = rng.Value
+    if raw is None:
+        return pd.DataFrame()
+    if not isinstance(raw, (tuple, list)):
+        raw = ((raw,),)
+    rows: List[List[object]] = []
+    max_cols = 0
+    for row in raw:
+        if not isinstance(row, (tuple, list)):
+            row = (row,)
+        values = list(row)
+        max_cols = max(max_cols, len(values))
+        rows.append(values)
+    if max_cols == 0:
+        return pd.DataFrame()
+    rows = [row + [None] * (max_cols - len(row)) for row in rows]
+    return pd.DataFrame(rows)
 def _read_excel_used_range_df(ws_com) -> pd.DataFrame:
     try:
         raw = _dyn(ws_com.UsedRange).Value
@@ -929,7 +951,6 @@ def _read_excel_used_range_df(ws_com) -> pd.DataFrame:
         return pd.DataFrame()
     rows = [r + [None] * (max_cols - len(r)) for r in rows]
     return pd.DataFrame(rows)
-
 def build_selector_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
@@ -1272,11 +1293,10 @@ def build_pss_from_user_data(
         print(f"[WARN][{team_name}] PSS User Data workbook not found: {xlsx_path}", flush=True)
         return pd.DataFrame()
     try:
-        ws = pd.read_excel(
+        ws = _read_excel_sheet_cached(
             xlsx_path,
             sheet_name=PSS_USER_DATA_SHEET,
             header=0,
-            engine="openpyxl",
         )
     except Exception as e:
         print(f"[WARN][{team_name}] Could not read User Data sheet: {e}", flush=True)
@@ -1699,15 +1719,16 @@ def get_people_count_from_wip(
         week_txt = pd.Timestamp(week).date().isoformat()
     except Exception:
         week_txt = str(week)
-    print(
-        f"[PEOPLE COUNT TRACE] "
-        f"team_raw={team!r} "
-        f"team_name={team_name!r} "
-        f"team_key={team_key!r} "
-        f"week={week_txt} "
-        f"fallback={fallback!r}",
-        flush=True,
-    )
+    if TRACE_PEOPLE_COUNTS:
+        print(
+            f"[PEOPLE COUNT TRACE] "
+            f"team_raw={team!r} "
+            f"team_name={team_name!r} "
+            f"team_key={team_key!r} "
+            f"week={week_txt} "
+            f"fallback={fallback!r}",
+            flush=True,
+        )
     if team_key == "dbs":
         people_count = get_dbs_people_count_for_week(week)
         return people_count
@@ -3030,24 +3051,22 @@ def _build_et_us_rows_from_sheet(
             except Exception:
                 pass
             built = None
-            for _recalc_pass in range(10):
+            try:
+                _com_call(lambda: wb.RefreshAll(), tries=5, sleep_s=0.2)
+            except Exception:
+                pass
+            try:
+                _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=5, sleep_s=0.2)
+            except Exception:
+                pass
+            try:
+                _com_call(lambda: excel.CalculateFullRebuild(), tries=5, sleep_s=0.3)
+            except Exception:
                 try:
                     _com_call(lambda: ws_com.Calculate(), tries=5, sleep_s=0.2)
                 except Exception:
                     pass
-                try:
-                    _com_call(lambda: wb.RefreshAll(), tries=5, sleep_s=0.2)
-                except Exception:
-                    pass
-                try:
-                    _com_call(lambda: excel.CalculateUntilAsyncQueriesDone(), tries=5, sleep_s=0.2)
-                except Exception:
-                    pass
-                try:
-                    _com_call(lambda: excel.CalculateFullRebuild(), tries=5, sleep_s=0.3)
-                except Exception:
-                    pass
-                time.sleep(0.5)
+            for _poll_attempt in range(10):
                 ws_df = _read_excel_range_display_df(ws_com, "A1:AD30")
                 builder = team_src.custom_builder or build_et_us_snapshot
                 built = builder(team_name, ws_df, week)
@@ -3056,6 +3075,11 @@ def _build_et_us_rows_from_sheet(
                 enough_people = expected_people > 0 and people_found >= min(expected_people, 10)
                 if enough_people or built.get("total_nonwip_hours", 0.0) > 0 or built.get("ooo_hours", 0.0) > 0:
                     break
+                try:
+                    _com_call(lambda: ws_com.Calculate(), tries=3, sleep_s=0.1)
+                except Exception:
+                    pass
+                time.sleep(0.1)
             if built is None:
                 continue
             out_rows.append({
@@ -3202,9 +3226,9 @@ def build_et_us_rows_from_capacity_workbook(
         excel.Visible = False
         excel.DisplayAlerts = False
         excel.AskToUpdateLinks = False
-        excel.EnableEvents = True
+        excel.EnableEvents = False
         try:
-            excel.AutomationSecurity = 1
+            excel.AutomationSecurity = 3  # Disable workbook macros
         except Exception:
             pass
         import tempfile
@@ -3286,25 +3310,29 @@ def build_et_us_rows_from_capacity_workbook(
             df = df.sort_values(["team", "period_date"]).reset_index(drop=True)
         return df
     finally:
+        current_ws_com = None
+        archive_ws_com = None
+        week_viewer_ws_com = None
+        workbooks = None
         try:
             if wb is not None:
                 wb.Close(SaveChanges=False)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[WARN] Excel workbook close failed: {e}", flush=True)
         try:
             if excel is not None:
+                excel.EnableEvents = False
+                excel.DisplayAlerts = False
                 excel.Quit()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[WARN] Excel quit failed: {e}", flush=True)
+        wb = None
         try:
             pythoncom.CoUninitialize()
-        except Exception:
-            pass
-        try:
-            if temp_dir and Path(temp_dir).exists():
-                shutil.rmtree(temp_dir, ignore_errors=True)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[WARN] COM uninitialization failed: {e}", flush=True)
+        if temp_dir and Path(temp_dir).exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
 TEAM_SOURCES: Dict[str, TeamSource] = {
     "PSS MEIC": TeamSource(
         team="PSS MEIC",
@@ -3681,6 +3709,7 @@ def build_team_rows(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df: pd.D
         metrics_df=metrics_df,
     )
 def main():
+    print("[START] Loading CSV inputs...", flush=True)
     if not NS_WIP_PATH.exists():
         raise FileNotFoundError(f"Missing NS_WIP.csv: {NS_WIP_PATH}")
     if not NS_METRICS_PATH.exists():
@@ -3689,7 +3718,14 @@ def main():
     metrics_df = load_metrics(NS_METRICS_PATH)
     built: List[pd.DataFrame] = []
     for team, src in TEAM_SOURCES.items():
+        started = time.perf_counter()
+        print(f"[START] {team}: {src.xlsx}", flush=True)
         df_team = build_team_rows(src, wip_df=wip_df, metrics_df=metrics_df)
+        elapsed = time.perf_counter() - started
+        print(
+            f"[DONE] {team}: {len(df_team)} rows in {elapsed:.1f}s",
+            flush=True,
+        )
         if not df_team.empty:
             built.append(df_team)
     new_df = pd.concat(built, ignore_index=True) if built else pd.DataFrame()
