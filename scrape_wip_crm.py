@@ -56,8 +56,6 @@ def _cds_summary_row(period: Optional[_dt.date]) -> int:
         return 11
     return 10
 def _cds_people_row_stop(period: Optional[_dt.date]) -> int:
-    # The range end is exclusive. Summary row 10 means people rows 5-9;
-    # summary row 11 means people rows 5-10.
     return _cds_summary_row(period)
 MCS_ROOT_HINT = _norm_mcs = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling")
 CDS_ROOT_HINT = _norm_cds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis")
@@ -1720,8 +1718,6 @@ def compute_output_by_station_by_person_cpt(ws_pab: Worksheet) -> Dict[str, Dict
     return out
 def scrape_one_workbook_cpt(path: str) -> List[Dict[str, Any]]:
     team = team_for_source(path)
-    # CPT PAB files can have a bad used range on #3 PAB (A1:M1048576).
-    # read_only avoids openpyxl materializing the whole worksheet.
     wb = _load_workbook_data(path, read_only=True)
     err_msgs: List[str] = []
     ws_wip_plan = wb[_sheet_ci(wb, "# 1 WIP plan")] if _sheet_ci(wb, "# 1 WIP plan") else None
