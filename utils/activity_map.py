@@ -4125,6 +4125,8 @@ ACTIVITY_MAP = {
     "rerd training, scrum":"Training/Mentoring",
     "daily scrum & mfg/exp date updates":"Scrum & Action",
     "cornerstore":"Cornerstone",
+    "event review rr submission, collaboration":"Collaboration",
+    "rr audit/ collaboration":"Audit",
     "rs inbox":"RS Inbox",
     "ng, training, coding, collaboration/event reviews, email/admin":"Next Gen",
     "ng, meetings, coding, collaboration/event review, email/admin":"Next Gen",
