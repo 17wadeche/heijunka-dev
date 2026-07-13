@@ -4139,6 +4139,7 @@ ACTIVITY_MAP = {
     "aortic ri report":"RI",
     "looking through wait investigations and open dhr": "WIP/Event Review",
     "reviewing files that need dhr.": "WIP/Event Review",
+    "non eu vig rr": "WIP/Event Review",
     "comm & reg report": "WIP/Event Review",
     "ot event review 4 events submitted": "WIP/Event Review",
     "completing vs dhr request forms and sending to harmac (total of 7 dhr )": "WIP/Event Review",
