@@ -4125,6 +4125,11 @@ ACTIVITY_MAP = {
     "rerd training, scrum":"Training/Mentoring",
     "daily scrum & mfg/exp date updates":"Scrum & Action",
     "rs inbox":"RS Inbox",
+    "ng, training, coding, collaboration/event reviews, email/admin":"Next Gen",
+    "ng, meetings, coding, collaboration/event review, email/admin":"Next Gen",
+    "email meetings collaboration a"
+    "scrum, training activities, emails/admin.":"Training/Mentoring",
+    "email,task":"Email & IM",:"Email & IM",
     "aortic ri report":"RI",
     "looking through wait investigations and open dhr": "WIP/Event Review",
     "reviewing files that need dhr.": "WIP/Event Review",
