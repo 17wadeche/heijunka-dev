@@ -4154,6 +4154,7 @@ ACTIVITY_MAP = {
     "email,task":"Email & IM",
     "aortic ri report":"RI",
     "looking through wait investigations and open dhr": "WIP/Event Review",
+    "mfg complaints review": "WIP/Event Review",
     "looking through aged file": "WIP/Event Review",
     "reviewing files that need dhr.": "WIP/Event Review",
     "non eu vig rr": "WIP/Event Review",
