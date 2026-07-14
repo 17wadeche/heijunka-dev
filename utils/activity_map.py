@@ -4146,6 +4146,7 @@ ACTIVITY_MAP = {
     "email meetings collaboration a":"Email & IM",
     "rr audit/ collaboration":"Audit",
     "cs":"Cornerstone",
+    "quality ofi review":"QA",
     "addressing additional questions from the broker for dt equipment been sent to rice creek":"Question",
     "ehs induction":"Admin",
     "rs inbox":"RS Inbox",
