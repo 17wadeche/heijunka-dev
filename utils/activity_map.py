@@ -4126,6 +4126,7 @@ ACTIVITY_MAP = {
     "updating finding work tool, emails, admin":"Metrics & Schedule",
     "pulling relevant pes":"Metrics & Schedule",
     "daily scrum & mfg/exp date updates":"Scrum & Action",
+    "scrum xx pulling relevent pe file":"Scrum & Action",
     "cornerstore":"Cornerstone",
     "stint program":"Admin",
     "tourguide shipment":"Shipment",
