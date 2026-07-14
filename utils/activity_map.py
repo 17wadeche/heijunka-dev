@@ -4139,6 +4139,7 @@ ACTIVITY_MAP = {
     "scrum, eoy conversation, lunch,email":"Scrum & Action",
     "event review rr submission, collaboration":"Collaboration",
     "ad hoc emails for late events/scrum/questions from team/adhoc messages and calls for late event":"Email & IM",
+    "adhoc emails/france qs/non eu vig notification/late mdr meeting/scheduling/scrum":"Admin",
     "email meetings collaboration a":"Email & IM",
     "rr audit/ collaboration":"Audit",
     "cs":"Cornerstone",
