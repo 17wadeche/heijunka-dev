@@ -4136,6 +4136,8 @@ ACTIVITY_MAP = {
     "scrum fy":"Scrum & Action",
     "working on training material":"Training/Mentoring",
     "ng testing":"Next Gen",
+    "adding images and descriptions for the broker for all the dt equipment that was shipped":"Admin",
+    "additional photo":"Admin",
     "worked on events sent from tct clinical coming due over the weekend/lunch/email/scrum":"Scrum & Action",
     "scrum, eoy conversation, lunch,email":"Scrum & Action",
     "event review rr submission, collaboration":"Collaboration",
