@@ -4138,6 +4138,7 @@ ACTIVITY_MAP = {
     "worked on events sent from tct clinical coming due over the weekend/lunch/email/scrum":"Scrum & Action",
     "scrum, eoy conversation, lunch,email":"Scrum & Action",
     "event review rr submission, collaboration":"Collaboration",
+    "ad hoc emails for late events/scrum/questions from team/adhoc messages and calls for late event":"Email & IM",
     "email meetings collaboration a":"Email & IM",
     "rr audit/ collaboration":"Audit",
     "cs":"Cornerstone",
