@@ -4140,6 +4140,7 @@ ACTIVITY_MAP = {
     "event review rr submission, collaboration":"Collaboration",
     "email meetings collaboration a":"Email & IM",
     "rr audit/ collaboration":"Audit",
+    "cs":"Cornerstone",
     "rs inbox":"RS Inbox",
     "ng, training, coding, collaboration/event reviews, email/admin":"Next Gen",
     "ng, meetings, coding, collaboration/event review, email/admin":"Next Gen",
