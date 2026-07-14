@@ -4133,6 +4133,8 @@ ACTIVITY_MAP = {
     "tl (30) follwoing up for cidex additional questions from brokers for the dt equipment":"Question",
     "boot up issue":"IT Issue/Update",
     "scrum fy":"Scrum & Action",
+    "working on training material":"Training/Mentoring",
+    "ng testing":"Next Gen",
     "worked on events sent from tct clinical coming due over the weekend/lunch/email/scrum":"Scrum & Action",
     "scrum, eoy conversation, lunch,email":"Scrum & Action",
     "event review rr submission, collaboration":"Collaboration",
