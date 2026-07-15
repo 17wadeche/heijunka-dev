@@ -4149,6 +4149,7 @@ ACTIVITY_MAP = {
     "task training, collab, crash":"Training/Mentoring",
     "microsfot crash":"IT Issue/Update",
     "training, event review, collaboration":"Training/Mentoring",
+    "crdn qa results call and update":"QA",
     "system crash":"IT Issue/Update",
     "hypercare meeting/task":"Project Work",
     "training activities, email/admin.":"Training/Mentoring",
