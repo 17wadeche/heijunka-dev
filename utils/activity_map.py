@@ -4169,6 +4169,10 @@ ACTIVITY_MAP = {
     "cs":"Cornerstone",
     "new hire training":"Training/Mentoring",
     "pmq pre-meeting q's reviewe":"PMQ Meeting",
+    "internet went down/scheduling at home/working without outlook/adhoc emails for eu vig":"IT Issue/Update"
+    "internet went down":"IT Issue/Update",
+    "cornerstone/reviewing events/reading through training material":"Cornerstone",
+    "pc restart - contacted it":"IT Issue/Update",
     "email & im goals meeting it call for rs issue":"Career Development",
     "goal meeting":"Career Development",
     "quality ofi review":"QA",
