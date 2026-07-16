@@ -4156,6 +4156,7 @@ ACTIVITY_MAP = {
     "team call on file":"Collaboration",
     "training activities, email/admin.":"Training/Mentoring",
     "shadowing myles in lab":"Training/Mentoring",
+    "scrum, lunch, email":"Admin",
     "finding work tool, emails, admin":"Admin",
     "training-denise":"Training/Mentoring",
     "investigation attempt?": "WIP/Event Review",
