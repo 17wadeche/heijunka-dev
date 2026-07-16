@@ -4159,6 +4159,7 @@ ACTIVITY_MAP = {
     "scrum, lunch, email":"Admin",
     "finding work tool, emails, admin":"Admin",
     "training-denise":"Training/Mentoring",
+    "metrics/schedule/wip mgmt training late meeting":"Admin",
     "investigation attempt?": "WIP/Event Review",
     "training call scrum":"Training/Mentoring",
     "rr doubt":"Question",
