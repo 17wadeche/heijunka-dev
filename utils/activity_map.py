@@ -1614,6 +1614,7 @@ ACTIVITY_MAP = {
     "qa corrections (enterprise)":"QA",
     "huddle" : "Meeting",
     "town halls, aem" : "Meeting",
+    "file querie":"Question",
     "town halls,aem": "Meeting",
     "town halls/aem" : "Meeting",
     "tl heijunka": "Metrics & Schedule",
