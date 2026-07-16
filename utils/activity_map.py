@@ -4155,6 +4155,7 @@ ACTIVITY_MAP = {
     "escalation tracker updates and call":"Escalation",
     "team call on file":"Collaboration",
     "training activities, email/admin.":"Training/Mentoring",
+    "shadowing myles in lab":"Training/Mentoring",
     "finding work tool, emails, admin":"Admin",
     "training-denise":"Training/Mentoring",
     "investigation attempt?": "WIP/Event Review",
