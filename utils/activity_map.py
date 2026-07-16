@@ -4153,6 +4153,7 @@ ACTIVITY_MAP = {
     "system crash":"IT Issue/Update",
     "hypercare meeting/task":"Project Work",
     "training activities, email/admin.":"Training/Mentoring",
+    "training-denise":"Training/Mentoring",
     "investigation attempt?": "WIP/Event Review",
     "training call scrum":"Training/Mentoring",
     "rr doubt":"Question",
