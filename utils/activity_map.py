@@ -1540,6 +1540,7 @@ ACTIVITY_MAP = {
     "mentoring/shadowing and meeting": "Training/Mentoring",
     "shadowing mfg for dcb device": "Training/Mentoring",
     "computer failure requiring replacement": "IT Issue/Update",
+    "1:1 meeting, weekly cqxm/pmpa review, scrum, oc weekly complaint review":"Admin",
     "in-person discussion":"Collaboration",
     "internet issue": "IT Issue/Update",
     "requesting proforma/creating evnts for ppm event":"Proforma",
