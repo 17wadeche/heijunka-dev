@@ -4152,6 +4152,8 @@ ACTIVITY_MAP = {
     "crdn qa results call and update":"QA",
     "system crash":"IT Issue/Update",
     "hypercare meeting/task":"Project Work",
+    "escalation tracker updates and call":"Escalation",
+    "team call on file":"Collaboration",
     "training activities, email/admin.":"Training/Mentoring",
     "training-denise":"Training/Mentoring",
     "investigation attempt?": "WIP/Event Review",
