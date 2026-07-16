@@ -4165,6 +4165,8 @@ ACTIVITY_MAP = {
     "shadowing fola in lab":"Training/Mentoring",
     "pmpa/r&d review meeting":"PMPA",
     "mfg down to review a dcb device":"Admin",
+    "adhoc emails/sent correction mir/filled in for audit backroom for elaine and stacy":"Audit",
+    "risk questionnaire/cornerstone/scrum":"Admin",
     "ordering chemicals from warehouse":"Ordering",
     "qa results meeting":"QA",
     "next gen test/meet":"Next Gen",
