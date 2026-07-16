@@ -4169,6 +4169,8 @@ ACTIVITY_MAP = {
     "scrum, one on one, collaboration":"Scrum & Action",
     "sphere vt study meeting":"Meeting",
     "next pulse study":"Study",
+    "risk document training and questionnaire":"Training/Mentoring",
+    "investigation work instrument act x":"Admin",
     "collab 15 min":"Collaboration",
     "scrum xx pulling relevant pe file":"Scrum & Action",
     "email, admin (update to finding work tool, team assignment)":"Admin",
