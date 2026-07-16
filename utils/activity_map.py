@@ -1538,6 +1538,7 @@ ACTIVITY_MAP = {
     "reg inquiries/ am meetings (ri/oct/lates)":"RI",
     "capa call": "CAPA",
     "mentoring/shadowing and meeting": "Training/Mentoring",
+    "shadowing mfg for dcb device": "Training/Mentoring",
     "computer failure requiring replacement": "IT Issue/Update",
     "in-person discussion":"Collaboration",
     "internet issue": "IT Issue/Update",
@@ -1565,7 +1566,6 @@ ACTIVITY_MAP = {
     "ous/rep/aging escalations":"Escalation",
     "run & post gap report (gap owners)":"Gap Report",
     "run & post gap report (gap owners), precedent review":"Gap Report",
-    
     "tier- mon or tue": "Meeting",
     "tier- thur": "Meeting",
     "cst tier 2" : "Meeting",
