@@ -4156,6 +4156,7 @@ ACTIVITY_MAP = {
     "nextgen testing and meeting":"Next Gen",
     "meeting, training/letter review":"Training/Mentoring",
     "sphere vt pivotal study":"Study",
+    "team's meeting with rep":"Meeting",
     "conquer af study":"Study",
     "cs communications report":"Admin",
     "it issues morning & afternoon":"IT Issue/Update",
