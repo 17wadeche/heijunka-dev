@@ -1532,6 +1532,7 @@ ACTIVITY_MAP = {
     "scrum, eu training, pp review":"Training/Mentoring",
     "questions/collab":"Collaboration",
     "team collabotation":"Collaboration",
+    "cornerstone escalation tracker":"Escalation",
     "reviewing practice letter":"Training/Mentoring",
     "reg report":"WIP/Event Review",
     "tip":"",
