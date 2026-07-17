@@ -1522,6 +1522,8 @@ ACTIVITY_MAP = {
     "cas + svt ri":"RI",
     "training - read procedure": "Training/Mentoring",
     "updating the redline copy of dop3.446":"Redline",
+    "rr audit events/ collab (120)":"Audit",
+    "rr audit events/collab":"Audit",
     "lates meeting/1:1/ri":"RI",
     "training with sean for gfe/fax reply, working on lit event": "Training/Mentoring",
     "priority customer letter/cornerstone training":"Cornerstone",
