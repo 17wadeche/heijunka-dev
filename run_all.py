@@ -52,7 +52,7 @@ commands = [
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS IND"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters", "--weeks-back", "1"],
-    [PYTHON_BIN, "Scrape_wip_ns.py"], # 14:17
+    [PYTHON_BIN, "Scrape_wip_ns.py"], # 9:00
 ]
 def run(cmd, *, cwd=None):
     subprocess.run(cmd, cwd=cwd, check=True)
