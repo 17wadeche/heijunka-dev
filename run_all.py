@@ -8,9 +8,9 @@ os.chdir(SCRIPT_DIR)
 PYTHON_BIN = sys.executable
 commands = [
     [PYTHON_BIN, "scrape_wip_iv.py", "--all"], # 0:56
-    [PYTHON_BIN, "build_iv_non_wip_activities.py", "--config", "teams.json", "--metrics", "IV_DATA\\metrics.csv", "--all", "--out", "IV_DATA\\non_wip.csv"], #1:19
-    [PYTHON_BIN, "scrape_wip_ect.py"], # 0:09
-    [PYTHON_BIN, "build_ect_non_wip_activities.py"], # 0:09
+    [PYTHON_BIN, "build_iv_non_wip_activities.py", "--config", "teams.json", "--metrics", "IV_DATA\\metrics.csv", "--all", "--out", "IV_DATA\\non_wip.csv"], #1:30
+    [PYTHON_BIN, "scrape_wip_ect.py"], # 0:10
+    [PYTHON_BIN, "build_ect_non_wip_activities.py"], # 0:10
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-05"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-12"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-01-19"],
@@ -39,16 +39,16 @@ commands = [
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-06-29"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-07-06"],
     [PYTHON_BIN, "push_selected_dates.py", "--date", "2026-07-13"],
-    [PYTHON_BIN, "scrape_wip_crm.py"], # 4:00
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CDS"],
+    [PYTHON_BIN, "scrape_wip_crm.py"], # 4:43
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CDS"], # 0:07
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "CPT", "--weeks-back", "1"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "DS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "NI & PM MEIC"],
-    [PYTHON_BIN, "scrape_wip_ms.py"], # 1:38
-    [PYTHON_BIN, "build_ms_non_wip_activities.py"], # 1:44
-    [PYTHON_BIN, "build_ns_non_wip_activities.py"], # 1:36
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "1"],
+    [PYTHON_BIN, "scrape_wip_ms.py"], # 0:18
+    [PYTHON_BIN, "build_ms_non_wip_activities.py"], # 0:03
+    [PYTHON_BIN, "build_ns_non_wip_activities.py"], # 0:33
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "1"], #0:22
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS IND"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters", "--weeks-back", "1"],
