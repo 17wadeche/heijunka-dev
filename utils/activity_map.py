@@ -1520,6 +1520,8 @@ ACTIVITY_MAP = {
     "team leads meeting/capa 726178 inv meeting/audit updates meeting":"CAPA",
     "audit nc prep":"Audit",
     "cas + svt ri":"RI",
+    "training - read procedure": "Training/Mentoring",
+    "updating the redline copy of dop3.446":"Redline",
     "lates meeting/1:1/ri":"RI",
     "training with sean for gfe/fax reply, working on lit event": "Training/Mentoring",
     "priority customer letter/cornerstone training":"Cornerstone",
