@@ -1526,7 +1526,7 @@ ACTIVITY_MAP = {
     "ri/late":"RI",
     "any final a3 touches needed": "Problem Solving",
     "a3":"Problem Solving",
-    "capa training": "Training/Mentoring",
+    "capa training": "CAPA",
     "training, emails, admin, bo report update": "Training/Mentoring",
     "answering file querie":"Question",
     "mc3 call":"Meeting",
