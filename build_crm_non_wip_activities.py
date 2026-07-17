@@ -248,9 +248,13 @@ def is_excluded_person(name: str) -> bool:
     return n in {"", "do not use", "team member(s)"}
 def _find_header_col(ws: Worksheet, header_text: str, *, max_header_row: int = 10) -> Optional[int]:
     want = _norm_text(header_text)
-    for r in range(1, min(ws.max_row, max_header_row) + 1):
-        for c in range(1, ws.max_column + 1):
-            if _norm_text(str(ws.cell(r, c).value or "")) == want:
+    for row in ws.iter_rows(
+        min_row=1,
+        max_row=min(ws.max_row, max_header_row),
+        values_only=True,
+    ):
+        for c, value in enumerate(row, start=1):
+            if _norm_text(str(value or "")) == want:
                 return c
     return None
 def _find_number_right_of_label(
@@ -260,11 +264,11 @@ def _find_number_right_of_label(
     lookahead: int = 10,
 ) -> Optional[float]:
     want = _norm_text(label_text)
-    for r in range(1, ws.max_row + 1):
-        for c in range(1, ws.max_column + 1):
-            if want in _norm_text(str(ws.cell(r, c).value or "")):
-                for cc in range(c + 1, min(ws.max_column, c + lookahead) + 1):
-                    n = _cell_number(ws.cell(r, cc).value)
+    for row in ws.iter_rows(values_only=True):
+        for c, value in enumerate(row):
+            if want in _norm_text(str(value or "")):
+                for candidate in row[c + 1:c + 1 + lookahead]:
+                    n = _cell_number(candidate)
                     if n is not None:
                         return n
     return None
@@ -289,13 +293,23 @@ def iter_pm_cts_non_wip_rows(
     ws_pab: Worksheet,
     start_row: int = 2,
 ) -> Iterable[Tuple[str, str, float]]:
-    for r in range(start_row, ws_pab.max_row + 1):
-        category = _norm_text(str(ws_pab[f"C{r}"].value or ""))
+    blank_run = 0
+    for row in ws_pab.iter_rows(
+        min_row=start_row, min_col=2, max_col=8, values_only=True
+    ):
+        raw_person, raw_category, raw_activity, raw_hours = row[0], row[1], row[2], row[6]
+        if not any(str(value or "").strip() for value in (raw_person, raw_category, raw_activity, raw_hours)):
+            blank_run += 1
+            if blank_run >= MAX_TRAILING_BLANK_ROWS:
+                break
+            continue
+        blank_run = 0
+        category = _norm_text(str(raw_category or ""))
         if category not in PM_CTS_NON_WIP_TYPES:
             continue
-        person = normalize_person_name(str(ws_pab[f"B{r}"].value or ""))
-        activity = _collapse_ws(str(ws_pab[f"D{r}"].value or "")) or category.title()
-        hours = _cell_number(ws_pab[f"H{r}"].value)
+        person = normalize_person_name(str(raw_person or ""))
+        activity = _collapse_ws(str(raw_activity or "")) or category.title()
+        hours = _cell_number(raw_hours)
         if not person or is_excluded_person(person) or hours is None:
             continue
         yield person, activity, float(hours)
@@ -316,14 +330,24 @@ def compute_pm_cts_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]:
 def compute_pm_cts_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
     ooo_col = _find_header_col(ws_perf, "Total OOO hours") or ws_perf["S1"].column
     out: Dict[str, float] = {}
-    for r in range(3, ws_perf.max_row + 1):
-        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+    blank_run = 0
+    for row in ws_perf.iter_rows(
+        min_row=3, min_col=1, max_col=ooo_col, values_only=True
+    ):
+        raw_name = str(row[0] or "").strip()
+        raw_hours = row[ooo_col - 1]
+        if not raw_name and _cell_number(raw_hours) in {None, 0}:
+            blank_run += 1
+            if blank_run >= MAX_TRAILING_BLANK_ROWS:
+                break
+            continue
+        blank_run = 0
         if not raw_name:
             continue
         if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         person = normalize_person_name(raw_name)
-        hours = _cell_number(ws_perf.cell(r, ooo_col).value)
+        hours = _cell_number(raw_hours)
         if not person or hours is None or hours == 0:
             continue
         out[person] = out.get(person, 0.0) + float(hours)
@@ -383,13 +407,23 @@ def iter_lit_letters_non_wip_rows(
     ws_pab: Worksheet,
     start_row: int = 2,
 ) -> Iterable[Tuple[str, str, float]]:
-    for r in range(start_row, ws_pab.max_row + 1):
-        area = _norm_text(str(ws_pab[f"D{r}"].value or ""))
+    blank_run = 0
+    for row in ws_pab.iter_rows(
+        min_row=start_row, min_col=3, max_col=8, values_only=True
+    ):
+        raw_person, raw_area, raw_activity, raw_mins = row[0], row[1], row[2], row[5]
+        if not any(str(value or "").strip() for value in (raw_person, raw_area, raw_activity, raw_mins)):
+            blank_run += 1
+            if blank_run >= MAX_TRAILING_BLANK_ROWS:
+                break
+            continue
+        blank_run = 0
+        area = _norm_text(str(raw_area or ""))
         if area not in LIT_LETTERS_NON_WIP_TYPES:
             continue
-        person = normalize_person_name(str(ws_pab[f"C{r}"].value or ""))
-        activity = _collapse_ws(str(ws_pab[f"E{r}"].value or "")) or area.title()
-        mins = _cell_number(ws_pab[f"H{r}"].value)
+        person = normalize_person_name(str(raw_person or ""))
+        activity = _collapse_ws(str(raw_activity or "")) or area.title()
+        mins = _cell_number(raw_mins)
         if not person or is_excluded_person(person) or mins is None:
             continue
         yield person, activity, float(mins) / 60.0
@@ -403,14 +437,24 @@ def compute_lit_letters_non_wip_by_person(ws_pab: Worksheet) -> Dict[str, float]
 def compute_lit_letters_ooo_by_person(ws_perf: Worksheet) -> Dict[str, float]:
     ooo_col = _find_header_col(ws_perf, "OOO hours") or ws_perf["AL1"].column
     out: Dict[str, float] = {}
-    for r in range(5, ws_perf.max_row + 1):
-        raw_name = str(ws_perf[f"A{r}"].value or "").strip()
+    blank_run = 0
+    for row in ws_perf.iter_rows(
+        min_row=5, min_col=1, max_col=ooo_col, values_only=True
+    ):
+        raw_name = str(row[0] or "").strip()
+        raw_hours = row[ooo_col - 1]
+        if not raw_name and _cell_number(raw_hours) in {None, 0}:
+            blank_run += 1
+            if blank_run >= MAX_TRAILING_BLANK_ROWS:
+                break
+            continue
+        blank_run = 0
         if not raw_name:
             continue
         if is_excluded_person(raw_name) or _is_summary_person_row(raw_name):
             continue
         person = normalize_person_name(raw_name)
-        hours = _cell_number(ws_perf.cell(r, ooo_col).value)
+        hours = _cell_number(raw_hours)
         if not person or hours is None or hours == 0:
             continue
         out[person] = out.get(person, 0.0) + float(hours)
@@ -658,11 +702,15 @@ def find_sheets_by_period(wb, *, kind: str) -> Dict[_dt.date, str]:
     return out
 def iter_prod_rows(ws_prod: Worksheet, start_row: int = 7, end_row: int = 406) -> Iterable[Tuple[int, str, str, Optional[float], Optional[float]]]:
     maxr = min(ws_prod.max_row, end_row)
-    for r in range(start_row, maxr + 1):
-        person = ws_prod[f"D{r}"].value
-        station = ws_prod[f"E{r}"].value
-        target = _cell_number(ws_prod[f"F{r}"].value)
-        output = _cell_number(ws_prod[f"G{r}"].value)
+    for r, row in enumerate(
+        ws_prod.iter_rows(
+            min_row=start_row, max_row=maxr, min_col=4, max_col=7, values_only=True
+        ),
+        start=start_row,
+    ):
+        person, station = row[0], row[1]
+        target = _cell_number(row[2])
+        output = _cell_number(row[3])
         p = str(person).strip() if person is not None else ""
         s = str(station).strip() if station is not None else ""
         if p == "" and s == "" and target is None and output is None:
@@ -885,19 +933,37 @@ def scrape_one_lit_letters_workbook(
     period_iso = iso_date(period)
     ws_pab = _get_required_sheet(wb, LIT_LETTERS_PAB_SHEET)
     ws_perf = _get_required_sheet(wb, LIT_LETTERS_PERF_WIP_SHEET)
-    total_non_wip_hours = compute_lit_letters_total_non_wip_hours(ws_pab)
-    ooo_hours = compute_lit_letters_total_ooo_hours(ws_perf)
+    pab_rows = list(iter_lit_letters_non_wip_rows(ws_pab))
+    total_non_wip_hours = float(sum(hours for _, _, hours in pab_rows))
+    non_wip_by_person: Dict[str, float] = {}
+    activity_agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in pab_rows:
+        non_wip_by_person[person] = non_wip_by_person.get(person, 0.0) + hours
+        activity_agg[(person, activity)] = activity_agg.get((person, activity), 0.0) + hours
+    ooo_by_person = compute_lit_letters_ooo_by_person(ws_perf)
+    ooo_hours = float(
+        _find_number_right_of_label(ws_perf, "Team OOO hours")
+        or _find_number_right_of_label(ws_perf, "Total OOO hours")
+        or sum(ooo_by_person.values())
+    )
+    for person, hours in ooo_by_person.items():
+        activity_agg[(person, "OOO")] = activity_agg.get((person, "OOO"), 0.0) + hours
+    non_wip_activities = [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(
+            activity_agg.items(), key=lambda item: (item[0][0].lower(), item[0][1].lower())
+        )
+        if hours != 0
+    ]
     pct_in_wip = _find_number_right_of_label(ws_perf, "Team % WIP")
     if pct_in_wip is None:
         total_wip_hours = _find_number_right_of_label(ws_perf, "Total WIP Hours")
         total_workable_hours = _find_number_right_of_label(ws_perf, "Total Team workable hours")
         if total_wip_hours is not None and total_workable_hours is not None:
             pct_in_wip = safe_div(float(total_wip_hours), float(total_workable_hours))
-    non_wip_by_person = compute_lit_letters_non_wip_by_person(ws_pab)
-    non_wip_activities = compute_lit_letters_non_wip_activities(ws_pab, ws_perf)
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
-    wip_workers_ooo_hours = compute_lit_letters_wip_workers_ooo_hours(ws_perf, wip_workers)
+    wip_workers_ooo_hours = compute_wip_workers_ooo_hours_from_ooo_by_person(ooo_by_person, wip_workers)
     row = {
         "team": team,
         "period_date": period_iso,
@@ -926,19 +992,37 @@ def scrape_one_pm_cts_workbook(
     period_iso = iso_date(period)
     ws_pab = _get_required_sheet(wb, PM_CTS_PAB_SHEET)
     ws_perf = _get_required_sheet(wb, PM_CTS_PERF_WIP_SHEET)
-    total_non_wip_hours = compute_pm_cts_total_non_wip_hours(ws_pab)
-    ooo_hours = compute_pm_cts_total_ooo_hours(ws_perf)
+    pab_rows = list(iter_pm_cts_non_wip_rows(ws_pab))
+    total_non_wip_hours = float(sum(hours for _, _, hours in pab_rows))
+    non_wip_by_person: Dict[str, float] = {}
+    activity_agg: Dict[Tuple[str, str], float] = {}
+    for person, activity, hours in pab_rows:
+        non_wip_by_person[person] = non_wip_by_person.get(person, 0.0) + hours
+        activity_agg[(person, activity)] = activity_agg.get((person, activity), 0.0) + hours
+    ooo_by_person = compute_pm_cts_ooo_by_person(ws_perf)
+    ooo_hours = float(
+        _find_number_right_of_label(ws_perf, "Team OOO hours")
+        or _find_number_right_of_label(ws_perf, "Total OOO hours")
+        or sum(ooo_by_person.values())
+    )
+    for person, hours in ooo_by_person.items():
+        activity_agg[(person, "OOO")] = activity_agg.get((person, "OOO"), 0.0) + hours
+    non_wip_activities = [
+        {"name": person, "activity": activity, "hours": float(hours)}
+        for (person, activity), hours in sorted(
+            activity_agg.items(), key=lambda item: (item[0][0].lower(), item[0][1].lower())
+        )
+        if hours != 0
+    ]
     pct_in_wip = _find_number_right_of_label(ws_perf, "Team % WIP")
     if pct_in_wip is None:
         total_wip_hours = _find_number_right_of_label(ws_perf, "Total WIP Hours")
         total_workable_hours = _find_number_right_of_label(ws_perf, "Total Team workable hours")
         if total_wip_hours is not None and total_workable_hours is not None:
             pct_in_wip = safe_div(float(total_wip_hours), float(total_workable_hours))
-    non_wip_by_person = compute_pm_cts_non_wip_by_person(ws_pab)
-    non_wip_activities = compute_pm_cts_non_wip_activities(ws_pab, ws_perf)
     wip_workers = people_in_wip_lookup.get((team, period_iso), [])
     wip_workers_count = len({normalize_person_key(x) for x in wip_workers if x})
-    wip_workers_ooo_hours = compute_pm_cts_wip_workers_ooo_hours(ws_perf, wip_workers)
+    wip_workers_ooo_hours = compute_wip_workers_ooo_hours_from_ooo_by_person(ooo_by_person, wip_workers)
     row = {
         "team": team,
         "period_date": period_iso,
