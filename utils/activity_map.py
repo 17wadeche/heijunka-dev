@@ -1525,6 +1525,8 @@ ACTIVITY_MAP = {
     "training - reading proceedure": "Training/Mentoring",
     "updating the redline copy of dop3.446":"Redline",
     "cornerstone vid":"Cornerstone",
+    "final risk documentation questionnaire, masterdata meeting for avalus, scrum, attachnig faxes,":"Admin",
+    "conor capa review/questionaire":"CAPA",
     "email replie":"Email & IM",
     "capa questionnaire":"CAPA",
     "scrum, collab":"Collaboration",
