@@ -1521,6 +1521,8 @@ ACTIVITY_MAP = {
     "audit nc prep":"Audit",
     "cas + svt ri":"RI",
     "training - read procedure": "Training/Mentoring",
+    "training - read proceedure": "Training/Mentoring",
+    "training - reading proceedure": "Training/Mentoring",
     "updating the redline copy of dop3.446":"Redline",
     "cornerstone vid":"Cornerstone",
     "email replie":"Email & IM",
