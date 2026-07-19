@@ -1525,6 +1525,8 @@ ACTIVITY_MAP = {
     "cornerstone vid":"Cornerstone",
     "email replie":"Email & IM",
     "capa questionnaire":"CAPA",
+    "fu emails doc update":"Admin",
+    "selft directed mdt academy training -enchevar": "Training/Mentoring",
     "rr audit events/ collab (120)":"Audit",
     "rr audit events/collab":"Audit",
     "lates meeting/1:1/ri":"RI",
