@@ -1399,6 +1399,7 @@ def _sheet_ci(wb, name: str) -> Optional[str]:
 DS_NEW_HOURS_START = _dt.date(2026, 4, 24)
 DS_Y_AD_HOURS_START = _dt.date(2026, 5, 4)
 DS_COMPLETED_HOURS_UP_ONE_ROW_START = _dt.date(2026, 6, 1)
+DS_FINAL_ROW_42_START = _dt.date(2026, 7, 13)
 def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= DS_NEW_HOURS_START
 def _ds_use_y_ad_hours_layout(period: Optional[_dt.date]) -> bool:
@@ -1408,6 +1409,12 @@ def _ds_completed_hours_up_one_row(period: Optional[_dt.date]) -> bool:
         isinstance(period, _dt.date)
         and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
     )
+def _ds_final_row(period: Optional[_dt.date]) -> int:
+    if isinstance(period, _dt.date) and period >= DS_FINAL_ROW_42_START:
+        return 42
+    return 46
+def _ds_person_end_row(period: Optional[_dt.date]) -> int:
+    return _ds_final_row(period) - 1
 def _is_ds_excluded_category(v: Any) -> bool:
     s = str(v).strip().lower() if v is not None else ""
     return s in {"non-wip", "essential non-wip"}
@@ -1437,18 +1444,18 @@ def compute_completed_hours_ds(
     period: Optional[_dt.date] = None,
 ) -> Tuple[Optional[float], Dict[str, float], List[str]]:
     if _ds_use_new_hours_layout(period):
-        total_cell = "C46" if _ds_completed_hours_up_one_row(period) else "C47"
+        total_cell = f"C{_ds_final_row(period)}" if _ds_completed_hours_up_one_row(period) else "C47"
         total = _cell_number(ws_perf[total_cell].value)
         actual_col = "Y" if _ds_use_y_ad_hours_layout(period) else "W"
     else:
         use_r_layout = _ds_use_r_layout(ws_perf)
         total_col = "R" if use_r_layout else "AB"
         actual_col = "R" if use_r_layout else "AB"
-        total = _cell_number(ws_perf[f"{total_col}46"].value)
+        total = _cell_number(ws_perf[f"{total_col}{_ds_final_row(period)}"].value)
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
-    for r in range(5, 46):
+    for r in range(5, _ds_person_end_row(period) + 1):
         person = ws_perf[f"A{r}"].value
         actual = _cell_number(ws_perf[f"{actual_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
@@ -1471,7 +1478,7 @@ def compute_person_available_hours_ds(
         use_r_layout = _ds_use_r_layout(ws_perf)
         available_col = "R" if use_r_layout else "AA"
     out: Dict[str, float] = {}
-    for r in range(5, 46):
+    for r in range(5, _ds_person_end_row(period) + 1):
         person = ws_perf[f"A{r}"].value
         available = _cell_number(ws_perf[f"{available_col}{r}"].value)
         p = str(person).strip() if person is not None else ""
