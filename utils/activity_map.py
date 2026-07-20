@@ -1526,6 +1526,8 @@ ACTIVITY_MAP = {
     "training on sentrant": "Training/Mentoring",
     "cornerstone, email, admin, other":"Cornerstone",
     "a3 work": "Problem Solving",
+    "cornerstone/ email":"Email & IM",
+    "dexter weekly meeting":"Meeting",
     "letter requested by pmpa / sent for pmpa review":"PMPA",
     "conerstone training/email response":"Cornerstone",
     "talking with inv team regarding event/customer letter":"Collaboration",
