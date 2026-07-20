@@ -64,6 +64,7 @@ CPT_ROOT_HINT = _norm_cpt = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Car
 NI_ROOT_HINT = _norm_ni = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka")
 MEIC_ROOT_HINT = _norm_meic = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker")
 PM_CTS_ROOT_HINT = norm_pm_cts = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB")
+PM_CTS_ARCHIVED_PAB_HINT = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB\Archived PAB")
 _AVAIL_PAT = re.compile(r"\bavailability\b", re.IGNORECASE)
 _PROD_PAT = re.compile(r"\b(production|product)\s+analysis\b", re.IGNORECASE)
 _MONTH_MAP = {
@@ -2165,6 +2166,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker",
         r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker\Archive",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB",
+        PM_CTS_ARCHIVED_PAB_HINT,
     ]
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*", help="Excel workbook(s) and/or folders to scrape (.xlsx/.xlsm).")
