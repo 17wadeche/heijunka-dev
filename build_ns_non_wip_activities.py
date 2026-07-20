@@ -3209,17 +3209,11 @@ def build_tdd_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
         "ooo_map": ooo_map,
     }
 _ET_CAPACITY_ROWS_CACHE: Dict[str, pd.DataFrame] = {}
-
-
 def build_et_us_rows_from_capacity_workbook(
     team_src: TeamSource,
     wip_df: pd.DataFrame,
     metrics_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    # PSS US and ET US are two row selections from the same workbook.  Opening
-    # and releasing that macro-enabled workbook twice in one process can leave
-    # the second Excel COM server blocked during proxy destruction.  Build and
-    # cache both team results during the first open instead.
     cached = _ET_CAPACITY_ROWS_CACHE.get(team_src.team)
     if cached is not None:
         print(
@@ -3227,11 +3221,9 @@ def build_et_us_rows_from_capacity_workbook(
             flush=True,
         )
         return cached.copy(deep=True)
-
     xlsx_path = team_src.xlsx
     if not xlsx_path.exists():
         return pd.DataFrame()
-
     requested_team = team_src.team
     team_sources = [
         TEAM_SOURCES[name]
@@ -3240,7 +3232,6 @@ def build_et_us_rows_from_capacity_workbook(
     ]
     if not team_sources:
         team_sources = [team_src]
-
     results: Dict[str, pd.DataFrame] = {}
     pythoncom.CoInitialize()
     excel = None
