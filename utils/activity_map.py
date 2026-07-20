@@ -1525,6 +1525,8 @@ ACTIVITY_MAP = {
     "mfg complaint review":"WIP/Event Review",
     "training on sentrant": "Training/Mentoring",
     "stent id check":"Admin",
+    "questions/doubt":"Question",
+    "risk assessment call":"Meeting",
     "cornerstone, email, admin, other":"Cornerstone",
     "a3 work": "Problem Solving",
     "cornerstone/ email":"Email & IM",
