@@ -1525,6 +1525,7 @@ ACTIVITY_MAP = {
     "wk wip output/delta": "Metrics & Schedule",
     "ml/ai rd gap analysi":"Data Request/Review",
     "audit nc prep":"Audit",
+    "scrum/reviewing events/some faxes/eu training material":"Admin",
     "did non-wip/audit backroom support":"Audit",
     "cas + svt ri":"RI",
     "event review, collaboration":"Collaboration",
