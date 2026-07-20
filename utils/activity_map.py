@@ -1527,6 +1527,8 @@ ACTIVITY_MAP = {
     "audit nc prep":"Audit",
     "did non-wip/audit backroom support":"Audit",
     "cas + svt ri":"RI",
+    "event review, collaboration":"Collaboration",
+    "rr audit events,scrum,collab":"Audit",
     "training - read procedure": "Training/Mentoring",
     "training - read proceedure": "Training/Mentoring",
     "training - reading proceedure": "Training/Mentoring",
