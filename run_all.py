@@ -49,10 +49,10 @@ commands = [
     [PYTHON_BIN, "scrape_wip_ms.py"], # 0:18
     [PYTHON_BIN, "build_ms_non_wip_activities.py"], # 0:03
     [PYTHON_BIN, "build_ns_non_wip_activities.py"], # 0:33
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "1"], #0:22
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS", "--weeks-back", "2"], #0:22
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "MCS"],
     [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "PM-CTS IND"],
-    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters", "--weeks-back", "1"],
+    [PYTHON_BIN, "build_crm_non_wip_activities.py", "--team", "Lit & Letters", "--weeks-back", "2"],
     [PYTHON_BIN, "Scrape_wip_ns.py"], # 9:00
 ]
 def run(cmd, *, cwd=None):
