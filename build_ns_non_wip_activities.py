@@ -2907,6 +2907,15 @@ def _build_et_capacity_snapshot(
         "ooo_map": ooo_map,
     }
 def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
+    week_norm = pd.Timestamp(week).normalize() if week is not None and pd.notna(week) else None
+    if week_norm is not None and week_norm >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
+        return _build_et_capacity_snapshot(
+            team,
+            ws,
+            week,
+            include_rows=list(range(2, 32)),  # Excel rows 3:32 after ET US expanded to 30 people
+            people_count=30,
+        )
     return _build_et_capacity_snapshot(
         team,
         ws,
@@ -2924,9 +2933,9 @@ def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd
     )
 def _reconstruct_et_archive_snapshot(week_rows: pd.DataFrame, header_row: List) -> pd.DataFrame:
     column_count = 30
-    data_row_count = 28
+    data_row_count = 38
     reconstructed = pd.DataFrame(
-        [[""] * column_count for _ in range(30)],
+        [[""] * column_count for _ in range(data_row_count + 2)],
         dtype=object,
     )
     for c, val in enumerate(header_row[:column_count]):
@@ -3076,7 +3085,7 @@ def _build_et_us_rows_from_sheet(
                 except Exception:
                     pass
             for _poll_attempt in range(10):
-                ws_df = _read_excel_range_display_df(ws_com, "A1:AD30")
+                ws_df = _read_excel_range_display_df(ws_com, "A1:AD40")
                 builder = team_src.custom_builder or build_et_us_snapshot
                 built = builder(team_name, ws_df, week)
                 people_found = len(built.get("people_rows", []))
