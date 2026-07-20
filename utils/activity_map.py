@@ -1528,6 +1528,7 @@ ACTIVITY_MAP = {
     "a3 work": "Problem Solving",
     "cornerstone/ email":"Email & IM",
     "dexter weekly meeting":"Meeting",
+    "rdn meeting":"Meeting",
     "letter requested by pmpa / sent for pmpa review":"PMPA",
     "conerstone training/email response":"Cornerstone",
     "talking with inv team regarding event/customer letter":"Collaboration",
