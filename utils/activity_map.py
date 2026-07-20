@@ -1524,6 +1524,7 @@ ACTIVITY_MAP = {
     "observing sentrant analysi": "Training/Mentoring",
     "mfg complaint review":"WIP/Event Review",
     "training on sentrant": "Training/Mentoring",
+    "stent id check":"Admin",
     "cornerstone, email, admin, other":"Cornerstone",
     "a3 work": "Problem Solving",
     "cornerstone/ email":"Email & IM",
