@@ -1953,11 +1953,12 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
     }
 def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
-    PEOPLE_END = 18
+    PEOPLE_END = 29
     COL_B = 1
-    ooo_col = 26
     COL_C = 2
-    COL_AE = 30
+    COL_AD = _col_letter_to_idx("AD")
+    COL_AE = _col_letter_to_idx("AE")
+    ooo_col = COL_AE
     HEADER_ROW = 1
     AI20_ROW = 19
     AI20_COL = _col_letter_to_idx("AI")
@@ -1990,7 +1991,7 @@ def build_mnav_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = N
     for pr in people_rows:
         i = pr["row_i"]
         name = pr["name"]
-        for c in range(COL_C, COL_AE + 1):
+        for c in range(COL_C, COL_AD + 1):
             label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[1] > c else "")
             if not label:
                 continue
@@ -2021,10 +2022,14 @@ ET_SPLIT_TEAMS = {"ET US", "ET MEIC"}
 ET_MEIC_ROLLUP_TEAMS = {"AE MEIC", "O-Arm MEIC"}
 ENABLE_TEAMS = set(ET_LEGACY_TEAMS | ET_SPLIT_TEAMS)
 ENABLE_TEAM_NAME = "Enabling Technologies"
+ET_US_PEOPLE_COUNT_INCREASE_DATE = pd.Timestamp("2026-07-06").normalize()
 ET_FIXED_PEOPLE_COUNT = {
     "ET US": 23,
     "ET MEIC": 10,
 }
+def _et_fixed_people_count(team_name: str, period_date) -> int:
+    if team_name == "ET US" and pd.Timestamp(period_date).normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
+        return 30
 def _et_component_teams_for_week(period_date) -> set[str]:
     week = pd.Timestamp(period_date).normalize()
     return set(ET_SPLIT_TEAMS if week >= ET_SPLIT_START_DATE else ET_LEGACY_TEAMS)
@@ -2096,7 +2101,7 @@ def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
         & (out["period_date"] < ET_SPLIT_START_DATE)
     )
     out = out.loc[~pre_split_new_names].copy()
-    for team_name, fixed_count in ET_FIXED_PEOPLE_COUNT.items():
+    for team_name in ET_FIXED_PEOPLE_COUNT:
         mask = (
             out["team"].eq(team_name)
             & out["period_date"].notna()
@@ -2105,7 +2110,9 @@ def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
         if not mask.any():
             continue
         if "people_count" in out.columns:
-            out.loc[mask, "people_count"] = fixed_count
+            out.loc[mask, "people_count"] = out.loc[mask, "period_date"].map(
+                lambda d: _et_fixed_people_count(team_name, d)
+            )
         if team_name == "ET US" and "% in WIP" in out.columns:
             out.loc[mask, "% in WIP"] = np.nan
         for col, blank_value in {
@@ -2117,7 +2124,7 @@ def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
             if col in out.columns:
                 out.loc[mask, col] = blank_value
     out = _collapse_duplicate_team_week_rows(out)
-    for team_name, fixed_count in ET_FIXED_PEOPLE_COUNT.items():
+    for team_name in ET_FIXED_PEOPLE_COUNT:
         mask = (
             out["team"].eq(team_name)
             & out["period_date"].notna()
@@ -2126,7 +2133,9 @@ def _normalize_et_split_rows(df: pd.DataFrame) -> pd.DataFrame:
         if not mask.any():
             continue
         if "people_count" in out.columns:
-            out.loc[mask, "people_count"] = fixed_count
+            out.loc[mask, "people_count"] = out.loc[mask, "period_date"].map(
+                lambda d: _et_fixed_people_count(team_name, d)
+            )
         if team_name == "ET US" and "% in WIP" in out.columns:
             out.loc[mask, "% in WIP"] = np.nan
         for col, blank_value in {
