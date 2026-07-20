@@ -1733,6 +1733,9 @@ def get_people_count_from_wip(
         people_count = get_dbs_people_count_for_week(week)
         return people_count
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
+        week_date = pd.to_datetime(week, errors="coerce")
+        if pd.notna(week_date) and week_date.normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
+            return 40
         return 33
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
@@ -2030,6 +2033,7 @@ ET_FIXED_PEOPLE_COUNT = {
 def _et_fixed_people_count(team_name: str, period_date) -> int:
     if team_name == "ET US" and pd.Timestamp(period_date).normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
         return 30
+    return ET_FIXED_PEOPLE_COUNT[team_name]
 def _et_component_teams_for_week(period_date) -> set[str]:
     week = pd.Timestamp(period_date).normalize()
     return set(ET_SPLIT_TEAMS if week >= ET_SPLIT_START_DATE else ET_LEGACY_TEAMS)
@@ -2458,7 +2462,6 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     PEOPLE_START = 2
     week_norm = pd.Timestamp(week).normalize() if week is not None and pd.notna(week) else None
     ent_layout_shift = week_norm is not None and week_norm >= ENT_LAYOUT_SHIFT_START
-
     PEOPLE_END   = 22 if ent_layout_shift else 21
     TOTAL_ROW    = 23 if ent_layout_shift else 22
     COL_B  = _col_letter_to_idx("B")
@@ -2834,22 +2837,11 @@ def _build_et_capacity_snapshot(
     include_rows: List[int],
     people_count: int,
 ) -> Dict:
-    """Build one non-WIP snapshot from the shared Enabling Technologies sheet.
-
-    The sheet layout uses:
-      - Excel row 2 for activity headers
-      - Excel column A for names
-      - Excel columns C:AC for non-WIP activity hours
-      - Excel column AD for OOO
-
-    `include_rows` is zero-based, so Excel rows 23:27 are range(22, 27).
-    """
     NAME_COL = _col_letter_to_idx("A")
     ACT_START = _col_letter_to_idx("C")
     ACT_END = _col_letter_to_idx("AC")
     OOO_COL = _col_letter_to_idx("AD")
-    HEADER_ROW = 1  # Excel row 2
-
+    HEADER_ROW = 1  
     people_rows: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
     activities: List[dict] = []
@@ -3899,14 +3891,18 @@ def main():
         final_combined.loc[dbs_mask, "people_count"] = final_combined.loc[dbs_mask, "period_date"].apply(
             get_dbs_people_count_for_week
         )
-        final_combined.loc[
-            final_combined["_team_key"].isin({
-                "enabling tech",
-                "enabling technology",
-                "enabling technologies",
-            }),
-            "people_count"
-        ] = 33
+        enabling_mask = final_combined["_team_key"].isin({
+            "enabling tech",
+            "enabling technology",
+            "enabling technologies",
+        })
+        final_combined.loc[enabling_mask, "people_count"] = final_combined.loc[
+            enabling_mask, "period_date"
+        ].apply(
+            lambda week: 40
+            if pd.to_datetime(week, errors="coerce").normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE
+            else 33
+        )
         final_combined = final_combined.drop(columns=["_team_key"])
     final_combined.to_csv(OUT_PATH, index=False, encoding="utf-8-sig")
 if __name__ == "__main__":
