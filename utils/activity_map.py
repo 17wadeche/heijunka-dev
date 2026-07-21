@@ -1541,6 +1541,8 @@ ACTIVITY_MAP = {
     "benefits/cas ri + ri meeting":"RI",
     "audit nc admin (assign training, collaborate with rpa, request data)":"Audit",
     "team leads meeting/capa 726178 inv meeting/audit updates meeting":"CAPA",
+    "adhoc france meeting/late mdr meeting/scheduling/emails regarding data for france/ou product email search/review of capa material with conor":"CAPA",
+    "scrum, lunch, call with conor/email":"Admin",
     "collaboration/interruption":"Collaboration",
     "wk wip output/delta": "Metrics & Schedule",
     "ml/ai rd gap analysi":"Data Request/Review",
