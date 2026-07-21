@@ -1538,6 +1538,8 @@ ACTIVITY_MAP = {
     "r&d tax credit":"Admin",
     "retirement party":"Engagement",
     "dhr review from fwt":"WIP/Event Review",
+    "set-up: emails: scrum: eu mdr call":"Admin",
+    "retirement celebration":"Engagement",
     "emails (30) sotring ftir testing":"Email & IM",
     "collaboration, training, cornerstone":"Collaboration",
     "training- reading proceedure": "Training/Mentoring",
