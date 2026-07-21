@@ -1535,6 +1535,7 @@ ACTIVITY_MAP = {
     "email & im pmq cr pre-meeting q's review":"Email & IM",
     "uat doc approval":"Project Work",
     "dexter weekly meeting":"Meeting",
+    "scrum, training, collab":"Scrum & Action",
     "rdn meeting":"Meeting",
     "letter requested by pmpa / sent for pmpa review":"PMPA",
     "conerstone training/email response":"Cornerstone",
