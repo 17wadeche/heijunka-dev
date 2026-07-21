@@ -1451,6 +1451,7 @@ ACTIVITY_MAP = {
     "meeting tl": "Meeting",
     "looking at launcher for grainne and helping siva":"Collaboration",
     "gemba walk":"Gemba",
+    "sending faxes/inbox/emails/reviewing events/scrum+discuss event with tl":"Admin",
     "fw/heat map": "Metrics & Schedule",
     "fwt issue": "Metrics & Schedule",
     "sha weekly meeting": "Meeting",
