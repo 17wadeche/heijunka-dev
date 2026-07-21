@@ -1553,6 +1553,7 @@ ACTIVITY_MAP = {
     "judy and margaret leaving bash!!!":"Engagement",
     "judy leaving":"Engagement",
     "closurefast meeting with fola":"Meeting",
+    "meetings, training, email":"Meeting",
     "emails, fw":"Email & IM",
     "pulling relevant pe files/review":"WIP/Event Review",
     "meeting analytical lab rep":"Meeting",
