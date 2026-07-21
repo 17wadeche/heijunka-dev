@@ -1545,6 +1545,7 @@ ACTIVITY_MAP = {
     "judy leaving":"Engagement",
     "closurefast meeting with fola":"Meeting",
     "emails, fw":"Email & IM",
+    "pulling relevant pe files/review":"WIP/Event Review",
     "meeting analytical lab rep":"Meeting",
     "dexter weekly meeting":"Meeting",
     "scrum, training, collab":"Scrum & Action",
