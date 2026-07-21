@@ -1534,6 +1534,8 @@ ACTIVITY_MAP = {
     "cornerstone/ email":"Email & IM",
     "email & im pmq cr pre-meeting q's review":"Email & IM",
     "uat doc approval":"Project Work",
+    "audit reports crdn cs aortic":"Audit",
+    "r&d tax credit":"Admin",
     "retirement party":"Engagement",
     "dhr review from fwt":"WIP/Event Review",
     "emails (30) sotring ftir testing":"Email & IM",
