@@ -1532,6 +1532,8 @@ ACTIVITY_MAP = {
     "scrumb emails admin training": "Training/Mentoring",
     "a3 work": "Problem Solving",
     "cornerstone/ email":"Email & IM",
+    "email & im pmq cr pre-meeting q's review":"Email & IM",
+    "uat doc approval":"Project Work",
     "dexter weekly meeting":"Meeting",
     "rdn meeting":"Meeting",
     "letter requested by pmpa / sent for pmpa review":"PMPA",
