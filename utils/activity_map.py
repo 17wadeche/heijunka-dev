@@ -1539,6 +1539,7 @@ ACTIVITY_MAP = {
     "retirement party":"Engagement",
     "dhr review from fwt":"WIP/Event Review",
     "emails (30) sotring ftir testing":"Email & IM",
+    "collaboration, training, cornerstone":"Collaboration",
     "training- reading proceedure": "Training/Mentoring",
     "retirement get together":"Engagement",
     "retirement event":"Engagement",
