@@ -1528,6 +1528,8 @@ ACTIVITY_MAP = {
     "questions/doubt":"Question",
     "risk assessment call":"Meeting",
     "cornerstone, email, admin, other":"Cornerstone",
+    "ml rd gap":"Data Request/Review",
+    "scrumb emails admin training": "Training/Mentoring",
     "a3 work": "Problem Solving",
     "cornerstone/ email":"Email & IM",
     "dexter weekly meeting":"Meeting",
