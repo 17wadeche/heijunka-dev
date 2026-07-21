@@ -1540,6 +1540,7 @@ ACTIVITY_MAP = {
     "training- reading proceedure": "Training/Mentoring",
     "retirement get together":"Engagement",
     "retirement event":"Engagement",
+    "collab cornerstone emails requiring action":"Collaboration",
     "judy and margaret leaving bash!!!":"Engagement",
     "judy leaving":"Engagement",
     "closurefast meeting with fola":"Meeting",
