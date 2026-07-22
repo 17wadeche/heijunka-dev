@@ -1683,8 +1683,6 @@ def discover_lit_letters_files(*, weeks_back: int) -> List[str]:
                 seen.add(fp)
                 out.append(fp)
     return sorted(out)
-
-
 def expand_input_paths(paths: List[str]) -> List[str]:
     out: List[str] = []
     seen = set()
