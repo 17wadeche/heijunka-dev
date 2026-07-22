@@ -15,7 +15,7 @@
     { "portfolio": "CRM", "team": "CDS", "ou": "CDS" },
     { "portfolio": "CRM", "team": "NI", "ou": "PCS" },
     { "portfolio": "CRM", "team": "NI & PM MEIC", "ou": "PCS" },
-    { "portfolio": "CRM", "team": "PM-CTS", "ou": "PCS", "unaccounted_only": true, "people_count": 14 },
+    { "portfolio": "CRM", "team": "PM-CTS", "ou": "PCS", "unaccounted_only": true, "people_count": 14, "active_before": "2026-06-29" },
     { "portfolio": "CRM", "team": "PM-CTS IND", "ou": "PCS", "unaccounted_only": true, "people_count": 14 },
     { "portfolio": "MCS", "team": "MCS", "ou": "MCS" },
     { "portfolio": "CRM", "team": "Lit & Letters", "ou": "Lit & Letters" },

@@ -14,6 +14,7 @@ LIT_LETTERS_TEAM = "Lit & Letters"
 PM_CTS_TEAM = "PM-CTS"
 PM_CTS_IND_TEAM = "PM-CTS IND"
 PM_CTS_IND_START = _dt.date(2026, 6, 29)
+PM_CTS_REMOVAL_START = _dt.date(2026, 6, 29)
 def _load_workbook_data(path: str, *, read_only: bool = False):
     return load_workbook(path, data_only=True, read_only=read_only)
 def _is_lit_letters_path(path: str) -> bool:
@@ -365,7 +366,6 @@ def compute_completed_hours_cds(
         actual_col = "AB" if not use_r_layout else "R"
         total = _cell_number(ws_perf[f"{total_col}11"].value)
         row_stop = 11
-
     actual_by_person: Dict[str, float] = {}
     people_in_wip: List[str] = []
     seen = set()
@@ -470,6 +470,12 @@ def _is_pm_cts_ind_file(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
     period = parse_period_date_from_filename(path, default_year=2026)
     return "pm-cts ind" in base and (period is None or period >= PM_CTS_IND_START)
+def _is_removed_pm_cts_file(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    if "pm-cts" not in base or "pm-cts ind" in base:
+        return False
+    period = parse_period_date_from_filename(path, default_year=2026)
+    return isinstance(period, _dt.date) and period >= PM_CTS_REMOVAL_START
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
     base = os.path.basename(np)
@@ -477,6 +483,8 @@ def team_for_source(path: str) -> str:
         return LIT_LETTERS_TEAM
     if _is_pm_cts_ind_file(np):
         return PM_CTS_IND_TEAM
+    if _is_removed_pm_cts_file(np):
+        return ""
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     if np.startswith(DS_ROOT_HINT):
@@ -2101,6 +2109,8 @@ def iter_input_files(paths: List[str]) -> Iterable[str]:
                 full_path = _norm_path(os.path.join(p, name))
                 if full_path in EXCLUDED_FILES:
                     continue
+                if _is_removed_pm_cts_file(full_path):
+                    continue
                 if np.startswith(CDS_ROOT_HINT) and "pab" not in lower:
                     continue
                 if np.startswith(NI_ROOT_HINT) and not np.startswith(PM_CTS_ROOT_HINT) and "pab" not in lower:
@@ -2111,6 +2121,8 @@ def iter_input_files(paths: List[str]) -> Iterable[str]:
         else:
             full_path = _norm_path(p)
             if full_path in EXCLUDED_FILES:
+                continue
+            if _is_removed_pm_cts_file(full_path):
                 continue
             yield full_path
 def scrape_input_file(f: str) -> List[Dict[str, Any]]:

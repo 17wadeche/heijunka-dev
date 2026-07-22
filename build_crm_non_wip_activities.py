@@ -85,6 +85,7 @@ def lit_letters_people_count_for_period(period: _dt.date) -> int:
 PM_CTS_TEAM_NAME = "PM-CTS"
 PM_CTS_IND_TEAM_NAME = "PM-CTS IND"
 PM_CTS_IND_START = _dt.date(2026, 6, 29)
+PM_CTS_REMOVAL_START = _dt.date(2026, 6, 29)
 PM_CTS_PAB_SHEET = "#2 PAB"
 PM_CTS_PERF_WIP_SHEET = "#3 Performance WIP Time"
 PM_CTS_NON_WIP_TYPES = {"essential non-wip", "non-wip"}
@@ -180,12 +181,20 @@ def _is_pm_cts_ind_file(path: str) -> bool:
     base = os.path.basename(_norm_path(path)).lower()
     period = parse_period_date_from_filename(path)
     return "pm-cts ind" in base and (period is None or period >= PM_CTS_IND_START)
+def _is_removed_pm_cts_file(path: str) -> bool:
+    base = os.path.basename(_norm_path(path)).lower()
+    if "pm-cts" not in base or "pm-cts ind" in base:
+        return False
+    period = parse_period_date_from_filename(path)
+    return isinstance(period, _dt.date) and period >= PM_CTS_REMOVAL_START
 def team_for_source(path: str) -> str:
     np = _norm_path(path)
     if is_lit_letters_path(np):
         return LIT_LETTERS_TEAM_NAME
     if _is_pm_cts_ind_file(np):
         return PM_CTS_IND_TEAM_NAME
+    if _is_removed_pm_cts_file(np):
+        return ""
     if np in TEAM_BY_SOURCE:
         return TEAM_BY_SOURCE[np]
     ds_root = _norm_path(DS_DEFAULT_DIR)
@@ -1682,6 +1691,8 @@ def expand_input_paths(paths: List[str]) -> List[str]:
     def add_file(fp: str) -> None:
         np = _norm_path(fp)
         if np in EXCLUDED_FILES:
+            return
+        if _is_removed_pm_cts_file(np):
             return
         if np in seen:
             return

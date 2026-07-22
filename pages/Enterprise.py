@@ -354,10 +354,13 @@ def _build_missing_team_weeks_df(
     weeks = [w for w in weeks if w >= min_missing_week]
     if not weeks:
         return pd.DataFrame(columns=["Week Start", "Team", "Portfolio", "OU", "Status"])
-    expected = pd.MultiIndex.from_product(
-        [weeks, [t.name for t in enabled_teams]],
-        names=["week_start", "team"],
-    ).to_frame(index=False)
+    expected_rows = [
+        {"week_start": wk, "team": t.name}
+        for wk in weeks
+        for t in enabled_teams
+        if _team_active_for_week(t, wk)
+    ]
+    expected = pd.DataFrame(expected_rows, columns=["week_start", "team"])
     actual = pd.DataFrame(columns=["week_start", "team"])
     if team_export is not None and not team_export.empty:
         actual_cols = ["week_start", "team"]
@@ -1170,6 +1173,31 @@ org_cache_key = json.dumps(org.raw, sort_keys=True, default=str)
 if not team_filter:
     st.warning("No teams selected.")
     st.stop()
+def _meta_date(meta: dict[str, Any], *keys: str) -> Optional[pd.Timestamp]:
+    for key in keys:
+        value = meta.get(key)
+        if value in (None, ""):
+            continue
+        ts = pd.to_datetime(value, errors="coerce")
+        if pd.notna(ts):
+            return pd.Timestamp(ts).normalize()
+    return None
+def _team_active_for_week(team_cfg: TeamConfig, week: Any) -> bool:
+    wk = pd.to_datetime(week, errors="coerce")
+    if pd.isna(wk):
+        return True
+    wk = pd.Timestamp(wk).normalize()
+    meta = team_cfg.meta or {}
+    active_from = _meta_date(meta, "active_from", "active_start", "start_date")
+    active_before = _meta_date(meta, "active_before", "inactive_from", "disabled_from")
+    active_through = _meta_date(meta, "active_through", "active_until", "end_date")
+    if active_from is not None and wk < active_from:
+        return False
+    if active_before is not None and wk >= active_before:
+        return False
+    if active_through is not None and wk > active_through:
+        return False
+    return True
 def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_filter:
         return df.iloc[0:0]
@@ -1185,7 +1213,18 @@ def filter_by_team(df: pd.DataFrame) -> pd.DataFrame:
     if not team_cols:
         return df
     col = team_cols[0]
-    return df[df[col].astype(str).isin(set(team_filter))]
+    tmp = df[df[col].astype(str).isin(set(team_filter))].copy()
+    dc = _get_date_col(tmp)
+    if dc:
+        team_cfg_by_name = {t.name: t for t in org.teams}
+        dates = pd.to_datetime(tmp[dc], errors="coerce").dt.normalize()
+        active_mask = [
+            _team_active_for_week(team_cfg_by_name.get(str(team)), wk)
+            if team_cfg_by_name.get(str(team)) is not None else True
+            for team, wk in zip(tmp[col].astype(str), dates)
+        ]
+        tmp = tmp.loc[active_mask]
+    return tmp
 def _date_bounds_for_df(df: pd.DataFrame) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp], Optional[str]]:
     dc = _get_date_col(df)
     if not dc:
@@ -1390,6 +1429,8 @@ def _unaccounted_only_team_rows(
         if capacity_hours <= 0:
             continue
         for wk in normalized_weeks:
+            if not _team_active_for_week(team_cfg, wk):
+                continue
             key = (team_cfg.name, wk)
             if key in existing_team_weeks:
                 continue
