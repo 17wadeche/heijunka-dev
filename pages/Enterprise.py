@@ -820,6 +820,7 @@ def build_person_weekly_accounting(
         "NI": 37.75,
         "DS": 37.5,
         "LIT & LETTERS": 37.5,
+        "PM-CTS IND": 37.5,
     }
     PERSON_TEAM_WEEKLY_HOURS = {
         ("peter mchugh", "CDS"): 10.0,

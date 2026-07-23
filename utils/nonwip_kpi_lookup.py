@@ -223,7 +223,7 @@ def enterprise_nonwip_kpi_lookup(
         capacity_hours = count * 39.0
     elif team_name in FORTY_HOUR_TEAMS:
         capacity_hours = _capacity_from_count_with_person_overrides(count, 40.0, wk_people)
-    elif team_name in {"DS", "Lit & Letters"}:
+    elif team_name in {"DS", "Lit & Letters", "PM-CTS IND"}:
         capacity_hours = _capacity_from_count_with_person_overrides(count, 37.5, wk_people)
     elif team_name == "CPT":
         capacity_hours = _sum_col(wk_people, "Available Hours")

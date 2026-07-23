@@ -2330,6 +2330,7 @@ with right:
                         "NI": 37.75,
                         "DS": 37.5,
                         "LIT & LETTERS": 37.5,
+                        "PM-CTS IND": 37.5,
                     }
                     if multi_team and chosen_mix_teams:
                         teams_for_drill = {str(t).strip().upper() for t in chosen_mix_teams}
