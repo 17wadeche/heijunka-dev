@@ -1442,6 +1442,7 @@ ACTIVITY_MAP = {
     "admin (emails,fwt etc)":"Admin",
     "concerto email":"Email & IM",
     "fwt emails ((15)": "Metrics & Schedule",
+    "metrics/schedule": "Metrics & Schedule",
     "fw, emails, ect": "Metrics & Schedule",
     "emails, training, fw":"Email & IM",
     "emails for training, reporting cell":"Email & IM",
