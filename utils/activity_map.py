@@ -1450,6 +1450,7 @@ ACTIVITY_MAP = {
     "canada collaboration/research":"Collaboration",
     "emails admin audit":"Audit",
     "rd/coding update meeting":"Meeting",
+    "investigation progress meeting":"Meeting",
     "canada collabortion":"Collaboration",
     "’s":"",
     "req inquirie":"RI",
