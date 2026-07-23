@@ -479,8 +479,6 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, float]]:
         result[week_date] = people_avail
     return result
 def iter_production_rows(ws: Worksheet, start_row: int = 3) -> Iterable[Tuple[_dt.date, str, str, float, float, float]]:
-    # Stream A:H once. This avoids allocating the entire workbook and avoids
-    # thousands of random cell lookups.
     for values in ws.iter_rows(min_row=start_row, max_col=8, values_only=True):
         date_val = _as_date(values[0])
         if date_val is None:
