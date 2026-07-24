@@ -1451,6 +1451,7 @@ ACTIVITY_MAP = {
     "audit report updates/support":"Audit",
     "sh letters job aid":"Admin",
     "late report mtg":"Meeting",
+    "set up issue":"Set Up",
     "r&d tax data":"Admin",
     "inbox job aid":"Admin",
     "email/im wip check":"Email & IM",
