@@ -1454,6 +1454,7 @@ ACTIVITY_MAP = {
     "r&d tax data":"Admin",
     "inbox job aid":"Admin",
     "email/im wip check":"Email & IM",
+    "meeting with tl on death event":"Meeting",
     "email & im 20":"Email & IM",
     "it restart":"IT Issue/Update",
     "emails for training, reporting cell":"Email & IM",
