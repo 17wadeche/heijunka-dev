@@ -1449,7 +1449,7 @@ ACTIVITY_MAP = {
     "sh letters job aid":"Admin",
     "r&d tax data":"Admin",
     "inbox job aid":"Admin",
-    "email/im wIP check":"Email & IM",
+    "email/im wip check":"Email & IM",
     "email & im 20":"Email & IM",
     "it restart":"IT Issue/Update",
     "emails for training, reporting cell":"Email & IM",
