@@ -1443,6 +1443,7 @@ ACTIVITY_MAP = {
     "concerto email":"Email & IM",
     "audit req for ohq, inv meeting, complaint rev meting, schedule, scrum,":"Audit",
     "inv meeting, complaint rev meting, scrum, lunch":"Meeting",
+    "inv meeting, complaint rev meting, schedule, scrum, lunch":"Meeting",
     "fwt emails ((15)": "Metrics & Schedule",
     "metrics/schedule": "Metrics & Schedule",
     "fw, emails, ect": "Metrics & Schedule",
