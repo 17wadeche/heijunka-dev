@@ -1459,6 +1459,8 @@ ACTIVITY_MAP = {
     "emails for training, reporting cell":"Email & IM",
     "audit request/collaboration":"Audit",
     "canada collaboration/research":"Collaboration",
+    "collaboration/ querie":"Collaboration",
+    "collaboration/teams/email":"Collaboration",
     "emails admin audit":"Audit",
     "rd/coding update meeting":"Meeting",
     "investigation progress meeting":"Meeting",
