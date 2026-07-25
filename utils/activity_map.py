@@ -3179,6 +3179,8 @@ ACTIVITY_MAP = {
     "fda report":"FDA Meeting & Action",
     "sorting out hold box (pvh)":"Shipment",
     "meetiing/ fw/email":"Meeting",
+    "meeting with jb for businss obj pull, meeting with jennifr for inv data pull, reviwing events and completing rds, scrum, updating late tracker":"Meeting",
+    "reviewing events/cornerstone/scrum/creating faxe":"Admin",
     "shipping device (training eoin)":"Training/Mentoring",
     "shadowing coronary analysi":"Training/Mentoring",
     "security update": "IT Issue/Update",
