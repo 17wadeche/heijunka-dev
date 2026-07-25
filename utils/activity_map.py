@@ -3187,6 +3187,7 @@ ACTIVITY_MAP = {
     "wip review/gemba prep":"Gemba",
     "wip review":"WIP/Event Review",
     "event review":"WIP/Event Review",
+    "wip review/update":"WIP/Event Review",
     "aged wip review":"WIP/Event Review",
     "master data update":"Data Request/Review",
     "reviewing matrix/ifu's":"Reportability Matrix",
