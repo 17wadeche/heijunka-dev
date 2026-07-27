@@ -3154,6 +3154,7 @@ ACTIVITY_MAP = {
     "imf coding":"Coding/Code Gov",
     "tourguide device return followup":"Admin",
     "autolog investigation work":"WIP/Event Review",
+    "events discussion with tl/reviewing events/few gfe events/fax review took additional time":"Collaboration",
     "audio driver install and pc restart":"IT Issue/Update",
     "opening documents password change email":"IT Issue/Update",
     "dexter mtg":"Meeting",
