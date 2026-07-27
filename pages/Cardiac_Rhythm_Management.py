@@ -425,11 +425,6 @@ def filter_non_wip_activity_table(
         options=_options("Activity"),
         key=f"{key_prefix}_activity",
     )
-    selected_days = day_col.multiselect(
-        "Filter by day",
-        options=_options("Day"),
-        key=f"{key_prefix}_day",
-    )
     selected_names = name_col.multiselect(
         "Filter by name",
         options=_options("Name"),
@@ -438,7 +433,6 @@ def filter_non_wip_activity_table(
     filtered = activity_table.copy()
     for column, selected_values in (
         ("Activity", selected_activities),
-        ("Day", selected_days),
         ("Name", selected_names),
     ):
         if selected_values:
