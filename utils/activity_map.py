@@ -3160,6 +3160,7 @@ ACTIVITY_MAP = {
     "events discussion with tl/reviewing events/few gfe events/fax review took additional time":"Collaboration",
     "audio driver install and pc restart":"IT Issue/Update",
     "opening documents password change email":"IT Issue/Update",
+    "cornerstone, emails/admin":"Cornerstone",
     "dexter mtg":"Meeting",
     "password update/ restart issue":"IT Issue/Update",
     "submitting it ticket for laptop audio issue":"IT Issue/Update",
