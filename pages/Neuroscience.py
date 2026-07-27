@@ -1365,7 +1365,6 @@ if nonwip_mode:
             filter_scope = (
                 f"nw_activity_filters_"
                 f"{re.sub(r'[^A-Za-z0-9_]+', '_', str(team_nw))}_"
-                f"{re.sub(r'[^A-Za-z0-9_]+', '_', str(subgroup_nw))}_"
                 f"{week_nw.strftime('%Y%m%d')}"
             )
             filtered_act_tbl = filter_non_wip_activity_table(
