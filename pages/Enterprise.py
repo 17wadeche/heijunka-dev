@@ -3087,33 +3087,10 @@ elif page == "Non-WIP":
             activity for activity in st.session_state["nonwip_activity_filter"]
             if activity in activity_options
         ]
-    selected_activities = st.multiselect(
-        "Activities",
-        options=activity_options,
-        default=activity_options,
-        key="nonwip_activity_filter",
-        help="Choose which activities appear in the charts and table.",
-    )
-    rolled = rolled[rolled["activity"].isin(selected_activities)].copy()
     if rolled.empty:
         st.info("No Non-WIP activity data available for the selected activities.")
         st.stop()
-    st.markdown("#### Non-WIP activities table")
-    activity_table = (
-        rolled.groupby(
-            ["week_start", "portfolio", "ou", "team", "activity"],
-            as_index=False,
-            dropna=False,
-        )["hours"].sum()
-        .rename(columns={
-            "week_start": "Week Start", "portfolio": "Portfolio", "ou": "OU",
-            "team": "Team", "activity": "Activity", "hours": "Hours",
-        })
-        .sort_values(["Week Start", "OU", "Team", "Hours"], ascending=[False, True, True, False])
-    )
-    activity_table["Week Start"] = pd.to_datetime(activity_table["Week Start"]).dt.date
     st.dataframe(
-        activity_table,
         width="stretch",
         hide_index=True,
         column_config={"Hours": st.column_config.NumberColumn("Hours", format="%.2f")},
@@ -3239,7 +3216,6 @@ elif page == "Non-WIP":
     pie_rolled = pie_rolled[
         ~pie_rolled["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
     ].sort_values("hours", ascending=False)
-    pie_rolled = pie_rolled[pie_rolled["activity"].isin(selected_activities)]
     if pie_rolled.empty:
         st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
         st.stop()
