@@ -8,6 +8,7 @@ import streamlit as st
 from utils.nonwip_kpi_lookup import enterprise_nonwip_kpi_lookup
 import altair as alt
 import json
+import re
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.activity_map import ACTIVITY_MAP
 from utils.styles import apply_global_styles
@@ -572,6 +573,43 @@ def build_ooo_table_from_row(row) -> pd.DataFrame:
            .reset_index(drop=True)
     )
     return out
+def filter_non_wip_activity_table(
+    activity_table: pd.DataFrame,
+    key_prefix: str,
+) -> pd.DataFrame:
+    if activity_table.empty:
+        return activity_table.copy()
+    def _options(column: str) -> list[str]:
+        values = (
+            activity_table[column]
+            .dropna()
+            .astype(str)
+            .str.strip()
+        )
+        return sorted(
+            [value for value in values.unique().tolist() if value],
+            key=str.casefold,
+        )
+    activity_col, name_col = st.columns(2)
+    selected_activities = activity_col.multiselect(
+        "Filter by activity",
+        options=_options("Activity"),
+        key=f"{key_prefix}_activity",
+    )
+    selected_names = name_col.multiselect(
+        "Filter by name",
+        options=_options("Name"),
+        key=f"{key_prefix}_name",
+    )
+    filtered = activity_table.copy()
+    for column, selected_values in (
+        ("Activity", selected_activities),
+        ("Name", selected_names),
+    ):
+        if selected_values:
+            filtered = filtered[filtered[column].astype(str).isin(selected_values)]
+    st.caption(f"Showing {len(filtered):,} of {len(activity_table):,} activities")
+    return filtered.reset_index(drop=True)
 def split_nonwip_activity_minutes(cat: pd.DataFrame) -> pd.DataFrame:
     import re
     import numpy as np
@@ -1929,8 +1967,21 @@ if nonwip_mode:
         if act_tbl.empty:
             st.info("No Non-WIP activities recorded for this selection.")
         else:
-            display_tbl = act_tbl.drop(columns=["HoursRaw"], errors="ignore")
-            st.dataframe(display_tbl, width="stretch", hide_index=True)
+            filter_scope = (
+                f"nw_activity_filters_"
+                f"{re.sub(r'[^A-Za-z0-9_]+', '_', str(team_nw))}_"
+                f"{re.sub(r'[^A-Za-z0-9_]+', '_', str(subgroup_nw))}_"
+                f"{week_nw.strftime('%Y%m%d')}"
+            )
+            filtered_act_tbl = filter_non_wip_activity_table(
+                act_tbl,
+                key_prefix=filter_scope,
+            )
+            if filtered_act_tbl.empty:
+                st.info("No Non-WIP activities match the selected filters.")
+            else:
+                display_tbl = filtered_act_tbl.drop(columns=["HoursRaw"], errors="ignore")
+                st.dataframe(display_tbl, width="stretch", hide_index=True)
     teams_cfg = load_team_config()
     team_irl_people = irl_people_for_team(team_nw, teams_cfg)
     wk_people = build_person_weekly_accounting(

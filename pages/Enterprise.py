@@ -875,6 +875,87 @@ def build_person_weekly_accounting(
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
+@st.cache_data(show_spinner=False)
+def _build_unaccounted_time_export(
+    metrics_frame: Optional[pd.DataFrame],
+    nw_frame: Optional[pd.DataFrame],
+    _org: OrgConfig,
+    cache_key: str,
+) -> pd.DataFrame:
+    columns = ["Person", "Team", "Week Start", "Unaccounted Hours"]
+    if nw_frame is None or nw_frame.empty:
+        return pd.DataFrame(columns=columns)
+    nw = _normalize_df_columns(nw_frame.copy())
+    date_col = "period_date" if "period_date" in nw.columns else _get_date_col(nw)
+    team_col = "team" if "team" in nw.columns else _get_team_col(nw)
+    if date_col is None or team_col is None:
+        return pd.DataFrame(columns=columns)
+    nw["period_date"] = _to_monday(nw[date_col])
+    nw["team"] = nw[team_col].astype(str).str.strip()
+    nw = nw.dropna(subset=["period_date"])
+    enabled_teams = {team.name for team in _org.teams if team.enabled}
+    if not enabled_teams:
+        enabled_teams = {team.name for team in _org.teams}
+    nw = nw[nw["team"].isin(enabled_teams)].copy()
+    if nw.empty:
+        return pd.DataFrame(columns=columns)
+    metrics = (
+        _normalize_df_columns(metrics_frame.copy())
+        if metrics_frame is not None and not metrics_frame.empty
+        else pd.DataFrame()
+    )
+    prepared = _prepare_weekly_accounting_inputs(metrics, nw)
+    teams_config = load_team_config()
+    today = pd.Timestamp.now().normalize()
+    rows: list[pd.DataFrame] = []
+    for _, nw_row in nw.iterrows():
+        team = str(nw_row["team"]).strip()
+        week = pd.Timestamp(nw_row["period_date"]).normalize()
+        if week > today:
+            continue
+        people = build_person_weekly_accounting(
+            team=team,
+            week=week,
+            nw_row=nw_row,
+            long_nw=prepared["long_nw"],
+            person_hours=prepared["person_hours"],
+            week_hours=39.0 if team == "ECT" else 40.0,
+            irl_people=irl_people_for_team(team, teams_config),
+        )
+        if people.empty:
+            continue
+        people["Unaccounted"] = pd.to_numeric(
+            people["Unaccounted"], errors="coerce"
+        ).fillna(0.0)
+        people = people[people["Unaccounted"] > 0.01].copy()
+        if people.empty:
+            continue
+        people["Week Start"] = week
+        rows.append(
+            people.rename(
+                columns={
+                    "person": "Person",
+                    "team": "Team",
+                    "Unaccounted": "Unaccounted Hours",
+                }
+            )[columns]
+        )
+    if not rows:
+        return pd.DataFrame(columns=columns)
+    export = pd.concat(rows, ignore_index=True)
+    export["Unaccounted Hours"] = pd.to_numeric(
+        export["Unaccounted Hours"], errors="coerce"
+    ).round(2)
+    export = (
+        export.groupby(["Person", "Team", "Week Start"], as_index=False)[
+            "Unaccounted Hours"
+        ]
+        .max()
+        .sort_values(["Week Start", "Team", "Person"], ascending=[False, True, True])
+        .reset_index(drop=True)
+    )
+    export["Week Start"] = pd.to_datetime(export["Week Start"]).dt.date
+    return export[columns]
 def _selected_nonwip_start_floor(df: Optional[pd.DataFrame]) -> Optional[pd.Timestamp]:
     if df is None or df.empty:
         return None
@@ -2883,7 +2964,24 @@ if page == "Overview":
                                 .properties(height=360)
                                 .interactive()
                             )
-                            st.altair_chart(trend_chart, width="stretch")
+        st.altair_chart(trend_chart, width="stretch")
+        unaccounted_export = _build_unaccounted_time_export(
+        shared_metrics_df,
+        shared_nonwip_df,
+        org,
+        cache_key=org_cache_key,
+    )
+    unaccounted_workbook = _cached_custom_excel_bytes(
+        (("Unaccounted Time", unaccounted_export),)
+    )
+    st.download_button(
+        "Unaccounted Time",
+        data=unaccounted_workbook,
+        file_name="enterprise_unaccounted_time.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="overview_unaccounted_time_download",
+        width="stretch",
+    )
 elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
     activity_keys = [
