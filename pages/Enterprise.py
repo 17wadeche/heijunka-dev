@@ -907,11 +907,12 @@ def _build_unaccounted_time_export(
     prepared = _prepare_weekly_accounting_inputs(metrics, nw)
     teams_config = load_team_config()
     today = pd.Timestamp.now().normalize()
+    current_week_start = today - pd.Timedelta(days=today.weekday())
     rows: list[pd.DataFrame] = []
     for _, nw_row in nw.iterrows():
         team = str(nw_row["team"]).strip()
         week = pd.Timestamp(nw_row["period_date"]).normalize()
-        if week > today:
+        if week >= current_week_start:
             continue
         people = build_person_weekly_accounting(
             team=team,
