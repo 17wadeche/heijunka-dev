@@ -2659,16 +2659,6 @@ if page == "Overview":
                         }])
                         period_summary = _add_avg_hours_day_columns(period_summary)
                     metric_df = period_summary if not period_summary.empty else scoped_df
-                    warning_text = ""
-                    if "warning" in scoped_df.columns and not scoped_df.empty:
-                        warnings = [
-                            str(x).strip()
-                            for x in scoped_df["warning"].dropna().tolist()
-                            if str(x).strip()
-                        ]
-                        warning_text = "; ".join(sorted(set(warnings)))
-                    if warning_text:
-                        st.warning(warning_text)
                     history_df["week_start"] = pd.to_datetime(
                         history_df["week_start"],
                         errors="coerce",
@@ -2730,7 +2720,7 @@ if page == "Overview":
                             )
                             for _, row in over_hours_alerts.iterrows()
                         ]
-                        st.error(
+                        st.warning(
                             "❗ Over hours alert week(s): "
                             + "; ".join(over_hours_details)
                         )
