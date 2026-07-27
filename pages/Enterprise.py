@@ -2704,28 +2704,35 @@ if page == "Overview":
                     alert_weeks["_over_hours"] = pd.to_numeric(
                         alert_weeks.get("over_hours"), errors="coerce"
                     ).fillna(0.0)
-                    alert_weeks = alert_weeks[
-                        (alert_weeks["_unaccounted_pct"] > 0.25)
-                        | (alert_weeks["_over_hours"] > 0)
+                    unaccounted_alerts = alert_weeks[
+                        alert_weeks["_unaccounted_pct"] > 0.25
                     ].sort_values("week_start")
-                    if not alert_weeks.empty:
-                        alert_details = []
-                        for _, alert_row in alert_weeks.iterrows():
-                            reasons = []
-                            if alert_row["_unaccounted_pct"] > 0.25:
-                                reasons.append(
-                                    f"{alert_row['_unaccounted_pct']:.1%} unaccounted"
-                                )
-                            if alert_row["_over_hours"] > 0:
-                                reasons.append(
-                                    f"{alert_row['_over_hours']:.1f} hours over capacity"
-                                )
-                            week_label = pd.Timestamp(
-                                alert_row["week_start"]
-                            ).strftime("%Y-%m-%d")
-                            alert_details.append(f"**{week_label}** ({', '.join(reasons)})")
+                    if not unaccounted_alerts.empty:
+                        unaccounted_details = [
+                            (
+                                f"**{pd.Timestamp(row['week_start']).strftime('%Y-%m-%d')}** "
+                                f"({row['_unaccounted_pct']:.1%} unaccounted)"
+                            )
+                            for _, row in unaccounted_alerts.iterrows()
+                        ]
                         st.error(
-                            "❗ Alert week(s): " + "; ".join(alert_details)
+                            "❗ Unaccounted hours alert week(s): "
+                            + "; ".join(unaccounted_details)
+                        )
+                    over_hours_alerts = alert_weeks[
+                        alert_weeks["_over_hours"] > 0
+                    ].sort_values("week_start")
+                    if not over_hours_alerts.empty:
+                        over_hours_details = [
+                            (
+                                f"**{pd.Timestamp(row['week_start']).strftime('%Y-%m-%d')}** "
+                                f"({row['_over_hours']:.1f} hours over capacity)"
+                            )
+                            for _, row in over_hours_alerts.iterrows()
+                        ]
+                        st.error(
+                            "❗ Over hours alert week(s): "
+                            + "; ".join(over_hours_details)
                         )
                     st.markdown(
                         """
@@ -3090,11 +3097,6 @@ elif page == "Non-WIP":
     if rolled.empty:
         st.info("No Non-WIP activity data available for the selected activities.")
         st.stop()
-    st.dataframe(
-        width="stretch",
-        hide_index=True,
-        column_config={"Hours": st.column_config.NumberColumn("Hours", format="%.2f")},
-    )
     label_map = (
         rolled.assign(activity_len=rolled["activity"].astype(str).str.len())
         .sort_values(["activity_norm", "activity_len", "activity"], ascending=[True, False, True])
