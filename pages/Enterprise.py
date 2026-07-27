@@ -876,7 +876,8 @@ def build_person_weekly_accounting(
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
 UNACCOUNTED_TIME_EXPORT_EXCLUDED_PEOPLE = {
-    f"tm{number}" for number in range(4, 17)
+    "#ref!",
+    *(f"tm{number}" for number in range(4, 17)),
 }
 @st.cache_data(show_spinner=False)
 def _build_unaccounted_time_export(
@@ -946,6 +947,7 @@ def _build_unaccounted_time_export(
         )
     if not rows:
         return pd.DataFrame(columns=columns)
+    export = pd.concat(rows, ignore_index=True)
     export = export[
         ~export["Person"]
         .astype(str)
