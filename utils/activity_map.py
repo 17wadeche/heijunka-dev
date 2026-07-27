@@ -3162,6 +3162,7 @@ ACTIVITY_MAP = {
     "fu q doc":"Admin",
     "fu q's project doc":"Project Work",
     "file call":"Collaboration",
+    "morning admine":"Admin",
     "practice events for training":"Training/Mentoring",
     "ng, event reviews/collaboration, meeting":"Next Gen",
     "collaboration supporting new hires 60 min":"Collaboration",
