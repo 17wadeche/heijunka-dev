@@ -2721,7 +2721,7 @@ if page == "Overview":
                             for _, row in over_hours_alerts.iterrows()
                         ]
                         st.warning(
-                            "❗ Over hours alert week(s): "
+                            "⚠ Over hours alert week(s): "
                             + "; ".join(over_hours_details)
                         )
                     st.markdown(
