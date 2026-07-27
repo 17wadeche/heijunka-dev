@@ -2697,8 +2697,36 @@ if page == "Overview":
                         )
                     except Exception:
                         unaccounted_val = 0.0
-                    if unaccounted_val > 0.25:
-                        st.error("❗ Unaccounted hours are high for this selection (>25%).")
+                    alert_weeks = scoped_df.copy()
+                    alert_weeks["_unaccounted_pct"] = pd.to_numeric(
+                        alert_weeks.get("unaccounted_pct"), errors="coerce"
+                    ).fillna(0.0)
+                    alert_weeks["_over_hours"] = pd.to_numeric(
+                        alert_weeks.get("over_hours"), errors="coerce"
+                    ).fillna(0.0)
+                    alert_weeks = alert_weeks[
+                        (alert_weeks["_unaccounted_pct"] > 0.25)
+                        | (alert_weeks["_over_hours"] > 0)
+                    ].sort_values("week_start")
+                    if not alert_weeks.empty:
+                        alert_details = []
+                        for _, alert_row in alert_weeks.iterrows():
+                            reasons = []
+                            if alert_row["_unaccounted_pct"] > 0.25:
+                                reasons.append(
+                                    f"{alert_row['_unaccounted_pct']:.1%} unaccounted"
+                                )
+                            if alert_row["_over_hours"] > 0:
+                                reasons.append(
+                                    f"{alert_row['_over_hours']:.1f} hours over capacity"
+                                )
+                            week_label = pd.Timestamp(
+                                alert_row["week_start"]
+                            ).strftime("%Y-%m-%d")
+                            alert_details.append(f"**{week_label}** ({', '.join(reasons)})")
+                        st.error(
+                            "❗ Alert week(s): " + "; ".join(alert_details)
+                        )
                     st.markdown(
                         """
                         <style>
@@ -2879,12 +2907,16 @@ elif page == "Non-WIP":
     source_raw = pd.concat(available_frames, ignore_index=True, sort=False).drop_duplicates()
     team_meta = _team_meta_lookup(org).copy()
     selected_portfolio = "All portfolios"
+    selected_ou = "All OUs"
+    selected_team = "All teams"
     if not team_meta.empty and "team" in source_raw.columns:
         source_raw = source_raw.copy()
         source_raw["team"] = source_raw["team"].astype(str).str.strip()
         team_meta["team"] = team_meta["team"].astype(str).str.strip()
         source_raw = source_raw.merge(
-            team_meta[["team", "portfolio"]].rename(columns={"portfolio": "_portfolio"}),
+            team_meta[["team", "portfolio", "ou"]].rename(
+                columns={"portfolio": "_portfolio", "ou": "_ou"}
+            ),
             on="team",
             how="left",
         )
@@ -2893,19 +2925,44 @@ elif page == "Non-WIP":
             for p in source_raw["_portfolio"].dropna().astype(str).unique()
             if p.strip()
         )
-        selected_portfolio = st.selectbox(
-            "Portfolio",
-            options=["All portfolios", *portfolio_options],
-            index=0,
-            key="nonwip_portfolio_filter",
-            help="Filters only the Non-WIP page.",
+        filter_cols = st.columns(3)
+        selected_portfolio = filter_cols[0].selectbox(
+            "Portfolio", options=["All portfolios", *portfolio_options],
+            index=0, key="nonwip_portfolio_filter",
+            help="Filters the Non-WIP charts and activities table.",
         )
         if selected_portfolio != "All portfolios":
             source_raw = source_raw[
                 source_raw["_portfolio"].astype(str).eq(selected_portfolio)
             ].copy()
+        ou_options = sorted(
+            value for value in source_raw["_ou"].dropna().astype(str).unique()
+            if value.strip()
+        )
+        if st.session_state.get("nonwip_ou_filter") not in ["All OUs", *ou_options]:
+            st.session_state["nonwip_ou_filter"] = "All OUs"
+        selected_ou = filter_cols[1].selectbox(
+            "OU", options=["All OUs", *ou_options], index=0,
+            key="nonwip_ou_filter",
+            help="Show all OUs or a single organizational unit.",
+        )
+        if selected_ou != "All OUs":
+            source_raw = source_raw[source_raw["_ou"].astype(str).eq(selected_ou)].copy()
+        team_options = sorted(
+            value for value in source_raw["team"].dropna().astype(str).unique()
+            if value.strip()
+        )
+        if st.session_state.get("nonwip_team_filter") not in ["All teams", *team_options]:
+            st.session_state["nonwip_team_filter"] = "All teams"
+        selected_team = filter_cols[2].selectbox(
+            "Team", options=["All teams", *team_options], index=0,
+            key="nonwip_team_filter",
+            help="Show all teams or a single team within the selected OU.",
+        )
+        if selected_team != "All teams":
+            source_raw = source_raw[source_raw["team"].astype(str).eq(selected_team)].copy()
         if source_raw.empty:
-            st.info("No Non-WIP activity data available for the selected portfolio.")
+            st.info("No Non-WIP activity data available for the selected filters.")
             st.stop()
     apply_nonwip_activity_map = selected_portfolio != "CRM"
     parsed_nonwip = _prepare_nonwip_activity_source(source_raw)
@@ -2985,6 +3042,9 @@ elif page == "Non-WIP":
             rows.append(
                 {
                     "week": wk,
+                    "portfolio": r.get("_portfolio", ""),
+                    "ou": r.get("_ou", ""),
+                    "team": r.get("team", ""),
                     "activity": str(act).strip(),
                     "hours": hrs_val,
                 }
@@ -2997,15 +3057,23 @@ elif page == "Non-WIP":
     act_df = act_df.dropna(subset=["week"])
     act_df["week_start"] = _weekly_start(act_df["week"])
     weekly_raw = (
-        act_df.groupby(["week_start", "activity"], as_index=False)
+        act_df.groupby(["week_start", "portfolio", "ou", "team", "activity"], as_index=False, dropna=False)
         .agg(hours=("hours", "sum"))
     )
     normalised_chunks: List[pd.DataFrame] = []
     for wk_val, grp in weekly_raw.groupby("week_start"):
-        cat = grp[["activity", "hours"]].rename(columns={"activity": "Activity", "hours": "Hours"})
-        cat_norm = split_nonwip_activity_minutes(cat, apply_activity_map=apply_nonwip_activity_map)
-        cat_norm["week_start"] = wk_val
-        normalised_chunks.append(cat_norm)
+        for dimensions, dimension_group in grp.groupby(
+            ["portfolio", "ou", "team"], dropna=False
+        ):
+            cat = dimension_group[["activity", "hours"]].rename(
+                columns={"activity": "Activity", "hours": "Hours"}
+            )
+            cat_norm = split_nonwip_activity_minutes(
+                cat, apply_activity_map=apply_nonwip_activity_map
+            )
+            cat_norm["week_start"] = wk_val
+            cat_norm["portfolio"], cat_norm["ou"], cat_norm["team"] = dimensions
+            normalised_chunks.append(cat_norm)
     if not normalised_chunks:
         st.info("No activity data available after normalization.")
         st.stop()
@@ -3013,6 +3081,43 @@ elif page == "Non-WIP":
     rolled = rolled.rename(columns={"Activity": "activity", "Hours": "hours"})
     rolled["activity_norm"] = rolled["activity"].map(_norm_activity_name)
     rolled = rolled[~rolled["activity_norm"].isin(EXCLUDED_NON_WIP)].copy()
+    activity_options = sorted(rolled["activity"].dropna().astype(str).unique())
+    if "nonwip_activity_filter" in st.session_state:
+        st.session_state["nonwip_activity_filter"] = [
+            activity for activity in st.session_state["nonwip_activity_filter"]
+            if activity in activity_options
+        ]
+    selected_activities = st.multiselect(
+        "Activities",
+        options=activity_options,
+        default=activity_options,
+        key="nonwip_activity_filter",
+        help="Choose which activities appear in the charts and table.",
+    )
+    rolled = rolled[rolled["activity"].isin(selected_activities)].copy()
+    if rolled.empty:
+        st.info("No Non-WIP activity data available for the selected activities.")
+        st.stop()
+    st.markdown("#### Non-WIP activities table")
+    activity_table = (
+        rolled.groupby(
+            ["week_start", "portfolio", "ou", "team", "activity"],
+            as_index=False,
+            dropna=False,
+        )["hours"].sum()
+        .rename(columns={
+            "week_start": "Week Start", "portfolio": "Portfolio", "ou": "OU",
+            "team": "Team", "activity": "Activity", "hours": "Hours",
+        })
+        .sort_values(["Week Start", "OU", "Team", "Hours"], ascending=[False, True, True, False])
+    )
+    activity_table["Week Start"] = pd.to_datetime(activity_table["Week Start"]).dt.date
+    st.dataframe(
+        activity_table,
+        width="stretch",
+        hide_index=True,
+        column_config={"Hours": st.column_config.NumberColumn("Hours", format="%.2f")},
+    )
     label_map = (
         rolled.assign(activity_len=rolled["activity"].astype(str).str.len())
         .sort_values(["activity_norm", "activity_len", "activity"], ascending=[True, False, True])
@@ -3134,6 +3239,7 @@ elif page == "Non-WIP":
     pie_rolled = pie_rolled[
         ~pie_rolled["activity"].map(_norm_activity_name).isin(EXCLUDED_NON_WIP)
     ].sort_values("hours", ascending=False)
+    pie_rolled = pie_rolled[pie_rolled["activity"].isin(selected_activities)]
     if pie_rolled.empty:
         st.info('No pie chart data available after excluding "OOO" and "Non-WIP".')
         st.stop()
