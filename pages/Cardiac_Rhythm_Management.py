@@ -419,7 +419,7 @@ def filter_non_wip_activity_table(
             [value for value in values.unique().tolist() if value],
             key=str.casefold,
         )
-    activity_col, day_col, name_col = st.columns(3)
+    activity_col, day_col, name_col = st.columns(2)
     selected_activities = activity_col.multiselect(
         "Filter by activity",
         options=_options("Activity"),
