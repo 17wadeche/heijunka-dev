@@ -3162,6 +3162,7 @@ ACTIVITY_MAP = {
     "checking heijunka was filled out for previous week": "Metrics & Schedule",
     "cornerstone/scrum/lunch/email":"Cornerstone",
     "cornerstone & training":"Training/Mentoring",
+    "training/collab":"Training/Mentoring",
     "soe html doc":"IT Issue/Update",
     "fu q doc":"Admin",
     "fu q's project doc":"Project Work",
