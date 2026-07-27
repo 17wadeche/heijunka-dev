@@ -3156,6 +3156,7 @@ ACTIVITY_MAP = {
     "password update/ restart issue":"IT Issue/Update",
     "submitting it ticket for laptop audio issue":"IT Issue/Update",
     "checking heijunka was filled out for previous week": "Metrics & Schedule",
+    "cornerstone/scrum/lunch/email":"Cornerstone",
     "cornerstone & training":"Training/Mentoring",
     "soe html doc":"IT Issue/Update",
     "fu q doc":"Admin",
