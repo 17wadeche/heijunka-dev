@@ -321,7 +321,7 @@
         ]
     },
     "CRDN": {
-        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN WIP+Non-WIP Heijunka 2025.xlsm",
+        "workbook": "c:\\Users\\wadec8\\Medtronic PLC\\CQXM - IV Resource Site - Heijunka\\CRDN Heijunka.xlsm",
         "prod_sheet": "CRDN Prod Analysis",
         "avail_sheet": "Available WIP+Non-WIP Hours",
         "week_anchors": {
