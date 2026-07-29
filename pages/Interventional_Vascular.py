@@ -55,6 +55,7 @@ def irl_people_for_team(team: str, config: dict) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {str(x).strip() for x in raw if str(x).strip()}
+IV_DASHBOARD_TEAMS = ("Aortic", "CAS", "CRDN", "ECT", "PVH", "RPA Lab", "SVT", "TCT")
 TEAM_WEEKLY_HOURS_OVERRIDES = {
     "CRDN": 39.0,
     "ECT": 39.0,
@@ -1166,6 +1167,8 @@ if data_path:
     p = Path(data_path)
     mtime_key = p.stat().st_mtime if p.exists() else 0
 df = load_data(data_path, DATA_URL)
+if not df.empty and "team" in df.columns:
+    df = df[df["team"].isin(IV_DASHBOARD_TEAMS)].copy()
 def _first_valid_team(value, options):
     if value in options:
         return value
