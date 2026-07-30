@@ -26,6 +26,7 @@ NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Impl
 NI_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB"
 MEIC_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker"
 PM_CTS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB"
+PM_CTS_ARCHIVED_PAB_DIR = os.path.join(PM_CTS_DEFAULT_DIR, "Archived PAB")
 TEAM_BY_SOURCE: Dict[str, str] = {
     os.path.normpath(MCS_DEFAULT_PATH): "MCS",
 }
@@ -632,6 +633,7 @@ def iso_monday_weeks_back(today: Optional[_dt.date] = None, weeks_back: int = 3)
     return [(start - _dt.timedelta(days=7 * i)).isoformat() for i in range(weeks_back + 1)]
 def filter_rows_to_recent_weeks(rows: List[Dict[str, Any]], weeks_back: int = 3) -> List[Dict[str, Any]]:
     keep_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
+    keep_weeks.add(PM_CTS_IND_START.isoformat())
     return [r for r in rows if (r.get("period_date") or "").strip() in keep_weeks]
 def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
     if not path or not os.path.exists(path):
@@ -1584,8 +1586,8 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "CDS": [CDS_DEFAULT_DIR, CDS_ARCHIVE_PAB_DIR],
     "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE],
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
-    PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR],
-    PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR],
+    PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
+    PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     LIT_LETTERS_TEAM_NAME: [],
 }
 
@@ -1640,6 +1642,8 @@ def parse_month_year_from_path(path: str) -> Optional[Tuple[int, int]]:
 def file_looks_recent_enough(path: str, *, weeks_back: int) -> bool:
     period = parse_period_date_from_filename(path)
     if period is not None:
+        if _is_pm_cts_ind_file(path) and period == PM_CTS_IND_START:
+            return True
         return monday_of_week(period).isoformat() in recent_week_starts(weeks_back)
     month_year = parse_month_year_from_path(path)
     if month_year is not None:
