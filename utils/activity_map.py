@@ -3144,6 +3144,8 @@ ACTIVITY_MAP = {
     "smart tree check in/ problem solving/ scrum/ lunch":"Project Work",
     "creating faxes/reviewing events/problem solving":"Problem Solving",
     "doubt":"Question",
+    "dcb device literature reading":"Reviewing Documents & Case Video",
+    "global quality meeting (q & a) -scott cundy (informative on ai)":"Meeting",
     "p":"",
     "rerd files review and completion":"WIP/Event Review",
     "pulling pe file":"WIP/Event Review",
