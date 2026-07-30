@@ -3144,6 +3144,7 @@ ACTIVITY_MAP = {
     "doubt":"Question",
     "p":"",
     "rerd files review and completion":"WIP/Event Review",
+    Pulling pe file
     "reviewed work instruction":"Admin",
     "calibration form corrections and send out":"Calibration",
     "voyager ehs meeting":"Meeting",
