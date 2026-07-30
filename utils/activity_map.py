@@ -3141,6 +3141,8 @@ ACTIVITY_MAP = {
     "goals meeting":"Career Development",
     "workshop visit":"Admin",
     "it for laptop issue":"IT Issue/Update",
+    "smart tree check in/ problem solving/ scrum/ lunch":"Project Work",
+    "creating faxes/reviewing events/problem solving":"Problem Solving",
     "doubt":"Question",
     "p":"",
     "rerd files review and completion":"WIP/Event Review",
