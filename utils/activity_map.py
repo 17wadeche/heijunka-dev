@@ -3182,6 +3182,7 @@ ACTIVITY_MAP = {
     "tm support and submit rr for penditure event":"Collaboration",
     "brooklyn park mtg":"Meeting",
     "fyet":"Metrics & Schedule",
+    "post analysis events and training":"Training/Mentoring",
     "project surge-oem process":"Project Work",
     "tl meeting priority file":"Meeting",
     "working meeting prirority file":"Meeting",
