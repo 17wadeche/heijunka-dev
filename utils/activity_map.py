@@ -3197,6 +3197,7 @@ ACTIVITY_MAP = {
     "rerd files review and completion":"WIP/Event Review",
     "pulling pe file":"WIP/Event Review",
     "eu training /review/prep":"Training/Mentoring",
+    "training etc.":"Training/Mentoring",
     "gfe training (120)":"Training/Mentoring",
     "cornerstone/self training":"Cornerstone",
     "tm":"Collaboration",
