@@ -3184,6 +3184,8 @@ ACTIVITY_MAP = {
     "fyet":"Metrics & Schedule",
     "post analysis events and training":"Training/Mentoring",
     "project surge-oem process":"Project Work",
+    "cqxm/pmpa complaint review meeting, complaint review meeting, scrum, lunch, email":"PMPA",
+    "scrum/meeting/review events/creating and sending faxe":"Scrum & Action",
     "tl meeting priority file":"Meeting",
     "working meeting prirority file":"Meeting",
     "listening to yesterday rgi recording":"Meeting",
