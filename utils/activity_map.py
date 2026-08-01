@@ -3189,6 +3189,7 @@ ACTIVITY_MAP = {
     "tl meeting priority file":"Meeting",
     "working meeting prirority file":"Meeting",
     "listening to yesterday rgi recording":"Meeting",
+    "assigned srs, scrum, lunch, email":"Admin",
     "finishing weekly report":"Team Report",
     "laptop problem":"IT Issue/Update",
     "looking at past file":"WIP/Event Review",
