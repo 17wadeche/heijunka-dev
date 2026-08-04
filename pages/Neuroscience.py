@@ -283,7 +283,6 @@ ENT_EXCLUSION_START = pd.Timestamp("2026-04-27")
 ENT_EXCLUDED_PEOPLE = {
     normalize_person_name(x)
     for x in [
-        "Aravind Kumar Badugu",
         "Jagruti Damahe",
         "Naveen Shanmugasundaram",
         "Prabhu S",
