@@ -1153,7 +1153,8 @@ def safe_str(v: Any) -> str:
 ENT_NAME_REPLACEMENTS = {
     "AG, Girish": "Girish AG",
     "Sharma, Anurag": "Anurag Sharma",
-    "Badugu, Aravind Kumar": "Aravind Kumar Badugu",
+    "Badugu, Aravind Kumar": "Aravind Badugu",
+    "Aravind Kumar Badugu": "Aravind Badugu",
     "Boya, Kranthi Kumar": "Kranthi Kumar Boya",
     "Kumari, Taruna": "Taruna Kumari",
     "Pavani Uppari":"Uppari Pavani",
