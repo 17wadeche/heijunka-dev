@@ -1948,7 +1948,7 @@ ACTIVITY_MAP = {
     "it support/restart": "IT Issue/Update",
     "capa remediation review": "CAPA",
     "ect letter training": "Training/Mentoring",
-    "cqxm training":"Training/Mentoring",
+    "cqxm training":"CQXM Training",
     "ri": "RI",
     "ri aortic meeting": "RI",
     "scrum&action": "Scrum & Action",
