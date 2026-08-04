@@ -616,6 +616,7 @@ ACTIVITY_MAP = {
     "document/previous investigation reading":"Reading File/Document Information",
     "cqxm/pmq meeting": "Meeting",
     "internal cqxm training":"CQXM Training",
+    "cqxm mentoring":"CQXM Mentoring",
     "set u":"Set Up",
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
