@@ -615,6 +615,7 @@ ACTIVITY_MAP = {
     "cornerstone (30)":"Cornerstone",
     "document/previous investigation reading":"Reading File/Document Information",
     "cqxm/pmq meeting": "Meeting",
+    "internal cqxm training":"CQXM Training",
     "set u":"Set Up",
     "cqzm/pmq meeting": "Meeting",
     "cw call": "Meeting",
