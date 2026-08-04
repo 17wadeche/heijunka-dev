@@ -1507,10 +1507,15 @@ def scrape_one_ni_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, str]
         ooo_hours = float(_cell_number(ws_perf[NI_PERF_WIP_OOO_TOTAL_CELL].value) or 0.0)
         ooo_by_person = compute_ooo_by_person_from_fixed_rows(
             ws_perf,
-            name_col=NI_PERF_WIP_OOO_NAME_COL,
-            hours_col=NI_PERF_WIP_OOO_HOURS_COL,
-            start_row=NI_PERF_WIP_OOO_START_ROW,
-            end_row=NI_PERF_WIP_OOO_END_ROW,
+            name_col="A",
+            hours_col="Z",
+            start_row=5,
+            end_row=11,
+        )
+        ooo_total = _find_number_right_of_label(ws_perf, "Total OOO hours")
+        ooo_hours = float(
+            ooo_total if ooo_total is not None
+            else sum(ooo_by_person.values())
         )
     else:
         ooo_hours = float(_cell_number(ws_wip_plan["BR2"].value) or 0.0)
