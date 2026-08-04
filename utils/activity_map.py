@@ -4756,6 +4756,7 @@ ACTIVITY_MAP = {
     "rd guidance":"Reportability Matrix",
     "gpt ed training": "Training/Mentoring",
     "training, collaboration, flexed closure": "Training/Mentoring",
+    "watching scott do analysis on closurefast": "Training/Mentoring",
     "capa / ri support":"CAPA",
     "emea/fsm escalation":"Escalation",
     "gpt rd training": "Training/Mentoring",
