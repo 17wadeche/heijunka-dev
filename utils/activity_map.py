@@ -3187,6 +3187,7 @@ ACTIVITY_MAP = {
     "breakfast, finishing up last few bit of paper work for college":"Admin",
     "finishing up last few things and making sure jt has everything he need":"Admin",
     "emails/tidying up things before finishing up":"Admin",
+    "scurum, lunch, email":"Admin",
     "grad project - researching implementation plan":"Project Work",
     "dt training session":"Training/Mentoring",
     "chemical stock check with scott":"Admin",
