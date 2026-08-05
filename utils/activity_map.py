@@ -752,7 +752,7 @@ ACTIVITY_MAP = {
     "film review call": "Meeting",
     "pmq code meeting": "Meeting",
     "email & im conerstone":"Email & IM",
-    "internal cqxm meetings, colaboration, cornerstone,problem solving, emails/team": "Meeting",
+    "internal cqxm meetings, colaboration, cornerstone, problem solving, emails/team": "Meeting",
     "training/shadowing with pat/emails/team": "Training/Mentoring",
     "training/emails/teams/cornerstone": "Training/Mentoring",
     "sh live case video":"Reviewing Documents & Case Video",
