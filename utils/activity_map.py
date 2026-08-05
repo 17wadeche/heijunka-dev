@@ -765,6 +765,7 @@ ACTIVITY_MAP = {
     "reading through updated closurefast document":"Reading File/Document Information",
     "co-op onboarding": "Training/Mentoring",
     "extermal meeting": "Meeting",
+    "internal cqxm meeting xx pulling relevant pe file": "Meeting",
     "internal meeting": "Meeting",
     "email & im 20l cornerstone":"Email & IM",
     "grad report out 2":"Admin",
