@@ -764,6 +764,7 @@ ACTIVITY_MAP = {
     "dt training meeting + prep": "Training/Mentoring",
     "dt training meeting": "Training/Mentoring",
     "liberant review and liberant dfmeca review":"Admin",
+    "training read procedure":"Training/Mentoring",
     "liberant lab review":"Admin",
     "reg inquiry meeting (draft responce)":"RI",
     "cas ri":"RI",
