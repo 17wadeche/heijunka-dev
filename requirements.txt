@@ -1,3 +1,4 @@
 XlsxWriter
 matplotlib
 streamlit==1.61.0
+starlette<1.4.0
