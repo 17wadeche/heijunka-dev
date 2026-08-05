@@ -748,6 +748,7 @@ ACTIVITY_MAP = {
     "pmq/aortic meeting": "Meeting",
     "film team meeting": "Meeting",
     "q&a meeting": "Meeting",
+    "aira audit":"Audit",
     "film review call": "Meeting",
     "pmq code meeting": "Meeting",
     "email & im conerstone":"Email & IM",
