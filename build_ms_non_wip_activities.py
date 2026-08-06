@@ -329,10 +329,8 @@ def find_column_by_header(ws: Worksheet, header_row: int, header_name: str, star
 def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
     results: Dict[_dt.date, Dict[str, Any]] = {}
     sheet_rows = list(ws.iter_rows(min_row=1, max_col=NON_D2D_COL, values_only=True))
-
     def value(row: int, col: int) -> Any:
         return sheet_rows[row - 1][col - 1]
-
     starts: List[Tuple[int, _dt.date]] = []
     for row, values in enumerate(sheet_rows, start=1):
         if _as_text(values[0]).lower() == "week starting:":
@@ -361,7 +359,6 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             if norm not in seen_people:
                 seen_people.add(norm)
                 week_people.append(current_person.strip())
-
         non_wip_by_person: Dict[str, float] = {}
         non_wip_activities: List[Dict[str, Any]] = []
         ooo_by_person: Dict[str, float] = {}
