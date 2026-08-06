@@ -760,8 +760,8 @@ ACTIVITY_MAP = {
     "work tool/ae sort, training, collaboration, comm review":"Admin",
     "mdt academy pulse select":"Admin",
     "tourguide and mosaic valve shipment":"Shipment",
-    "crdn coding meeting
-    "launcher curve meeting with pmq
+    "crdn coding meeting":"Coding/Code Gov",
+    "launcher curve meeting with pmq":"Meeting",
     "scrum, email/admin, gch crash":"Scrum & Action",
     "jennifer product return issue/unreport event":"WIP/Event Review",
     "call for hotkey text":"Project Work",
