@@ -762,6 +762,7 @@ ACTIVITY_MAP = {
     "jennifer product return issue/unreport event":"WIP/Event Review",
     "call for hotkey text":"Project Work",
     "pulse select case with jyn":"Pulse Select",
+    "cqxm trainining":"CQXM Training",
     "scrum, collaboration, capa support project":"CAPA",
     "external cqxm meeting":"Meeting",
     "post analysis training event":"Training/Mentoring",
