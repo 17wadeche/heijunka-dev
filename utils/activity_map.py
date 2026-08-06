@@ -763,7 +763,7 @@ ACTIVITY_MAP = {
     "call for hotkey text":"Project Work",
     "qa finding, fw, emails, aged file":"QA",
     "relabeling boxes in the lab tier":"Admin",
-    "uploading dt presentation to s drive
+    "uploading dt presentation to s drive":"IT Issue/Update",
     "pulse select case with jyn":"Pulse Select",
     "cqxm trainining":"CQXM Training",
     "scrum, collaboration, capa support project":"CAPA",
