@@ -756,8 +756,12 @@ ACTIVITY_MAP = {
     "training/shadowing with pat/emails/team": "Training/Mentoring",
     "training/emails/teams/cornerstone": "Training/Mentoring",
     "it issues, ng, collaboration, email/admin":"IT Issue/Update",
+    "comm (10 ) completed":"WIP/Event Review",
     "work tool/ae sort, training, collaboration, comm review":"Admin",
     "mdt academy pulse select":"Admin",
+    "tourguide and mosaic valve shipment":"Shipment",
+    "crdn coding meeting
+    "launcher curve meeting with pmq
     "scrum, email/admin, gch crash":"Scrum & Action",
     "jennifer product return issue/unreport event":"WIP/Event Review",
     "call for hotkey text":"Project Work",
