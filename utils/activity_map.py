@@ -764,6 +764,7 @@ ACTIVITY_MAP = {
     "qa finding, fw, emails, aged file":"QA",
     "relabeling boxes in the lab tier":"Admin",
     "uploading dt presentation to s drive":"IT Issue/Update",
+    "cqxm training/shadowing/team":"CQXM Training",
     "pulse select case with jyn":"Pulse Select",
     "cqxm trainining":"CQXM Training",
     "scrum, collaboration, capa support project":"CAPA",
