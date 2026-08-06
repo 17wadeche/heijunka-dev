@@ -763,6 +763,7 @@ ACTIVITY_MAP = {
     "call for hotkey text":"Project Work",
     "pulse select case with jyn":"Pulse Select",
     "scrum, collaboration, capa support project":"CAPA",
+    "external cqxm meeting":"Meeting",
     "post analysis training event":"Training/Mentoring",
     "sh live case video":"Reviewing Documents & Case Video",
     "10 gfe completed for review":"WIP/Event Review",
