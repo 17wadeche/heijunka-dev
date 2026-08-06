@@ -761,6 +761,9 @@ ACTIVITY_MAP = {
     "scrum, email/admin, gch crash":"Scrum & Action",
     "jennifer product return issue/unreport event":"WIP/Event Review",
     "call for hotkey text":"Project Work",
+    "qa finding, fw, emails, aged file":"QA",
+    "relabeling boxes in the lab tier":"Admin",
+    "uploading dt presentation to s drive
     "pulse select case with jyn":"Pulse Select",
     "cqxm trainining":"CQXM Training",
     "scrum, collaboration, capa support project":"CAPA",
