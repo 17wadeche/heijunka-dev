@@ -760,6 +760,7 @@ ACTIVITY_MAP = {
     "comm (10 ) completed":"WIP/Event Review",
     "work tool/ae sort, training, collaboration, comm review":"Admin",
     "mdt academy pulse select":"Admin",
+    "/inbox) cornerstone/self training":"Cornerstone",
     "tourguide and mosaic valve shipment":"Shipment",
     "crdn coding meeting":"Coding/Code Gov",
     "training, work tool, comm review, pa rr review":"Metrics & Schedule",
