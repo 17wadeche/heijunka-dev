@@ -755,6 +755,7 @@ ACTIVITY_MAP = {
     "internal cqxm meetings, colaboration, cornerstone, problem solving, emails/team": "Meeting",
     "training/shadowing with pat/emails/team": "Training/Mentoring",
     "training/emails/teams/cornerstone": "Training/Mentoring",
+    "administration":"Admin",
     "it issues, ng, collaboration, email/admin":"IT Issue/Update",
     "comm (10 ) completed":"WIP/Event Review",
     "work tool/ae sort, training, collaboration, comm review":"Admin",
