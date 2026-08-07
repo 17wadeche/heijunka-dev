@@ -643,7 +643,6 @@ def iso_monday_weeks_back(today: Optional[_dt.date] = None, weeks_back: int = 3)
     return [(start - _dt.timedelta(days=7 * i)).isoformat() for i in range(weeks_back + 1)]
 def filter_rows_to_recent_weeks(rows: List[Dict[str, Any]], weeks_back: int = 3) -> List[Dict[str, Any]]:
     keep_weeks = set(iso_monday_weeks_back(weeks_back=weeks_back))
-    keep_weeks.add(PM_CTS_IND_START.isoformat())
     return [r for r in rows if (r.get("period_date") or "").strip() in keep_weeks]
 def load_existing_csv_rows(path: str) -> List[Dict[str, Any]]:
     if not path or not os.path.exists(path):
@@ -1081,6 +1080,13 @@ def scrape_one_workbook(path: str, completed_hours_lookup: Dict[Tuple[str, str],
     avail_sheets = find_sheets_by_period(wb, kind="availability")
     prod_sheets = find_sheets_by_period(wb, kind="production")
     periods = sorted(set(avail_sheets.keys()) | set(prod_sheets.keys()))
+    if team == "MCS":
+        refresh_weeks = set(iso_monday_weeks_back())
+        periods = [
+            period
+            for period in periods
+            if monday_of_week(period).isoformat() in refresh_weeks
+        ]
     rows: List[Dict[str, Any]] = []
     for period in periods:
         ws_av = wb[avail_sheets[period]] if period in avail_sheets else None
@@ -1567,7 +1573,6 @@ def scrape_one_meic_workbook(path: str, people_in_wip_lookup: Dict[Tuple[str, st
         people_count=MEIC_PEOPLE_COUNT,
         non_wip_types=MEIC_NON_WIP_TYPES,
     )
-
 TEAM_ALIASES: Dict[str, str] = {
     "mcs": "MCS",
     "ds": "DS",
@@ -1593,7 +1598,6 @@ TEAM_ALIASES: Dict[str, str] = {
     "lit & letters": LIT_LETTERS_TEAM_NAME,
     "lit and letters": LIT_LETTERS_TEAM_NAME,
 }
-
 TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "MCS": [MCS_DEFAULT_PATH],
     "DS": [DS_DEFAULT_DIR, DS_ARCHIVE],
@@ -1605,8 +1609,6 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     LIT_LETTERS_TEAM_NAME: [],
 }
-
-
 def normalize_team_arg(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
@@ -1616,8 +1618,6 @@ def normalize_team_arg(value: Optional[str]) -> Optional[str]:
         return team
     valid = sorted(TEAM_DEFAULT_INPUTS)
     raise ValueError(f"Unknown team {value!r}. Valid teams: {', '.join(valid)}")
-
-
 def default_inputs_for_team(team: Optional[str]) -> List[str]:
     if team:
         return list(TEAM_DEFAULT_INPUTS.get(team, []))
@@ -1625,12 +1625,8 @@ def default_inputs_for_team(team: Optional[str]) -> List[str]:
     for team_inputs in TEAM_DEFAULT_INPUTS.values():
         inputs.extend(team_inputs)
     return inputs
-
-
 def recent_week_starts(weeks_back: int) -> set[str]:
     return set(iso_monday_weeks_back(weeks_back=weeks_back))
-
-
 def recent_months(weeks_back: int) -> set[Tuple[int, int]]:
     months: set[Tuple[int, int]] = set()
     for week_start_iso in recent_week_starts(weeks_back):
@@ -1639,10 +1635,7 @@ def recent_months(weeks_back: int) -> set[Tuple[int, int]]:
             d = week_start + _dt.timedelta(days=day_offset)
             months.add((d.year, d.month))
     return months
-
-
 def parse_month_year_from_path(path: str) -> Optional[Tuple[int, int]]:
-    """Find folder names like '4. April 2026' or 'June 2026'."""
     parts = re.split(r"[\\/]+", _norm_path(path))
     for part in reversed(parts):
         s = part.strip().lower()
@@ -1657,8 +1650,6 @@ def parse_month_year_from_path(path: str) -> Optional[Tuple[int, int]]:
 def file_looks_recent_enough(path: str, *, weeks_back: int) -> bool:
     period = parse_period_date_from_filename(path)
     if period is not None:
-        if _is_pm_cts_ind_file(path) and period == PM_CTS_IND_START:
-            return True
         return monday_of_week(period).isoformat() in recent_week_starts(weeks_back)
     month_year = parse_month_year_from_path(path)
     if month_year is not None:
