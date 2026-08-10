@@ -792,6 +792,7 @@ ACTIVITY_MAP = {
     "/ollab":"Collaboration",
     "completed":"WIP/Event Review",
     "cqxm training, emails/teams, internal cqxm meeting":"CQXM Training",
+    "scrum, cqxm training":"CQXM Training",
     "iris smart tree building/nextgen":"Project Work",
     "migraine":"Break",
     "reviewing ri":"RI",
