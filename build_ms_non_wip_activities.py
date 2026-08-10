@@ -14,7 +14,7 @@ TEAM_BY_SOURCE: Dict[str, str] = {
     r"C:\Users\wadec8\Medtronic PLC\Robotics Complaint Intake - Heijunka\RST(US)-Heijunka Surgical.xlsm":"Surgical Robotics",
     r"C:\Users\wadec8\Medtronic PLC\Beeman, Amy - Heijunka Dashboard Endoscopy\WIP+Non-WIP Heijunka Template.xlsm":"Endoscopy",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - !Heijunka\AST-GST(US) - Heijunka Surgical.xlsm":"Surgical AST-GST",
-    r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Copy of Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST MEIC",
+    r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (MEIC) - Heijunka.xlsm":"Surgical AST-GST MEIC",
     r"C:\Users\wadec8\Medtronic PLC\SI INV Backlog - Heijunka\Surgical Inv (US)-Heijunka.xlsm":"Surgical AST-GST",
     r"C:\Users\wadec8\Medtronic PLC\ACM Documents - General\ACM INV (US)-Heijunka v1.0 (002).xlsm":"ACM",
     r"C:\Users\wadec8\Medtronic PLC\Surgical CQXM Team - Legal Mesh -- Shared Folder\WIP+Non-WIP Heijunka Surgical - Legal Team.xlsm":"Surgical Legal",
