@@ -781,6 +781,7 @@ ACTIVITY_MAP = {
     "emails/teams, internal cqxm meeting":"Email & IM",
     "training, work tool, comm review, pa rr review":"Metrics & Schedule",
     "training with marie":"CQXM Training",
+    "mfg complaint meeting":"Meeting",
     "shadow training":"CQXM Mentoring",
     "iris recording":"Project Work",
     "next gen (bug ticket create for cami, tree review for jyn)":"Next Gen",
