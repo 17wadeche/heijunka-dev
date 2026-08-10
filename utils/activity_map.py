@@ -782,6 +782,7 @@ ACTIVITY_MAP = {
     "training, work tool, comm review, pa rr review":"Metrics & Schedule",
     "training with marie":"CQXM Training",
     "shadow training":"CQXM Mentoring",
+    "iris recording":"Project Work",
     "next gen (bug ticket create for cami, tree review for jyn)":"Next Gen",
     "mdt academy/self training":"Cornerstone",
     "comm":"WIP/Event Review",
