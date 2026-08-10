@@ -767,6 +767,7 @@ ACTIVITY_MAP = {
     "meetings, ng, collaboration":"Next Gen",
     "email/messages; meeting":"Email & IM",
     "email/messages; training":"Email & IM",
+    "administrative internal cqxm meeting":"Meeting",
     "email/message":"Email & IM",
     "training, ng, meeting":"Next Gen",
     "bank holiday (480)":"OOO",
