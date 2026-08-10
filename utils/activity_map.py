@@ -766,6 +766,8 @@ ACTIVITY_MAP = {
     "practice event":"CQXM Training",
     "meetings, ng, collaboration":"Next Gen",
     "training, ng, meeting":"Next Gen",
+    "bank holiday (480)":"OOO",
+    "cqxm training/shadowing/teams/cornerstone training":"CQXM Training",
     "training, comm review, work tool/priory ae, collaboration":"Collaboration",
     "scrum, training, email/admin.":"Scrum & Action",
     "administrative, scrum, internal cqxm meeting, cornerstone":"Admin",
