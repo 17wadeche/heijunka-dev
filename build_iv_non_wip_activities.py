@@ -169,8 +169,30 @@ def parse_prod_analysis(
     anchors: List[Dict[str, Any]],
     hidden_rows: Optional[Set[int]] = None,
 ) -> Dict[date, Dict[str, Any]]:
-    COL_NAME, COL_FLAG, COL_MINUTES, COL_ACTIVITY = 3, 4, 8, 12
-    COL_HOURS_F = 5
+    columns = {
+        "name": 3,
+        "flag": 4,
+        "minutes": 8,
+        "activity": 12,
+        "hours_fallback": 5,
+    }
+    def _header_key(value: Any) -> str:
+        return " ".join(_clean(value).lower().replace("/", " ").split())
+    def _update_columns_from_header(row: Tuple[Any, ...]) -> bool:
+        labels = {_header_key(value): idx for idx, value in enumerate(row) if _clean(value)}
+        detected = {
+            "name": labels.get("team member"),
+            "flag": labels.get("cell station"),
+            "minutes": labels.get("actual time m"),
+        }
+        if not all(index is not None for index in detected.values()):
+            return False
+        columns.update(detected)
+        for label, index in labels.items():
+            if label.startswith("comments") and "reason" in label:
+                columns["activity"] = index
+                break
+        return True
     nonwip_flags = {"non wip", "non-wip"}
     other_team_wip_flags = {
         "other team wip",
@@ -194,13 +216,15 @@ def parse_prod_analysis(
         if ridx in hidden_rows:
             continue  # <-- skip hidden Excel rows
         r = r or tuple()
+        if _update_columns_from_header(r):
+            continue
         wk = _week_from_row(ridx, anchors)
         if not wk:
             continue
-        name = _clean(r[COL_NAME] if len(r) > COL_NAME else "")
-        flag = _clean(r[COL_FLAG] if len(r) > COL_FLAG else "").lower()
-        mins = _to_float(r[COL_MINUTES] if len(r) > COL_MINUTES else None) or 0.0
-        act  = _clean(r[COL_ACTIVITY] if len(r) > COL_ACTIVITY else "")
+        name = _clean(r[columns["name"]] if len(r) > columns["name"] else "")
+        flag = _clean(r[columns["flag"]] if len(r) > columns["flag"] else "").lower()
+        mins = _to_float(r[columns["minutes"]] if len(r) > columns["minutes"] else None) or 0.0
+        act = _clean(r[columns["activity"]] if len(r) > columns["activity"] else "")
         if not (flag or mins or name or act):
             continue
         b = buckets[wk]
@@ -225,7 +249,7 @@ def parse_prod_analysis(
             if mins > 0:
                 hrs = mins / 60.0
             else:
-                comment = _clean(r[COL_ACTIVITY] if len(r) > COL_ACTIVITY else "")
+                comment = _clean(r[columns["activity"]] if len(r) > columns["activity"] else "")
                 if comment:
                     nums = [ _to_float(m) or 0.0 for m in re.findall(r"\d+(?:\.\d+)?", comment) ]
                     total_comment_mins = sum(nums)
@@ -234,7 +258,8 @@ def parse_prod_analysis(
                 if total_comment_mins > 0:
                     hrs = total_comment_mins / 60.0
                 else:
-                    hrs_f = _to_float(r[COL_HOURS_F] if len(r) > COL_HOURS_F else None) or 0.0
+                    fallback_col = columns["hours_fallback"]
+                    hrs_f = _to_float(r[fallback_col] if len(r) > fallback_col else None) or 0.0
                     if hrs_f > 0:
                         hrs = hrs_f
             if hrs > 0:

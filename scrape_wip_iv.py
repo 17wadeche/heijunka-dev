@@ -401,7 +401,28 @@ def parse_available_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
     return avail_per_week
 def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
                     anchors: Optional[List[Dict[str, Any]]] = None) -> Dict[date, Dict[str, Any]]:
-    COL_DATE, COL_NAME, COL_CELL, COL_TARGET, COL_MINUTES, COL_OUTPUT = 0, 3, 4, 7, 8, 10
+    columns = {
+        "name": 3,
+        "cell": 4,
+        "target": 7,
+        "minutes": 8,
+        "output": 10,
+    }
+    def _header_key(value: Any) -> str:
+        return " ".join(_clean_name(value).lower().replace("/", " ").split())
+    def _update_columns_from_header(row: Tuple[Any, ...]) -> bool:
+        labels = {_header_key(value): idx for idx, value in enumerate(row) if _clean_name(value)}
+        detected = {
+            "name": labels.get("team member"),
+            "cell": labels.get("cell station"),
+            "target": labels.get("actual target"),
+            "minutes": labels.get("actual time m"),
+            "output": labels.get("actual event"),
+        }
+        if all(index is not None for index in detected.values()):
+            columns.update(detected)
+            return True
+        return False
     buckets: Dict[date, Dict[str, Any]] = defaultdict(lambda: {
         "completed_hours_by_person": defaultdict(float),
         "outputs_by_person": defaultdict(lambda: {"target": 0.0, "output": 0.0}),
@@ -414,14 +435,16 @@ def parse_prod_rows(rows_with_idx: Iterable[Tuple[int, Tuple[Any, ...]]],
     })
     for ridx, r in rows_with_idx:
         r = r or tuple()
+        if _update_columns_from_header(r):
+            continue
         wk = _week_from_row(ridx, anchors or [])
         if wk is None:
             continue
-        name = _clean_name(r[COL_NAME] if len(r) > COL_NAME else "")
-        cell = _clean_name(r[COL_CELL] if len(r) > COL_CELL else "")
-        tgt  = _to_float(r[COL_TARGET] if len(r) > COL_TARGET else None) or 0.0
-        mins = _to_float(r[COL_MINUTES] if len(r) > COL_MINUTES else None) or 0.0
-        outp = _to_float(r[COL_OUTPUT] if len(r) > COL_OUTPUT else None) or 0.0
+        name = _clean_name(r[columns["name"]] if len(r) > columns["name"] else "")
+        cell = _clean_name(r[columns["cell"]] if len(r) > columns["cell"] else "")
+        tgt  = _to_float(r[columns["target"]] if len(r) > columns["target"] else None) or 0.0
+        mins = _to_float(r[columns["minutes"]] if len(r) > columns["minutes"] else None) or 0.0
+        outp = _to_float(r[columns["output"]] if len(r) > columns["output"] else None) or 0.0
         if not (name or cell or tgt or mins or outp):
             continue
         is_excluded = _is_excluded_cell(cell)
