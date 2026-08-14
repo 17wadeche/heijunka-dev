@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, csv, json, math, os, sys
+import argparse, csv, json, math, os, re, sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -43,6 +43,11 @@ def _clean(s: Any) -> str:
     if isinstance(s, float) and math.isnan(s):
         return ""
     return str(s).strip()
+def _is_ooo_flag(value: Any) -> bool:
+    flag = _clean(value).casefold()
+    if flag in {"ooo", "medical leave", "sl"}:
+        return True
+    return bool(re.fullmatch(r"ooo\s*[-–—:]\s*(?:annual|certified|other)\s+leave", flag))
 def _sheetnames_xlsb(path: str) -> List[str]:
     import pandas as pd
     with pd.ExcelFile(path, engine="pyxlsb") as xf:
@@ -188,7 +193,6 @@ def parse_prod_analysis(
         "non_wip_by_person": defaultdict(float),
         "non_wip_activities": [],
     })
-    import re
     hidden_rows = hidden_rows or set()
     for ridx, r in enumerate(rows, start=1):
         if ridx in hidden_rows:
@@ -204,11 +208,11 @@ def parse_prod_analysis(
         if not (flag or mins or name or act):
             continue
         b = buckets[wk]
-        OOO_FLAGS = {"ooo", "medical leave", "sl"}
-        if flag in OOO_FLAGS and mins > 0:
+        if _is_ooo_flag(flag) and mins > 0:
             hrs = mins / 60.0
             b["ooo_hours"] += hrs
             if name:
+                b["ooo_by_person"][name] += hrs
                 b["non_wip_activities"].append({
                     "name": name,
                     "activity": "OOO",
