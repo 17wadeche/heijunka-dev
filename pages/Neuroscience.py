@@ -132,11 +132,12 @@ def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
         out["period_date"] = pd.to_datetime(out["period_date"], errors="coerce").dt.normalize()
     out = _filter_excluded_people_frame(out)
     return out
-DEFAULT_DATA_PATH = Path(r"C:\heijunka-dev\NS_WIP.csv")
+DEFAULT_DATA_PATH = Path(__file__).resolve().parents[1] / "NS_DATA" / "NS_WIP.csv"
 if hasattr(st, "autorefresh"):
     st.autorefresh(interval=60 * 60 * 1000, key="auto-refresh")
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def load_data(data_path: str | None, data_url: str | None):
+    remote_error = None
     if data_url:
         try:
             lower = data_url.lower()
@@ -164,8 +165,7 @@ def load_data(data_path: str | None, data_url: str | None):
                     dtype=str,
                 )
             except Exception as e:
-                st.error(f"Couldn't parse HEIJUNKA_DATA_URL as CSV: {e}")
-                return pd.DataFrame()
+                remote_error = e
         except Exception:
             import io, requests
             try:
@@ -186,9 +186,14 @@ def load_data(data_path: str | None, data_url: str | None):
                         dtype=str,
                     )
             except Exception as e:
-                st.error(f"Failed to fetch/parse HEIJUNKA_DATA_URL: {e}")
-                return pd.DataFrame()
-        return _postprocess(df)
+                remote_error = e
+        if remote_error is None:
+            return _postprocess(df)
+        if data_path and Path(data_path).exists():
+            st.warning("The live Neuroscience data is temporarily unavailable; showing the bundled data instead.")
+        else:
+            st.error(f"Failed to fetch/parse NS_HEIJUNKA_DATA_URL: {remote_error}")
+            return pd.DataFrame()
     if not data_path:
         return pd.DataFrame()
     p = Path(data_path)
@@ -931,7 +936,7 @@ def build_person_weekly_accounting(
     out["period_date"] = wk
     out["team"] = team
     return out.sort_values(["person"]).reset_index(drop=True)
-data_path = None if DATA_URL else str(DEFAULT_DATA_PATH)
+data_path = str(DEFAULT_DATA_PATH)
 mtime_key = 0
 if data_path:
     p = Path(data_path)
