@@ -38,7 +38,8 @@ EXCLUDED_CELLS = {
 }
 def _is_excluded_cell(cell: str) -> bool:
     normalized = (cell or "").strip().upper()
-    return normalized in EXCLUDED_CELLS or "NEXT GEN" in normalized
+    is_ooo = normalized == "OOO" or normalized.startswith("OOO ")
+    return is_ooo or normalized in EXCLUDED_CELLS or "NEXT GEN" in normalized
 def _week_from_row(ridx: int, anchors: List[Dict[str, Any]]) -> Optional[date]:
     if not anchors:
         return None
