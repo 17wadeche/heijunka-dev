@@ -122,6 +122,24 @@ ACTIVITY_MAP = {
     "emails/":"Emails & IM",
     "fmla":"OOO",
     "iris smart tree drafting":"Project Work",
+    "looking through agile harmony document":"Reviewing Documents & Case Video",
+    "dt transcript and recording review for marmar and transfer team":"Reviewing Documents & Case Video",
+    "listening to rgi":"Admin",
+    "tl activities fwt- review priority files , action aged files, link with other tl":"Metrics & Schedule",
+    "generator investigation training":"CQXM Training",
+    "writting minute":"Admin",
+    "weekly report":"Team Report",
+    "closing general pms":"Admin",
+    Opening Fedex Ticket And Emails Abo…
+    Closurefast Issue-pec Follow Up Meet…
+    Incorrect Device Received Email/ship…
+    Rdn Transfer Meeting
+    Pec Follow Up
+    Pec Meeting
+    Reading Through Previous Investigation
+    Pvh Tier 2 Meeting
+    Sorting File
+    Workshop Meeting + Discrepancy
     "sr reassign fwt tool":"Admin",
     "investiogation training":"CQXM Training",
     "vital flow training":"CQXM Training",
