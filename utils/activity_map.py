@@ -124,7 +124,7 @@ ACTIVITY_MAP = {
     "incorrect device received email/shipment":"Shipment",
     "emails/":"Emails & IM",
     "precedent event review for":"Precedent Event",
-    "ect letters as req by elaine/rrs/late field submission":"Letters",
+    "ect letters as req by elaine/rrs/late field submission email":"Letters",
     "req complaint list/emails/team":"Admin",
     "fmla":"OOO",
     "iris smart tree drafting":"Project Work",
