@@ -130,16 +130,13 @@ ACTIVITY_MAP = {
     "writting minute":"Admin",
     "weekly report":"Team Report",
     "closing general pms":"Admin",
-    Opening Fedex Ticket And Emails Abo…
-    Closurefast Issue-pec Follow Up Meet…
-    Incorrect Device Received Email/ship…
-    Rdn Transfer Meeting
-    Pec Follow Up
-    Pec Meeting
-    Reading Through Previous Investigation
-    Pvh Tier 2 Meeting
-    Sorting File
-    Workshop Meeting + Discrepancy
+    "rdn transfer meeting":"Meeting",
+    "pec follow up":"RI",
+    "pec meeting":"Meeting",
+    "reading through previous investigation":"Reviewing Documents & Case Video",
+    "pvh tier 2 meeting":"Meeting",
+    "sorting file":"Sorting",
+    "workshop meeting + discrepancy":"Meeting",
     "sr reassign fwt tool":"Admin",
     "investiogation training":"CQXM Training",
     "vital flow training":"CQXM Training",
