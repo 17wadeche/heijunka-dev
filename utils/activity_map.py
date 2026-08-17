@@ -132,6 +132,7 @@ ACTIVITY_MAP = {
     "internal cqxm meetings, emails/teams,":"Meeting",
     "emails/teams, administrative, internal cqxm meeting":"Meeting", 
     "fmla":"OOO",
+    "problem solving a":"Problem Solving",
     "training eu/shadowing srs/internal cqxm meetings/cornerstone":"CQXM Training",
     "administrative/cornerstone/training/cqxm internal meeting":"Admin",
     "training/cqxm internal meetings/cornerstone/eu vig training":"CQXM Training",
