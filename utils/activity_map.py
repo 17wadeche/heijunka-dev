@@ -117,6 +117,7 @@ ACTIVITY_MAP = {
     "colaboration":"Collaboration",
     "emails, ad hoc question":"Emails & IM",
     "pulling appropraite pe file":"WIP/Event Review",
+    "submitting due tmr rr/updating record":"WIP/Event Review",
     "heijunka: 20.":"Metrics & Schedule",
     "metrics/xcrum/schedule":"Metrics & Schedule",
     "not able to access gch/it/network error/resolved/review events/faxe":"IT Issue/Update",
