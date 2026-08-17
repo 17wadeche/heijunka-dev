@@ -131,6 +131,8 @@ ACTIVITY_MAP = {
     "tl activities fwt- review priority files , action aged files, link with other tl":"Metrics & Schedule",
     "generator investigation training":"CQXM Training",
     "writting minute":"Admin",
+    "autolog investigations left pending":"Admin",
+    "emails/tm":"Emails & IM",
     "weekly report":"Team Report",
     "closing general pms":"Admin",
     "rdn transfer meeting":"Meeting",
