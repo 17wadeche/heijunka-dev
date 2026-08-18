@@ -138,6 +138,7 @@ ACTIVITY_MAP = {
     "emails/admin, training":"CQXM Training",
     "email, training":"CQXM Training",
     "reviewed arterial cannula reverse shadowing recording":"CQXM Training",
+    "training self (shadowing/supervised/independent":"CQXM Training",
     "other cw it issue - had to work an extra sr on call with it person":"IT Issue/Update",
     "af terminate training for sme":"CQXM Training",
     "reviewed canadian training ppt":"CQXM Training",
