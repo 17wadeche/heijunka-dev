@@ -138,6 +138,8 @@ ACTIVITY_MAP = {
     "power hour, training and collaboration":"Collaboration",
     "new tasks intro/ training":"CQXM Training",
     "create new event":"CQXM Training",
+    "email/messages; meeting; training":"Email & IM",
+    "emails admin clinical metrics/schedule/wip mgmt training collaboration meeting":"Meeting",
     "emails/admin, training":"CQXM Training",
     "email, training":"CQXM Training",
     "reviewed arterial cannula reverse shadowing recording":"CQXM Training",
