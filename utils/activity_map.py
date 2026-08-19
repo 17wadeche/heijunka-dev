@@ -139,6 +139,7 @@ ACTIVITY_MAP = {
     "new tasks intro/ training":"CQXM Training",
     "aministrative":"Admin",
     "create new event":"CQXM Training",
+    "email/messages; collaboration":"Email & IM",
     "power (60)":"Power Hour",
     "team collaboration (10)":"Collaboration",
     "email/messages; meeting; training":"Email & IM",
