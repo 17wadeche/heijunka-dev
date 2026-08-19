@@ -137,6 +137,7 @@ ACTIVITY_MAP = {
     "administrative/cqxm internal meetings/cornerstone/emails/team":"Admin",
     "power hour, training and collaboration":"Collaboration",
     "new tasks intro/ training":"CQXM Training",
+    "aministrative":"Admin",
     "create new event":"CQXM Training",
     "email/messages; meeting; training":"Email & IM",
     "emails admin clinical metrics/schedule/wip mgmt training collaboration meeting":"Meeting",
