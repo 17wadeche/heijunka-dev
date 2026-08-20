@@ -140,6 +140,8 @@ ACTIVITY_MAP = {
     "nextgen gch cw meeting":"Next Gen",
     "other- it support for cw/gch issue":"IT Issue/Update",
     "sr practice event":"CQXM Training",
+    "internal cqxm meetings, emails/team":"Meeting",
+    "training support/other/inbox/cqxm internal meeting":"CQXM Training",
     "gfe practice event":"CQXM Training",
     "powerhr":"Power Hour",
     "reassess trainig/practice event":"CQXM Training",
