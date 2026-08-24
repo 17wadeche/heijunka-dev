@@ -1739,7 +1739,7 @@ def get_people_count_from_wip(
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
         week_date = pd.to_datetime(week, errors="coerce")
         if pd.notna(week_date) and week_date.normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
-            return 34
+            return 40
         return 33
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
