@@ -143,6 +143,7 @@ ACTIVITY_MAP = {
     "smart tree meeting":"Project Work",
     "administrative: , emails/teams: , training:":"Admin",
     "it troubleshoot":"IT Issue/Update",
+    "administrative emails/teams training":"Admin",
     "nextgen gch master data review":"Next Gen",
     "internal cqxm team 25":"Meeting",
     "doubts call":"Meeting",
