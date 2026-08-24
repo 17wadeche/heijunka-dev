@@ -21,6 +21,7 @@ faulthandler.dump_traceback_later(300, repeat=False)
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
+SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-08-17").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
 PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
@@ -31,6 +32,7 @@ PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
 )
 TDD_NEW_TOTALS_ROW = 21
+SCS_NEW_TOTALS_ROW = 32  # Excel row 33 after the SCS roster expansion
 warnings.filterwarnings(
     "ignore",
     message="Data Validation extension is not supported and will be removed"
@@ -3646,6 +3648,11 @@ def _build_team_rows_base(team_src: TeamSource, wip_df: pd.DataFrame, metrics_df
                 and pd.Timestamp(week).normalize() >= TDD_TOTALS_ROW_CHANGE_DATE
             ):
                 forced_totals_row = TDD_NEW_TOTALS_ROW
+            elif (
+                team_src.team == "SCS"
+                and pd.Timestamp(week).normalize() >= SCS_TOTALS_ROW_CHANGE_DATE
+            ):
+                forced_totals_row = SCS_NEW_TOTALS_ROW
             if forced_totals_row is not None:
                 if 0 <= forced_totals_row < ws.shape[0]:
                     actual_totals_row = forced_totals_row
