@@ -141,6 +141,7 @@ ACTIVITY_MAP = {
     "next gen gch iris smart tree drafting":"Project Work",
     "nextgen gch smart tree":"Project Work",
     "smart tree meeting":"Project Work",
+    "administrative: , emails/teams: , training:":"Admin",
     "it troubleshoot":"IT Issue/Update",
     "nextgen gch master data review":"Next Gen",
     "internal cqxm team 25":"Meeting",
