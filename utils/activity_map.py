@@ -144,6 +144,8 @@ ACTIVITY_MAP = {
     "administrative: , emails/teams: , training:":"Admin",
     "it troubleshoot":"IT Issue/Update",
     "administrative emails/teams training":"Admin",
+    "reviewing australian slide":"Admin",
+    "other- correction":"Admin",
     "nextgen gch master data review":"Next Gen",
     "internal cqxm team 25":"Meeting",
     "doubts call":"Meeting",
