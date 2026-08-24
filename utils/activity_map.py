@@ -138,6 +138,7 @@ ACTIVITY_MAP = {
     "nextgen gch smart tree":"Project Work",
     "smart tree meeting":"Project Work",
     "nextgen gch cw meeting":"Next Gen",
+    "reg inquiry":"RI",
     "other- it support for cw/gch issue":"IT Issue/Update",
     "ng, coding, smart tree, meetings, collaboration, team building activity":"Next Gen",
     "ng smart trees coding event reviews late":"Project Work",
