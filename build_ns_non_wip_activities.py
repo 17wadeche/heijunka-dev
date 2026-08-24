@@ -2863,6 +2863,8 @@ def _build_et_capacity_snapshot(
     *,
     include_rows: List[int],
     people_count: int,
+    allowed_names: Optional[set[str]] = None,
+    excluded_names: Optional[set[str]] = None,
 ) -> Dict:
     NAME_COL = _col_letter_to_idx("A")
     ACT_START = _col_letter_to_idx("C")
@@ -2873,15 +2875,25 @@ def _build_et_capacity_snapshot(
     nonwip_by_person: Dict[str, float] = {}
     activities: List[dict] = []
     ooo_map: Dict[str, float] = {}
-
+    allowed_name_keys = (
+        {norm_name(name).casefold() for name in allowed_names}
+        if allowed_names is not None
+        else None
+    )
+    excluded_name_keys = {
+        norm_name(name).casefold() for name in (excluded_names or set())
+    }
     for i in include_rows:
         if i >= ws.shape[0]:
             continue
-
         name = norm_name(ws.iat[i, NAME_COL] if ws.shape[1] > NAME_COL else "")
         if not is_real_person(name):
             continue
-
+        name_key = name.casefold()
+        if allowed_name_keys is not None and name_key not in allowed_name_keys:
+            continue
+        if name_key in excluded_name_keys:
+            continue
         row_total = 0.0
         row_ooo = safe_float0(ws.iat[i, OOO_COL] if ws.shape[1] > OOO_COL else 0.0)
         people_rows.append({
@@ -2934,6 +2946,7 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
             week,
             include_rows=list(range(2, 32)),  # Excel rows 3:32 after ET US expanded to 30 people
             people_count=30,
+            excluded_names=PSS_US_USER_DATA_NAMES,
         )
     return _build_et_capacity_snapshot(
         team,
@@ -2941,6 +2954,7 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
         week,
         include_rows=list(range(2, 22)) + list(range(27, 30)),  # Excel rows 3:22 and 28:30
         people_count=23,
+        excluded_names=PSS_US_USER_DATA_NAMES,
     )
 def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     return _build_et_capacity_snapshot(
@@ -2949,6 +2963,7 @@ def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd
         week,
         include_rows=list(range(22, 27)),  # Excel rows 23:27; these are skipped by ET US
         people_count=5,
+        allowed_names=PSS_US_USER_DATA_NAMES,
     )
 def _reconstruct_et_archive_snapshot(week_rows: pd.DataFrame, header_row: List) -> pd.DataFrame:
     column_count = 30
