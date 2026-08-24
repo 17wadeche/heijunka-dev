@@ -25,6 +25,7 @@ PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
 PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
 ENT_LAYOUT_SHIFT_START = pd.Timestamp("2026-06-22").normalize()
+ENT_ROSTER_AND_CATEGORY_EXPANSION_START = pd.Timestamp("2026-08-17").normalize()
 ENT_REFRESH_WEEK_COUNT = 3
 PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
@@ -2462,13 +2463,26 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     PEOPLE_START = 2
     week_norm = pd.Timestamp(week).normalize() if week is not None and pd.notna(week) else None
     ent_layout_shift = week_norm is not None and week_norm >= ENT_LAYOUT_SHIFT_START
-    PEOPLE_END   = 22 if ent_layout_shift else 21
-    TOTAL_ROW    = 23 if ent_layout_shift else 22
+    ent_roster_and_category_expansion = (
+        week_norm is not None
+        and week_norm >= ENT_ROSTER_AND_CATEGORY_EXPANSION_START
+    )
+    if ent_roster_and_category_expansion:
+        PEOPLE_END = 23
+        TOTAL_ROW = 24
+    elif ent_layout_shift:
+        PEOPLE_END = 22
+        TOTAL_ROW = 23
+    else:
+        PEOPLE_END = 21
+        TOTAL_ROW = 22
     COL_B  = _col_letter_to_idx("B")
     COL_Y  = _col_letter_to_idx("Y")
     COL_Z  = _col_letter_to_idx("Z")
     ACT_START  = _col_letter_to_idx("C")
-    ACT_END    = _col_letter_to_idx("AG")
+    ACT_END = _col_letter_to_idx(
+        "AH" if ent_roster_and_category_expansion else "AG"
+    )
     HEADER_ROW = 1
     def _cell(r: int, c: int, default=None):
         if r < 0 or c < 0:
