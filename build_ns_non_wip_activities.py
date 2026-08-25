@@ -2868,8 +2868,8 @@ def _build_et_capacity_snapshot(
 ) -> Dict:
     NAME_COL = _col_letter_to_idx("A")
     ACT_START = _col_letter_to_idx("C")
-    ACT_END = _col_letter_to_idx("AC")
-    OOO_COL = _col_letter_to_idx("AD")
+    ACT_END = _col_letter_to_idx("AD")
+    OOO_COL = _col_letter_to_idx("AE")
     HEADER_ROW = 1  
     people_rows: List[dict] = []
     nonwip_by_person: Dict[str, float] = {}
@@ -2966,7 +2966,7 @@ def build_pss_us_from_et_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd
         allowed_names=PSS_US_USER_DATA_NAMES,
     )
 def _reconstruct_et_archive_snapshot(week_rows: pd.DataFrame, header_row: List) -> pd.DataFrame:
-    column_count = 30
+    column_count = 31
     data_row_count = 38
     reconstructed = pd.DataFrame(
         [[""] * column_count for _ in range(data_row_count + 2)],
@@ -3002,12 +3002,12 @@ def _build_et_us_rows_from_archive_sheet(
     archive_df = _read_excel_used_range_df(archive_ws_com)
     if archive_df.empty or archive_df.shape[1] < 2:
         return out_rows
-    header_df = _read_excel_range_display_df(current_ws_com, "A2:AD2")
+    header_df = _read_excel_range_display_df(current_ws_com, "A2:AE2")
     header_row = header_df.iloc[0].tolist() if not header_df.empty else []
-    if len(header_row) < 30:
-        header_row = header_row + [""] * (30 - len(header_row))
+    if len(header_row) < 31:
+        header_row = header_row + [""] * (31 - len(header_row))
     else:
-        header_row = header_row[:30]
+        header_row = header_row[:31]
     archive_dates = archive_df.iloc[:, 0].map(_excel_date_to_timestamp)
     weeks = []
     seen_weeks = set()
@@ -3119,7 +3119,7 @@ def _build_et_us_rows_from_sheet(
                 except Exception:
                     pass
             for _poll_attempt in range(10):
-                ws_df = _read_excel_range_display_df(ws_com, "A1:AD40")
+                ws_df = _read_excel_range_display_df(ws_com, "A1:AE40")
                 builder = team_src.custom_builder or build_et_us_snapshot
                 built = builder(team_name, ws_df, week)
                 people_found = len(built.get("people_rows", []))
