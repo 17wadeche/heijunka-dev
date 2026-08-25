@@ -43,7 +43,7 @@ MEIC_TRACKER_PATH = Path(
 )
 MEIC_NON_D2D_LOG_SHEET = "Non-D2D WIP Time Log"
 ET_US_SOURCE_FILE = Path(
-    r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Documents\CST_Capacity Management.xlsm"
+    r"C:\Users\wadec8\Medtronic PLC\MNAV Sharepoint - Documents\CST_Capacity_Management V2.xlsm"
 )
 ET_US_WEEK_VIEWER_SHEET = "Week Viewer"
 ET_US_CURRENT_WEEK_SHEET = "Current Week"
