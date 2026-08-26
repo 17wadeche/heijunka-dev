@@ -146,7 +146,7 @@ ACTIVITY_MAP = {
     "training/update here":"CQXM Training",
     "sna audit meeting/cornerstone/scheduling/emails/team":"Audit",
     "training support/admin/emails/teams/cornerstone/other":"CQXM Training",
-    "cornerstone/emails/teams/self-training rd/sr support":"Cornerstone",
+    "cornerstone/emails/teams/self-training/training rd/sr support":"Cornerstone",
     "training support/rrs/emails/teams/other":"CQXM Training",
     "ehs gemba walk, training, haz obs":"Gemba",
     "emails/admin/catch up from time off":"Admin",
