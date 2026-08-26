@@ -151,6 +151,7 @@ ACTIVITY_MAP = {
     "cornerstone/emails/teams/self-training/training rd/sr support":"Cornerstone",
     "training support/rrs/emails/teams/other":"CQXM Training",
     "ehs gemba walk, training, haz obs":"Gemba",
+    "lab question":"Question",
     "emails/admin/catch up from time off":"Admin",
     "teams/rpa":"Email & IM",
     "other correcting previous heijunka":"Metrics & Schedule",
