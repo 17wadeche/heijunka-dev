@@ -145,6 +145,7 @@ ACTIVITY_MAP = {
     "emails/admin/catch up from time off":"Admin",
     "teams/rpa":"Email & IM",
     "reassess general":"WIP/Event Review",
+    "geo tasks and closed":"WIP/Event Review",
     "email/messages; collaboration; meeting":"Email & IM",
     "email/messages; mentoring; cornerstone":"CQXM Mentoring",
     "emails team":"Email & IM",
