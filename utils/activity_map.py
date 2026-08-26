@@ -140,6 +140,7 @@ ACTIVITY_MAP = {
     "scrum, us task practice event":"Scrum & Action",
     "us task":"WIP/Event Review",
     "power hour and town hall":"Power Hour",
+    "out sick":"OOO",
     "collaboration, emails/admin.":"Collaboration",
     "collaboration - death event":"Collaboration",
     "emails/admin/catch up from time off":"Admin",
