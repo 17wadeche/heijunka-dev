@@ -141,6 +141,8 @@ ACTIVITY_MAP = {
     "us task":"WIP/Event Review",
     "power hour and town hall":"Power Hour",
     "out sick":"OOO",
+    "email/messages; meetings; collaboration":"Email & IM",
+    "email/messages; cornerstone":"Email & IM",
     "collaboration, emails/admin.":"Collaboration",
     "collaboration - death event":"Collaboration",
     "training/update here":"CQXM Training",
