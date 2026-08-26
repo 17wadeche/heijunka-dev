@@ -143,6 +143,7 @@ ACTIVITY_MAP = {
     "out sick":"OOO",
     "collaboration, emails/admin.":"Collaboration",
     "collaboration - death event":"Collaboration",
+    "ehs gemba walk, training, haz obs":"Gemba",
     "emails/admin/catch up from time off":"Admin",
     "teams/rpa":"Email & IM",
     "other correcting previous heijunka":"Metrics & Schedule",
