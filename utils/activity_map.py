@@ -144,7 +144,7 @@ ACTIVITY_MAP = {
     "collaboration - death event":"Collaboration",
     "emails/admin/catch up from time off":"Admin",
     "teams/rpa":"Email & IM",
-    "other correcting previous heijunka":"Schedule & Metrics",
+    "other correcting previous heijunka":"Metrics & Schedule",
     "reassess general":"WIP/Event Review",
     "geo tasks and closed":"WIP/Event Review",
     "email/messages; collaboration; meeting":"Email & IM",
