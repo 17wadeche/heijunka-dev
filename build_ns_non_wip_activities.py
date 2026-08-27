@@ -23,6 +23,7 @@ DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documen
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
 SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-08-17").normalize()
 NV_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-17").normalize()
+SPINE_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-10").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
 PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
@@ -2733,10 +2734,11 @@ def week_from_spine_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timest
     dt = pd.to_datetime(s, errors="coerce")
     if _is_real_year(dt):
         return dt.normalize()
+    # Spine tabs use day.month.year, for example Cap_Mgmt_10.08.26.
     m = re.search(r"(\d{1,2})[.\-_/](\d{1,2})[.\-_/](\d{2,4})", s)
     if m:
-        mm = int(m.group(1))
-        dd = int(m.group(2))
+        dd = int(m.group(1))
+        mm = int(m.group(2))
         yy = int(m.group(3))
         if yy < 100:
             yy += 2000
@@ -2760,9 +2762,16 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
     PEOPLE_START = 2  
     PEOPLE_END   = 17 
     COL_B   = _col_letter_to_idx("B")
-    COL_OOO = _col_letter_to_idx("AC")
+    week_ts = pd.to_datetime(week, errors="coerce")
+    uses_shifted_layout = (
+        pd.notna(week_ts)
+        and week_ts.normalize() >= SPINE_LAYOUT_SHIFT_START
+    )
+    # A new activity column was added for 2026-08-10 onward, shifting OOO
+    # from AC to AD. Keep the historical mapping for earlier archive tabs.
+    COL_OOO = _col_letter_to_idx("AD" if uses_shifted_layout else "AC")
     ACT_START = _col_letter_to_idx("C")
-    ACT_END   = _col_letter_to_idx("AB")
+    ACT_END   = _col_letter_to_idx("AC" if uses_shifted_layout else "AB")
     HEADER_ROW = 1
     TEAM_HOURS_CELL = "B20"
     min_rows_needed = PEOPLE_END + 1   
