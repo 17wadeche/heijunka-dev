@@ -14,6 +14,7 @@ MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB 
 MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
+LITLetters_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
 CPT_ARCHIVE_PAB_DIR2 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\5. May 2026"
@@ -1608,7 +1609,7 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
     PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
-    LIT_LETTERS_TEAM_NAME: [],
+    LIT_LETTERS_TEAM_NAME: [LITLetters_ARCHIVE],
 }
 def normalize_team_arg(value: Optional[str]) -> Optional[str]:
     if value is None:
@@ -1676,17 +1677,13 @@ def lit_letters_search_roots() -> List[str]:
         seen.add(nr)
         out.append(nr)
     return out
-
-
 def discover_lit_letters_files(*, weeks_back: int) -> List[str]:
-    """Find Lit & Letters workbooks by filename under the likely team folders."""
     out: List[str] = []
     seen = set()
     for root in lit_letters_search_roots():
         if not os.path.isdir(root):
             continue
         for dirpath, dirnames, filenames in os.walk(root):
-            # Avoid Office/OneDrive temporary folders and hidden/system folders.
             dirnames[:] = [
                 d for d in dirnames
                 if not d.startswith("~") and not d.startswith(".")
