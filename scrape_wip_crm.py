@@ -64,6 +64,7 @@ CDS_ARCHIVE_PAB_HINT = os.path.join(CDS_ROOT_HINT, "Archived PAB", "5-Aug 2026")
 DS_ROOT_HINT = _norm_ds = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB")
 CPT_ROOT_HINT = _norm_cpt = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB")
 NI_ROOT_HINT = _norm_ni = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka")
+DS_ARCHIVE_HINT = os.path.join(DS_ROOT_HINT, "Archive")
 MEIC_ROOT_HINT = _norm_meic = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\CRM CQXM Reports - 1.9 Heijunka Tracker")
 PM_CTS_ROOT_HINT = norm_pm_cts = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB")
 PM_CTS_ARCHIVED_PAB_HINT = os.path.normpath(r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\PM-CTS PAB\Archived PAB")
@@ -2169,6 +2170,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\5-Aug 2026",
+        DS_ARCHIVE_HINT,
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\5. May 2026",
