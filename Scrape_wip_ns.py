@@ -3529,7 +3529,7 @@ def main():
     logger.info(f"Selected team: {args.team}")
     ph_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\PH Cell Heijunka.xlsx"
     meic_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality Pelvic Health - Daily Tracker\MEIC\New MEIC PH Heijunka.xlsx"
-    scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Cell 1 - Heijunka.xlsx"
+    scs_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - Cell 17\Archive (work reports)\Cell 1 - Heijunka.xlsx"
     scs_super_source_file = r"C:\Users\wadec8\Medtronic PLC\Customer Quality SCS - SCS Super Cell\Super Cell Heijunka.xlsx"
     cos_source_file = r"C:\Users\wadec8\Medtronic PLC\COS Cell - Documents\Heijunka v2 TDD.xlsx"
     spine_source_file = r"C:\Users\wadec8\Medtronic PLC\MEIC - RTG - Documents\Heijunka - RTG Spine CQ_V2.0_Apr2023.xlsx"
