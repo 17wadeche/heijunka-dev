@@ -162,7 +162,7 @@ ACTIVITY_MAP = {
     "training/shadowing/review (4 x srr's)":"CQXM Training",
     "training support/review/other/emails/teams/internal cqxm meeting":"CQXM Training",
     "training support/admin/emails/teams/cornerstone/other/internal cqxm meeting":"CQXM Training",
-    "emails/teams, internal cqxm meetings. nextgen":"Email & IM",
+    "emails/teams, internal cqxm meetings, nextgen":"Email & IM",
     "went to it with laptp issue":"IT Issue/Update",
     "effectiveness check":"CAPA",
     "training emails/admin.":"Email & IM",
