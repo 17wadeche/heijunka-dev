@@ -157,6 +157,8 @@ ACTIVITY_MAP = {
     "cqxm trainin":"CQXM Training",
     "scrum, sr reassignment":"Scrum & Action",
     "admins/ email":"Admin",
+    "email/messages; bsi portal catchup submission":"Email & IM",
+    "email/messages; mentoring; collaboration":"CQXM Mentoring",
     "reviewing canadian rd slide":"Admin",
     "training/shadowing/review (4 x sr's)":"CQXM Training",
     "training/shadowing/review (4 x srr's)":"CQXM Training",
