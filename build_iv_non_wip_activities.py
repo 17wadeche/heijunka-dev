@@ -466,6 +466,28 @@ def main():
     except Exception as e:
         print(f"Failed: {e}", file=sys.stderr); sys.exit(1)
     rows = filter_period_rows(rows)
+    if os.path.exists(args.out):
+        with open(args.config, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        preserve_before = {
+            team: _to_date(entry.get("preserve_before"))
+            for team, entry in config.items()
+            if entry.get("preserve_before")
+        }
+        with open(args.out, "r", encoding="utf-8") as f:
+            historical_rows = list(csv.DictReader(f))
+        frozen_keys = {
+            (row.get("Team", ""), row.get("Week", ""))
+            for row in historical_rows
+            if preserve_before.get(row.get("Team", ""))
+            and (_to_date(row.get("Week")) or date.max) < preserve_before[row["Team"]]
+        }
+        rows = [row for row in rows if (row.get("Team", ""), row.get("Week", "")) not in frozen_keys]
+        rows.extend(
+            row for row in historical_rows
+            if (row.get("Team", ""), row.get("Week", "")) in frozen_keys
+        )
+        rows.sort(key=lambda row: (row.get("Team", ""), row.get("Week", "")))
     if not rows:
         print("No data produced on or after 2026-01-01.", file=sys.stderr); sys.exit(1)
     cols = [
