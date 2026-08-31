@@ -22,7 +22,7 @@ DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documen
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
 SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-08-17").normalize()
-NV_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-17").normalize()
+NV_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-25").normalize()
 SPINE_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-10").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
@@ -1907,9 +1907,9 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         else None
     )
     if week_norm is not None and week_norm >= NV_LAYOUT_SHIFT_START:
-        ACT_END_COL = _col_letter_to_idx("Y")
-        COL_OOO = _col_letter_to_idx("Z")
-        COL_NONWIP = _col_letter_to_idx("AA")
+        ACT_END_COL = _col_letter_to_idx("AB")
+        COL_OOO = _col_letter_to_idx("AC")
+        COL_NONWIP = _col_letter_to_idx("AD")
     else:
         ACT_END_COL = _col_letter_to_idx("X")
         COL_OOO = _col_letter_to_idx("Y")
