@@ -474,7 +474,7 @@ def main():
             for team, entry in config.items()
             if entry.get("preserve_before")
         }
-        with open(args.out, "r", encoding="utf-8") as f:
+        with open(args.out, "r", encoding="utf-8-sig") as f:
             historical_rows = list(csv.DictReader(f))
         frozen_keys = {
             (row.get("Team", ""), row.get("Week", ""))
