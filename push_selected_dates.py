@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, csv, os
+import argparse, csv, json, os
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 from utils.date_floor import MIN_PERIOD_DATE_ISO
@@ -57,6 +57,21 @@ def _merge_upsert(existing: List[Dict[str, Any]],
     for r in new_rows:
         by_key[key_fn(r)] = r  # upsert
     return list(by_key.values())
+def _load_preserve_before(config_path: str) -> Dict[str, date]:
+    if not config_path or not os.path.exists(config_path):
+        return {}
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    cutoffs: Dict[str, date] = {}
+    for team, settings in config.items():
+        cutoff = _to_date_iso((settings or {}).get("preserve_before"))
+        if cutoff:
+            cutoffs[_clean(team).casefold()] = date.fromisoformat(cutoff)
+    return cutoffs
+def _is_frozen_nonwip_row(row: Dict[str, Any], cutoffs: Dict[str, date]) -> bool:
+    cutoff = cutoffs.get(_clean(row.get("team")).casefold())
+    period = _to_date_iso(row.get("period_date"))
+    return bool(cutoff and period and date.fromisoformat(period) < cutoff)
 def _sort_rows_team_date(rows: List[Dict[str, Any]],
                          team_key="team", date_key="period_date") -> List[Dict[str, Any]]:
     def _k(r):
@@ -163,17 +178,26 @@ def push_metrics(dates_iso: List[str], src_path: str, out_path: str, source_file
     merged = _sort_rows_team_date(merged)  # enforce sort
     _write_csv(out_path, merged, METRICS_AGG_HEADERS)
     print(f"[metrics] Wrote {len(merged)} total rows -> {out_path} (added/updated {len(want)})")
-def push_nonwip(dates_iso: List[str], src_path: str, out_path: str, source_file_value: str):
+def push_nonwip(
+    dates_iso: List[str],
+    src_path: str,
+    out_path: str,
+    source_file_value: str,
+    preserve_before: Optional[Dict[str, date]] = None,
+):
     src_rows, _ = _read_csv(src_path)
     if not src_rows:
         raise SystemExit(f"No rows in {src_path}")
+    preserve_before = preserve_before or {}
     want = []
     for r in src_rows:
         wk = _to_date_iso(_get(r, "Week", "period_date")) or _clean(_get(r, "Week", "period_date"))
         if wk in dates_iso:
             want.append(project_nonwip_row(r, source_file_value))
-    if not want:
-        print(f"[non_wip] No matching rows for dates: {', '.join(dates_iso)}"); return
+    if wk in dates_iso:
+            candidate = project_nonwip_row(r, source_file_value)
+            if not _is_frozen_nonwip_row(candidate, preserve_before):
+                want.append(candidate)
     existing, _ = _read_csv(out_path)
     key_fn = lambda x: (_clean(x.get("team")), _clean(x.get("period_date")), _clean(x.get("source_file")))
     merged = _merge_upsert(existing, want, key_fn)
@@ -192,6 +216,7 @@ def main():
     ap.add_argument("--out-nonwip", default="IV_DATA\\non_wip_activities.csv", help="Output aggregate for non-wip")
     ap.add_argument("--source-file-metrics", default="IV_DATA\\metrics.csv", help="Value to place in 'source_file' for metrics rows")
     ap.add_argument("--source-file-nonwip", default="IV_DATA\\non_wip.csv", help="Value to place in 'source_file' for non-wip rows")
+    ap.add_argument("--config", default="teams.json", help="Team configuration containing optional preserve_before cutoffs")
     ap.add_argument("--skip-metrics", action="store_true")
     ap.add_argument("--skip-nonwip", action="store_true")
     args = ap.parse_args()
@@ -203,6 +228,12 @@ def main():
     if not args.skip_metrics:
         push_metrics(dates_iso, args.metrics, args.out_metrics, args.source_file_metrics)
     if not args.skip_nonwip:
-        push_nonwip(dates_iso, args.nonwip, args.out_nonwip, args.source_file_nonwip)
+        push_nonwip(
+            dates_iso,
+            args.nonwip,
+            args.out_nonwip,
+            args.source_file_nonwip,
+            _load_preserve_before(args.config),
+        )
 if __name__ == "__main__":
     main()
