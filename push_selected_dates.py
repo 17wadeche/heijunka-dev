@@ -193,8 +193,6 @@ def push_nonwip(
     for r in src_rows:
         wk = _to_date_iso(_get(r, "Week", "period_date")) or _clean(_get(r, "Week", "period_date"))
         if wk in dates_iso:
-            want.append(project_nonwip_row(r, source_file_value))
-    if wk in dates_iso:
             candidate = project_nonwip_row(r, source_file_value)
             if not _is_frozen_nonwip_row(candidate, preserve_before):
                 want.append(candidate)
