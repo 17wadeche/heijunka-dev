@@ -152,6 +152,8 @@ ACTIVITY_MAP = {
     "ng meetings smarttree":"Next Gen",
     "ng meetings smarttrees emails collaboration":"Project Work",
     "training and onboarding":"CQXM Training",
+    "observe kirsty in new information":"CQXM Training",
+    "kirsty will work on files with ana supporting":"CQXM Training",
     "collab/queries-clinical":"Collaboration",
     "collaboration/letter example pull":"Collaboration",
     "admin/wip pull/training":"Admin",
