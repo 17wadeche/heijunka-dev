@@ -156,6 +156,7 @@ ACTIVITY_MAP = {
     "us task /power hr":"Power Hour",
     "us task practice events, power hour":"CQXM Training",
     "power hour - comm received":"Power Hour",
+    "administartive":"Admin",
     "practice events eu final":"CQXM Training",
     "remaining burn down event":"WIP/Event Review",
     "closing add new info":"WIP/Event Review",
