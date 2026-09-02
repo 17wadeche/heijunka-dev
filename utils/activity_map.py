@@ -165,6 +165,7 @@ ACTIVITY_MAP = {
     "internal cqxm team":"Meeting",
     "collaboratio":"Collaboration",
     "sr reassignment, emails, meeting":"Email & IM",
+    "email/messages; scrum":"Email & IM",
     "nextgen gch iri":"Next Gen",
     "cornerstone, scrum, email":"Cornerstone",
     "other reportable file self paced training":"Cornerstone",
