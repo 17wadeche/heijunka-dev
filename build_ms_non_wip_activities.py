@@ -4,6 +4,7 @@ import csv
 import datetime as _dt
 import json
 import os
+import re
 import time
 from zipfile import BadZipFile
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -88,6 +89,7 @@ CSV_COLUMNS = [
     "wip_workers_ooo_hours",
 ]
 AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
+PRODUCTION_SHEET = "Production Analysis"
 def log_timing(message: str) -> None:
     now = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{now}] {message}")
@@ -425,6 +427,51 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             "ooo_by_person": ooo_by_person,
         }
     return results
+def _production_non_wip_kind(value: Any) -> Optional[str]:
+    compact = re.sub(r"[^a-z0-9]+", "", _as_text(value).lower())
+    if compact == "ooo":
+        return "ooo"
+    if "nonwip" in compact:
+        return "non_wip"
+    return None
+def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
+    results: Dict[_dt.date, Dict[str, Any]] = {}
+    people_by_period: Dict[_dt.date, set[str]] = {}
+
+    for values in ws.iter_rows(min_row=2, max_col=5, values_only=True):
+        source_date = _as_date(values[0])
+        name = _as_text(values[1])
+        kind = _production_non_wip_kind(values[2])
+        minutes = _cell_number(values[4])
+        if source_date is None or not name or kind is None or minutes is None or minutes <= 0:
+            continue
+
+        period = source_date - _dt.timedelta(days=source_date.weekday())
+        bucket = results.setdefault(period, {
+            "people_count": 0,
+            "total_non_wip_hours": 0.0,
+            "ooo_hours": 0.0,
+            "non_wip_by_person": {},
+            "non_wip_activities": [],
+            "ooo_by_person": {},
+        })
+        hours = minutes / 60.0
+        activity = "OOO" if kind == "ooo" else (_as_text(values[3]) or "Non-WIP")
+        bucket["total_non_wip_hours"] += hours
+        bucket["non_wip_by_person"][name] = bucket["non_wip_by_person"].get(name, 0.0) + hours
+        bucket["non_wip_activities"].append({
+            "name": name,
+            "activity": activity,
+            "hours": hours,
+        })
+        people_by_period.setdefault(period, set()).add(_norm_name(name))
+        if kind == "ooo":
+            bucket["ooo_hours"] += hours
+            bucket["ooo_by_person"][name] = bucket["ooo_by_person"].get(name, 0.0) + hours
+
+    for period, people in people_by_period.items():
+        results[period]["people_count"] = len(people)
+    return results
 def _norm_team(s: str) -> str:
     return (s or "").strip().upper()
 def _norm_period_date(s: str) -> str:
@@ -511,8 +558,8 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
         log_timing(f"{display_team}: workbook open failed after {elapsed:.2f}s ({error})")
         return [blank_row_for_workbook_error(path, error)]
     log_timing(f"{display_team}: workbook open took {time.perf_counter() - load_start:.2f}s")
-    if AVAILABILITY_SHEET not in wb.sheetnames:
-        log_timing(f"{display_team}: missing sheet {AVAILABILITY_SHEET}")
+    if PRODUCTION_SHEET not in wb.sheetnames:
+        log_timing(f"{display_team}: missing sheet {PRODUCTION_SHEET}")
         wb.close()
         return [{
             "team": team,
@@ -528,7 +575,14 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
             "wip_workers_ooo_hours": "",
         }]
     parse_start = time.perf_counter()
-    available_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
+    available_by_week = parse_production_non_wip_sheet(wb[PRODUCTION_SHEET])
+    if AVAILABILITY_SHEET in wb.sheetnames:
+        roster_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
+        for period, bucket in available_by_week.items():
+            if period in roster_by_week:
+                bucket["people_count"] = roster_by_week[period].get(
+                    "people_count", bucket["people_count"]
+                )
     wb.close()
     log_timing(f"{display_team}: availability parse took {time.perf_counter() - parse_start:.2f}s")
     rows: List[Dict[str, Any]] = []
