@@ -457,8 +457,6 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
         })
         hours = minutes / 60.0
         activity = "OOO" if kind == "ooo" else (_as_text(values[3]) or "Non-WIP")
-        bucket["total_non_wip_hours"] += hours
-        bucket["non_wip_by_person"][name] = bucket["non_wip_by_person"].get(name, 0.0) + hours
         bucket["non_wip_activities"].append({
             "name": name,
             "activity": activity,
@@ -468,7 +466,11 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
         if kind == "ooo":
             bucket["ooo_hours"] += hours
             bucket["ooo_by_person"][name] = bucket["ooo_by_person"].get(name, 0.0) + hours
-
+        else:
+            bucket["total_non_wip_hours"] += hours
+            bucket["non_wip_by_person"][name] = (
+                bucket["non_wip_by_person"].get(name, 0.0) + hours
+            )
     for period, people in people_by_period.items():
         results[period]["people_count"] = len(people)
     return results
