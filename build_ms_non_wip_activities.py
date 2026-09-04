@@ -427,25 +427,25 @@ def parse_available_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
             "ooo_by_person": ooo_by_person,
         }
     return results
-def _production_non_wip_kind(value: Any) -> Optional[str]:
-    compact = re.sub(r"[^a-z0-9]+", "", _as_text(value).lower())
-    if compact == "ooo":
+def _production_non_wip_kind(category: Any, activity: Any) -> Optional[str]:
+    category_text = _as_text(category)
+    category_compact = re.sub(r"[^a-z0-9]+", "", category_text.lower())
+    activity_compact = re.sub(r"[^a-z0-9]+", "", _as_text(activity).lower())
+    if category_compact == "ooo" or (not category_text and activity_compact == "ooo"):
         return "ooo"
-    if "nonwip" in compact:
+    if "nonwip" in category_compact or (not category_text and activity_compact):
         return "non_wip"
     return None
 def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, Any]]:
     results: Dict[_dt.date, Dict[str, Any]] = {}
     people_by_period: Dict[_dt.date, set[str]] = {}
-
     for values in ws.iter_rows(min_row=2, max_col=5, values_only=True):
         source_date = _as_date(values[0])
         name = _as_text(values[1])
-        kind = _production_non_wip_kind(values[2])
+        kind = _production_non_wip_kind(values[2], values[3])
         minutes = _cell_number(values[4])
         if source_date is None or not name or kind is None or minutes is None or minutes <= 0:
             continue
-
         period = source_date - _dt.timedelta(days=source_date.weekday())
         bucket = results.setdefault(period, {
             "people_count": 0,
