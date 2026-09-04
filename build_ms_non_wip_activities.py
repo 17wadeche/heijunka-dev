@@ -88,7 +88,6 @@ CSV_COLUMNS = [
     "wip_workers_count",
     "wip_workers_ooo_hours",
 ]
-AVAILABILITY_SHEET = "Available WIP+Non-WIP Hours"
 PRODUCTION_SHEET = "Production Analysis"
 def log_timing(message: str) -> None:
     now = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -442,9 +441,7 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
     for values in ws.iter_rows(min_row=2, max_col=5, values_only=True):
         source_date = _as_date(values[0])
         name = _as_text(values[1])
-        kind = _production_non_wip_kind(values[2], values[3])
-        minutes = _cell_number(values[4])
-        if source_date is None or not name or kind is None or minutes is None or minutes <= 0:
+        if source_date is None or not name:
             continue
         period = source_date - _dt.timedelta(days=source_date.weekday())
         bucket = results.setdefault(period, {
@@ -455,6 +452,11 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
             "non_wip_activities": [],
             "ooo_by_person": {},
         })
+        people_by_period.setdefault(period, set()).add(_norm_name(name))
+        kind = _production_non_wip_kind(values[2], values[3])
+        minutes = _cell_number(values[4])
+        if kind is None or minutes is None or minutes <= 0:
+            continue
         hours = minutes / 60.0
         activity = "OOO" if kind == "ooo" else (_as_text(values[3]) or "Non-WIP")
         bucket["non_wip_activities"].append({
@@ -462,7 +464,6 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
             "activity": activity,
             "hours": hours,
         })
-        people_by_period.setdefault(period, set()).add(_norm_name(name))
         if kind == "ooo":
             bucket["ooo_hours"] += hours
             bucket["ooo_by_person"][name] = bucket["ooo_by_person"].get(name, 0.0) + hours
@@ -577,19 +578,12 @@ def scrape_one_workbook(path: str, wip_lut: Dict[Tuple[str, str], Dict[str, Any]
             "wip_workers_ooo_hours": "",
         }]
     parse_start = time.perf_counter()
-    available_by_week = parse_production_non_wip_sheet(wb[PRODUCTION_SHEET])
-    if AVAILABILITY_SHEET in wb.sheetnames:
-        roster_by_week = parse_available_sheet(wb[AVAILABILITY_SHEET])
-        for period, bucket in available_by_week.items():
-            if period in roster_by_week:
-                bucket["people_count"] = roster_by_week[period].get(
-                    "people_count", bucket["people_count"]
-                )
+    production_by_week = parse_production_non_wip_sheet(wb[PRODUCTION_SHEET])
     wb.close()
-    log_timing(f"{display_team}: availability parse took {time.perf_counter() - parse_start:.2f}s")
+    log_timing(f"{display_team}: production parse took {time.perf_counter() - parse_start:.2f}s")
     rows: List[Dict[str, Any]] = []
-    for period in sorted(available_by_week.keys()):
-        av = available_by_week[period]
+    for period in sorted(production_by_week.keys()):
+        av = production_by_week[period]
         key = (_norm_team(team), iso_date(period))
         wip_info = wip_lut.get(key, {})
         completed_hours = float(wip_info.get("Completed Hours", 0.0) or 0.0)
