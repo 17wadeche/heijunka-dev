@@ -229,6 +229,15 @@ def filter_team_view(
         else:
             sub = exact
     return sub
+def accounting_metrics_for_team_view(
+    frame: pd.DataFrame,
+    team_group: str,
+    subgroup: str = "All",
+) -> pd.DataFrame:
+    view = filter_team_view(frame, team_group, subgroup, fallback_to_all=False).copy()
+    if not view.empty:
+        view["team"] = team_group
+    return view
 @st.cache_data(show_spinner=False, ttl=15 * 60)
 def explode_non_wip_by_person(nw: pd.DataFrame) -> pd.DataFrame:
     cols = ["team","period_date","person","Non-WIP Hours"]
@@ -1715,22 +1724,19 @@ if nonwip_mode:
             unsafe_allow_html=True,
         )
     c1, c2, c3, c4 = st.columns(4)
-    if subgroup_nw == "All":
-        wip_match = df[(df["team"] == team_nw) & (df["period_date"] == week_nw)]
-    else:
-        wip_match = filter_team_view(wip_group_df, team_nw, subgroup_nw, fallback_to_all=False)
-        wip_match = wip_match[wip_match["period_date"] == week_nw]
+    metrics_frame_for_accounting = accounting_metrics_for_team_view(
+        wip_group_df,
+        team_nw,
+        subgroup_nw,
+    )
+    wip_match = metrics_frame_for_accounting[
+        metrics_frame_for_accounting["period_date"] == week_nw
+    ]
     wip_hours_val = (
         float(pd.to_numeric(wip_match["Completed Hours"], errors="coerce").sum())
         if not wip_match.empty and "Completed Hours" in wip_match.columns
         else np.nan
     )
-    if subgroup_nw == "All":
-        metrics_frame_for_accounting = df
-    else:
-        wip_group_filtered = filter_team_view(wip_group_df, team_nw, subgroup_nw, fallback_to_all=False).copy()
-        metrics_frame_for_accounting = wip_group_filtered
-        metrics_frame_for_accounting["team"] = team_nw
     if subgroup_nw == "All":
         nw_view_for_accounting = nw_base
     else:
