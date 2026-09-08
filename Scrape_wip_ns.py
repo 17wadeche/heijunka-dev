@@ -2147,6 +2147,23 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 os.remove(tmp_path)
         except Exception:
             pass
+def nav_excel_float(v):
+    if v is None:
+        return 0.0
+    if isinstance(v, str):
+        s = v.strip()
+        if not s or s.startswith("#"):
+            return 0.0
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+    if isinstance(v, (int, float)):
+        x = float(v)
+        if x < -1_000_000:
+            return 0.0
+        return x
+    return 0.0
 def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown_override: Optional[list[Any]] = None) -> list[dict]:
     import shutil
     import tempfile
@@ -2202,14 +2219,20 @@ def scrape_nav_previous_weeks_xlsm(source_file: str, team: str = "Nav", dropdown
                 continue
             total_available_hours = safe_float(_com_call(lambda: ws.Range("X64").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("X54").Value))
-            wp1_tgt = safe_float(_com_call(lambda: ws.Range("AD10").Value))
-            wp2_tgt = safe_float(_com_call(lambda: ws.Range("AF10").Value))
-            wp1_out = safe_float(_com_call(lambda: ws.Range("AD5").Value))
-            wp2_out = safe_float(_com_call(lambda: ws.Range("AF5").Value))
+            wp1_tgt = nav_excel_float(
+                _com_call(lambda: ws.Range("AD10").Value)
+            )
+            wp2_tgt = nav_excel_float(
+                _com_call(lambda: ws.Range("AF10").Value)
+            )
+            wp1_out = nav_excel_float(
+                _com_call(lambda: ws.Range("AD5").Value)
+            )
+            wp2_out = nav_excel_float(
+                _com_call(lambda: ws.Range("AF5").Value)
+            )
             target_output = wp1_tgt + wp2_tgt
             actual_output = wp1_out + wp2_out
-            if target_output < 0:
-                continue
             target_uplh = safe_div(target_output, completed_hours)
             actual_uplh = safe_div(actual_output, completed_hours)
             uplh_wp1 = safe_float(_com_call(lambda: ws.Range("AD8").Value))
