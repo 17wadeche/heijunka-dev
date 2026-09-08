@@ -177,14 +177,21 @@ def _merge_unique_list_of_dicts(items: list[dict]) -> list[dict]:
             str(item.get("name", "")).strip(),
             str(item.get("activity", "")).strip(),
             safe_float2(item.get("hours")),
+            str(item.get("day", "")).strip(),
+            safe_float2(item.get("days")),
         )
         if key not in seen:
             seen.add(key)
-            out.append({
+            merged_item = {
                 "name": key[0],
                 "activity": key[1],
                 "hours": key[2],
-            })
+            }
+            if key[3]:
+                merged_item["day"] = key[3]
+            if key[4]:
+                merged_item["days"] = key[4]
+            out.append(merged_item)
     return out
 def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     team_rollup_map = {
@@ -463,6 +470,7 @@ def parse_production_non_wip_sheet(ws: Worksheet) -> Dict[_dt.date, Dict[str, An
             "name": name,
             "activity": activity,
             "hours": hours,
+            "day": source_date.isoformat(),
         })
         if kind == "ooo":
             bucket["ooo_hours"] += hours
