@@ -2570,7 +2570,27 @@ with mid2:
 with right2:
     st.subheader("Hours Trend")
     mix_rows = []
-    nw_sub = _nw[_nw["team"].isin(teams_in_view)].copy()
+    mix_metrics = f
+    mix_nw = _nw
+    if len(teams_in_view) == 1:
+        mix_team = teams_in_view[0]
+        mix_subgroup = _first_valid_subgroup(
+            st.session_state.get("selected_team_subgroup", "All"),
+            mix_team,
+        )
+        if len(subgroup_options_for_team(mix_team)) > 1:
+            mix_metrics = accounting_metrics_for_team_view(
+                wip_group_df,
+                mix_team,
+                mix_subgroup,
+            )
+            if mix_subgroup != "All":
+                mix_nw = accounting_metrics_for_team_view(
+                    nonwip_group_df,
+                    mix_team,
+                    mix_subgroup,
+                )
+    nw_sub = mix_nw[mix_nw["team"].isin(teams_in_view)].copy()
     if not nw_sub.empty:
         for _, nw_row in nw_sub.iterrows():
             team = str(nw_row.get("team", "")).strip()
@@ -2582,8 +2602,8 @@ with right2:
                 team=team,
                 week=wk,
                 nw_row=nw_row,
-                metrics_frame=f,
-                nw_frame=_nw,
+                metrics_frame=mix_metrics,
+                nw_frame=mix_nw,
                 week_hours=40.0,
                 irl_people=irl_lookup.get(team, set()),
             )
