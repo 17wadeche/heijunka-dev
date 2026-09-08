@@ -167,32 +167,6 @@ def safe_float2(v: Any) -> float:
 def _sum_simple_map(dst: dict, src: dict) -> None:
     for k, v in (src or {}).items():
         dst[k] = safe_float2(dst.get(k)) + safe_float2(v)
-def _merge_unique_list_of_dicts(items: list[dict]) -> list[dict]:
-    seen = set()
-    out = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        key = (
-            str(item.get("name", "")).strip(),
-            str(item.get("activity", "")).strip(),
-            safe_float2(item.get("hours")),
-            str(item.get("day", "")).strip(),
-            safe_float2(item.get("days")),
-        )
-        if key not in seen:
-            seen.add(key)
-            merged_item = {
-                "name": key[0],
-                "activity": key[1],
-                "hours": key[2],
-            }
-            if key[3]:
-                merged_item["day"] = key[3]
-            if key[4]:
-                merged_item["days"] = key[4]
-            out.append(merged_item)
-    return out
 def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     team_rollup_map = {
         "Surgical AST-GST MEIC": "Surgical AST-GST",
@@ -266,7 +240,9 @@ def rollup_non_wip_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "OOO Hours": total_ooo_hours,
             "% in WIP": pct_in_wip_avg,
             "non_wip_by_person": dumps_json(non_wip_by_person),
-            "non_wip_activities": dumps_json(_merge_unique_list_of_dicts(non_wip_activities_all)),
+            # Each item is recorded time, even when its values match another entry.
+            # Deduplicating loses repeated OOO/non-WIP time, especially without dates.
+            "non_wip_activities": dumps_json(non_wip_activities_all),
             "wip_workers": dumps_json(sorted(wip_workers_set)),
             "wip_workers_count": int(wip_workers_count) if float(wip_workers_count).is_integer() else wip_workers_count,
             "wip_workers_ooo_hours": wip_workers_ooo_hours,
