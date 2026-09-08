@@ -175,6 +175,8 @@ ACTIVITY_MAP = {
     "internal cqxm meeting 30":"Meeting",
     "files review fix":"WIP/Event Review",
     "internal cqxm team 20":"Meeting",
+    "lab tour - visitor":"Admin",
+    "additional testing for mfg engineer":"Testing",
     "intrnal cqxm team 20":"Meeting",
     "cs qa":"QA",
     "nextgen gch uat file":"Next Gen",
