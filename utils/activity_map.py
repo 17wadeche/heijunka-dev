@@ -198,6 +198,7 @@ ACTIVITY_MAP = {
     "files smdr":"Admin",
     "reviewing fer pdf":"Admin",
     "extenal meetin":"Meeting",
+    "meeting - general":"Meeting",
     "ng smartttrees meetings event reviews email/admin":"Next Gen",
     "ng smart trees meetings email/admin":"Project Work",
     "ng, smarttrees, training, cornerstone, event reviews, email/admin":"Next Gen",
