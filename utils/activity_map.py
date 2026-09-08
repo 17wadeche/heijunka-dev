@@ -185,6 +185,8 @@ ACTIVITY_MAP = {
     "aira audit/emails/teams/weekly complaint review dhr tasks/schedule":"Audit",
     "sr x":"WIP/Event Review",
     "+ rd x":"WIP/Event Review",
+    "eu training material/pending cornerstone/review/emails/scrum/other":"CQXM Training",
+    "emails/training events review/":"Email & IM",
     "training/reviewing/cqxm internal meetings/other/email":"CQXM Training",
     "1-1 with elaine, cornerstone training":"Meeting",
     "sr/rd review/emails/team/cqxm internal meetings/cornerstone/other":"WIP/Event Review",
