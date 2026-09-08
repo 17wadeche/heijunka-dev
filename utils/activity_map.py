@@ -197,6 +197,7 @@ ACTIVITY_MAP = {
     "additional testing for mfg engineer":"Testing",
     "ng smarttrees coding lates event review collaboration email/admin":"Next Gen",
     "training/onboarding/ troubleshooting/collaboration":"CQXM Training",
+    "cornerstone/self-training":"Cornerstone",
     "training/onboarding/ assisting structural heart new hire":"CQXM Training",
     "intrnal cqxm team 20":"Meeting",
     "cs qa":"QA",
