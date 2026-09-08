@@ -2476,8 +2476,8 @@ with mid2:
                         team=team_name,
                         week=picked_week,
                         nw_row=nw_week_rows.iloc[0],
-                        metrics_frame=mix_metrics,
-                        nw_frame=mix_nw,
+                        metrics_frame=f,
+                        nw_frame=_nw,
                         week_hours=40.0,
                         irl_people=irl_lookup.get(team_name, set()),
                     )
