@@ -1012,7 +1012,7 @@ def build_person_weekly_accounting(
     non_ooo_total = out["Non-WIP Hours"].clip(lower=0.0)
     out["Other Team WIP"] = np.minimum(out["Other Team WIP"], non_ooo_total)
     remaining_nonwip = (non_ooo_total - out["Other Team WIP"]).clip(lower=0.0)
-    out["Accounted Non-WIP"] = np.minimum(out["Accounted Non-WIP"], remaining_nonwip)
+    out["Accounted Non-WIP"] = remaining_nonwip
     out["Unaccounted"] = (
         out["Expected Hours"]
         - out["Completed Hours"]
@@ -2476,8 +2476,8 @@ with mid2:
                         team=team_name,
                         week=picked_week,
                         nw_row=nw_week_rows.iloc[0],
-                        metrics_frame=f,
-                        nw_frame=_nw,
+                        metrics_frame=mix_metrics,
+                        nw_frame=mix_nw,
                         week_hours=40.0,
                         irl_people=irl_lookup.get(team_name, set()),
                     )
