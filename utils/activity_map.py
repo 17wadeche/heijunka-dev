@@ -171,6 +171,7 @@ ACTIVITY_MAP = {
     "reading additional dcb device investigation":"Admin",
     "capere":"Project Work",
     "and rfg":"Project Work",
+    "extenal meetin":"Meeting",
     "rdn generator training":"CQXM Training",
     "investigation training on rfg":"CQXM Training",
     "weekly report for uni":"Admin",
