@@ -409,7 +409,7 @@ def excel_cell(row_i_zero_based: int, col_i_zero_based: int) -> str:
     return f"{letters}{row_i_zero_based + 1}"
 DBS_MEIC_NAMES = {"Divya", "Reshmita", "Shankar"}
 PH_MEIC_NAMES = {"Sathya", "Arun", "Kavya"}
-SCS_MEIC_NAMES = {"Brajendra", "Nadeem", "Trisha", "Priyadarshini", "Sharavanan", "Raviteja", "Trilok", "Nitheesh", "Chaitanya", "Sinduja"}
+SCS_MEIC_NAMES = {"Brajendra", "Nadeem", "Trisha", "Priyadarshini", "Sharavanan", "Raviteja", "Trilok", "Nitheesh", "Sinduja"}
 TEAM_TRACKER_SHEET = "Team Tracker"
 NS_WIP_PATH = Path(r"C:\heijunka-dev\NS_DATA\NS_WIP.csv")
 NS_METRICS_PATH = Path(r"C:\heijunka-dev\NS_DATA\NS_metrics.csv")
