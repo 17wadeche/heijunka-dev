@@ -1740,8 +1740,8 @@ def get_people_count_from_wip(
     if team_key in {"enabling tech", "enabling technology", "enabling technologies"}:
         week_date = pd.to_datetime(week, errors="coerce")
         if pd.notna(week_date) and week_date.normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE:
-            return 35
-        return 33
+            return 37
+        return 37
     if wip_df is None or wip_df.empty:
         return int(fallback or 0)
     base = wip_df[wip_df["period_date"] == week].copy()
@@ -3955,7 +3955,7 @@ def main():
         final_combined.loc[enabling_mask, "people_count"] = final_combined.loc[
             enabling_mask, "period_date"
         ].apply(
-            lambda week: 35
+            lambda week: 37
             if pd.to_datetime(week, errors="coerce").normalize() >= ET_US_PEOPLE_COUNT_INCREASE_DATE
             else 33
         )
