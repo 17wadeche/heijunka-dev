@@ -4269,7 +4269,7 @@ def main():
     ph17_after = sum(1 for r in rows if r.get("team") == "PH Cell 17")
     logger.info(f"[PH Cell 17] rows after TAA filter = {ph17_after}")
     logger.info(f"[ALL] filter TAA!=0 (except SCS Super Cell): {before} -> {len(rows)}")
-    for bad in ("2023-11-06", "2026-09-07"):
+    for bad in ("2023-11-06"):
         before = len(rows)
         rows = [
             r for r in rows
