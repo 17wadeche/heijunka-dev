@@ -274,6 +274,7 @@ def normalize_person_name(name: str) -> str:
         _norm("gundlapally, sinduja"): "Sinduja",
         _norm("s, sharavanan"): "Sharavanan",
         _norm(" tuniki, nitheesh chandra"): "Chandra",
+        _norm("mistry, sneha"):"Sneha",
         _norm("embari, chaitanya"): "Chaitanya",
         _norm("gowda, manjunath"): "Manjunath Gowda",
         _norm("andrew o"): "Andrew",
