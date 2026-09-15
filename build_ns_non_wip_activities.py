@@ -2734,7 +2734,6 @@ def week_from_spine_tab(sheet_name: str, ws: pd.DataFrame) -> Optional[pd.Timest
     dt = pd.to_datetime(s, errors="coerce")
     if _is_real_year(dt):
         return dt.normalize()
-    # Spine tabs use day.month.year, for example Cap_Mgmt_10.08.26.
     m = re.search(r"(\d{1,2})[.\-_/](\d{1,2})[.\-_/](\d{2,4})", s)
     if m:
         dd = int(m.group(1))
@@ -2767,8 +2766,6 @@ def build_spine_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = 
         pd.notna(week_ts)
         and week_ts.normalize() >= SPINE_LAYOUT_SHIFT_START
     )
-    # A new activity column was added for 2026-08-10 onward, shifting OOO
-    # from AC to AD. Keep the historical mapping for earlier archive tabs.
     COL_OOO = _col_letter_to_idx("AD" if uses_shifted_layout else "AC")
     ACT_START = _col_letter_to_idx("C")
     ACT_END   = _col_letter_to_idx("AC" if uses_shifted_layout else "AB")

@@ -1159,6 +1159,7 @@ ENT_NAME_REPLACEMENTS = {
     "Kumari, Taruna": "Taruna Kumari",
     "Pavani Uppari":"Uppari Pavani",
     "Raju, Surekha": "Surekha Raju Anantarapu",
+    "Mistry, Sneha":"Sneha",
     "S, Selvarasu": "Selvarasu Sampathu",
     "Uppari, Pavani": "Uppari Pavani",
     "Megan R":"Megan",
