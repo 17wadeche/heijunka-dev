@@ -2182,6 +2182,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\8. August",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\April 2026 - PAB",
+        r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\Aug 2026 - PAB",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\Sep 2026 - PAB",
         CDS_ARCHIVE_PAB_HINT,
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB",

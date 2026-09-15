@@ -24,6 +24,7 @@ CPT_ARCHIVE_PAB_DIR5 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies 
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
 CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB\5-Aug 2026"
 NI_ARCHIVE_SEPT_2026 = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\Sep 2026 - PAB"
+NI_ARCHIVE_AUG_2026 = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\Aug 2026 - PAB"
 NI_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka"
 NI_ARCHIVE_APRIL_2026_DIR = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\April 2026 - PAB"
 NI_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB"
@@ -1610,7 +1611,7 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "DS": [DS_DEFAULT_DIR, DS_ARCHIVE],
     "CPT": [CPT_DEFAULT_DIR, CPT_ARCHIVE_PAB_DIR, CPT_ARCHIVE_PAB_DIR2, CPT_ARCHIVE_PAB_DIR3, CPT_ARCHIVE_PAB_DIR4, CPT_ARCHIVE_PAB_DIR5],
     "CDS": [CDS_DEFAULT_DIR, CDS_ARCHIVE_PAB_DIR],
-    "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE, NI_ARCHIVE_SEPT_2026],
+    "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE, NI_ARCHIVE_SEPT_2026, NI_ARCHIVE_AUG_2026],
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
     PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
