@@ -2876,6 +2876,7 @@ def _build_et_capacity_snapshot(
     excluded_names: Optional[set[str]] = None,
 ) -> Dict:
     NAME_COL = _col_letter_to_idx("A")
+    EXPECTED_WIP_COL = _col_letter_to_idx("B")
     ACT_START = _col_letter_to_idx("C")
     ACT_END = _col_letter_to_idx("AD")
     OOO_COL = _col_letter_to_idx("AE")
@@ -2903,14 +2904,17 @@ def _build_et_capacity_snapshot(
             continue
         if name_key in excluded_name_keys:
             continue
-        row_total = 0.0
+        expected_wip = safe_float0(
+            ws.iat[i, EXPECTED_WIP_COL]
+            if ws.shape[1] > EXPECTED_WIP_COL else 0.0
+        )
         row_ooo = safe_float0(ws.iat[i, OOO_COL] if ws.shape[1] > OOO_COL else 0.0)
         people_rows.append({
             "row_i": i,
             "name": name,
+            "B": float(expected_wip),
             "OOO": float(row_ooo),
         })
-
         for c in range(ACT_START, min(ACT_END, ws.shape[1] - 1) + 1):
             label = norm_name(ws.iat[HEADER_ROW, c] if ws.shape[0] > HEADER_ROW and ws.shape[1] > c else "")
             if not label:
@@ -2924,10 +2928,9 @@ def _build_et_capacity_snapshot(
                 "activity": label,
                 "hours": hrs,
             })
-            row_total += hrs
-        row_total = float(round(row_total, 2))
-        if row_total != 0.0:
-            nonwip_by_person[name] = row_total
+        person_nonwip = float(round(max(40.0 - expected_wip - row_ooo, 0.0), 2))
+        if person_nonwip != 0.0:
+            nonwip_by_person[name] = person_nonwip
         ooo_map[name] = float(round(row_ooo, 2))
         if row_ooo > 0:
             activities.append({
@@ -2953,7 +2956,7 @@ def build_et_us_snapshot(team: str, ws: pd.DataFrame, week: Optional[pd.Timestam
             team,
             ws,
             week,
-            include_rows=list(range(2, 32)),  # Excel rows 3:32 after ET US expanded to 30 people
+            include_rows=list(range(2, 40)),  # Excel rows 3:32 after ET US expanded to 30 people
             people_count=30,
             excluded_names=PSS_US_USER_DATA_NAMES,
         )
