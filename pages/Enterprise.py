@@ -2988,14 +2988,14 @@ if page == "Overview":
     unaccounted_workbook = _cached_custom_excel_bytes(
         (("Unaccounted Time", unaccounted_export),)
     )
-    st.download_button(
-        "Unaccounted Time",
-        data=unaccounted_workbook,
-        file_name="enterprise_unaccounted_time.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="overview_unaccounted_time_download",
-        width="stretch",
-    )
+    ## .download_button(
+    ##    "Unaccounted Time",
+    ##    data=unaccounted_workbook,
+    ##    file_name="enterprise_unaccounted_time.xlsx",
+    ##    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ##    key="overview_unaccounted_time_download",
+    ##    width="stretch",
+    ##)
 elif page == "Non-WIP":
     st.markdown("### Non-WIP activities")
     activity_keys = [
