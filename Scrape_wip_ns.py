@@ -1360,7 +1360,16 @@ def scrape_csf_previous_weeks_with_config(
             if isinstance(completed_spec, str):
                 completed_hours = safe_float(_range_val(ws, completed_spec))
             else:
-                if completed_spec.get("type") == "sum_range":
+                if completed_spec.get("type") == "sum_named_person_actual":
+                    name_row = cfg["rows"]["person_name_row_for_person_hours"]
+                    actual_row = cfg["rows"]["person_actual_row_for_person_hours"]
+                    completed_hours = sum(
+                        safe_float(_cell_val(ws, actual_row, c))
+                        for c in cols
+                        if safe_str(_cell_val(ws, name_row, c)).casefold()
+                        not in {"", "totals", "total", "uplh"}
+                    )
+                elif completed_spec.get("type") == "sum_range":
                     start_col, start_row, end_col, end_row = re.match(
                         r"([A-Z]+)(\d+):([A-Z]+)(\d+)", completed_spec["range"]
                     ).groups()
@@ -1679,7 +1688,16 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         if isinstance(completed_spec, str):
             completed_hours = safe_float(ws[completed_spec].value)
         else:
-            if completed_spec.get("type") == "sum_range":
+            if completed_spec.get("type") == "sum_named_person_actual":
+                name_row = cfg["rows"]["person_name_row_for_person_hours"]
+                actual_row = cfg["rows"]["person_actual_row_for_person_hours"]
+                completed_hours = sum(
+                    safe_float(ws.cell(row=actual_row, column=c).value)
+                    for c in cols
+                    if safe_str(ws.cell(row=name_row, column=c).value).casefold()
+                    not in {"", "totals", "total", "uplh"}
+                )
+            elif completed_spec.get("type") == "sum_range":
                 rng = completed_spec["range"]
                 completed_hours = sum(safe_float(cell.value) for row in ws[rng] for cell in row)
             elif completed_spec.get("type") == "sum_cells":
@@ -3949,7 +3967,7 @@ def main():
         "min_period_date": "2026-03-01",
         "cells": {
             "total_available_hours": {"type": "sum_range", "range": "B61:Y61"},
-            "completed_hours": {"type": "sum_range", "range": "B50:Y50"},
+            "completed_hours": {"type": "sum_named_person_actual"},
             "wp1_output": "AH2",
             "wp1_target": "AH7",
             "wp2_output": "AJ2",
