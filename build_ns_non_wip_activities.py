@@ -21,7 +21,7 @@ faulthandler.dump_traceback_later(300, repeat=False)
 DBS_C13_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 13 Heijunka V2.xlsx")
 DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documents\Cell 14 Heijunka V2.xlsx")
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
-SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-08-17").normalize()
+SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-09-07").normalize()
 NV_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-24").normalize()
 SPINE_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-10").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
@@ -34,7 +34,7 @@ PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
 )
 TDD_NEW_TOTALS_ROW = 21
-SCS_NEW_TOTALS_ROW = 32  # Excel row 33 after the SCS roster expansion
+SCS_NEW_TOTALS_ROW = 33  # Excel row 33 after the SCS roster expansion
 warnings.filterwarnings(
     "ignore",
     message="Data Validation extension is not supported and will be removed"
