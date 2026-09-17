@@ -339,12 +339,20 @@ def load_scs_super_from_existing_metrics_and_refresh_3_weeks(
     logger: Optional[logging.Logger] = None,
 ) -> list[dict]:
     existing_rows = read_existing_metrics_rows(ns_metrics_path)
-    weeks_to_refresh = sorted(set(iso_monday_weeks_back(date.today(), weeks_back=2)))
-    weeks_set = set(weeks_to_refresh)
     existing_super_rows = [
         r for r in existing_rows
         if safe_str(r.get("team")) == "SCS Super Cell"
     ]
+    stale_roster_weeks = {
+        safe_str(r.get("period_date"))
+        for r in existing_super_rows
+        if safe_str(r.get("period_date")) >= "2026-09-07"
+        and "Totals" in json_load_safe(r.get("Person Hours"))
+    }
+    weeks_to_refresh = sorted(
+        set(iso_monday_weeks_back(date.today(), weeks_back=2)) | stale_roster_weeks
+    )
+    weeks_set = set(weeks_to_refresh)
     frozen_super_rows = [
         r for r in existing_super_rows
         if safe_str(r.get("period_date")) not in weeks_set
@@ -1389,7 +1397,7 @@ def scrape_csf_previous_weeks_with_config(
             avail_row_ph = cfg["rows"]["person_available_row_for_person_hours"]
             for c in cols:
                 name = safe_str(_cell_val(ws, name_row_ph, c))
-                if not name:
+                if not name or name.casefold() in {"totals", "total", "uplh"}:
                     continue
                 actual = safe_float(_cell_val(ws, actual_row_ph, c))
                 available = safe_float(_cell_val(ws, avail_row_ph, c))
@@ -1401,7 +1409,7 @@ def scrape_csf_previous_weeks_with_config(
             if name_row_op and target_row_op and output_spec:
                 for c in cols:
                     name = safe_str(_cell_val(ws, name_row_op, c))
-                    if not name:
+                    if not name or name.casefold() in {"totals", "total", "uplh"}:
                         continue
                     if output_spec.get("type") == "row":
                         output_val = safe_float(_cell_val(ws, output_spec["row"], c))
@@ -1435,7 +1443,7 @@ def scrape_csf_previous_weeks_with_config(
             wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
             for c in cols:
                 name = safe_str(_cell_val(ws, name_row_hc, c))
-                if not name:
+                if not name or name.casefold() in {"totals", "total", "uplh"}:
                     continue
                 wp1_hrs = sum(safe_float(_cell_val(ws, r, c)) for r in wp1_hour_rows)
                 wp2_hrs = sum(safe_float(_cell_val(ws, r, c)) for r in wp2_hour_rows)
@@ -1453,7 +1461,7 @@ def scrape_csf_previous_weeks_with_config(
             wp2_out_rows = cfg["rows"]["wp2_output_rows_by_person"]
             for c in cols:
                 name = safe_str(_cell_val(ws, name_row_oc, c))
-                if not name:
+                if not name or name.casefold() in {"totals", "total", "uplh"}:
                     continue
                 wp1_o = sum(safe_float(_cell_val(ws, r, c)) for r in wp1_out_rows)
                 wp2_o = sum(safe_float(_cell_val(ws, r, c)) for r in wp2_out_rows)
@@ -1551,7 +1559,7 @@ def scrape_dbs_dated_tabs_xlsx(
         person_hours: Dict[str, Dict[str, float]] = {}
         for c in cols:
             name = safe_str(ws.cell(row=30, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             actual = safe_float(ws.cell(row=50, column=c).value)
             available = safe_float(ws.cell(row=61, column=c).value)
@@ -1559,7 +1567,7 @@ def scrape_dbs_dated_tabs_xlsx(
         outputs_by_person: Dict[str, Dict[str, float]] = {}
         for c in cols:
             name = safe_str(ws.cell(row=10, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             out_val = sum(
                 safe_float(ws.cell(row=r, column=c).value)
@@ -1586,7 +1594,7 @@ def scrape_dbs_dated_tabs_xlsx(
         wp3_hour_rows = [33, 37, 41, 45, 49]
         for c in cols:
             name = safe_str(ws.cell(row=30, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             wp1_hrs = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_hour_rows)
             wp2_hrs = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_hour_rows)
@@ -1602,7 +1610,7 @@ def scrape_dbs_dated_tabs_xlsx(
         wp2_out_rows = [12, 15, 18, 21, 24]
         for c in cols:
             name = safe_str(ws.cell(row=13, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             wp1_o = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp1_out_rows)
             wp2_o = sum(safe_float(ws.cell(row=r, column=c).value) for r in wp2_out_rows)
@@ -1700,7 +1708,7 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         avail_row_ph = cfg["rows"]["person_available_row_for_person_hours"]
         for c in cols:
             name = safe_str(ws.cell(row=name_row_ph, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             actual = safe_float(ws.cell(row=actual_row_ph, column=c).value)
             available = safe_float(ws.cell(row=avail_row_ph, column=c).value)
@@ -1711,7 +1719,7 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         output_spec = cfg["outputs_by_person_output"]  
         for c in cols:
             name = safe_str(ws.cell(row=name_row_op, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             if output_spec["type"] == "row":
                 output_val = safe_float(ws.cell(row=output_spec["row"], column=c).value)
@@ -1745,7 +1753,7 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         wp2_hour_rows = cfg["rows"]["wp2_hour_rows"]
         for c in cols:
             name = safe_str(ws.cell(row=name_row_hc, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             wp1_hrs = sum_rows(ws, wp1_hour_rows, c)
             wp2_hrs = sum_rows(ws, wp2_hour_rows, c)
@@ -1763,7 +1771,7 @@ def scrape_workbook_with_config(source_file: str, cfg: Dict[str, Any]) -> list[d
         wp2_out_rows = cfg["rows"]["wp2_output_rows_by_person"]
         for c in cols:
             name = safe_str(ws.cell(row=name_row_oc, column=c).value)
-            if not name:
+            if not name or name.casefold() in {"totals", "total", "uplh"}:
                 continue
             wp1_o = sum_rows(ws, wp1_out_rows, c)
             wp2_o = sum_rows(ws, wp2_out_rows, c)
