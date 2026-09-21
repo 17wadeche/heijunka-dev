@@ -2058,28 +2058,35 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
             total_available_hours = safe_float(_com_call(lambda: ws.Range("O69").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("O59").Value))
             nv_d2d_by_person: Dict[str, float] = {}
+            nv_hours_error = ""
             if team == "NV" and period_date >= "2026-09-14":
                 week_sheet_name = datetime.strptime(period_date, "%Y-%m-%d").strftime("%d%b%Y")
                 try:
                     week_ws = _com_call(lambda: wb.Worksheets(week_sheet_name))
+                    nv_d2d_total = 0.0
+                    week_d2d_by_person: Dict[str, float] = {}
                     for row_number in range(3, 17):
                         person = safe_str(_com_call(lambda r=row_number: week_ws.Cells(r, 1).Value))
-                        if not person:
-                            continue
+                        # Completed hours include every cell in F3:J16.
                         d2d_hours = sum(
                             safe_float(_com_call(lambda r=row_number, c=col: week_ws.Cells(r, c).Value))
-                            for col in range(5, 10)
+                            for col in range(6, 11)
                         )
-                        if d2d_hours:
-                            nv_d2d_by_person[person] = d2d_hours
-                    completed_hours += sum(nv_d2d_by_person.values())
+                        nv_d2d_total += d2d_hours
+                        if person:
+                            person_key = " ".join(person.split()).casefold()
+                            week_d2d_by_person[person_key] = (
+                                week_d2d_by_person.get(person_key, 0.0) + d2d_hours
+                            )
+                    # Commit both additions only after the complete tab is read.
+                    nv_d2d_by_person = week_d2d_by_person
+                    completed_hours += nv_d2d_total
                 except Exception as exc:
-                    logging.getLogger(__name__).warning(
-                        "[NV] Could not add E:I D2D hours for %s from sheet %s: %s",
-                        period_date,
-                        week_sheet_name,
-                        exc,
+                    nv_hours_error = (
+                        f"[NV] Could not add F3:J16 D2D hours for {period_date} "
+                        f"from sheet {week_sheet_name}: {exc}"
                     )
+                    logging.getLogger(__name__).warning(nv_hours_error)
             wp1_tgt = safe_float(_com_call(lambda: ws.Range("T10").Value))
             wp2_tgt = safe_float(_com_call(lambda: ws.Range("V10").Value))
             wp1_out = safe_float(_com_call(lambda: ws.Range("T5").Value))
@@ -2102,7 +2109,8 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                     continue
                 actual = safe_float(_com_call(lambda c=c: ws.Cells(59, c).Value))
                 if team == "NV":
-                    actual += nv_d2d_by_person.get(name, 0.0)
+                    person_key = " ".join(name.split()).casefold()
+                    actual += nv_d2d_by_person.get(person_key, 0.0)
                 available = safe_float(_com_call(lambda c=c: ws.Cells(69, c).Value))
                 person_hours[name] = {"actual": actual, "available": available}
             outputs_by_person: Dict[str, Dict[str, float]] = {}
@@ -2178,6 +2186,7 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 "Hours by Cell/Station - by person": json.dumps(hours_by_cell_by_person, ensure_ascii=False),
                 "Output by Cell/Station - by person": json.dumps(output_by_cell_by_person, ensure_ascii=False),
                 "UPLH by Cell/Station - by person": json.dumps(uplh_by_cell_by_person, ensure_ascii=False),
+                "error": nv_hours_error,
             })
         return rows_out
     finally:
