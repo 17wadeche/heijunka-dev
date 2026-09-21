@@ -208,6 +208,7 @@ ACTIVITY_MAP = {
     "administation":"Admin",
     "cqxm training administrative":"CQXM Training",
     "internal cqxm meetings40":"Meeting",
+    "administravive":"Admin",
     "cqxm training, scrum":"CQXM Training",
     "cqxm training investigation training":"CQXM Training",
     "cornerstone/self learning":"Cornerstone",
