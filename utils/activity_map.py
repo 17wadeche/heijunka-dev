@@ -230,6 +230,7 @@ ACTIVITY_MAP = {
     "cqxm-letter":"CQXM Training",
     "cqxm training - letter":"CQXM Training",
     "cqxm training -denise":"CQXM Training",
+    "/argon/kimal":"CQXM Training",
     "proxbox uat testing":"Project Work",
     "collab (60)":"Collaboration",
     "collab, admin/email":"Collaboration",
