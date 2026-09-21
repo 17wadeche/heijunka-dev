@@ -214,6 +214,7 @@ ACTIVITY_MAP = {
     "1-1, emails/teams, call with mark, inbox work, scheduling":"Meeting",
     "internal cqxm meetings, emails/teams, cornerstone / self training":"Email & IM",
     "cqxm mentoring/emails/teams/cornerstone/other":"CQXM Mentoring",
+    "internal cqxm meeting, cqxm training, administrative":"Meeting",
     "internal cqxm meetings, emails/teams, nextgen":"Next Gen",
     "cqxm training/cqxm internal meetings/emails/teams/other":"CQXM Training",
     "town hall online meeting":"Meeting",
