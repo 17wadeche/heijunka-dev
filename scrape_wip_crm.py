@@ -11,6 +11,9 @@ from openpyxl.worksheet.worksheet import Worksheet
 from zipfile import BadZipFile
 MCS_PULL_START = _dt.date(2026, 6, 22)
 LIT_LETTERS_TEAM = "Lit & Letters"
+LIT_LETTERS_ROOT = os.path.normpath(
+    r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters"
+)
 PM_CTS_TEAM = "PM-CTS"
 PM_CTS_IND_TEAM = "PM-CTS IND"
 PM_CTS_IND_START = _dt.date(2026, 6, 29)
@@ -18,8 +21,9 @@ PM_CTS_REMOVAL_START = _dt.date(2026, 6, 29)
 def _load_workbook_data(path: str, *, read_only: bool = False):
     return load_workbook(path, data_only=True, read_only=read_only)
 def _is_lit_letters_path(path: str) -> bool:
-    base = os.path.basename(_norm_path(path)).lower()
-    return (
+    normalized = _norm_path(path).lower()
+    base = os.path.basename(normalized)
+    return "pab for lit and letters" in normalized or (
         "pab for letters" in base
         and "lit" in base
         and "principals" in base
@@ -2170,6 +2174,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
+        LIT_LETTERS_ROOT,
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\5-Aug 2026",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\6-Sep 2026",
         DS_ARCHIVE_HINT,

@@ -14,7 +14,7 @@ MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB 
 MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
-LITLetters_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
+LIT_LETTERS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
 CPT_ARCHIVE_PAB_DIR2 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\5. May 2026"
@@ -208,8 +208,9 @@ MEIC_TEAM_NAME = "NI & PM MEIC"
 def _norm_path(p: str) -> str:
     return os.path.normpath(p)
 def is_lit_letters_path(path: str) -> bool:
-    base = os.path.basename(_norm_path(path)).lower()
-    return (
+    normalized = _norm_path(path).lower()
+    base = os.path.basename(normalized)
+    return "pab for lit and letters" in normalized or (
         "pab for letters" in base
         and "lit" in base
         and "principals" in base
@@ -1620,7 +1621,7 @@ TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
     PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
-    LIT_LETTERS_TEAM_NAME: [LITLetters_ARCHIVE],
+    LIT_LETTERS_TEAM_NAME: [LIT_LETTERS_DEFAULT_DIR],
 }
 def normalize_team_arg(value: Optional[str]) -> Optional[str]:
     if value is None:
@@ -1672,6 +1673,7 @@ def filter_files_to_recent_weeks(files: List[str], *, weeks_back: int) -> List[s
     return [f for f in files if file_looks_recent_enough(f, weeks_back=weeks_back)]
 def lit_letters_search_roots() -> List[str]:
     roots = [
+        LIT_LETTERS_DEFAULT_DIR,
         NI_DEFAULT_DIR,
         PM_CTS_DEFAULT_DIR,
         MEIC_DEFAULT_DIR,
