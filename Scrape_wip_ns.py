@@ -2057,6 +2057,29 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 continue
             total_available_hours = safe_float(_com_call(lambda: ws.Range("O69").Value))
             completed_hours = safe_float(_com_call(lambda: ws.Range("O59").Value))
+            nv_d2d_by_person: Dict[str, float] = {}
+            if team == "NV" and period_date >= "2026-09-14":
+                week_sheet_name = datetime.strptime(period_date, "%Y-%m-%d").strftime("%d%b%Y")
+                try:
+                    week_ws = _com_call(lambda: wb.Worksheets(week_sheet_name))
+                    for row_number in range(3, 17):
+                        person = safe_str(_com_call(lambda r=row_number: week_ws.Cells(r, 1).Value))
+                        if not person:
+                            continue
+                        d2d_hours = sum(
+                            safe_float(_com_call(lambda r=row_number, c=col: week_ws.Cells(r, c).Value))
+                            for col in range(5, 10)
+                        )
+                        if d2d_hours:
+                            nv_d2d_by_person[person] = d2d_hours
+                    completed_hours += sum(nv_d2d_by_person.values())
+                except Exception as exc:
+                    logging.getLogger(__name__).warning(
+                        "[NV] Could not add E:I D2D hours for %s from sheet %s: %s",
+                        period_date,
+                        week_sheet_name,
+                        exc,
+                    )
             wp1_tgt = safe_float(_com_call(lambda: ws.Range("T10").Value))
             wp2_tgt = safe_float(_com_call(lambda: ws.Range("V10").Value))
             wp1_out = safe_float(_com_call(lambda: ws.Range("T5").Value))
@@ -2078,6 +2101,8 @@ def scrape_dbs_previous_weeks_xlsm(source_file: str, team: str, dropdown_overrid
                 if not name:
                     continue
                 actual = safe_float(_com_call(lambda c=c: ws.Cells(59, c).Value))
+                if team == "NV":
+                    actual += nv_d2d_by_person.get(name, 0.0)
                 available = safe_float(_com_call(lambda c=c: ws.Cells(69, c).Value))
                 person_hours[name] = {"actual": actual, "available": available}
             outputs_by_person: Dict[str, Dict[str, float]] = {}

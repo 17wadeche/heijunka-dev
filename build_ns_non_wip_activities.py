@@ -23,6 +23,7 @@ DBS_C14_SOURCE_FILE = Path(r"C:\Users\wadec8\Medtronic PLC\DBS CQ Team - Documen
 TDD_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-05-04").normalize()
 SCS_TOTALS_ROW_CHANGE_DATE = pd.Timestamp("2026-09-07").normalize()
 NV_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-24").normalize()
+NV_D2D_WIP_START = pd.Timestamp("2026-09-14").normalize()
 SPINE_LAYOUT_SHIFT_START = pd.Timestamp("2026-08-10").normalize()
 PSS_COMBINED_NONWIP_START = pd.Timestamp("2026-05-11").normalize()
 PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
@@ -1914,6 +1915,8 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         ACT_END_COL = _col_letter_to_idx("X")
         COL_OOO = _col_letter_to_idx("Y")
         COL_NONWIP = _col_letter_to_idx("Z")
+    if week_norm is not None and week_norm >= NV_D2D_WIP_START:
+        ACT_START_COL = _col_letter_to_idx("J")
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
