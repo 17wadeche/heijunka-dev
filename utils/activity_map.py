@@ -207,6 +207,7 @@ ACTIVITY_MAP = {
     "reviewing fer pdf":"Admin",
     "administation":"Admin",
     "cqxm training administrative":"CQXM Training",
+    "internal cqxm meetings40":"Meeting",
     "cqxm training, scrum":"CQXM Training",
     "cqxm training investigation training":"CQXM Training",
     "internal cqxm meeting, internal cqxm training, administrative":"CQXM Training",
