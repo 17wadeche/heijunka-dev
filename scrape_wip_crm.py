@@ -2173,6 +2173,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\5-Aug 2026",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\6-Sep 2026",
         DS_ARCHIVE_HINT,
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026",
