@@ -1907,7 +1907,18 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         if week is not None and pd.notna(week)
         else None
     )
-    if week_norm is not None and week_norm >= NV_LAYOUT_SHIFT_START:
+    use_september_layout = (
+        week_norm is not None and week_norm >= NV_D2D_WIP_START
+    )
+    if use_september_layout:
+        # Excel rows 3:16, activity headers on row 2, non-WIP in K:Z.
+        PEOPLE_START = 2
+        PEOPLE_END = 15
+        ACT_HEADER_ROW = 1
+        ACT_START_COL = _col_letter_to_idx("K")
+        ACT_END_COL = _col_letter_to_idx("Z")
+        COL_OOO = _col_letter_to_idx("AA")
+    elif week_norm is not None and week_norm >= NV_LAYOUT_SHIFT_START:
         ACT_END_COL = _col_letter_to_idx("AB")
         COL_OOO = _col_letter_to_idx("AC")
         COL_NONWIP = _col_letter_to_idx("AD")
@@ -1915,8 +1926,6 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
         ACT_END_COL = _col_letter_to_idx("X")
         COL_OOO = _col_letter_to_idx("Y")
         COL_NONWIP = _col_letter_to_idx("Z")
-    if week_norm is not None and week_norm >= NV_D2D_WIP_START:
-        ACT_START_COL = _col_letter_to_idx("J")
     people_rows: List[dict] = []
     for i in range(PEOPLE_START, PEOPLE_END + 1):
         name = norm_name(ws.iat[i, 0] if ws.shape[1] > 0 else "")
@@ -1924,7 +1933,13 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
             continue
         expected = safe_float0(ws.iat[i, COL_EXPECTED] if ws.shape[1] > COL_EXPECTED else 0.0)
         ooo      = safe_float0(ws.iat[i, COL_OOO]      if ws.shape[1] > COL_OOO      else 0.0)
-        nonwip   = safe_float0(ws.iat[i, COL_NONWIP]   if ws.shape[1] > COL_NONWIP   else 0.0)
+        if use_september_layout:
+            nonwip = sum(
+                safe_float0(value)
+                for value in ws.iloc[i, ACT_START_COL:ACT_END_COL + 1]
+            )
+        else:
+            nonwip = safe_float0(ws.iat[i, COL_NONWIP] if ws.shape[1] > COL_NONWIP else 0.0)
         people_rows.append({
             "row_i": i,
             "name": name,
@@ -1935,6 +1950,18 @@ def build_nv_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = Non
     people_count = len(set(r["name"] for r in people_rows))
     ooo_hours = float(round(sum(r["OOO"] for r in people_rows), 2))
     total_nonwip_hours = float(round(sum(r["NONWIP"] for r in people_rows), 2))
+    if use_september_layout:
+        # Sum the full requested ranges, independently of name filtering.
+        total_nonwip_hours = float(round(sum(
+            safe_float0(value)
+            for value in ws.iloc[
+                PEOPLE_START:PEOPLE_END + 1, ACT_START_COL:ACT_END_COL + 1
+            ].to_numpy().flat
+        ), 2))
+        ooo_hours = float(round(sum(
+            safe_float0(value)
+            for value in ws.iloc[PEOPLE_START:PEOPLE_END + 1, COL_OOO:COL_OOO + 1].to_numpy().flat
+        ), 2))
     nonwip_by_person: Dict[str, float] = {}
     for r in people_rows:
         v = float(round(float(r["NONWIP"]), 2))
