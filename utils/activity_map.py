@@ -210,6 +210,8 @@ ACTIVITY_MAP = {
     "internal cqxm meetings40":"Meeting",
     "cqxm training, scrum":"CQXM Training",
     "cqxm training investigation training":"CQXM Training",
+    "cornerstone/self learning":"Cornerstone",
+    "cornerstone/ self training":"Cornerstone",
     "internal cqxm meeting, internal cqxm training, administrative":"CQXM Training",
     "nextgen gch iris tree drafting":"Project Work",
     "other j drive it issue":"IT Issue/Update",
