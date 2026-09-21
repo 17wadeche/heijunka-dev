@@ -1198,12 +1198,10 @@ TEAM_ARG_ALIASES: Dict[str, str] = {
     "LIT AND LETTERS": LIT_LETTERS_TEAM,
     "LIT LETTERS": LIT_LETTERS_TEAM,
 }
-
 def parse_team_filter(values: Optional[List[str]]) -> Optional[set[str]]:
     """Parse --team values. Supports repeated args and comma/semicolon lists."""
     if not values:
         return None
-
     selected: set[str] = set()
     bad: List[str] = []
     for value in values:
