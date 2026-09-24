@@ -227,6 +227,8 @@ ACTIVITY_MAP = {
     "sw hypercare action item":"Project Work",
     "monitor audit backroom":"Audit",
     "inernal cqxm meeting":"Meeting",
+    "cqxm external meeting":"Meeting",
+    "internal cqxm meetings emails/team":"Email & IM",
     "iris work":"Project Work",
     "cqxm training review/cornerstone/admin/other":"CQXM Training",
     "cqxm internal meetings/emails/teams/other":"Meeting",
