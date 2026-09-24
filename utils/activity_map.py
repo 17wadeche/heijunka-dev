@@ -226,6 +226,7 @@ ACTIVITY_MAP = {
     "training onboarding collaboration event review":"CQXM Training",
     "sw hypercare action item":"Project Work",
     "monitor audit backroom":"Audit",
+    "cornerstone/self train":"Cornerstone",
     "inernal cqxm meeting":"Meeting",
     "cqxm external meeting":"Meeting",
     "internal cqxm meetings emails/team":"Email & IM",
