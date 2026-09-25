@@ -14,6 +14,7 @@ MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB 
 MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
+DS_ARCHIVE2 = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Sept 2026 DS PAB"
 LIT_LETTERS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
@@ -1618,7 +1619,7 @@ TEAM_ALIASES: Dict[str, str] = {
 }
 TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "MCS": [MCS_DEFAULT_PATH],
-    "DS": [DS_DEFAULT_DIR, DS_ARCHIVE],
+    "DS": [DS_DEFAULT_DIR, DS_ARCHIVE, DS_ARCHIVE2],
     "CPT": [CPT_DEFAULT_DIR, CPT_ARCHIVE_PAB_DIR, CPT_ARCHIVE_PAB_DIR2, CPT_ARCHIVE_PAB_DIR3, CPT_ARCHIVE_PAB_DIR4, CPT_ARCHIVE_PAB_DIR5],
     "CDS": [CDS_DEFAULT_DIR, CDS_ARCHIVE_PAB_DIR, CDS_ARCHIVE_PAB_DIR2],
     "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE, NI_ARCHIVE_SEPT_2026, NI_ARCHIVE_AUG_2026],
