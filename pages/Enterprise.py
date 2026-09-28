@@ -68,6 +68,7 @@ NAME_ALIASES = {
     "gowda, manjunath":"Manjunath Gowda",
     "andrew o":"Andrew",
     "kumar, shailesh":"Shailesh Kumar",
+    "sneha mistry":"Sneha",
     "michael": "Michael F",
     "kuche":"Ku Che",
     "goutham kumar, p":"P Goutham Kumar",
