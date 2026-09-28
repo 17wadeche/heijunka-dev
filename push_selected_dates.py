@@ -68,7 +68,7 @@ def _load_preserve_before(config_path: str) -> Dict[str, date]:
         if cutoff:
             cutoffs[_clean(team).casefold()] = date.fromisoformat(cutoff)
     return cutoffs
-def _is_frozen_nonwip_row(row: Dict[str, Any], cutoffs: Dict[str, date]) -> bool:
+def _is_frozen_row(row: Dict[str, Any], cutoffs: Dict[str, date]) -> bool:
     cutoff = cutoffs.get(_clean(row.get("team")).casefold())
     period = _to_date_iso(row.get("period_date"))
     return bool(cutoff and period and date.fromisoformat(period) < cutoff)
@@ -161,15 +161,24 @@ def project_nonwip_row(src: Dict[str, str], source_file: str) -> Dict[str, Any]:
         "non_wip_activities": _clean(_get(src, "Non-WIP Activities", "non_wip_activities")),
         "OOO Hours": _clean(_get(src, "OOO Hours", "ooo_hours")),
     }
-def push_metrics(dates_iso: List[str], src_path: str, out_path: str, source_file_value: str):
+def push_metrics(
+    dates_iso: List[str],
+    src_path: str,
+    out_path: str,
+    source_file_value: str,
+    preserve_before: Optional[Dict[str, date]] = None,
+):
     src_rows, _ = _read_csv(src_path)
     if not src_rows:
         raise SystemExit(f"No rows in {src_path}")
+    preserve_before = preserve_before or {}
     want = []
     for r in src_rows:
         wk = _to_date_iso(_get(r, "Week", "period_date")) or _clean(_get(r, "Week", "period_date"))
         if wk in dates_iso:
-            want.append(project_metrics_row(r, source_file_value))
+            candidate = project_metrics_row(r, source_file_value)
+            if not _is_frozen_row(candidate, preserve_before):
+                want.append(candidate)
     if not want:
         print(f"[metrics] No matching rows for dates: {', '.join(dates_iso)}"); return
     existing, _ = _read_csv(out_path)
@@ -194,7 +203,7 @@ def push_nonwip(
         wk = _to_date_iso(_get(r, "Week", "period_date")) or _clean(_get(r, "Week", "period_date"))
         if wk in dates_iso:
             candidate = project_nonwip_row(r, source_file_value)
-            if not _is_frozen_nonwip_row(candidate, preserve_before):
+            if not _is_frozen_row(candidate, preserve_before):
                 want.append(candidate)
     existing, _ = _read_csv(out_path)
     key_fn = lambda x: (_clean(x.get("team")), _clean(x.get("period_date")), _clean(x.get("source_file")))
@@ -219,19 +228,26 @@ def main():
     ap.add_argument("--skip-nonwip", action="store_true")
     args = ap.parse_args()
     dates_iso = _parse_dates(args)
+    preserve_before = _load_preserve_before(args.config)
     if not os.path.exists(args.out_metrics):
         _write_csv(args.out_metrics, [], METRICS_AGG_HEADERS)
     if not os.path.exists(args.out_nonwip):
         _write_csv(args.out_nonwip, [], NONWIP_OUT_HEADERS)
     if not args.skip_metrics:
-        push_metrics(dates_iso, args.metrics, args.out_metrics, args.source_file_metrics)
+        push_metrics(
+            dates_iso,
+            args.metrics,
+            args.out_metrics,
+            args.source_file_metrics,
+            preserve_before,
+        )
     if not args.skip_nonwip:
         push_nonwip(
             dates_iso,
             args.nonwip,
             args.out_nonwip,
             args.source_file_nonwip,
-            _load_preserve_before(args.config),
+            preserve_before,
         )
 if __name__ == "__main__":
     main()

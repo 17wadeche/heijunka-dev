@@ -716,11 +716,21 @@ def _read_csv_if_exists(path: str) -> Tuple[List[Dict[str, Any]], List[str]]:
     return rows, cols
 def _key(row: Dict[str, Any]) -> Tuple[str, str]:
     return (str(row.get("Team", "")).strip(), str(row.get("Week", "")).strip())
-def _merge_rows(existing: List[Dict[str, Any]], new_rows: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
+def _merge_rows(
+    existing: List[Dict[str, Any]],
+    new_rows: List[Dict[str, Any]],
+    preserve_before: Optional[Dict[str, date]] = None,
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    preserve_before = preserve_before or {}
     by_key: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for r in existing:
         by_key[_key(r)] = r
     for r in new_rows:
+        team, week = _key(r)
+        cutoff = preserve_before.get(team)
+        parsed_week = _to_date(week)
+        if cutoff and parsed_week and parsed_week < cutoff and (team, week) in by_key:
+            continue
         by_key[_key(r)] = r
     existing_keys = [_key(r) for r in existing]
     new_keys = [_key(r) for r in new_rows]
@@ -762,6 +772,7 @@ def main():
     if args.team and not args.config:
         sys.exit(2)
     jobs: List[Tuple[str, str, List[str], str, Dict[str, List[Dict[str, Any]]]]] = []
+    preserve_before: Dict[str, date] = {}
     default_prod = "Prod Analysis"
     default_avail = "Available WIP+Non-WIP Hours"
     if args.config and (args.all or args.team):
@@ -775,6 +786,9 @@ def main():
             if team not in cfg:
                 sys.exit(2)
             entry = cfg[team]
+            cutoff = _to_date(entry.get("preserve_before"))
+            if cutoff:
+                preserve_before[team] = cutoff
             wb = entry.get("workbook")
             if not wb:
                 sys.exit(2)
@@ -822,7 +836,7 @@ def main():
     if not all_rows:
         sys.exit(1)
     existing_rows, existing_cols = _read_csv_if_exists(args.out)
-    merged_rows, merged_cols = _merge_rows(existing_rows, all_rows)
+    merged_rows, merged_cols = _merge_rows(existing_rows, all_rows, preserve_before)
     merged_rows = filter_period_rows(_sort_rows(merged_rows))
     closures_map = {}
     opened_map   = {}
