@@ -30,8 +30,11 @@ PSS_MEIC_USER_DATA_START = PSS_COMBINED_NONWIP_START
 PSS_INTERN_USER_DATA_START = PSS_COMBINED_NONWIP_START
 ENT_LAYOUT_SHIFT_START = pd.Timestamp("2026-06-22").normalize()
 ENT_ROSTER_AND_CATEGORY_EXPANSION_START = pd.Timestamp("2026-08-17").normalize()
-ENT_REFRESH_WEEK_COUNT = 3
 ENT_FIRST_ROSTER_REDUCTION_START = pd.Timestamp("2026-09-21").normalize()
+ENT_ROSTER_EXCLUSIONS = {
+    ENT_FIRST_ROSTER_REDUCTION_START: {"mohd faiz anwar"},
+}
+ENT_REFRESH_WEEK_COUNT = 3
 ENT_SECOND_ROSTER_REDUCTION_START = pd.Timestamp("2026-09-28").normalize()
 PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
@@ -2508,6 +2511,12 @@ def classify_activity(label: str) -> str:
 def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = None) -> Dict:
     PEOPLE_START = 2
     week_norm = pd.Timestamp(week).normalize() if week is not None and pd.notna(week) else None
+    excluded_people = {
+        name
+        for effective_date, names in ENT_ROSTER_EXCLUSIONS.items()
+        if week_norm is not None and week_norm >= effective_date
+        for name in names
+    }
     ent_layout_shift = week_norm is not None and week_norm >= ENT_LAYOUT_SHIFT_START
     ent_roster_and_category_expansion = (
         week_norm is not None
@@ -2546,7 +2555,11 @@ def build_ent_row(team: str, ws: pd.DataFrame, week: Optional[pd.Timestamp] = No
     last_people_row = min(PEOPLE_END, ws.shape[0] - 1)
     for i in range(PEOPLE_START, last_people_row + 1):
         name = norm_name(_cell(i, 0, ""))
-        if not name or not is_real_person(name):
+        if (
+            not name
+            or not is_real_person(name)
+            or name.casefold() in excluded_people
+        ):
             continue
         b = safe_float0(_cell(i, COL_B, 0.0))
         z = safe_float0(_cell(i, COL_Z, 0.0))
