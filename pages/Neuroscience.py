@@ -287,14 +287,11 @@ def normalize_person_name(name: str) -> str:
         _norm("goutham kumar, p"): "P Goutham Kumar",
     }
     return aliases.get(key, clean)
-ENT_EXCLUSION_START = pd.Timestamp("2026-04-27")
 ENT_EXCLUDED_PEOPLE = {
-    normalize_person_name(x)
-    for x in [
-        "Jagruti Damahe",
-        "Naveen Shanmugasundaram",
-        "Prabhu S",
-    ]
+    normalize_person_name("Jagruti Damahe").casefold(): pd.Timestamp("2026-04-27"),
+    normalize_person_name("Naveen Shanmugasundaram").casefold(): pd.Timestamp("2026-04-27"),
+    normalize_person_name("Prabhu S").casefold(): pd.Timestamp("2026-04-27"),
+    normalize_person_name("Mohd Faiz Anwar").casefold(): pd.Timestamp("2026-09-21"),
 }
 def is_excluded_from_team_after_date(team: str, week, person: str) -> bool:
     if str(team or "").strip().upper() != "ENT":
@@ -303,9 +300,10 @@ def is_excluded_from_team_after_date(team: str, week, person: str) -> bool:
     if pd.isna(wk):
         return False
     wk = wk.normalize()
-    if wk < ENT_EXCLUSION_START:
-        return False
-    return normalize_person_name(str(person or "").strip()) in ENT_EXCLUDED_PEOPLE
+    exclusion_start = ENT_EXCLUDED_PEOPLE.get(
+        normalize_person_name(str(person or "").strip()).casefold()
+    )
+    return exclusion_start is not None and wk >= exclusion_start
 def _filter_excluded_people_frame(
     df_in: pd.DataFrame,
     team_col: str = "team",
