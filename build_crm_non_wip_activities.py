@@ -14,14 +14,17 @@ MCS_DEFAULT_PATH = r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB 
 MCS_REFRESH_MIN_PERIOD = _dt.date(2026, 6, 22)
 DS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB"
 DS_ARCHIVE = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive"
+DS_ARCHIVE3 = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Aug 2026 DS PAB"
 DS_ARCHIVE2 = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Sept 2026 DS PAB"
 LIT_LETTERS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters"
+LIT_LETTERS_DEFAULT_DIR2 = r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters\Archive"
 CPT_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB"
 CPT_ARCHIVE_PAB_DIR =r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\4. April 2026"
 CPT_ARCHIVE_PAB_DIR2 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\5. May 2026"
 CPT_ARCHIVE_PAB_DIR3 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\6. Jun 2026"
 CPT_ARCHIVE_PAB_DIR4 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\7. Jul 2026"
 CPT_ARCHIVE_PAB_DIR5 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\8. August"
+CPT_ARCHIVE_PAB_DIR6 = r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\9. September"
 CDS_DEFAULT_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis"
 CDS_ARCHIVE_PAB_DIR = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB\5-Aug 2026"
 CDS_ARCHIVE_PAB_DIR2 = r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB\6-Sep 2026"
@@ -1619,14 +1622,14 @@ TEAM_ALIASES: Dict[str, str] = {
 }
 TEAM_DEFAULT_INPUTS: Dict[str, List[str]] = {
     "MCS": [MCS_DEFAULT_PATH],
-    "DS": [DS_DEFAULT_DIR, DS_ARCHIVE, DS_ARCHIVE2],
-    "CPT": [CPT_DEFAULT_DIR, CPT_ARCHIVE_PAB_DIR, CPT_ARCHIVE_PAB_DIR2, CPT_ARCHIVE_PAB_DIR3, CPT_ARCHIVE_PAB_DIR4, CPT_ARCHIVE_PAB_DIR5],
+    "DS": [DS_DEFAULT_DIR, DS_ARCHIVE, DS_ARCHIVE2, DS_ARCHIVE3],
+    "CPT": [CPT_DEFAULT_DIR, CPT_ARCHIVE_PAB_DIR, CPT_ARCHIVE_PAB_DIR2, CPT_ARCHIVE_PAB_DIR3, CPT_ARCHIVE_PAB_DIR4, CPT_ARCHIVE_PAB_DIR5, CPT_ARCHIVE_PAB_DIR6],
     "CDS": [CDS_DEFAULT_DIR, CDS_ARCHIVE_PAB_DIR, CDS_ARCHIVE_PAB_DIR2],
     "NI": [NI_DEFAULT_DIR, NI_ARCHIVE_APRIL_2026_DIR, NI_ARCHIVE, NI_ARCHIVE_SEPT_2026, NI_ARCHIVE_AUG_2026],
     MEIC_TEAM_NAME: [MEIC_DEFAULT_DIR],
     PM_CTS_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
     PM_CTS_IND_TEAM_NAME: [PM_CTS_DEFAULT_DIR, PM_CTS_ARCHIVED_PAB_DIR],
-    LIT_LETTERS_TEAM_NAME: [LIT_LETTERS_DEFAULT_DIR],
+    LIT_LETTERS_TEAM_NAME: [LIT_LETTERS_DEFAULT_DIR, LIT_LETTERS_DEFAULT_DIR2 ],
 }
 def normalize_team_arg(value: Optional[str]) -> Optional[str]:
     if value is None:
@@ -1679,6 +1682,7 @@ def filter_files_to_recent_weeks(files: List[str], *, weeks_back: int) -> List[s
 def lit_letters_search_roots() -> List[str]:
     roots = [
         LIT_LETTERS_DEFAULT_DIR,
+        LIT_LETTERS_DEFAULT_DIR2,
         NI_DEFAULT_DIR,
         PM_CTS_DEFAULT_DIR,
         MEIC_DEFAULT_DIR,

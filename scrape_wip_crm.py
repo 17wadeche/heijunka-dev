@@ -2174,13 +2174,14 @@ def blank_row_for_missing_file(f: str) -> Dict[str, Any]:
     }
 def main() -> int:
     default_paths = [
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\PAB for Lit and Letters\Archive"
         r"C:\Users\wadec8\Medtronic PLC\MCS COS Transformation - VMB Scheduling\Heijunka Current.xlsm",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB",
         r"C:\Users\wadec8\Medtronic PLC\Diagnostics MDR - Heijunka and Production Analysis\Archived PAB\6-Sep 2026",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB",
         LIT_LETTERS_ROOT,
-        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\5-Aug 2026",
+        r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\Aug 2026 DS PAB",
         r"C:\Users\wadec8\Medtronic PLC\Defibrillation Solutions - Schedule and PAB\Archive\6-Sep 2026",
         DS_ARCHIVE_HINT,
         DS_ARCHIVE_HINT2,
@@ -2190,6 +2191,7 @@ def main() -> int:
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\6. Jun 2026",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\7. Jul 2026",
         r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\8. August",
+        r"C:\Users\wadec8\Medtronic PLC\Cardiac Pacing Therapies CQXM - Heijunka & PAB\Archive\2026\9. September",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\April 2026 - PAB",
         r"C:\Users\wadec8\Medtronic PLC\Tier1 PXM - Non Implantables - Heijunka\Archived PAB\Aug 2026 - PAB",
