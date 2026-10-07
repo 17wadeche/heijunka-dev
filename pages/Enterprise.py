@@ -2362,7 +2362,7 @@ def build_training_mentoring_export(
     source_raw: pd.DataFrame,
     before_date: Any,
 ) -> pd.DataFrame:
-    columns = ["Team", "Week Start", "Training/Mentoring Hours"]
+    columns = ["Team", "Week Start", "CQXM Training Hours"]
     if source_raw is None or source_raw.empty:
         return pd.DataFrame(columns=columns)
     source_df = _normalize_df_columns(source_raw.copy())
@@ -2425,7 +2425,7 @@ def build_training_mentoring_export(
                 {
                     "Team": team,
                     "Week Start": week_start,
-                    "Training/Mentoring Hours": float(training_hours),
+                    "CQXM Training Hours": float(training_hours),
                 }
             )
     if training_rows:
@@ -2433,26 +2433,26 @@ def build_training_mentoring_export(
         export_df = team_weeks.merge(totals, on=["Team", "Week Start"], how="left")
     else:
         export_df = team_weeks.copy()
-        export_df["Training/Mentoring Hours"] = 0.0
-    export_df["Training/Mentoring Hours"] = (
-        pd.to_numeric(export_df["Training/Mentoring Hours"], errors="coerce").fillna(0.0).round(2)
+        export_df["CQXM Training Hours"] = 0.0
+    export_df["CQXM Training Hours"] = (
+        pd.to_numeric(export_df["CQXM Training Hours"], errors="coerce").fillna(0.0).round(2)
     )
     return export_df.loc[:, columns].sort_values(["Week Start", "Team"]).reset_index(drop=True)
 def build_training_mentoring_totals_export(training_export: pd.DataFrame) -> pd.DataFrame:
-    columns = ["Team", "Training/Mentoring Hours"]
+    columns = ["Team", "CQXM Training Hours"]
     if training_export is None or training_export.empty:
         return pd.DataFrame(columns=columns)
     totals = training_export.copy()
-    totals["Training/Mentoring Hours"] = pd.to_numeric(
-        totals["Training/Mentoring Hours"], errors="coerce"
+    totals["CQXM Training Hours"] = pd.to_numeric(
+        totals["CQXM Training Hours"], errors="coerce"
     ).fillna(0.0)
     totals = (
-        totals.groupby("Team", as_index=False)["Training/Mentoring Hours"]
+        totals.groupby("Team", as_index=False)["CQXM Training Hours"]
         .sum()
         .sort_values("Team")
         .reset_index(drop=True)
     )
-    totals["Training/Mentoring Hours"] = totals["Training/Mentoring Hours"].round(2)
+    totals["CQXM Training Hours"] = totals["CQXM Training Hours"].round(2)
     return totals.loc[:, columns]
 @st.cache_data(show_spinner=False)
 def build_nonwip_item_totals_export(
@@ -3353,7 +3353,7 @@ elif page == "Non-WIP":
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         key="export_training_mentoring",
         help=(
-            "Exports each team's combined Training/Mentoring hours for every week before "
+            "Exports each team's combined CQXM Training hours for every week before "
             "today in the selected portfolio, plus a Team Totals tab that sums all weeks."
         ),
     )
