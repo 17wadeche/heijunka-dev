@@ -40,7 +40,7 @@ PSS_COMBINED_SOURCE_FILE = Path(
     r"C:\Users\wadec8\Medtronic PLC\PSS Sharepoint - Documents\PSS Team Heijunka Tool.xlsm"
 )
 TDD_NEW_TOTALS_ROW = 21
-SCS_NEW_TOTALS_ROW = 30  # Excel row 33 after the SCS roster expansion
+SCS_NEW_TOTALS_ROW = 30
 warnings.filterwarnings(
     "ignore",
     message="Data Validation extension is not supported and will be removed"
