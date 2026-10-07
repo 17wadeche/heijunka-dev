@@ -2356,7 +2356,7 @@ EXCLUDED_NON_WIP = {"ooo", "non-wip", "non_wip", "other", "nan", "", "break", "o
 def _norm_activity_name(val: Any) -> str:
     return str(val).strip().lower().replace("_", "-")
 def _is_training_or_mentoring_activity(val: Any) -> bool:
-    return bool(re.search(r"\b(?:train\w*|mentor\w*)\b", str(val), flags=re.IGNORECASE))
+    return bool(re.search(r"\b(?:cqxm\w*|training\w*)\b", str(val), flags=re.IGNORECASE))
 @st.cache_data(show_spinner=False)
 def build_training_mentoring_export(
     source_raw: pd.DataFrame,
