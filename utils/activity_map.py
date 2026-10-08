@@ -4148,7 +4148,7 @@ ACTIVITY_MAP = {
     "admin/email/collab":"Admin",
     "collab (30)":"Collaboration",
     "collab on-site (30 mins)":"Collaboration",
-    "gailed auto closures on fywt":"WIP/Event Review",
+    "failed auto closures on fywt":"WIP/Event Review",
     "gch submissions/admin":"Admin",
     "collab debrief call":"Collaboration",
     "call tl":"Meeting",
