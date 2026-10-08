@@ -4128,6 +4128,8 @@ ACTIVITY_MAP = {
     "next gen gch meeting":"Next Gen",
     "query call":"Meeting",
     "self-training":"Cornerstone",
+    "internl cqxm meeting":"Meeting",
+    "internal cqxm meeting emails/team":"Meeting",
     "with elaine":"Cornerstone",
     "internal cqxm meetings, emails, im, administrative, cornerstone":"Admin",
     "cqxm training and updating previous file":"CQXM Training",
