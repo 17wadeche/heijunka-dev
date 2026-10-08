@@ -4141,6 +4141,13 @@ ACTIVITY_MAP = {
     "ran batchman fac/fer twice completed":"Batchman",
     "cas cross- functional complaint review":"WIP/Event Review",
     "scrum a":"Scrum & Action",
+    Precdent Event Review, Similar Indcidence Data, Emails/teams, Did Some Inbox Work, Late Mdr Call
+    Tuv Audit Requests/timing Study Recording
+    Mpxr Lates For Alison, Smart Tree Review, Emails/teams, Creating Event
+    Similar Incidence Calc for australia tuv/mdsap audit
+    Similar Incidence Calc for australia, tuv/mdsap audit
+    "cqxm mentoring/training reviewing/emails/teams/cornerstone/other
+    "emails/teams/cornerstone / self training/other
     "capa 605686 - eu vigilance remediation (netherlands)":"CAPA",
     "ide hypercare":"Project Work",
     "paf china study":"Study",
