@@ -272,6 +272,7 @@ ACTIVITY_MAP = {
     "review of files call":"Meeting",
     "scrum, email/admin, collab":"Scrum & Action",
     "email/messages; gch technical issue; cornerstone training":"Email & IM",
+    "email/messages; gch technical issues; cornerstone training":"Email & IM",
     "email/messages; collaboration; cornerstone":"Collaboration",
     "email/messages; meeting, data issue":"Meeting",
     "cornerstone self training":"Cornerstone",
