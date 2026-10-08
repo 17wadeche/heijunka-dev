@@ -4145,6 +4145,7 @@ ACTIVITY_MAP = {
     "ide hypercare":"Project Work",
     "paf china study":"Study",
     "scrum, collboration, correction":"Scrum & Action",
+    "collboration":"Collaboration",
     "training prep, admin/report delegation": "Training/Mentoring",
     "protocol update review sphere vt efs csmpcp update":"Admin",
     "inclusion activities (birthdays and meals from the heart)":"Engagement",
