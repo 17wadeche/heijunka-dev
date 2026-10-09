@@ -4130,6 +4130,8 @@ ACTIVITY_MAP = {
     "firedrill":"Fire Drill",
     "investigation catch up":"WIP/Event Review",
     "self-paced training":"Cornerstone",
+    "internal cqm meeting": "Meeting",
+    "reviewing/updating previous file":"WIP/Event Review",
     "internal cqxm meetings/coding": "Meeting",
     "cqxmtraiing":"CQXM Training",
     "/ administrative":"Admin",
