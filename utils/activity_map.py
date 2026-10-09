@@ -4127,6 +4127,7 @@ ACTIVITY_MAP = {
     "1:1 with madison":"Meeting",
     "au training/review":"CQXM Training",
     "teams/question":"Email & IM",
+    "corenrstone":"Cornerstone",
     "firedrill":"Fire Drill",
     "investigation catch up":"WIP/Event Review",
     "self-paced training":"Cornerstone",
