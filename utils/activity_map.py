@@ -4128,6 +4128,8 @@ ACTIVITY_MAP = {
     "au training/review":"CQXM Training",
     "teams/question":"Email & IM",
     "corenrstone":"Cornerstone",
+    "ad hoc data comparison":"Data Request/Review",
+    "administratrivel":"Admin",
     "firedrill":"Fire Drill",
     "emails/teams, cqxm internal meetings, fire drill, rrtt tasks, oc complaint review/pmpa meeting":"Email & IM",
     "cqxm mentoring/emails/teams/cornerstone/cqxm internal meetings/other":"CQXM Mentoring",
