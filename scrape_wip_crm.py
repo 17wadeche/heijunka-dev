@@ -1416,6 +1416,7 @@ DS_COMPLETED_HOURS_UP_ONE_ROW_START = _dt.date(2026, 6, 1)
 DS_FINAL_ROW_42_START = _dt.date(2026, 7, 13)
 DS_FINAL_ROW_45_START = _dt.date(2026, 8, 31)
 DS_FINAL_ROW_47_START = _dt.date(2026, 9, 14)
+DS_FINAL_ROW_48_START = _dt.date(2026, 10, 5)
 def _ds_use_new_hours_layout(period: Optional[_dt.date]) -> bool:
     return isinstance(period, _dt.date) and period >= DS_NEW_HOURS_START
 def _ds_use_y_ad_hours_layout(period: Optional[_dt.date]) -> bool:
@@ -1426,6 +1427,8 @@ def _ds_completed_hours_up_one_row(period: Optional[_dt.date]) -> bool:
         and period >= DS_COMPLETED_HOURS_UP_ONE_ROW_START
     )
 def _ds_final_row(period: Optional[_dt.date]) -> int:
+    if isinstance(period, _dt.date) and period >= DS_FINAL_ROW_48_START:
+        return 48
     if isinstance(period, _dt.date) and period >= DS_FINAL_ROW_47_START:
         return 47
     if isinstance(period, _dt.date) and period >= DS_FINAL_ROW_45_START:
