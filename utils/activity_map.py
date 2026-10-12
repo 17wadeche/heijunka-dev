@@ -1599,6 +1599,7 @@ ACTIVITY_MAP = {
     "lab tour prep":"Admin",
     "laptop udate and restart": "IT Issue/Update",
     "lab training": "Training/Mentoring",
+    "man & exp date and creating smdr'":"Admin",
     "prism 2 reverse shadowing": "Training/Mentoring",
     "one on one":"Meeting",
     "chemical ordering (tergazyme) + contact maria on cidex order issue":"Ordering",
