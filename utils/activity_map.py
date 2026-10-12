@@ -1593,6 +1593,7 @@ ACTIVITY_MAP = {
     "pmpa/r&d review":"PMPA",
     "dt transfer paperwork (import invoice)":"Ordering",
     "purchasing chem":"Ordering",
+    "replenishment/purchasing":"Ordering",
     "grad sne meeting":"Meeting",
     "meeting aurelie":"Meeting",
     "lab tour prep":"Admin",
