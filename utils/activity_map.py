@@ -4127,6 +4127,7 @@ ACTIVITY_MAP = {
     "1:1 with madison":"Meeting",
     "au training/review":"CQXM Training",
     "teams/question":"Email & IM",
+    "scrum/collab":"Scrum & Action",
     "corenrstone":"Cornerstone",
     "ad hoc data comparison":"Data Request/Review",
     "administratrivel":"Admin",
