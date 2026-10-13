@@ -1586,6 +1586,8 @@ ACTIVITY_MAP = {
     "cornerstone 180":"Cornerstone",
     "corserstone":"Cornerstone",
     "coding collaboration":"Collaboration",
+    "investigation training hyper-care":"CQXM Training",
+    "investigation training file update":"CQXM Training",
     "collaab":"Collaboration",
     "training in lab/tier 2": "Training/Mentoring",
     "scrum / collaboration / meeting / reg inquirie":"RI",
