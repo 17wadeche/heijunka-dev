@@ -1584,6 +1584,8 @@ ACTIVITY_MAP = {
     "audit prework":"Audit",
     "code governance":"Coding/Code Gov",
     "cornerstone 180":"Cornerstone",
+    "corserstone":"Cornerstone",
+    "coding collaboration":"Collaboration",
     "training in lab/tier 2": "Training/Mentoring",
     "scrum / collaboration / meeting / reg inquirie":"RI",
     "Nan":"",
