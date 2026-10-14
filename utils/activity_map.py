@@ -2724,6 +2724,7 @@ ACTIVITY_MAP = {
     "pmq query":"PMQ Meeting",
     "reliant training":"Training/Mentoring",
     "training":"CQXM Training",
+    "interncal cqxm meeting":"Meeting",
     "on":"Meeting",
     "lab meetig":"Meeting",
     "sh&a meeting":"Meeting",
