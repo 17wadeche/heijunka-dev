@@ -2721,6 +2721,8 @@ ACTIVITY_MAP = {
     "training/mentoring": "Training/Mentoring",
     "independednt cos": "COS",
     "meeting other": "Meeting",
+    "emails/teams audit":"Audit",
+    "admin/emails/collab":"Admin",
     "pmq query":"PMQ Meeting",
     "reliant training":"Training/Mentoring",
     "training":"CQXM Training",
