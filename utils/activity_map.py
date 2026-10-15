@@ -2723,6 +2723,7 @@ ACTIVITY_MAP = {
     "meeting other": "Meeting",
     "emails/teams audit":"Audit",
     "admin/emails/collab":"Admin",
+    "safety plan review":"Admin",
     "pmq query":"PMQ Meeting",
     "reliant training":"Training/Mentoring",
     "training":"CQXM Training",
