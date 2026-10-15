@@ -2717,6 +2717,7 @@ ACTIVITY_MAP = {
     "capa training online session":"CAPA",
     "internal cqxm meeting scrum":"Meeting",
     "gfe fax": "GFE",
+    "bsi portal error":"IT Issue/Update",
     "gfe e-mail":"GFE",
     "questions/update": "Question",
     "scurm": "Scrum & Action",
