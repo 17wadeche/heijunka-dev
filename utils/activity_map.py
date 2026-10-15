@@ -2714,6 +2714,8 @@ ACTIVITY_MAP = {
     "pmp questions/update": "PMPA",
     "pmpa question": "PMPA",
     "scrume" : "Scrum & Action",
+    "capa training online session":"CAPA",
+    "internal cqxm meeting scrum":"Meeting",
     "gfe fax": "GFE",
     "gfe e-mail":"GFE",
     "questions/update": "Question",
