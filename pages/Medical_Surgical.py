@@ -2606,6 +2606,7 @@ with right2:
                 week_hours=40.0,
                 irl_people=irl_lookup.get(team, set()),
             )
+            wk_people = wk_people.loc[wk_people["Total Used"] > 0].copy()
             if wk_people.empty:
                 continue
             wk_people = wk_people.copy()
