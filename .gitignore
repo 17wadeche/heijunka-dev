@@ -1,2 +1,5 @@
 archive/*
 deidentified/*
+test_files/*
+__pycache__/*
+run_errors.log

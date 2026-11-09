@@ -1,5 +1,7 @@
 XlsxWriter
 matplotlib
 openpyxl>=3.1,<4
+pandas
 streamlit==1.61.0
 starlette<1.4.0
+python-dotenv
