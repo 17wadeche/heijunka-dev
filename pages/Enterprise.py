@@ -48,19 +48,45 @@ if data.empty:
     st.warning("The dataset has no valid team records to display.")
     st.stop()
 
-filtered = data.copy()
 team_data = data.copy()
 
-portfolios = sorted(data["portfolio"].unique().tolist())
-selected_portfolio = st.selectbox("Portfolio", portfolios)
+# Create Enterprise, Portfolio, OU selector
+options = ["Enterprise", "Portfolio", "OU"]
+selected_level = st.pills(" ", options, selection_mode="single", default="Enterprise")
 
-if selected_portfolio != "All":
+if selected_level == "Portfolio":
+    team_data = team_data[team_data["team"].isna()]
+    team_data = team_data[team_data["level"] == "Portfolio"]
+    portfolios = sorted(team_data["portfolio"].unique().tolist())
+    selected_portfolio = st.selectbox("Portfolio", portfolios)
+
+    if selected_portfolio != "All":
+        team_data = team_data[team_data["portfolio"] == selected_portfolio]
+elif selected_level == "OU":
+    team_data = team_data[team_data["team"].notna()]
+    team_data = team_data[team_data["level"] == "OU"]
+
+    portfolios = sorted(team_data["portfolio"].unique().tolist())
+    selected_portfolio = st.selectbox("Portfolio", portfolios)
+
     team_data = team_data[team_data["portfolio"] == selected_portfolio]
+    ous = sorted(team_data["team"].unique().tolist())
+    selected_team = st.selectbox("Team", ous)
+
+    if selected_team != "All":
+        team_data = team_data[team_data["team"] == selected_team]
+else:
+    team_data = data[data["level"] == "Enterprise"]
+    selected_portfolio = "Enterprise"
+
 
 week_start = sorted(team_data["period_date"].unique().tolist())
+week_start.reverse()
 selected_date = st.selectbox("Select Week", week_start)
 if selected_date != "All":
     filtered = team_data[team_data["period_date"] == selected_date]
+else:
+    filtered = team_data.copy()
 
 if filtered.empty:
     st.info("No records match the selected filters.")
@@ -196,6 +222,7 @@ st.altair_chart(trend_chart, width="stretch")
 
 st.subheader("Team metrics")
 display_columns = [
+    "team",
     "portfolio",
     "period_date",
     "completed_hours",
