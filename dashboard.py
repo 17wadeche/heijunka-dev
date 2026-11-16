@@ -29,6 +29,77 @@ def load_data(path: Path) -> pd.DataFrame:
         data[column] = pd.to_numeric(data[column], errors="coerce")
     return data.dropna(subset=["period_date", "team"])
 
+def make_uplh_chart(data: pd.Dataframe):
+  target_max = data["target_uplh"].max()
+  max_height = data["actual_uplh"].max()
+  if target_max > max_height:
+    max_height = target_max
+  base = alt.Chart(data).transform_fold(
+    ['target_uplh', 'actual_uplh'],
+    as_=['metric', 'uplh']
+  ).encode(
+    x=alt.X(
+      fr"period_date:T",
+      title="Week of",
+      axis=alt.Axis(
+        format="%Y-%m-%d",
+        labelAngle=-35,
+        tickCount="week",
+      ),
+      timeUnit="yearmonthdate",
+    ),
+    y=alt.Y(
+      fr"uplh:Q",
+      title="UPLH",
+      axis=alt.Axis(),
+      scale=alt.Scale(
+        domain=[
+          0,
+          max(
+            1.0,
+            float(max_height) * 1.1,
+          ),
+        ]
+      ),
+    ),
+    color='metric:N',
+    tooltip=[
+      alt.Tooltip(fr"period_date:N", title="Week of"),
+      alt.Tooltip(fr"uplh:Q", title="UPLH"),
+    ]
+  )
+  line = base.mark_line(strokeWidth=3).encode()
+  points = base.mark_circle(size=80).encode()
+  latest_point = alt.Chart(data).mark_circle(
+    size=180,
+    filled=True,
+  ).encode(
+    x=fr"period_date:T",
+    y=fr"uplh:Q",
+    tooltip=[
+      alt.Tooltip(fr"period_date:T", title="Week of"),
+      alt.Tooltip(fr"uplh:Q", title="UPLH"),
+    ]
+  )
+  data_labels = base.mark_text(
+    align="center",
+    dy=-12,
+    fontSize=11,
+  )
+  rule = alt.Chart(
+    pd.DataFrame({"y": [0.80]})
+  ).mark_rule(
+    strokeDash=[6, 4]
+  ).encode(
+    y="y:Q"
+  )
+  trend_chart = (
+    alt.layer(rule, line, points, latest_point)
+    .properties(height=360)
+    .interactive()
+  )
+  return trend_chart
+
 def create_page(page_title: str, caption: str, file_path: str):
   st.set_page_config(page_title=page_title, layout="wide")
   st.title(page_title)
@@ -142,73 +213,3 @@ def create_page(page_title: str, caption: str, file_path: str):
     unsafe_allow_html=True,
   )
 
-def make_uplh_chart(data: pd.Dataframe):
-  target_max = data["target_uplh"].max()
-  max_height = data["actual_uplh"].max()
-  if target_max > max_height:
-    max_height = target_max
-  base = alt.Chart(data).transform_fold(
-    ['target_uplh', 'actual_uplh'],
-    as_=['metric', 'uplh']
-  ).encode(
-    x=alt.X(
-      fr"period_date:T",
-      title="Week of",
-      axis=alt.Axis(
-        format="%Y-%m-%d",
-        labelAngle=-35,
-        tickCount="week",
-      ),
-      timeUnit="yearmonthdate",
-    ),
-    y=alt.Y(
-      fr"uplh:Q",
-      title="UPLH",
-      axis=alt.Axis(),
-      scale=alt.Scale(
-        domain=[
-          0,
-          max(
-            1.0,
-            float(max_height) * 1.1,
-          ),
-        ]
-      ),
-    ),
-    color='metric:N',
-    tooltip=[
-      alt.Tooltip(fr"period_date:N", title="Week of"),
-      alt.Tooltip(fr"uplh:Q", title="UPLH"),
-    ]
-  )
-  line = base.mark_line(strokeWidth=3).encode()
-  points = base.mark_circle(size=80).encode()
-  latest_point = alt.Chart(data).mark_circle(
-    size=180,
-    filled=True,
-  ).encode(
-    x=fr"period_date:T",
-    y=fr"uplh:Q",
-    tooltip=[
-      alt.Tooltip(fr"period_date:T", title="Week of"),
-      alt.Tooltip(fr"uplh:Q", title="UPLH"),
-    ]
-  )
-  data_labels = base.mark_text(
-    align="center",
-    dy=-12,
-    fontSize=11,
-  )
-  rule = alt.Chart(
-    pd.DataFrame({"y": [0.80]})
-  ).mark_rule(
-    strokeDash=[6, 4]
-  ).encode(
-    y="y:Q"
-  )
-  trend_chart = (
-    alt.layer(rule, line, points, latest_point)
-    .properties(height=360)
-    .interactive()
-  )
-  return trend_chart
